@@ -5,9 +5,6 @@ import * as path from "path";
 
 dotenv.config();
 
-console.log("BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL);
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-
 export const auth = betterAuth({
   database: new Pool({ connectionString: process.env.DATABASE_URL }),
   emailAndPassword: { enabled: true },
