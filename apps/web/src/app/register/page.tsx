@@ -34,13 +34,8 @@ export default function RegisterPage() {
     }
   };
 
-  const inputGroupStyle = {
-    background: "rgba(255,255,255,0.03)",
-    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)",
-  };
-
-  const inputGroupFocus = "inset 0 0 0 1px rgba(217,70,239,0.4)";
-  const inputGroupBlur = "inset 0 0 0 1px rgba(255,255,255,0.06)";
+  const inputGroupClass =
+    "flex items-center gap-3 px-4 py-3 rounded-2xl transition-shadow bg-white/[0.03] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-within:shadow-[inset_0_0_0_1px_rgba(217,70,239,0.4)]";
 
   const fields = [
     {
@@ -149,16 +144,7 @@ export default function RegisterPage() {
                 >
                   {label}
                 </label>
-                <div
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-shadow"
-                  style={inputGroupStyle}
-                  onFocus={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = inputGroupFocus;
-                  }}
-                  onBlur={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = inputGroupBlur;
-                  }}
-                >
+                <div className={inputGroupClass}>
                   <Icon size={16} strokeWidth={1.75} style={{ color: "var(--mute2)", flexShrink: 0 }} />
                   <input
                     id={id}
