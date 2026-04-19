@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { AuthOrb } from "@/components/auth-orb";
+import { AmbientParticles } from "@/components/ambient-particles";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -43,6 +44,7 @@ export default function LoginPage() {
     >
       {/* Ambient grid overlay */}
       <div className="ambient-grid absolute inset-0 pointer-events-none" style={{ opacity: 0.6 }} />
+      <AmbientParticles />
 
       {/* Star dots — decorative */}
       <div
