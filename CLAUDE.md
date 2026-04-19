@@ -1,5 +1,9 @@
 # Fragments — Auth System
 
+## Git Conventions
+
+- No `Co-Authored-By` lines in commits.
+
 ## What this is
 
 Full-stack authentication system (login + register) built as a foundation for future multi-client apps (web, mobile, desktop). Functional only — no UI polish.
