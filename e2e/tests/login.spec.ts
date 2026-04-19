@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 
 test("debe iniciar sesión con el usuario de prueba y redirigir al dashboard", async ({ page }) => {
   await page.goto("/login");
-  await page.fill('input[placeholder="Email"]', "test@example.com");
-  await page.fill('input[placeholder="Contraseña"]', "Test1234!");
+  await page.fill("#email", "test@example.com");
+  await page.fill("#password", "Test1234!");
   await page.click('button[type="submit"]');
 
   await expect(page).toHaveURL("/dashboard");
@@ -12,8 +12,8 @@ test("debe iniciar sesión con el usuario de prueba y redirigir al dashboard", a
 
 test("debe mostrar error con contraseña incorrecta", async ({ page }) => {
   await page.goto("/login");
-  await page.fill('input[placeholder="Email"]', "test@example.com");
-  await page.fill('input[placeholder="Contraseña"]', "WrongPassword!");
+  await page.fill("#email", "test@example.com");
+  await page.fill("#password", "WrongPassword!");
   await page.click('button[type="submit"]');
 
   await expect(page).toHaveURL("/login");

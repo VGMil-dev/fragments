@@ -8,8 +8,8 @@ test("debe redirigir al login si no está autenticado", async ({ page }) => {
 test("debe cerrar sesión correctamente", async ({ page }) => {
   // Primero iniciamos sesión
   await page.goto("/login");
-  await page.fill('input[placeholder="Email"]', "test@example.com");
-  await page.fill('input[placeholder="Contraseña"]', "Test1234!");
+  await page.fill("#email", "test@example.com");
+  await page.fill("#password", "Test1234!");
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL("/dashboard");
 

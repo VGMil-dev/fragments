@@ -3,10 +3,11 @@
 ## Git Conventions
 
 - No `Co-Authored-By` lines in commits.
+- PR template: `.github/pull_request_template.md` — se carga automáticamente en GitHub al abrir una PR.
 
 ## What this is
 
-Full-stack authentication system (login + register) built as a foundation for future multi-client apps (web, mobile, desktop). Functional only — no UI polish.
+Full-stack authentication system (login + register) built as a foundation for future multi-client apps (web, mobile, desktop). Auth pages follow the "Fragments — Love UX" design system (dark palette, bento cards, Geist font, ambient particles).
 
 **Spec:** `docs/superpowers/specs/2026-04-18-auth-design.md`
 
@@ -21,6 +22,7 @@ Full-stack authentication system (login + register) built as a foundation for fu
 | Auth | Better Auth | 1.6.x |
 | Database | PostgreSQL | 16 |
 | Styling | TailwindCSS | 4.x |
+| Icons | lucide-react | 1.x |
 | Testing | Playwright | 1.59.x |
 | Container | Docker Compose | — |
 
@@ -116,11 +118,15 @@ fragments/
 │   ├── web/                        # Next.js — pure UI client
 │   │   └── src/
 │   │       ├── app/
+│   │       │   ├── globals.css         # Design tokens, .bento, .soft-stroke, keyframes
 │   │       │   ├── login/page.tsx
 │   │       │   ├── register/page.tsx
 │   │       │   └── dashboard/
 │   │       │       ├── page.tsx        # Server component
 │   │       │       └── logout-button.tsx  # Client component
+│   │       ├── components/
+│   │       │   ├── auth-orb.tsx        # Decorative Lumen orb (pure CSS, no deps)
+│   │       │   └── ambient-particles.tsx  # Floating fuchsia particles background
 │   │       ├── lib/auth-client.ts      # Better Auth browser client
 │   │       └── middleware.ts           # Protects /dashboard
 │   │
@@ -175,7 +181,7 @@ Both projects run `"strict": true`. Named exports everywhere except Next.js page
 - Password reset
 - Role-based access control
 - Production deployment / HTTPS
-- UI design system
+- UI design system for dashboard (auth pages have design system; dashboard is still unstyled)
 - Mobile / desktop clients (architecture supports them, not yet implemented)
 
 ---
@@ -186,3 +192,5 @@ Both projects run `"strict": true`. Named exports everywhere except Next.js page
 |------|-------------|
 | `docs/superpowers/specs/2026-04-18-auth-design.md` | Full design spec — source of truth |
 | `docs/superpowers/code-review-report.md` | Gemini CLI code review report |
+| `docs/superpowers/plans/2026-04-19-auth-ui-redesign.md` | Auth UI redesign implementation plan |
+| `docs/superpowers/reports-gemini/2026-04-19-auth-ui-redesign-report.md` | Gemini implementation report — UI redesign |
