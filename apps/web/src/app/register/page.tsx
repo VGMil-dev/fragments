@@ -35,7 +35,7 @@ export default function RegisterPage() {
   };
 
   const inputGroupClass =
-    "flex items-center gap-3 px-4 py-3 rounded-2xl transition-shadow bg-white/[0.03] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-within:shadow-[inset_0_0_0_1px_rgba(217,70,239,0.4)]";
+    "flex items-center gap-3 px-4 py-3 rounded-2xl transition-shadow bg-white/[0.03] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-within:shadow-[inset_0_0_0_1px_rgba(217,70,239,0.25)]";
 
   const fields = [
     {

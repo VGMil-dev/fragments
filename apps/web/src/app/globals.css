@@ -52,9 +52,11 @@ html, body {
 /* ---- Selection ---- */
 ::selection { background: rgba(217,70,239,0.35); color: white; }
 
-/* ---- Focus ---- */
-:focus { outline: none; }
-:focus-visible { outline: 2px solid var(--magic); outline-offset: 2px; border-radius: 8px; }
+/* ---- Focus — in @layer base so Tailwind utilities (outline-none) can override ---- */
+@layer base {
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--magic); outline-offset: 2px; border-radius: 8px; }
+}
 
 /* ---- Keyframes ---- */
 @keyframes breathe {
