@@ -23,6 +23,7 @@ Full-stack authentication system (login + register) built as a foundation for fu
 | Database | PostgreSQL | 16 |
 | Styling | TailwindCSS | 4.x |
 | Icons | lucide-react | 1.x |
+| Animation | framer-motion | 12.x |
 | Testing | Playwright | 1.59.x |
 | Container | Docker Compose | — |
 
@@ -122,12 +123,16 @@ fragments/
 │   │       │   ├── login/page.tsx
 │   │       │   ├── register/page.tsx
 │   │       │   └── dashboard/
-│   │       │       ├── page.tsx        # Server component
-│   │       │       └── logout-button.tsx  # Client component
+│   │       │       ├── page.tsx            # Server component — lee sesión + llama dashboard-service
+│   │       │       └── dashboard-shell.tsx # 'use client' — estado global, layout, animaciones
 │   │       ├── components/
-│   │       │   ├── auth-orb.tsx        # Decorative Lumen orb (pure CSS, no deps)
-│   │       │   └── ambient-particles.tsx  # Floating fuchsia particles background
-│   │       ├── lib/auth-client.ts      # Better Auth browser client
+│   │       │   ├── dashboard/              # Componentes del dashboard (Lumen, Sidebar, cards, etc.)
+│   │       │   ├── auth-orb.tsx            # Decorative Lumen orb (pure CSS, no deps)
+│   │       │   └── ambient-particles.tsx   # Floating fuchsia particles background
+│   │       ├── lib/
+│   │       │   ├── auth-client.ts          # Better Auth browser client
+│   │       │   ├── dashboard-types.ts      # Tipos TypeScript del dashboard
+│   │       │   └── dashboard-service.ts    # Mock data hoy → API call mañana
 │   │       └── middleware.ts           # Protects /dashboard
 │   │
 │   └── api/                        # NestJS — auth server
@@ -181,7 +186,9 @@ Both projects run `"strict": true`. Named exports everywhere except Next.js page
 - Password reset
 - Role-based access control
 - Production deployment / HTTPS
-- UI design system for dashboard (auth pages have design system; dashboard is still unstyled)
+- Panel de Tweaks del dashboard (hue, mascot species, density, bounce, particles)
+- Canvas de variantes de mascota (Crystal, Nebula, Jelly)
+- Endpoints reales en NestJS para datos del dashboard (hoy usa mock en dashboard-service.ts)
 - Mobile / desktop clients (architecture supports them, not yet implemented)
 
 ---
