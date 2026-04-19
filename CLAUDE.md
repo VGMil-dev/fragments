@@ -3,6 +3,7 @@
 ## Git Conventions
 
 - No `Co-Authored-By` lines in commits.
+- PR template: `.github/pull_request_template.md` — se carga automáticamente en GitHub al abrir una PR.
 
 ## What this is
 
