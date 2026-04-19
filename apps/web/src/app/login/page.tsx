@@ -30,7 +30,7 @@ export default function LoginPage() {
   const loginWithSocial = async (provider: "google" | "github") => {
     await authClient.signIn.social({
       provider,
-      callbackURL: "/dashboard",
+      callbackURL: "http://localhost:3000/dashboard",
     });
   };
 

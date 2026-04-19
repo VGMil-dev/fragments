@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/auth/ok"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/auth/ok"]
       interval: 5s
       timeout: 3s
       retries: 5
