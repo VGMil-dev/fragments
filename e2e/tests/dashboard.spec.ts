@@ -234,7 +234,7 @@ test.describe("Dashboard — Functional", () => {
   // ── Momentum card ───────────────────────────────────────────────────────────
 
   test("Momentum card muestra el número de racha", async ({ page }) => {
-    await expect(page.locator("text=23")).toBeVisible();
+    await expect(page.locator(".text-4xl").filter({ hasText: "23" })).toBeVisible();
   });
 
   test("Momentum card muestra la barra de segmentos semanales", async ({ page }) => {
