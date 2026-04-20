@@ -49,6 +49,11 @@ html, body {
 ::-webkit-scrollbar-thumb { background: #2a2a36; border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
+
 /* ---- Selection ---- */
 ::selection { background: rgba(217,70,239,0.35); color: white; }
 
@@ -88,4 +93,24 @@ html, body {
   10%  { opacity: 0.6; }
   90%  { opacity: 0.4; }
   100% { transform: translateY(-100vh) translateX(var(--drift)); opacity: 0; }
+}
+
+/* ---- Shake utility (wrong answer) ---- */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.animate-shake { animation: shake 0.4s ease-in-out; }
+
+/* ---- Shimmer utility (AI generating state) ---- */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(217, 70, 239, 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 2s infinite linear;
 }
