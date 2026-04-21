@@ -29,10 +29,10 @@ interface SidebarProps {
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: { es: 'Dashboard', en: 'Dashboard' }, href: '/dashboard' },
-  { id: 'intel', icon: BrainCircuit, label: { es: 'Inteligencia', en: 'Intelligence' }, href: '#' },
+  { id: 'intel', icon: BrainCircuit, label: { es: 'Inteligencia', en: 'Intelligence' }, href: '/challenges' },
   { id: 'momentum', icon: Zap, label: { es: 'Momentum', en: 'Momentum' }, href: '#' },
   { id: 'flow', icon: Wind, label: { es: 'Flujo', en: 'Flow' }, href: '#' },
-  { id: 'settings', icon: Settings, label: { es: 'Ajustes', en: 'Settings' }, href: '#' },
+  { id: 'settings', icon: Settings, label: { es: 'Ajustes', en: 'Settings' }, href: '/settings' },
 ]
 
 const SECONDARY_NAV = [
