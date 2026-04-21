@@ -103,3 +103,17 @@ export async function getDashboardData(): Promise<DashboardData> {
     stats: { xp: 4218, timeToday: 38, totalFragments: 312 },
   }
 }
+
+export async function getLumenEconomy(cookieHeader: string): Promise<{ balance: number; level: number }> {
+  const apiBase = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '';
+  try {
+    const res = await fetch(`${apiBase}/api/v1/economy/balance`, {
+      headers: { Cookie: cookieHeader },
+      cache: 'no-store',
+    });
+    if (!res.ok) return { balance: 0, level: 1 };
+    return res.json();
+  } catch {
+    return { balance: 0, level: 1 };
+  }
+}

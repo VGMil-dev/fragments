@@ -11,14 +11,15 @@ import { Constellation } from '@/components/dashboard/constellation'
 import { SummonBar } from '@/components/dashboard/summon-bar'
 import { SessionDock } from '@/components/dashboard/session-dock'
 import { AmbientParticles } from '@/components/ambient-particles'
-import { DashboardData, DashboardUser, Lang, LumenState } from '@/lib/dashboard-types'
+import { DashboardData, DashboardUser, Lang, LumenState, LumenEconomy } from '@/lib/dashboard-types'
 
 interface DashboardShellProps {
   initialData: DashboardData
   user: DashboardUser
+  economy: LumenEconomy
 }
 
-export default function DashboardShell({ initialData, user }: DashboardShellProps) {
+export default function DashboardShell({ initialData, user, economy }: DashboardShellProps) {
   const [lang, setLang] = useState<Lang>('es')
   const [mascotState, setMascotState] = useState<LumenState>('idle')
   const [sessionOpen, setSessionOpen] = useState(false)
@@ -84,6 +85,7 @@ export default function DashboardShell({ initialData, user }: DashboardShellProp
           <CompanionCard 
             lang={lang}
             user={user}
+            economy={economy}
             mascotState={mascotState}
             onPoke={handlePoke}
             onFeed={handleFeed}

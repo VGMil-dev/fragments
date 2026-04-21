@@ -1,4 +1,4 @@
-# Fragments — Auth System
+# Fragments — Learning Platform
 
 ## Git Conventions
 
@@ -7,9 +7,11 @@
 
 ## What this is
 
-Full-stack authentication system (login + register) built as a foundation for future multi-client apps (web, mobile, desktop). Auth pages follow the "Fragments — Love UX" design system (dark palette, bento cards, Geist font, ambient particles).
+Plataforma educativa de programación donde los estudiantes enseñan a **Lumen** (una mascota IA) a programar resolviendo retos de código. Incluye auth completa, dashboard con economía ACH, y un loop de aprendizaje con fases conceptuales + código evaluadas por IA.
 
-**Spec:** `docs/superpowers/specs/2026-04-18-auth-design.md`
+**Vision spec:** `docs/superpowers/specs/2026-04-19-fragments-vision.md`
+**Roadmap:** `docs/superpowers/specs/2026-04-19-fragments-roadmap.md`
+**Auth spec:** `docs/superpowers/specs/2026-04-18-auth-design.md`
 
 ---
 
@@ -24,6 +26,9 @@ Full-stack authentication system (login + register) built as a foundation for fu
 | Styling | TailwindCSS | 4.x |
 | Icons | lucide-react | 1.x |
 | Animation | framer-motion | 12.x |
+| Code editor | Monaco Editor | latest |
+| AI SDK | @google/genai | 0.14.x |
+| Code runner | Piston API (emkc.org) | v2 |
 | Testing | Playwright | 1.59.x |
 | Container | Docker Compose | — |
 
@@ -46,6 +51,15 @@ Better Auth stores sessions in PostgreSQL and sets an `httpOnly` cookie (`better
 
 Server-side code always uses: `process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL`
 
+### AI con claves del estudiante
+El estudiante provee sus propias keys de Google AI Studio y/o OpenRouter. Se almacenan cifradas en la DB con AES-256-GCM. La plataforma no paga por AI.
+- Primario: `gemini-2.5-flash` via `@google/genai`
+- Fallback: OpenRouter (`google/gemini-flash-1.5`)
+- `ENCRYPTION_KEY` (64-char hex) en `.env` — obligatorio para arrancar el API
+
+### userId en endpoints de la Learning Loop
+Los endpoints `/api/v1/challenges`, `/api/v1/settings`, `/api/v1/economy` usan `(req as any).user?.id ?? 'anonymous'`. Better Auth no tiene middleware global en NestJS aún — todos los usuarios comparten el slot `'anonymous'`. Pendiente para Phase 2: middleware de sesión real.
+
 ---
 
 ## Ports
@@ -55,6 +69,27 @@ Server-side code always uses: `process.env.API_INTERNAL_URL ?? process.env.NEXT_
 | Next.js (web) | 3000 |
 | NestJS (api) | 3001 |
 | PostgreSQL (db) | 5432 |
+
+---
+
+## Required env vars
+
+`.env` en la raíz del repo (Docker Compose lo carga automáticamente):
+
+```env
+# OAuth (GitHub + Google login)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+
+# Encriptación de API keys de estudiantes
+ENCRYPTION_KEY=<64-char hex — genera con: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+
+# URLs (para desarrollo local sin Docker)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fragments
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
 
 ---
 
@@ -79,8 +114,6 @@ npm run dev
 docker compose up
 ```
 
-> Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` in a `.env` file at the repo root.
-
 ---
 
 ## Running Tests
@@ -94,8 +127,8 @@ cd e2e && npx playwright test --headed
 # UI mode (visual debugger)
 cd e2e && npx playwright test --ui
 
-# Specific test file
-cd e2e && npx playwright test tests/login.spec.ts --headed
+# Challenge flow (Phase 1)
+cd e2e && npx playwright test tests/challenge-flow.spec.ts --headed
 
 # Debug mode (step by step)
 cd e2e && npx playwright test tests/login.spec.ts --debug
@@ -107,6 +140,8 @@ cd e2e && npx playwright test tests/login.spec.ts --debug
 - **Password:** `Test1234!`
 - **Name:** `Test User`
 
+> El test `correct conceptual answer advances to code phase` requiere que el usuario `anonymous` tenga una Google AI key guardada en `user_api_keys`. Configurarla una vez via `/settings` en el browser es suficiente.
+
 ---
 
 ## Project Structure
@@ -114,35 +149,52 @@ cd e2e && npx playwright test tests/login.spec.ts --debug
 ```
 fragments/
 ├── docker-compose.yml
-├── .env.example
+├── .env
 ├── apps/
 │   ├── web/                        # Next.js — pure UI client
 │   │   └── src/
 │   │       ├── app/
-│   │       │   ├── globals.css         # Design tokens, .bento, .soft-stroke, keyframes
+│   │       │   ├── globals.css             # Design tokens, .bento, .soft-stroke, keyframes
 │   │       │   ├── login/page.tsx
 │   │       │   ├── register/page.tsx
-│   │       │   └── dashboard/
-│   │       │       ├── page.tsx            # Server component — lee sesión + llama dashboard-service
-│   │       │       └── dashboard-shell.tsx # 'use client' — estado global, layout, animaciones
+│   │       │   ├── dashboard/
+│   │       │   │   ├── page.tsx            # Server component — sesión + economía ACH
+│   │       │   │   └── dashboard-shell.tsx # 'use client' — layout, animaciones
+│   │       │   ├── challenges/
+│   │       │   │   ├── page.tsx            # Listado de retos
+│   │       │   │   └── [id]/
+│   │       │   │       ├── page.tsx
+│   │       │   │       └── challenge-shell.tsx  # Flujo conceptual → código
+│   │       │   └── settings/
+│   │       │       ├── page.tsx
+│   │       │       └── settings-shell.tsx  # Formulario de API keys
 │   │       ├── components/
-│   │       │   ├── dashboard/              # Componentes del dashboard (Lumen, Sidebar, cards, etc.)
-│   │       │   ├── auth-orb.tsx            # Decorative Lumen orb (pure CSS, no deps)
-│   │       │   └── ambient-particles.tsx   # Floating fuchsia particles background
+│   │       │   ├── challenges/             # ConceptualPhase, CodePhase, LumenHintTrigger
+│   │       │   ├── dashboard/              # Lumen, Sidebar, CompanionCard, etc.
+│   │       │   ├── settings/               # ApiKeysForm
+│   │       │   ├── auth-orb.tsx
+│   │       │   └── ambient-particles.tsx
 │   │       ├── lib/
 │   │       │   ├── auth-client.ts          # Better Auth browser client
-│   │       │   ├── dashboard-types.ts      # Tipos TypeScript del dashboard
-│   │       │   └── dashboard-service.ts    # Mock data hoy → API call mañana
-│   │       └── middleware.ts           # Protects /dashboard
+│   │       │   ├── challenges-service.ts   # fetch wrappers para challenges API
+│   │       │   ├── dashboard-service.ts    # getLumenEconomy() → API real
+│   │       │   └── dashboard-types.ts
+│   │       └── middleware.ts               # Protects /dashboard
 │   │
-│   └── api/                        # NestJS — auth server
+│   └── api/                        # NestJS — auth + learning API
 │       └── src/
-│           ├── auth/
-│           │   ├── better-auth.ts      # Auth instance (Google, GitHub, email)
-│           │   ├── auth.controller.ts  # Wildcard → toNodeHandler(auth)
-│           │   └── auth.module.ts
+│           ├── auth/               # Better Auth (Google, GitHub, email)
+│           ├── database/
+│           │   ├── database.module.ts      # Global pg Pool
+│           │   ├── migrations/001-phase1.sql
+│           │   └── seeds/001-challenges.sql
+│           ├── ai-provider/        # GoogleGenAI + OpenRouter, AES-256-GCM encryption
+│           ├── settings/           # CRUD de API keys cifradas
+│           ├── challenges/         # CRUD + submission + Piston + PhaseEvaluator
+│           ├── hints/              # Pre-defined hints + AI fallback
+│           ├── economy/            # ACH balance + feedLumen
 │           ├── app.module.ts
-│           └── main.ts                 # CORS, cookieParser, port 3001
+│           └── main.ts
 │
 └── e2e/                            # Playwright tests
     ├── playwright.config.ts
@@ -150,7 +202,9 @@ fragments/
     └── tests/
         ├── register.spec.ts
         ├── login.spec.ts
-        └── dashboard.spec.ts
+        ├── dashboard.spec.ts
+        ├── dashboard-visual.spec.ts
+        └── challenge-flow.spec.ts  # Phase 1 — 6 tests
 ```
 
 ---
@@ -174,6 +228,25 @@ fragments/
 
 ---
 
+## Learning Loop (Phase 1)
+
+### Challenge submission
+`POST /api/v1/challenges/:challengeId/phases/:phaseId/submit`
+- `kind === 'code'` → Piston API → compara stdout con expected → +25 ACH
+- `kind === 'conceptual'` → Gemini 2.5 Flash evalúa con rubric → +10 ACH
+- Deduplicación: `ON CONFLICT (user_id, reason) DO NOTHING` en `ach_transaction`
+
+### Hints
+`POST /api/v1/challenges/:challengeId/phases/:phaseId/hint`
+- Busca hint pre-definido por `level` en `challenge_hint`
+- Si no hay → genera con AI usando el rubric y la pregunta
+
+### Lumen economy
+- `GET /api/v1/economy/balance` → `{ balance, level }`
+- `POST /api/v1/economy/feed` → descuenta 20 ACH, sube level +1
+
+---
+
 ## TypeScript
 
 Both projects run `"strict": true`. Named exports everywhere except Next.js page components (which must be default exports).
@@ -182,13 +255,12 @@ Both projects run `"strict": true`. Named exports everywhere except Next.js page
 
 ## Out of Scope (intentionally not built)
 
-- Email verification
-- Password reset
+- Email verification / password reset
 - Role-based access control
 - Production deployment / HTTPS
+- Middleware de sesión real en endpoints de la Learning Loop (Phase 2)
 - Panel de Tweaks del dashboard (hue, mascot species, density, bounce, particles)
 - Canvas de variantes de mascota (Crystal, Nebula, Jelly)
-- Endpoints reales en NestJS para datos del dashboard (hoy usa mock en dashboard-service.ts)
 - Mobile / desktop clients (architecture supports them, not yet implemented)
 
 ---
@@ -197,7 +269,8 @@ Both projects run `"strict": true`. Named exports everywhere except Next.js page
 
 | File | Description |
 |------|-------------|
-| `docs/superpowers/specs/2026-04-18-auth-design.md` | Full design spec — source of truth |
+| `docs/superpowers/specs/2026-04-19-fragments-vision.md` | Product vision — source of truth |
+| `docs/superpowers/specs/2026-04-19-fragments-roadmap.md` | 5-phase product roadmap |
+| `docs/superpowers/specs/2026-04-18-auth-design.md` | Auth design spec |
+| `docs/superpowers/plans/2026-04-19-phase1-learning-loop.md` | Phase 1 implementation plan |
 | `docs/superpowers/code-review-report.md` | Gemini CLI code review report |
-| `docs/superpowers/plans/2026-04-19-auth-ui-redesign.md` | Auth UI redesign implementation plan |
-| `docs/superpowers/reports-gemini/2026-04-19-auth-ui-redesign-report.md` | Gemini implementation report — UI redesign |

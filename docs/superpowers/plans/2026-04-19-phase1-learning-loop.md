@@ -4,9 +4,67 @@
 
 **Goal:** Build the core learning loop: students solve multi-phase challenges (conceptual + code), Lumen detects inactivity and offers AI-generated hints, and completing challenges earns ACH to feed Lumen.
 
-**Architecture:** NestJS adds four new modules (challenges, hints, economy, progress) using the existing `pg` Pool pattern. Next.js adds challenge list and detail pages with Monaco editor and an inactivity-based hint trigger. The Piston API handles sandboxed code execution; Claude Haiku generates progressive hints.
+**Architecture:** NestJS adds five new modules (ai-provider, settings, challenges, hints, economy) using the existing `pg` Pool pattern. The AI calls go through `AiProviderService` which uses the student's own API keys (stored encrypted in the DB): Google AI Studio as primary, OpenRouter as fallback. Next.js adds challenge list and detail pages with Monaco editor, an inactivity-based hint trigger, and a settings page for the student to enter their keys.
 
-**Tech Stack:** NestJS 11 · pg (raw SQL) · Piston API (HTTP) · @anthropic-ai/sdk · Monaco Editor (@monaco-editor/react) · Playwright
+**Tech Stack:** NestJS 11 · pg (raw SQL) · Piston API (HTTP) · @google/generative-ai · Monaco Editor (@monaco-editor/react) · Playwright
+
+**AI Strategy:**
+- **Primary:** Google AI Studio (`gemini-2.0-flash`) — fast, free within quota limits
+- **Fallback:** OpenRouter (OpenAI-compatible API) — redundancy; supports Gemini mirrors, Llama 3, and others
+- **Keys:** Each student provides their own keys via Settings UI. Keys are encrypted with AES-256-GCM before storing in the DB. The platform never pays for AI calls.
+
+---
+
+## Instructions for Gemini (or any AI agent executing this plan)
+
+This is a self-contained implementation plan. You have everything you need here — do not ask for clarification before starting.
+
+### Before you begin — read these files for codebase context
+- `CLAUDE.md` — project overview, stack, architecture decisions, running instructions
+- `docs/superpowers/specs/2026-04-19-fragments-vision.md` — product vision and principles
+- `docs/superpowers/specs/2026-04-19-fragments-roadmap.md` — full roadmap, Phase 1 scope
+- `apps/api/src/auth/better-auth.ts` — existing NestJS pattern to follow
+- `apps/api/src/app.module.ts` — current module registration
+- `apps/api/src/main.ts` — current bootstrap config
+- `apps/web/src/app/dashboard/page.tsx` — existing server component pattern
+- `apps/web/src/app/globals.css` — design tokens (.bento, .soft-stroke, CSS variables)
+
+### Rules — follow these exactly
+1. **Work on branch `feat/phase-1-learning-loop`** — Task 0 creates it. Never commit directly to `main`.
+2. **Execute tasks in order** — each task builds on the previous. Do not skip.
+3. **Run tests after each task** — the test commands are in each step. If a test fails, fix it before moving to the next task.
+4. **Complete code only** — every step has exact code. Do not invent or infer missing pieces.
+5. **Commit after each task** — commit messages are provided. Use them exactly (no Co-Authored-By lines).
+6. **TypeScript strict mode** — both projects use `"strict": true`. No `any` unless explicitly written in the plan.
+7. **Named exports only** — except Next.js page components (which must be default exports).
+8. **Do not install additional dependencies** — only `@google/generative-ai` and `@monaco-editor/react` (Task 1).
+9. **Do not modify auth files** — `apps/api/src/auth/` is off-limits.
+10. **Open a PR at the end** — Task 18 creates the PR against `main`.
+
+### Environment variables required
+Add this to `apps/api/.env` before running the API (Task 3 step 4 reminds you):
+```env
+ENCRYPTION_KEY=<32-byte hex string — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+```
+**No AI API keys in `.env`** — the student enters their own keys through the Settings UI. The platform never stores or uses a shared AI key.
+
+### How services run locally
+```bash
+# Terminal 1 — database only
+docker compose up db
+
+# Terminal 2 — API (NestJS on :3001)
+cd apps/api && npm run start:dev
+
+# Terminal 3 — Web (Next.js on :3000)
+cd apps/web && npm run dev
+```
+
+### Running Playwright tests
+```bash
+# All services must be running first, then:
+cd e2e && npx playwright test tests/challenge-flow.spec.ts --headed
+```
 
 ---
 
@@ -18,39 +76,47 @@ database/
   database.module.ts        — global Pool provider shared by all modules
   database.types.ts         — QueryResult helper type
 
+ai-provider/
+  ai-provider.module.ts
+  ai-provider.service.ts    — primary (Google AI Studio) + fallback (OpenRouter) logic
+  ai-provider.types.ts      — AiMessage, AiResponse interfaces
+  encryption.service.ts     — AES-256-GCM encrypt/decrypt for API keys
+
+settings/
+  settings.module.ts
+  settings.controller.ts    — GET /api/v1/settings/api-keys, POST /api/v1/settings/api-keys
+  settings.service.ts       — store/retrieve encrypted keys per user
+
 challenges/
   challenges.module.ts
-  challenges.controller.ts  — GET /api/challenges, GET /api/challenges/:id, POST /api/challenges
+  challenges.controller.ts  — GET /api/v1/challenges, GET /api/v1/challenges/:id, POST /api/v1/challenges
   challenges.service.ts     — CRUD + seed queries
   challenges.types.ts       — Challenge, Phase, Hint TS interfaces
   piston.service.ts         — code execution via Piston HTTP API
-  phase-evaluator.service.ts — conceptual phase grading via Claude
+  phase-evaluator.service.ts — conceptual phase grading via AiProviderService
+  submission.controller.ts  — POST /api/v1/challenges/:id/phases/:phaseId/submit
+  submission.service.ts     — orchestrates Piston + PhaseEvaluator + ACH
 
 hints/
   hints.module.ts
-  hints.controller.ts       — POST /api/challenges/:id/hint
-  hints.service.ts          — Claude Haiku prompt + hint_event insert
+  hints.controller.ts       — POST /api/v1/challenges/:id/phases/:phaseId/hint
+  hints.service.ts          — pre-defined hints + AiProviderService fallback
 
 economy/
   economy.module.ts
-  economy.controller.ts     — GET /api/economy/balance, POST /api/economy/feed
+  economy.controller.ts     — GET /api/v1/economy/balance, POST /api/v1/economy/feed
   economy.service.ts        — ACH earn/spend with DB transactions
-
-progress/
-  progress.module.ts
-  progress.controller.ts    — GET /api/progress
-  progress.service.ts       — user progress + lumen level
 ```
 
 ### Modified — Backend
 ```
-app.module.ts               — import all 4 new modules + DatabaseModule
-main.ts                     — add /api/v1 global prefix (except /api/auth/*)
+app.module.ts               — import all 5 new modules + DatabaseModule
 ```
 
 ### New — Database
 ```
-apps/api/src/database/migrations/001-phase1.sql
+apps/api/src/database/migrations/001-phase1.sql  — includes user_api_keys table
+apps/api/src/database/seeds/001-challenges.sql
 ```
 
 ### New — Frontend (`apps/web/src/`)
@@ -60,16 +126,23 @@ app/challenges/
   [id]/page.tsx             — server component: fetch challenge data
   [id]/challenge-shell.tsx  — 'use client': phase state machine + Lumen trigger
 
+app/settings/
+  page.tsx                  — settings page (server component wrapper)
+  settings-shell.tsx        — 'use client': API key form + status indicators
+
 components/challenges/
   challenge-card.tsx        — card in challenge list
   conceptual-phase.tsx      — question answering / pseudocode input
   code-phase.tsx            — Monaco editor + run button + test results
   lumen-hint-trigger.tsx    — inactivity timer + hint button + hint bubble
 
+components/settings/
+  api-keys-form.tsx         — form: Google AI key + OpenRouter key + save button
+
 lib/
   challenges-service.ts     — fetch wrappers for challenge endpoints
   economy-service.ts        — fetch wrappers for economy endpoints
-  progress-service.ts       — fetch wrappers for progress endpoint
+  settings-service.ts       — fetch wrappers for settings endpoints
 ```
 
 ### Modified — Frontend
@@ -91,14 +164,52 @@ apps/api/src/database/seeds/001-challenges.sql
 
 ---
 
+## Task 0: Create feature branch
+
+**Files:** none (git only)
+
+- [ ] **Step 1: Verify you are on main and it is clean**
+
+```bash
+git checkout main
+git status
+```
+
+Expected: `On branch main` · `nothing to commit, working tree clean`
+If there are uncommitted changes, stop and ask the developer to resolve them first.
+
+- [ ] **Step 2: Pull latest main**
+
+```bash
+git pull origin main
+```
+
+- [ ] **Step 3: Create and switch to feature branch**
+
+```bash
+git checkout -b feat/phase-1-learning-loop
+```
+
+Expected: `Switched to a new branch 'feat/phase-1-learning-loop'`
+
+- [ ] **Step 4: Verify branch**
+
+```bash
+git branch
+```
+
+Expected: `* feat/phase-1-learning-loop` is the active branch.
+
+---
+
 ## Task 1: Install dependencies
 
 **Files:** `apps/api/package.json`, `apps/web/package.json`
 
-- [ ] **Step 1: Install Anthropic SDK in API**
+- [ ] **Step 1: Install Google Generative AI SDK in API**
 
 ```bash
-cd apps/api && npm install @anthropic-ai/sdk
+cd apps/api && npm install @google/generative-ai
 ```
 
 Expected output: `added 1 package` (or similar, no errors)
@@ -115,7 +226,7 @@ Expected output: added packages, no errors
 
 ```bash
 git add apps/api/package.json apps/api/package-lock.json apps/web/package.json apps/web/package-lock.json
-git commit -m "chore: install @anthropic-ai/sdk and @monaco-editor/react"
+git commit -m "chore: install @google/generative-ai and @monaco-editor/react"
 ```
 
 ---
@@ -193,9 +304,17 @@ CREATE TABLE IF NOT EXISTS lumen_progress (
   ach_balance INT         NOT NULL DEFAULT 0,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Student API keys (encrypted at application level with AES-256-GCM)
+CREATE TABLE IF NOT EXISTS user_api_keys (
+  user_id             TEXT        PRIMARY KEY,
+  google_ai_key_enc   TEXT,
+  openrouter_key_enc  TEXT,
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
-Note: `user_id` is `TEXT` because Better Auth generates string IDs.
+Note: `user_id` is `TEXT` because Better Auth generates string IDs. API keys are encrypted before storage — the raw key never appears in the DB.
 
 - [ ] **Step 2: Write seed data**
 
@@ -315,7 +434,559 @@ git commit -m "feat(api): add Phase 1 database schema and seed challenges"
 
 ---
 
-## Task 3: Database module
+## Task 3: AI Provider module (encryption + Google AI Studio + OpenRouter)
+
+**Files:**
+- Create: `apps/api/src/ai-provider/ai-provider.types.ts`
+- Create: `apps/api/src/ai-provider/encryption.service.ts`
+- Create: `apps/api/src/ai-provider/encryption.service.spec.ts`
+- Create: `apps/api/src/ai-provider/ai-provider.service.ts`
+- Create: `apps/api/src/ai-provider/ai-provider.service.spec.ts`
+- Create: `apps/api/src/ai-provider/ai-provider.module.ts`
+
+- [ ] **Step 1: Add ENCRYPTION_KEY to .env**
+
+Add to `apps/api/.env` and `apps/api/.env.example`:
+
+```env
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+ENCRYPTION_KEY=your-64-char-hex-string-here
+```
+
+Generate a real value and put it in `.env` (never commit `.env`). The `.env.example` keeps the placeholder.
+
+- [ ] **Step 2: Write AI provider types**
+
+Create `apps/api/src/ai-provider/ai-provider.types.ts`:
+
+```typescript
+export interface AiMessage {
+  role: 'user' | 'model';
+  content: string;
+}
+
+export interface AiResponse {
+  text: string;
+  provider: 'google' | 'openrouter';
+}
+
+export class AiUnavailableError extends Error {
+  constructor(public readonly reason: string) {
+    super(`AI unavailable: ${reason}`);
+  }
+}
+```
+
+- [ ] **Step 3: Write failing encryption test**
+
+Create `apps/api/src/ai-provider/encryption.service.spec.ts`:
+
+```typescript
+import { EncryptionService } from './encryption.service';
+
+describe('EncryptionService', () => {
+  let service: EncryptionService;
+
+  beforeEach(() => {
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64); // 32 bytes hex
+    service = new EncryptionService();
+  });
+
+  it('encrypt and decrypt round-trip returns original string', () => {
+    const original = 'AIzaSyTest1234567890';
+    const encrypted = service.encrypt(original);
+    expect(encrypted).not.toBe(original);
+    expect(service.decrypt(encrypted)).toBe(original);
+  });
+
+  it('two encryptions of the same string produce different ciphertexts (IV randomness)', () => {
+    const key = 'sk-test-key';
+    expect(service.encrypt(key)).not.toBe(service.encrypt(key));
+  });
+
+  it('decrypt returns null for tampered ciphertext', () => {
+    const encrypted = service.encrypt('valid-key');
+    const tampered = encrypted.slice(0, -4) + 'xxxx';
+    expect(service.decrypt(tampered)).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 4: Run test — verify it fails**
+
+```bash
+cd apps/api && npx jest encryption.service.spec.ts --no-coverage
+```
+
+Expected: FAIL
+
+- [ ] **Step 5: Implement EncryptionService**
+
+Create `apps/api/src/ai-provider/encryption.service.ts`:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+
+@Injectable()
+export class EncryptionService {
+  private readonly key: Buffer;
+
+  constructor() {
+    const hex = process.env.ENCRYPTION_KEY ?? '';
+    if (hex.length !== 64) throw new Error('ENCRYPTION_KEY must be a 64-char hex string (32 bytes)');
+    this.key = Buffer.from(hex, 'hex');
+  }
+
+  encrypt(plaintext: string): string {
+    const iv = randomBytes(12); // 96-bit IV for GCM
+    const cipher = createCipheriv(ALGORITHM, this.key, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    // Format: iv(12) + tag(16) + ciphertext — all base64
+    return Buffer.concat([iv, tag, encrypted]).toString('base64');
+  }
+
+  decrypt(ciphertext: string): string | null {
+    try {
+      const buf = Buffer.from(ciphertext, 'base64');
+      const iv = buf.subarray(0, 12);
+      const tag = buf.subarray(12, 28);
+      const encrypted = buf.subarray(28);
+      const decipher = createDecipheriv(ALGORITHM, this.key, iv);
+      decipher.setAuthTag(tag);
+      return decipher.update(encrypted) + decipher.final('utf8');
+    } catch {
+      return null;
+    }
+  }
+}
+```
+
+- [ ] **Step 6: Run encryption tests — verify they pass**
+
+```bash
+cd apps/api && npx jest encryption.service.spec.ts --no-coverage
+```
+
+Expected: PASS (3 tests)
+
+- [ ] **Step 7: Write failing AI provider test**
+
+Create `apps/api/src/ai-provider/ai-provider.service.spec.ts`:
+
+```typescript
+import { AiProviderService } from './ai-provider.service';
+import { EncryptionService } from './encryption.service';
+
+const mockEncryption = {
+  encrypt: jest.fn((v: string) => `enc:${v}`),
+  decrypt: jest.fn((v: string) => v.replace('enc:', '')),
+};
+
+describe('AiProviderService', () => {
+  let service: AiProviderService;
+
+  beforeEach(() => {
+    service = new AiProviderService(mockEncryption as unknown as EncryptionService);
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
+
+  it('uses Google AI when google key is available', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: 'Pista: revisa tu bucle.' }] } }],
+      }),
+    });
+
+    const result = await service.generate('enc:AIzaSyTest', null, 'Dame una pista');
+    expect(result.text).toBe('Pista: revisa tu bucle.');
+    expect(result.provider).toBe('google');
+  });
+
+  it('falls back to OpenRouter when Google fails', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, status: 429 }) // Google fails
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'Pista desde OpenRouter.' } }],
+        }),
+      });
+
+    const result = await service.generate('enc:AIzaSyTest', 'enc:sk-or-test', 'Dame una pista');
+    expect(result.text).toBe('Pista desde OpenRouter.');
+    expect(result.provider).toBe('openrouter');
+  });
+
+  it('throws AiUnavailableError when both providers fail', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
+
+    await expect(
+      service.generate('enc:AIzaSyTest', 'enc:sk-or-test', 'Dame una pista'),
+    ).rejects.toThrow('AI unavailable');
+  });
+
+  it('throws AiUnavailableError when no keys are set', async () => {
+    await expect(
+      service.generate(null, null, 'Dame una pista'),
+    ).rejects.toThrow('AI unavailable');
+  });
+});
+```
+
+- [ ] **Step 8: Run test — verify it fails**
+
+```bash
+cd apps/api && npx jest ai-provider.service.spec.ts --no-coverage
+```
+
+Expected: FAIL
+
+- [ ] **Step 9: Implement AiProviderService**
+
+Create `apps/api/src/ai-provider/ai-provider.service.ts`:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { EncryptionService } from './encryption.service';
+import { AiResponse, AiUnavailableError } from './ai-provider.types';
+
+const GOOGLE_MODEL = 'gemini-2.0-flash';
+const OPENROUTER_MODEL = 'google/gemini-flash-1.5';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+@Injectable()
+export class AiProviderService {
+  constructor(private readonly encryption: EncryptionService) {}
+
+  /**
+   * Generate text using the student's own API keys.
+   * Tries Google AI Studio first, falls back to OpenRouter.
+   *
+   * @param encryptedGoogleKey — encrypted Google AI Studio key from DB (or null)
+   * @param encryptedOpenRouterKey — encrypted OpenRouter key from DB (or null)
+   * @param prompt — the prompt to send
+   */
+  async generate(
+    encryptedGoogleKey: string | null,
+    encryptedOpenRouterKey: string | null,
+    prompt: string,
+  ): Promise<AiResponse> {
+    if (encryptedGoogleKey) {
+      const googleKey = this.encryption.decrypt(encryptedGoogleKey);
+      if (googleKey) {
+        try {
+          return await this.callGoogle(googleKey, prompt);
+        } catch {
+          // fall through to OpenRouter
+        }
+      }
+    }
+
+    if (encryptedOpenRouterKey) {
+      const orKey = this.encryption.decrypt(encryptedOpenRouterKey);
+      if (orKey) {
+        try {
+          return await this.callOpenRouter(orKey, prompt);
+        } catch {
+          // fall through to error
+        }
+      }
+    }
+
+    throw new AiUnavailableError(
+      encryptedGoogleKey || encryptedOpenRouterKey
+        ? 'Both providers failed'
+        : 'No API keys configured — student must add keys in Settings',
+    );
+  }
+
+  private async callGoogle(apiKey: string, prompt: string): Promise<AiResponse> {
+    const client = new GoogleGenerativeAI(apiKey);
+    const model = client.getGenerativeModel({ model: GOOGLE_MODEL });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    if (!text) throw new Error('Empty response from Google AI');
+    return { text, provider: 'google' };
+  }
+
+  private async callOpenRouter(apiKey: string, prompt: string): Promise<AiResponse> {
+    const res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://fragments.app',
+        'X-Title': 'Fragments',
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 200,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content ?? '';
+    if (!text) throw new Error('Empty response from OpenRouter');
+    return { text, provider: 'openrouter' };
+  }
+}
+```
+
+- [ ] **Step 10: Run tests — verify they pass**
+
+```bash
+cd apps/api && npx jest ai-provider.service.spec.ts --no-coverage
+```
+
+Expected: PASS (4 tests)
+
+- [ ] **Step 11: Create AI provider module**
+
+Create `apps/api/src/ai-provider/ai-provider.module.ts`:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { AiProviderService } from './ai-provider.service';
+import { EncryptionService } from './encryption.service';
+
+@Module({
+  providers: [AiProviderService, EncryptionService],
+  exports: [AiProviderService],
+})
+export class AiProviderModule {}
+```
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add apps/api/src/ai-provider/ apps/api/.env.example
+git commit -m "feat(api): add AiProviderModule with AES-256-GCM encryption and Google AI/OpenRouter fallback"
+```
+
+---
+
+## Task 4: Settings module (store/retrieve student API keys)
+
+**Files:**
+- Create: `apps/api/src/settings/settings.service.ts`
+- Create: `apps/api/src/settings/settings.service.spec.ts`
+- Create: `apps/api/src/settings/settings.controller.ts`
+- Create: `apps/api/src/settings/settings.module.ts`
+
+The `user_api_keys` table is created in Task 2 (migration). This task wires the service on top of it.
+
+- [ ] **Step 1: Write failing test**
+
+Create `apps/api/src/settings/settings.service.spec.ts`:
+
+```typescript
+import { Test } from '@nestjs/testing';
+import { SettingsService } from './settings.service';
+import { EncryptionService } from '../ai-provider/encryption.service';
+
+const mockPool = { query: jest.fn() };
+const mockEncryption = {
+  encrypt: jest.fn((v: string) => `enc:${v}`),
+  decrypt: jest.fn((v: string) => v.replace('enc:', '')),
+};
+
+describe('SettingsService', () => {
+  let service: SettingsService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        SettingsService,
+        { provide: 'DB_POOL', useValue: mockPool },
+        { provide: EncryptionService, useValue: mockEncryption },
+      ],
+    }).compile();
+    service = module.get<SettingsService>(SettingsService);
+    jest.clearAllMocks();
+  });
+
+  it('getKeysStatus returns hasGoogleKey=false when no row exists', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [] });
+    const result = await service.getKeysStatus('user-1');
+    expect(result.hasGoogleKey).toBe(false);
+    expect(result.hasOpenRouterKey).toBe(false);
+  });
+
+  it('getKeysStatus returns hasGoogleKey=true when key is stored', async () => {
+    mockPool.query.mockResolvedValueOnce({
+      rows: [{ google_ai_key_enc: 'enc:AIzaSy...', openrouter_key_enc: null }],
+    });
+    const result = await service.getKeysStatus('user-1');
+    expect(result.hasGoogleKey).toBe(true);
+    expect(result.hasOpenRouterKey).toBe(false);
+  });
+
+  it('saveKeys encrypts and upserts both keys', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [] });
+    await service.saveKeys('user-1', 'AIzaSyReal', 'sk-or-real');
+    expect(mockEncryption.encrypt).toHaveBeenCalledWith('AIzaSyReal');
+    expect(mockEncryption.encrypt).toHaveBeenCalledWith('sk-or-real');
+    expect(mockPool.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO user_api_keys'),
+      expect.arrayContaining(['user-1']),
+    );
+  });
+});
+```
+
+- [ ] **Step 2: Run test — verify it fails**
+
+```bash
+cd apps/api && npx jest settings.service.spec.ts --no-coverage
+```
+
+Expected: FAIL
+
+- [ ] **Step 3: Implement SettingsService**
+
+Create `apps/api/src/settings/settings.service.ts`:
+
+```typescript
+import { Inject, Injectable } from '@nestjs/common';
+import { Pool } from 'pg';
+import { EncryptionService } from '../ai-provider/encryption.service';
+
+export interface KeysStatus {
+  hasGoogleKey: boolean;
+  hasOpenRouterKey: boolean;
+}
+
+export interface EncryptedKeys {
+  googleKeyEnc: string | null;
+  openRouterKeyEnc: string | null;
+}
+
+@Injectable()
+export class SettingsService {
+  constructor(
+    @Inject('DB_POOL') private pool: Pool,
+    private encryption: EncryptionService,
+  ) {}
+
+  async getKeysStatus(userId: string): Promise<KeysStatus> {
+    const { rows: [row] } = await this.pool.query(
+      'SELECT google_ai_key_enc, openrouter_key_enc FROM user_api_keys WHERE user_id = $1',
+      [userId],
+    );
+    return {
+      hasGoogleKey: !!row?.google_ai_key_enc,
+      hasOpenRouterKey: !!row?.openrouter_key_enc,
+    };
+  }
+
+  async getEncryptedKeys(userId: string): Promise<EncryptedKeys> {
+    const { rows: [row] } = await this.pool.query(
+      'SELECT google_ai_key_enc, openrouter_key_enc FROM user_api_keys WHERE user_id = $1',
+      [userId],
+    );
+    return {
+      googleKeyEnc: row?.google_ai_key_enc ?? null,
+      openRouterKeyEnc: row?.openrouter_key_enc ?? null,
+    };
+  }
+
+  async saveKeys(
+    userId: string,
+    googleKey: string | null,
+    openRouterKey: string | null,
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO user_api_keys (user_id, google_ai_key_enc, openrouter_key_enc)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE
+         SET google_ai_key_enc   = EXCLUDED.google_ai_key_enc,
+             openrouter_key_enc  = EXCLUDED.openrouter_key_enc,
+             updated_at          = NOW()`,
+      [
+        userId,
+        googleKey ? this.encryption.encrypt(googleKey) : null,
+        openRouterKey ? this.encryption.encrypt(openRouterKey) : null,
+      ],
+    );
+  }
+}
+```
+
+- [ ] **Step 4: Run tests — verify they pass**
+
+```bash
+cd apps/api && npx jest settings.service.spec.ts --no-coverage
+```
+
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Create controller and module**
+
+Create `apps/api/src/settings/settings.controller.ts`:
+
+```typescript
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Request } from 'express';
+import { SettingsService } from './settings.service';
+
+@Controller('api/v1/settings')
+export class SettingsController {
+  constructor(private readonly settingsService: SettingsService) {}
+
+  @Get('api-keys')
+  getStatus(@Req() req: Request) {
+    const userId = (req as any).user?.id ?? 'anonymous';
+    return this.settingsService.getKeysStatus(userId);
+  }
+
+  @Post('api-keys')
+  saveKeys(
+    @Body('googleKey') googleKey: string | null,
+    @Body('openRouterKey') openRouterKey: string | null,
+    @Req() req: Request,
+  ) {
+    const userId = (req as any).user?.id ?? 'anonymous';
+    return this.settingsService.saveKeys(userId, googleKey ?? null, openRouterKey ?? null);
+  }
+}
+```
+
+Create `apps/api/src/settings/settings.module.ts`:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { SettingsController } from './settings.controller';
+import { SettingsService } from './settings.service';
+import { AiProviderModule } from '../ai-provider/ai-provider.module';
+
+@Module({
+  imports: [AiProviderModule],
+  controllers: [SettingsController],
+  providers: [SettingsService],
+  exports: [SettingsService],
+})
+export class SettingsModule {}
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/api/src/settings/
+git commit -m "feat(api): add settings module for encrypted student API key storage"
+```
+
+---
+
+## Task 5: Database module
 
 **Files:**
 - Create: `apps/api/src/database/database.module.ts`
@@ -843,7 +1514,7 @@ git commit -m "feat(api): add PistonService for sandboxed code execution"
 
 ---
 
-## Task 6: Phase evaluator (conceptual phase grading via Claude)
+## Task 6: Phase evaluator (conceptual grading via AiProviderService)
 
 **Files:**
 - Create: `apps/api/src/challenges/phase-evaluator.service.ts`
@@ -855,24 +1526,26 @@ Create `apps/api/src/challenges/phase-evaluator.service.spec.ts`:
 
 ```typescript
 import { PhaseEvaluatorService } from './phase-evaluator.service';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+
+const mockAi = { generate: jest.fn() };
 
 describe('PhaseEvaluatorService', () => {
   let service: PhaseEvaluatorService;
-  const mockCreate = jest.fn();
 
   beforeEach(() => {
-    service = new PhaseEvaluatorService();
-    // Inject mock Anthropic client
-    (service as any).anthropic = { messages: { create: mockCreate } };
+    service = new PhaseEvaluatorService(mockAi as unknown as AiProviderService);
     jest.clearAllMocks();
   });
 
   it('returns passed=true when AI responds with APROBADO', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'APROBADO: La respuesta menciona correctamente condición y bloques.' }],
+    mockAi.generate.mockResolvedValue({
+      text: 'APROBADO: La respuesta menciona correctamente condición y bloques.',
+      provider: 'google',
     });
 
     const result = await service.evaluateConceptual(
+      { googleKeyEnc: 'enc:key', openRouterKeyEnc: null },
       'Un if/else evalúa una condición y ejecuta un bloque u otro.',
       'Debe mencionar: condición, bloque verdadero, bloque falso',
       '¿Qué hace un if/else?',
@@ -883,11 +1556,13 @@ describe('PhaseEvaluatorService', () => {
   });
 
   it('returns passed=false when AI responds with REVISAR', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'REVISAR: La respuesta no menciona el bloque falso (else).' }],
+    mockAi.generate.mockResolvedValue({
+      text: 'REVISAR: La respuesta no menciona el bloque falso (else).',
+      provider: 'google',
     });
 
     const result = await service.evaluateConceptual(
+      { googleKeyEnc: 'enc:key', openRouterKeyEnc: null },
       'Un if ejecuta código cuando algo es verdad.',
       'Debe mencionar: condición, bloque verdadero, bloque falso',
       '¿Qué hace un if/else?',
@@ -912,7 +1587,8 @@ Create `apps/api/src/challenges/phase-evaluator.service.ts`:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { EncryptedKeys } from '../settings/settings.service';
 
 export interface EvaluationResult {
   passed: boolean;
@@ -921,20 +1597,15 @@ export interface EvaluationResult {
 
 @Injectable()
 export class PhaseEvaluatorService {
-  private anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  constructor(private readonly ai: AiProviderService) {}
 
   async evaluateConceptual(
+    keys: EncryptedKeys,
     studentAnswer: string,
     rubric: string,
     question: string,
   ): Promise<EvaluationResult> {
-    const response = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'user',
-          content: `Eres un evaluador de respuestas de programación para estudiantes principiantes.
+    const prompt = `Eres un evaluador de respuestas de programación para estudiantes principiantes.
 
 Pregunta: ${question}
 Rúbrica (criterios mínimos que debe cumplir): ${rubric}
@@ -944,21 +1615,18 @@ Evalúa si la respuesta cumple los criterios de la rúbrica. Responde SOLO con:
 - "APROBADO: [razón breve]" si cumple los criterios mínimos
 - "REVISAR: [qué falta específicamente]" si no los cumple
 
-Sé generoso con principiantes: no exijas perfección, solo que demuestre comprensión básica.`,
-        },
-      ],
-    });
+Sé generoso con principiantes: no exijas perfección, solo comprensión básica.`;
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const response = await this.ai.generate(keys.googleKeyEnc, keys.openRouterKeyEnc, prompt);
     return {
-      passed: text.startsWith('APROBADO'),
-      feedback: text,
+      passed: response.text.startsWith('APROBADO'),
+      feedback: response.text,
     };
   }
 }
 ```
 
-- [ ] **Step 4: Run test — verify it passes**
+- [ ] **Step 4: Run tests — verify they pass**
 
 ```bash
 cd apps/api && npx jest phase-evaluator.service.spec.ts --no-coverage
@@ -970,7 +1638,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add apps/api/src/challenges/phase-evaluator.service.ts apps/api/src/challenges/phase-evaluator.service.spec.ts
-git commit -m "feat(api): add PhaseEvaluatorService using Claude Haiku for conceptual grading"
+git commit -m "feat(api): add PhaseEvaluatorService using AiProviderService for conceptual grading"
 ```
 
 ---
@@ -1109,13 +1777,9 @@ import { PhaseEvaluatorService } from './phase-evaluator.service';
 export class ChallengesModule {}
 ```
 
-- [ ] **Step 4: Add ANTHROPIC_API_KEY to .env**
+- [ ] **Step 4: Verify ENCRYPTION_KEY is set**
 
-Add to `apps/api/.env` (and `.env.example`):
-
-```env
-ANTHROPIC_API_KEY=your-anthropic-api-key
-```
+Confirm `apps/api/.env` has the `ENCRYPTION_KEY` added in Task 3 Step 1. No other AI key is needed at the server level — students provide their own keys via Settings UI.
 
 - [ ] **Step 5: Smoke test submission**
 
@@ -1156,9 +1820,12 @@ Create `apps/api/src/hints/hints.service.spec.ts`:
 ```typescript
 import { Test } from '@nestjs/testing';
 import { HintsService } from './hints.service';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { SettingsService } from '../settings/settings.service';
 
 const mockPool = { query: jest.fn() };
-const mockCreate = jest.fn();
+const mockAi = { generate: jest.fn() };
+const mockSettings = { getEncryptedKeys: jest.fn() };
 
 describe('HintsService', () => {
   let service: HintsService;
@@ -1168,45 +1835,45 @@ describe('HintsService', () => {
       providers: [
         HintsService,
         { provide: 'DB_POOL', useValue: mockPool },
+        { provide: AiProviderService, useValue: mockAi },
+        { provide: SettingsService, useValue: mockSettings },
       ],
     }).compile();
     service = module.get<HintsService>(HintsService);
-    (service as any).anthropic = { messages: { create: mockCreate } };
     jest.clearAllMocks();
   });
 
   it('uses pre-defined hint when one matches the requested level', async () => {
-    // phase query
     mockPool.query.mockResolvedValueOnce({
       rows: [{ id: 'phase-1', kind: 'conceptual', content: { question: 'What is if/else?' } }],
     });
-    // pre-defined hints query
     mockPool.query.mockResolvedValueOnce({
       rows: [{ content: 'Piensa en una decisión diaria.' }],
     });
-    // hint_event insert
-    mockPool.query.mockResolvedValueOnce({ rows: [] });
+    mockPool.query.mockResolvedValueOnce({ rows: [] }); // hint_event insert
 
     const result = await service.getHint('phase-1', 'user-1', 1);
 
     expect(result.hint).toBe('Piensa en una decisión diaria.');
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockAi.generate).not.toHaveBeenCalled();
   });
 
-  it('falls back to Claude when no pre-defined hint matches', async () => {
+  it('falls back to AI when no pre-defined hint matches', async () => {
     mockPool.query.mockResolvedValueOnce({
-      rows: [{ id: 'phase-1', kind: 'code', content: { question: 'Write a loop' } }],
+      rows: [{ id: 'phase-1', kind: 'code', content: { starter: 'for i in ...' } }],
     });
     mockPool.query.mockResolvedValueOnce({ rows: [] }); // no pre-defined hint
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'Prueba usando range()' }],
+    mockSettings.getEncryptedKeys.mockResolvedValue({
+      googleKeyEnc: 'enc:key', openRouterKeyEnc: null,
     });
+    mockAi.generate.mockResolvedValue({ text: 'Prueba usando range()', provider: 'google' });
     mockPool.query.mockResolvedValueOnce({ rows: [] }); // hint_event insert
 
     const result = await service.getHint('phase-1', 'user-1', 4);
 
     expect(result.hint).toBe('Prueba usando range()');
-    expect(mockCreate).toHaveBeenCalledOnce();
+    expect(result.source).toBe('ai');
+    expect(mockAi.generate).toHaveBeenCalledOnce();
   });
 });
 ```
@@ -1226,7 +1893,8 @@ Create `apps/api/src/hints/hints.service.ts`:
 ```typescript
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
-import Anthropic from '@anthropic-ai/sdk';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { SettingsService } from '../settings/settings.service';
 
 export interface HintResult {
   hint: string;
@@ -1236,9 +1904,11 @@ export interface HintResult {
 
 @Injectable()
 export class HintsService {
-  private anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  constructor(@Inject('DB_POOL') private pool: Pool) {}
+  constructor(
+    @Inject('DB_POOL') private pool: Pool,
+    private readonly ai: AiProviderService,
+    private readonly settings: SettingsService,
+  ) {}
 
   async getHint(phaseId: string, userId: string, requestedLevel: number): Promise<HintResult> {
     const { rows: [phase] } = await this.pool.query(
@@ -1246,7 +1916,6 @@ export class HintsService {
       [phaseId],
     );
 
-    // Try pre-defined hint at or near the requested level
     const { rows: [predefined] } = await this.pool.query(
       'SELECT content FROM challenge_hint WHERE phase_id = $1 AND level <= $2 ORDER BY level DESC LIMIT 1',
       [phaseId, requestedLevel],
@@ -1259,7 +1928,7 @@ export class HintsService {
       hint = predefined.content;
       source = 'predefined';
     } else {
-      hint = await this.generateAiHint(phase, requestedLevel);
+      hint = await this.generateAiHint(userId, phase, requestedLevel);
       source = 'ai';
     }
 
@@ -1272,20 +1941,17 @@ export class HintsService {
   }
 
   private async generateAiHint(
+    userId: string,
     phase: { kind: string; content: Record<string, unknown> },
     level: number,
   ): Promise<string> {
+    const keys = await this.settings.getEncryptedKeys(userId);
     const isTechnical = level >= 4;
     const phaseContext = phase.kind === 'conceptual'
       ? `Pregunta conceptual: ${(phase.content as any).question}`
       : `Ejercicio de código: ${(phase.content as any).starter ?? ''}`;
 
-    const response = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 150,
-      messages: [{
-        role: 'user',
-        content: `Eres Lumen, una mascota que ayuda a un estudiante principiante de programación.
+    const prompt = `Eres Lumen, una mascota que ayuda a un estudiante principiante de programación.
 El estudiante está atascado en: ${phaseContext}
 Nivel de la pista solicitada: ${level}/5 (${isTechnical ? 'técnica' : 'conceptual'})
 
@@ -1293,11 +1959,10 @@ Da UNA pista breve (máximo 2 oraciones). ${isTechnical
   ? 'Puedes mencionar sintaxis o métodos concretos.'
   : 'Usa analogías del mundo real, no código.'
 }
-No resuelvas el ejercicio completo. Solo orienta.`,
-      }],
-    });
+No resuelvas el ejercicio completo. Solo orienta.`;
 
-    return response.content[0].type === 'text' ? response.content[0].text : '';
+    const response = await this.ai.generate(keys.googleKeyEnc, keys.openRouterKeyEnc, prompt);
+    return response.text;
   }
 }
 ```
@@ -1333,8 +1998,11 @@ Create `apps/api/src/hints/hints.module.ts`:
 import { Module } from '@nestjs/common';
 import { HintsController } from './hints.controller';
 import { HintsService } from './hints.service';
+import { AiProviderModule } from '../ai-provider/ai-provider.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
+  imports: [AiProviderModule, SettingsModule],
   controllers: [HintsController],
   providers: [HintsService],
 })
@@ -1349,9 +2017,9 @@ cd apps/api && npx jest hints.service.spec.ts --no-coverage
 
 Expected: PASS (2 tests)
 
-- [ ] **Step 6: Register in AppModule**
+- [ ] **Step 6: Register all modules in AppModule**
 
-Edit `apps/api/src/app.module.ts` — add `HintsModule` to imports:
+Edit `apps/api/src/app.module.ts` — this is the final state of AppModule with all 5 new modules:
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -1359,11 +2027,22 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
+import { AiProviderModule } from './ai-provider/ai-provider.module';
+import { SettingsModule } from './settings/settings.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { HintsModule } from './hints/hints.module';
+import { EconomyModule } from './economy/economy.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, ChallengesModule, HintsModule],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    AiProviderModule,
+    SettingsModule,
+    ChallengesModule,
+    HintsModule,
+    EconomyModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
@@ -1374,7 +2053,7 @@ export class AppModule {}
 
 ```bash
 git add apps/api/src/hints/ apps/api/src/app.module.ts
-git commit -m "feat(api): add hints module with pre-defined + Claude Haiku fallback"
+git commit -m "feat(api): add hints module with pre-defined + AI provider fallback"
 ```
 
 ---
@@ -2413,7 +3092,295 @@ git commit -m "feat(web): wire real ACH balance from API into dashboard Companio
 
 ---
 
-## Task 16: Playwright e2e tests — full challenge flow
+## Task 16: Frontend — Settings page (student enters API keys)
+
+**Files:**
+- Create: `apps/web/src/lib/settings-service.ts`
+- Create: `apps/web/src/components/settings/api-keys-form.tsx`
+- Create: `apps/web/src/app/settings/settings-shell.tsx`
+- Create: `apps/web/src/app/settings/page.tsx`
+
+This page lets the student enter their Google AI Studio key and optionally an OpenRouter key. The keys are sent to the backend which encrypts and stores them. The frontend never shows the raw key again after saving — only whether a key is set.
+
+- [ ] **Step 1: Create settings service**
+
+Create `apps/web/src/lib/settings-service.ts`:
+
+```typescript
+const API_PUBLIC = () => process.env.NEXT_PUBLIC_API_URL ?? '';
+
+export interface KeysStatus {
+  hasGoogleKey: boolean;
+  hasOpenRouterKey: boolean;
+}
+
+export async function getKeysStatus(): Promise<KeysStatus> {
+  const res = await fetch(`${API_PUBLIC()}/api/v1/settings/api-keys`, {
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) return { hasGoogleKey: false, hasOpenRouterKey: false };
+  return res.json();
+}
+
+export async function saveApiKeys(
+  googleKey: string,
+  openRouterKey: string,
+): Promise<void> {
+  const res = await fetch(`${API_PUBLIC()}/api/v1/settings/api-keys`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      googleKey: googleKey || null,
+      openRouterKey: openRouterKey || null,
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to save keys');
+}
+```
+
+- [ ] **Step 2: Create API keys form component**
+
+Create `apps/web/src/components/settings/api-keys-form.tsx`:
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { Check, Eye, EyeOff, Key } from 'lucide-react';
+import { saveApiKeys } from '@/lib/settings-service';
+
+interface Props {
+  hasGoogleKey: boolean;
+  hasOpenRouterKey: boolean;
+}
+
+export function ApiKeysForm({ hasGoogleKey: initialGoogle, hasOpenRouterKey: initialOR }: Props) {
+  const [googleKey, setGoogleKey] = useState('');
+  const [openRouterKey, setOpenRouterKey] = useState('');
+  const [showGoogle, setShowGoogle] = useState(false);
+  const [showOR, setShowOR] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasGoogleKey, setHasGoogleKey] = useState(initialGoogle);
+  const [hasORKey, setHasORKey] = useState(initialOR);
+
+  async function handleSave() {
+    setStatus('saving');
+    try {
+      await saveApiKeys(googleKey, openRouterKey);
+      if (googleKey) setHasGoogleKey(true);
+      if (openRouterKey) setHasORKey(true);
+      setGoogleKey('');
+      setOpenRouterKey('');
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 2500);
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Google AI Studio */}
+      <div className="bento soft-stroke p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Key size={14} className="text-[#E05BF5]" />
+          <span className="text-sm font-medium text-white">Google AI Studio</span>
+          {hasGoogleKey && (
+            <span className="flex items-center gap-1 text-[11px] text-emerald-400 ml-auto">
+              <Check size={10} /> Configurada
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-white/40">
+          Obtén tu clave en{' '}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
+             className="text-[#E05BF5] hover:underline">
+            aistudio.google.com/apikey
+          </a>
+          {' '}— tier gratuito disponible.
+        </p>
+        <div className="relative">
+          <input
+            type={showGoogle ? 'text' : 'password'}
+            value={googleKey}
+            onChange={e => setGoogleKey(e.target.value)}
+            placeholder={hasGoogleKey ? '••••••••••••••••••••••••••••••••' : 'AIzaSy...'}
+            className="w-full bento soft-stroke rounded-lg px-4 py-2 pr-10 text-sm text-white/90
+                       bg-white/[0.03] placeholder:text-white/20 focus:outline-none
+                       focus:ring-1 focus:ring-[#E05BF5]/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowGoogle(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+          >
+            {showGoogle ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* OpenRouter */}
+      <div className="bento soft-stroke p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Key size={14} className="text-amber-400" />
+          <span className="text-sm font-medium text-white">OpenRouter</span>
+          <span className="text-[11px] text-white/30 ml-1">(respaldo opcional)</span>
+          {hasORKey && (
+            <span className="flex items-center gap-1 text-[11px] text-emerald-400 ml-auto">
+              <Check size={10} /> Configurada
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-white/40">
+          Clave de respaldo si Google AI falla. Obtén una en{' '}
+          <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer"
+             className="text-amber-400 hover:underline">
+            openrouter.ai/keys
+          </a>.
+        </p>
+        <div className="relative">
+          <input
+            type={showOR ? 'text' : 'password'}
+            value={openRouterKey}
+            onChange={e => setOpenRouterKey(e.target.value)}
+            placeholder={hasORKey ? '••••••••••••••••••••••••••••••••' : 'sk-or-...'}
+            className="w-full bento soft-stroke rounded-lg px-4 py-2 pr-10 text-sm text-white/90
+                       bg-white/[0.03] placeholder:text-white/20 focus:outline-none
+                       focus:ring-1 focus:ring-amber-400/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowOR(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+          >
+            {showOR ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={(!googleKey && !openRouterKey) || status === 'saving'}
+          className="px-5 py-2 rounded-lg bg-[#E05BF5] text-white text-sm font-medium
+                     disabled:opacity-40 hover:brightness-110 transition-all"
+        >
+          {status === 'saving' ? 'Guardando...' : 'Guardar claves'}
+        </button>
+        {status === 'saved' && (
+          <span className="flex items-center gap-1 text-emerald-400 text-sm">
+            <Check size={14} /> Guardadas y encriptadas
+          </span>
+        )}
+        {status === 'error' && (
+          <span className="text-red-400 text-sm">Error al guardar. Intenta de nuevo.</span>
+        )}
+      </div>
+
+      <p className="text-xs text-white/30 leading-relaxed">
+        Tus claves se encriptan con AES-256-GCM antes de guardarse. Fragments nunca las usa para
+        ningún otro propósito ni las comparte. Puedes cambiarlas en cualquier momento.
+      </p>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Create settings shell and page**
+
+Create `apps/web/src/app/settings/settings-shell.tsx`:
+
+```tsx
+'use client';
+
+import { ApiKeysForm } from '@/components/settings/api-keys-form';
+import { KeysStatus } from '@/lib/settings-service';
+
+interface Props {
+  keysStatus: KeysStatus;
+}
+
+export function SettingsShell({ keysStatus }: Props) {
+  return (
+    <main className="min-h-screen bg-[var(--base)] p-8">
+      <div className="max-w-xl mx-auto">
+        <div className="mb-8">
+          <p className="text-[11px] tracking-widest uppercase text-white/40 mb-1">Configuración</p>
+          <h1 className="text-3xl font-semibold text-white">Claves de IA</h1>
+          <p className="text-white/50 text-sm mt-2">
+            Lumen usa IA para evaluar tus respuestas y darte pistas. Necesita tu clave personal
+            para funcionar — así los costos son tuyos, no nuestros.
+          </p>
+        </div>
+        <ApiKeysForm
+          hasGoogleKey={keysStatus.hasGoogleKey}
+          hasOpenRouterKey={keysStatus.hasOpenRouterKey}
+        />
+      </div>
+    </main>
+  );
+}
+```
+
+Create `apps/web/src/app/settings/page.tsx`:
+
+```tsx
+import { cookies } from 'next/headers';
+import { SettingsShell } from './settings-shell';
+
+const API_INTERNAL = () => process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '';
+
+export default async function SettingsPage() {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  let keysStatus = { hasGoogleKey: false, hasOpenRouterKey: false };
+  try {
+    const res = await fetch(`${API_INTERNAL()}/api/v1/settings/api-keys`, {
+      headers: { Cookie: cookieHeader },
+      cache: 'no-store',
+    });
+    if (res.ok) keysStatus = await res.json();
+  } catch {
+    // Show empty form if API is unreachable
+  }
+
+  return <SettingsShell keysStatus={keysStatus} />;
+}
+```
+
+- [ ] **Step 4: Add Settings link to sidebar**
+
+In `apps/web/src/components/dashboard/sidebar.tsx`, find the nav item for "Ajustes" and update its `href` to point to `/settings`:
+
+```tsx
+// Find the nav item with id 'ajustes' or label 'Ajustes' and set:
+href="/settings"
+```
+
+The exact change depends on how the nav items are defined in sidebar.tsx. Read the file and find the Ajustes/Settings nav item, then add `href="/settings"` or wrap it in `<Link href="/settings">`.
+
+- [ ] **Step 5: Verify settings page**
+
+Open `http://localhost:3000/settings`. Expected:
+- "Claves de IA" title visible
+- Two key input fields (Google AI Studio, OpenRouter)
+- Save button disabled until a key is entered
+- After entering a key and saving: "Guardadas y encriptadas" confirmation appears
+- Reload page: both fields show "Configurada" badge
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/web/src/lib/settings-service.ts apps/web/src/components/settings/ apps/web/src/app/settings/
+git commit -m "feat(web): add settings page for student API key management"
+```
+
+---
+
+## Task 17: Playwright e2e tests — full challenge flow
 
 **Files:**
 - Create: `e2e/tests/challenge-flow.spec.ts`
@@ -2533,29 +3500,129 @@ git commit -m "test(e2e): add Playwright tests for full challenge flow"
 
 ---
 
+---
+
+## Task 18: Open pull request
+
+**Files:** none (git + GitHub only)
+
+- [ ] **Step 1: Verify all tests pass before opening the PR**
+
+```bash
+cd e2e && npx playwright test tests/challenge-flow.spec.ts
+```
+
+Expected: all tests green. If any fail, fix them before continuing.
+
+- [ ] **Step 2: Run NestJS unit tests**
+
+```bash
+cd apps/api && npx jest --no-coverage
+```
+
+Expected: all tests green (challenges.service.spec, piston.service.spec, phase-evaluator.service.spec, hints.service.spec, economy.service.spec).
+
+- [ ] **Step 3: Verify the branch is up to date with main**
+
+```bash
+git fetch origin main
+git log origin/main..HEAD --oneline
+```
+
+Expected: a list of commits from this branch. If there are merge conflicts with main, rebase first:
+```bash
+git rebase origin/main
+```
+
+- [ ] **Step 4: Push branch**
+
+```bash
+git push -u origin feat/phase-1-learning-loop
+```
+
+- [ ] **Step 5: Open PR using GitHub CLI**
+
+```bash
+gh pr create \
+  --base main \
+  --head feat/phase-1-learning-loop \
+  --title "feat: Phase 1 — The Learning Loop" \
+  --body "$(cat <<'EOF'
+## What this implements
+
+Phase 1 of the Fragments roadmap: the core learning loop.
+
+### Backend (NestJS)
+- `DatabaseModule` — global `pg` Pool shared across modules
+- `ChallengesModule` — challenge CRUD + two-phase submission endpoint
+- `PistonService` — sandboxed code execution via Piston API
+- `PhaseEvaluatorService` — conceptual phase grading via Claude Haiku
+- `HintsModule` — progressive hints (pre-defined → Claude Haiku fallback)
+- `EconomyModule` — ACH balance, earn on submission, spend to feed Lumen
+
+### Database
+- Migration: `001-phase1.sql` (6 new tables)
+- Seed: `001-challenges.sql` (2 challenges with phases and hints)
+
+### Frontend (Next.js)
+- `/challenges` — challenge list page
+- `/challenges/[id]` — two-phase challenge detail (conceptual → code)
+- Monaco editor for code phase
+- `LumenHintTrigger` — 45s inactivity detection → restless animation → hint button
+- Dashboard CompanionCard wired to real ACH balance
+
+### Tests
+- 5 NestJS unit tests (Jest)
+- 6 Playwright e2e tests covering the full challenge flow
+
+## How to test
+1. `docker compose up db`
+2. `cd apps/api && npm run start:dev`
+3. `cd apps/web && npm run dev`
+4. Open http://localhost:3000/challenges
+5. Complete a challenge — verify ACH updates in dashboard
+
+## Related docs
+- Vision: `docs/superpowers/specs/2026-04-19-fragments-vision.md`
+- Roadmap: `docs/superpowers/specs/2026-04-19-fragments-roadmap.md`
+EOF
+)"
+```
+
+Expected: GitHub prints the PR URL. Copy it and share it with the developer.
+
+---
+
 ## Self-Review
 
 ### Spec coverage check
 
 | Spec requirement (Phase 1) | Covered by |
 |---------------------------|-----------|
-| Reto con fase conceptual | Tasks 5, 6, 7, 13 |
-| Reto con fase de código (Piston) | Tasks 5, 7, 12 |
-| Lumen detecta inactividad → inquieto → botón | Task 13 |
-| IA genera pista progresiva según nivel | Task 8 |
-| ACH se gana al completar fase | Task 9 (submission.service.ts) |
-| ACH se gasta en comida → Lumen sube de nivel | Task 9 (economy.service.ts) |
-| Editor en browser (Monaco) | Task 12 |
+| Reto con fase conceptual | Tasks 6, 7, 8, 14 |
+| Reto con fase de código (Piston) | Tasks 6, 8, 13 |
+| Lumen detecta inactividad → inquieto → botón | Task 14 |
+| IA genera pista progresiva según nivel | Task 9 |
+| ACH se gana al completar fase | Task 10 (submission.service.ts) |
+| ACH se gasta en comida → Lumen sube de nivel | Task 10 (economy.service.ts) |
+| Editor en browser (Monaco) | Task 13 |
+| Student provides own AI keys (no shared key) | Tasks 3, 4, 16 |
+| Keys encrypted at rest (AES-256-GCM) | Task 3 (EncryptionService) |
+| Google AI Studio primary + OpenRouter fallback | Task 3 (AiProviderService) |
+| Settings UI for key entry | Task 16 |
 | Endpoints documentados con Swagger | ❌ No incluido — ver nota |
 | Docusaurus dentro de NestJS | ❌ No incluido — ver nota |
 
 **Nota Docusaurus/Swagger:** Son genuinamente independientes del learning loop. Se recomienda un plan separado (`2026-04-19-phase1-docs.md`) una vez que los endpoints estén estabilizados.
 
 ### Type consistency check
-- `ChallengePhase.content` tipado como `Record<string, unknown>` en el backend y `ChallengePhaseContent` en el frontend — coherente, el frontend es más específico.
+- `EncryptedKeys` definida en `settings.service.ts` y usada en `PhaseEvaluatorService` y `HintsService` — coherente.
+- `ChallengePhase.content` tipado como `Record<string, unknown>` en backend y `ChallengePhaseContent` en frontend — coherente, el frontend es más específico.
 - `userId` es `TEXT` en DB y string en todos los servicios — coherente con Better Auth.
 - `achEarned` fluye de `SubmitResult` → `handlePhaseResult` → `totalAch` — trazable.
+- `AiUnavailableError` exportado de `ai-provider.types.ts` — usado en `AiProviderService`, no silenciado.
 
 ### Placeholder scan
 - Ningún TBD, TODO o "implement later" en el plan.
 - Todos los bloques de código están completos.
+- Task 16 Step 4 (sidebar link) requiere leer el archivo existente — la instrucción explica esto explícitamente.
