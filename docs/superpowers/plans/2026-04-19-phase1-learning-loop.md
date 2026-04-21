@@ -10,6 +10,59 @@
 
 ---
 
+## Instructions for Gemini (or any AI agent executing this plan)
+
+This is a self-contained implementation plan. You have everything you need here — do not ask for clarification before starting.
+
+### Before you begin — read these files for codebase context
+- `CLAUDE.md` — project overview, stack, architecture decisions, running instructions
+- `docs/superpowers/specs/2026-04-19-fragments-vision.md` — product vision and principles
+- `docs/superpowers/specs/2026-04-19-fragments-roadmap.md` — full roadmap, Phase 1 scope
+- `apps/api/src/auth/better-auth.ts` — existing NestJS pattern to follow
+- `apps/api/src/app.module.ts` — current module registration
+- `apps/api/src/main.ts` — current bootstrap config
+- `apps/web/src/app/dashboard/page.tsx` — existing server component pattern
+- `apps/web/src/app/globals.css` — design tokens (.bento, .soft-stroke, CSS variables)
+
+### Rules — follow these exactly
+1. **Work on branch `feat/phase-1-learning-loop`** — Task 0 creates it. Never commit directly to `main`.
+2. **Execute tasks in order** — each task builds on the previous. Do not skip.
+3. **Run tests after each task** — the test commands are in each step. If a test fails, fix it before moving to the next task.
+4. **Complete code only** — every step has exact code. Do not invent or infer missing pieces.
+5. **Commit after each task** — commit messages are provided. Use them exactly (no Co-Authored-By lines).
+6. **TypeScript strict mode** — both projects use `"strict": true`. No `any` unless explicitly written in the plan.
+7. **Named exports only** — except Next.js page components (which must be default exports).
+8. **Do not install additional dependencies** — only `@anthropic-ai/sdk` and `@monaco-editor/react` (Task 1).
+9. **Do not modify auth files** — `apps/api/src/auth/` is off-limits.
+10. **Open a PR at the end** — Task 17 creates the PR against `main`.
+
+### Environment variables required
+Add these to `apps/api/.env` before running the API (Task 7 step 4 reminds you):
+```env
+ANTHROPIC_API_KEY=<get from Anthropic console>
+```
+All other env vars are already set per `CLAUDE.md`.
+
+### How services run locally
+```bash
+# Terminal 1 — database only
+docker compose up db
+
+# Terminal 2 — API (NestJS on :3001)
+cd apps/api && npm run start:dev
+
+# Terminal 3 — Web (Next.js on :3000)
+cd apps/web && npm run dev
+```
+
+### Running Playwright tests
+```bash
+# All services must be running first, then:
+cd e2e && npx playwright test tests/challenge-flow.spec.ts --headed
+```
+
+---
+
 ## File Map
 
 ### New — Backend (`apps/api/src/`)
@@ -88,6 +141,44 @@ e2e/tests/challenge-flow.spec.ts
 ```
 apps/api/src/database/seeds/001-challenges.sql
 ```
+
+---
+
+## Task 0: Create feature branch
+
+**Files:** none (git only)
+
+- [ ] **Step 1: Verify you are on main and it is clean**
+
+```bash
+git checkout main
+git status
+```
+
+Expected: `On branch main` · `nothing to commit, working tree clean`
+If there are uncommitted changes, stop and ask the developer to resolve them first.
+
+- [ ] **Step 2: Pull latest main**
+
+```bash
+git pull origin main
+```
+
+- [ ] **Step 3: Create and switch to feature branch**
+
+```bash
+git checkout -b feat/phase-1-learning-loop
+```
+
+Expected: `Switched to a new branch 'feat/phase-1-learning-loop'`
+
+- [ ] **Step 4: Verify branch**
+
+```bash
+git branch
+```
+
+Expected: `* feat/phase-1-learning-loop` is the active branch.
 
 ---
 
@@ -2530,6 +2621,99 @@ Expected: All 6 tests pass (the inactivity test is soft-skipped if timing is off
 git add e2e/tests/challenge-flow.spec.ts
 git commit -m "test(e2e): add Playwright tests for full challenge flow"
 ```
+
+---
+
+---
+
+## Task 17: Open pull request
+
+**Files:** none (git + GitHub only)
+
+- [ ] **Step 1: Verify all tests pass before opening the PR**
+
+```bash
+cd e2e && npx playwright test tests/challenge-flow.spec.ts
+```
+
+Expected: all tests green. If any fail, fix them before continuing.
+
+- [ ] **Step 2: Run NestJS unit tests**
+
+```bash
+cd apps/api && npx jest --no-coverage
+```
+
+Expected: all tests green (challenges.service.spec, piston.service.spec, phase-evaluator.service.spec, hints.service.spec, economy.service.spec).
+
+- [ ] **Step 3: Verify the branch is up to date with main**
+
+```bash
+git fetch origin main
+git log origin/main..HEAD --oneline
+```
+
+Expected: a list of commits from this branch. If there are merge conflicts with main, rebase first:
+```bash
+git rebase origin/main
+```
+
+- [ ] **Step 4: Push branch**
+
+```bash
+git push -u origin feat/phase-1-learning-loop
+```
+
+- [ ] **Step 5: Open PR using GitHub CLI**
+
+```bash
+gh pr create \
+  --base main \
+  --head feat/phase-1-learning-loop \
+  --title "feat: Phase 1 — The Learning Loop" \
+  --body "$(cat <<'EOF'
+## What this implements
+
+Phase 1 of the Fragments roadmap: the core learning loop.
+
+### Backend (NestJS)
+- `DatabaseModule` — global `pg` Pool shared across modules
+- `ChallengesModule` — challenge CRUD + two-phase submission endpoint
+- `PistonService` — sandboxed code execution via Piston API
+- `PhaseEvaluatorService` — conceptual phase grading via Claude Haiku
+- `HintsModule` — progressive hints (pre-defined → Claude Haiku fallback)
+- `EconomyModule` — ACH balance, earn on submission, spend to feed Lumen
+
+### Database
+- Migration: `001-phase1.sql` (6 new tables)
+- Seed: `001-challenges.sql` (2 challenges with phases and hints)
+
+### Frontend (Next.js)
+- `/challenges` — challenge list page
+- `/challenges/[id]` — two-phase challenge detail (conceptual → code)
+- Monaco editor for code phase
+- `LumenHintTrigger` — 45s inactivity detection → restless animation → hint button
+- Dashboard CompanionCard wired to real ACH balance
+
+### Tests
+- 5 NestJS unit tests (Jest)
+- 6 Playwright e2e tests covering the full challenge flow
+
+## How to test
+1. `docker compose up db`
+2. `cd apps/api && npm run start:dev`
+3. `cd apps/web && npm run dev`
+4. Open http://localhost:3000/challenges
+5. Complete a challenge — verify ACH updates in dashboard
+
+## Related docs
+- Vision: `docs/superpowers/specs/2026-04-19-fragments-vision.md`
+- Roadmap: `docs/superpowers/specs/2026-04-19-fragments-roadmap.md`
+EOF
+)"
+```
+
+Expected: GitHub prints the PR URL. Copy it and share it with the developer.
 
 ---
 
