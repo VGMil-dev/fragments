@@ -29,8 +29,7 @@ export class AiProviderService {
       if (googleKey) {
         try {
           return await this.callGoogle(googleKey, prompt);
-        } catch (err) {
-          console.error('[AiProvider] Google AI failed:', (err as Error).message);
+        } catch {
           // fall through to OpenRouter
         }
       }
@@ -41,8 +40,7 @@ export class AiProviderService {
       if (orKey) {
         try {
           return await this.callOpenRouter(orKey, prompt);
-        } catch (err) {
-          console.error('[AiProvider] OpenRouter failed:', (err as Error).message);
+        } catch {
           // fall through to error
         }
       }
