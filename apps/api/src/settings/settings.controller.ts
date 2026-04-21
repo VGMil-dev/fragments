@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { SettingsService } from './settings.service';
 
 @Controller('api/v1/settings')
