@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { EncryptionService } from './encryption.service';
 import { AiResponse, AiUnavailableError } from './ai-provider.types';
 
-const GOOGLE_MODEL = 'gemini-2.0-flash';
+const GOOGLE_MODEL = 'gemini-2.5-flash';
 const OPENROUTER_MODEL = 'google/gemini-flash-1.5';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -29,7 +29,8 @@ export class AiProviderService {
       if (googleKey) {
         try {
           return await this.callGoogle(googleKey, prompt);
-        } catch {
+        } catch (err) {
+          console.error('[AiProvider] Google AI failed:', (err as Error).message);
           // fall through to OpenRouter
         }
       }
@@ -40,7 +41,8 @@ export class AiProviderService {
       if (orKey) {
         try {
           return await this.callOpenRouter(orKey, prompt);
-        } catch {
+        } catch (err) {
+          console.error('[AiProvider] OpenRouter failed:', (err as Error).message);
           // fall through to error
         }
       }
@@ -54,10 +56,12 @@ export class AiProviderService {
   }
 
   private async callGoogle(apiKey: string, prompt: string): Promise<AiResponse> {
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({ model: GOOGLE_MODEL });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: GOOGLE_MODEL,
+      contents: prompt,
+    });
+    const text = response.text ?? '';
     if (!text) throw new Error('Empty response from Google AI');
     return { text, provider: 'google' };
   }
