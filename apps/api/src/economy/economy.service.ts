@@ -26,13 +26,13 @@ export class EconomyService {
 
     const { rows: [updated] } = await this.pool.query(
       `INSERT INTO lumen_progress (user_id, ach_balance, level)
-       VALUES ($1, $2, 2)
+       VALUES ($1, 0, 1)
        ON CONFLICT (user_id) DO UPDATE
-         SET ach_balance = lumen_progress.ach_balance - $3,
+         SET ach_balance = lumen_progress.ach_balance - $2,
              level       = lumen_progress.level + 1,
              updated_at  = NOW()
        RETURNING ach_balance, level`,
-      [userId, 0 - cost, cost],
+      [userId, cost],
     );
 
     return { newBalance: updated.ach_balance, newLevel: updated.level };

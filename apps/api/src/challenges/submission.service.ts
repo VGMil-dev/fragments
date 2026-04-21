@@ -62,7 +62,7 @@ export class SubmissionService {
     if (achEarned > 0) {
       await this.pool.query(
         `INSERT INTO ach_transaction (user_id, amount, reason) VALUES ($1, $2, $3)
-         ON CONFLICT (id) DO NOTHING`, // Fixed ON CONFLICT
+         ON CONFLICT (user_id, reason) DO NOTHING`,
         [dto.userId, achEarned, `phase_complete_${phaseId}`],
       );
       await this.pool.query(

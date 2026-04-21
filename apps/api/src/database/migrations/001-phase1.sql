@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS ach_transaction (
   user_id    TEXT        NOT NULL,
   amount     INT         NOT NULL,
   reason     VARCHAR(100) NOT NULL,
-  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, reason)
 );
 
 CREATE TABLE IF NOT EXISTS lumen_progress (
