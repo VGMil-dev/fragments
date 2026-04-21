@@ -142,3 +142,8 @@ export const DICTIONARY: Record<Lang, CopyStrings> = {
     searchPlaceholder: 'Search fragments... ⌘K'
   }
 }
+
+export interface LumenEconomy {
+  balance: number;
+  level: number;
+}

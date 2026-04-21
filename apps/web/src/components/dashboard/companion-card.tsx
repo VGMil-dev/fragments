@@ -3,13 +3,14 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Lumen } from './lumen'
-import { Lang, DashboardUser, LumenState, DICTIONARY } from '@/lib/dashboard-types'
+import { Lang, DashboardUser, LumenState, DICTIONARY, LumenEconomy } from '@/lib/dashboard-types'
 import { Sparkles, Play } from 'lucide-react'
 
 interface CompanionCardProps {
   lang: Lang
   user: DashboardUser
   mascotState: LumenState
+  economy?: LumenEconomy
   hue?: number
   onPoke: () => void
   onFeed: () => void
@@ -20,6 +21,7 @@ export function CompanionCard({
   lang,
   user,
   mascotState,
+  economy,
   hue = 292,
   onPoke,
   onFeed,
@@ -36,22 +38,22 @@ export function CompanionCard({
         {/* Content */}
         <div className="flex flex-col h-full justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 text-left">
               <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animate-pulse" />
               <span className="text-[10px] font-bold tracking-widest text-fuchsia-400 uppercase">
                 {dict.activeCompanion}
               </span>
             </div>
             
-            <h2 className="text-5xl font-semibold text-white mb-4 tracking-tight">Lumen</h2>
-            <p className="text-white/60 text-sm leading-relaxed max-w-[240px]">
+            <h2 className="text-5xl font-semibold text-white mb-4 tracking-tight text-left">Lumen</h2>
+            <p className="text-white/60 text-sm leading-relaxed max-w-[240px] text-left">
               {dict.lumenStatus[mascotState]}
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 text-left">
             <span className="text-[10px] font-bold text-white/30 tracking-widest uppercase">
-              {dict.cost}
+              {economy ? `${economy.balance} ACH disponibles · Nivel ${economy.level}` : dict.cost}
             </span>
             <div className="flex gap-3">
               <motion.button
