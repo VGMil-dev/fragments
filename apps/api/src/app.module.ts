@@ -8,6 +8,7 @@ import { SettingsModule } from "./settings/settings.module";
 import { ChallengesModule } from "./challenges/challenges.module";
 import { HintsModule } from "./hints/hints.module";
 import { EconomyModule } from "./economy/economy.module";
+import { TeacherModule } from "./teacher/teacher.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EconomyModule } from "./economy/economy.module";
     ChallengesModule,
     HintsModule,
     EconomyModule,
+    TeacherModule,
   ],
   controllers: [AppController],
   providers: [AppService],

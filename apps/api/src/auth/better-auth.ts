@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 export const auth = betterAuth({
   database: new Pool({ connectionString: process.env.DATABASE_URL }),
