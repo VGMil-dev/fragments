@@ -9,6 +9,7 @@ import { ChallengesModule } from "./challenges/challenges.module";
 import { HintsModule } from "./hints/hints.module";
 import { EconomyModule } from "./economy/economy.module";
 import { TeacherModule } from "./teacher/teacher.module";
+import { AnalyticsModule } from "./analytics/analytics.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TeacherModule } from "./teacher/teacher.module";
     HintsModule,
     EconomyModule,
     TeacherModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
