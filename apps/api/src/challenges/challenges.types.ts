@@ -18,6 +18,8 @@ export interface Challenge {
   description: string;
   difficulty: number;
   topic: string;
+  status: 'draft' | 'published';
+  teacher_id: string | null;
   created_at: string;
   phases: ChallengePhase[];
 }
@@ -32,4 +34,8 @@ export interface CreateChallengeDto {
     content: Record<string, unknown>;
     hints?: Array<{ level: number; content: string }>;
   }>;
+}
+
+export interface UpdateChallengeDto extends Partial<CreateChallengeDto> {
+  status?: 'draft' | 'published';
 }

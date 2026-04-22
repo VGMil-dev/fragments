@@ -7,9 +7,10 @@ import { PistonService } from './piston.service';
 import { PhaseEvaluatorService } from './phase-evaluator.service';
 import { SettingsModule } from '../settings/settings.module';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
+import { TeacherModule } from '../teacher/teacher.module';
 
 @Module({
-  imports: [SettingsModule, AiProviderModule],
+  imports: [SettingsModule, AiProviderModule, TeacherModule],
   controllers: [ChallengesController, SubmissionController],
   providers: [
     ChallengesService,
