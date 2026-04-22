@@ -22,9 +22,10 @@ export class AuthController {
       throw new HttpException("Invalid golden ticket", HttpStatus.FORBIDDEN);
     }
 
+    let createdUser: any = null;
     try {
       // 1. Create user via Better Auth
-      const user = await auth.api.signUpEmail({
+      createdUser = await auth.api.signUpEmail({
         body: {
           email,
           password,
@@ -32,19 +33,27 @@ export class AuthController {
         },
       });
 
-      if (!user) {
+      if (!createdUser) {
         throw new HttpException("Failed to create user", HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       // 2. Update role to teacher
-      await this.pool.query(
+      const updateResult = await this.pool.query(
         'UPDATE "user" SET role = $1 WHERE email = $2',
         ['teacher', email]
       );
 
+      if (updateResult.rowCount === 0) {
+        throw new Error("Failed to assign teacher role");
+      }
+
       // Return the user/session as Better Auth would
-      return res.json(user);
+      return res.json(createdUser);
     } catch (error: any) {
+      // Cleanup: if user was created but role failed, try to delete or flag
+      if (createdUser && error.message === "Failed to assign teacher role") {
+        await this.pool.query('DELETE FROM "user" WHERE email = $1', [email]);
+      }
       throw new HttpException(error.message || "Signup failed", HttpStatus.BAD_REQUEST);
     }
   }

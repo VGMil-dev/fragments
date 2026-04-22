@@ -7,6 +7,14 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 export const auth = betterAuth({
   database: new Pool({ connectionString: process.env.DATABASE_URL }),
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        defaultValue: "student",
+      },
+    },
+  },
   emailAndPassword: { enabled: true },
   socialProviders: {
     google: {

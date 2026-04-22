@@ -64,7 +64,7 @@ export default function NewChallengePage() {
       {/* Editor Panel */}
       <div className="w-1/2 overflow-y-auto p-8 border-r border-white/5 custom-scrollbar">
         <header className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-semibold text-white">Nuevo Reto</h1>
+          <h1 className="text-xl font-semibold text-white" data-testid="page-title">Nuevo Reto</h1>
           <div className="flex gap-2">
             <button
               onClick={() => handleSave('draft')}

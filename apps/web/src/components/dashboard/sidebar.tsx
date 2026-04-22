@@ -56,6 +56,8 @@ export function Sidebar({
   const router = useRouter()
   const dict = DICTIONARY[lang]
 
+  if (!user) return null;
+
   const handleLogout = async () => {
     await authClient.signOut()
     router.push('/login')
