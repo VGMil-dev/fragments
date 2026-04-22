@@ -8,9 +8,10 @@ import { PhaseEvaluatorService } from './phase-evaluator.service';
 import { SettingsModule } from '../settings/settings.module';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
 import { TeacherModule } from '../teacher/teacher.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
-  imports: [SettingsModule, AiProviderModule, TeacherModule],
+  imports: [SettingsModule, AiProviderModule, TeacherModule, AnalyticsModule],
   controllers: [ChallengesController, SubmissionController],
   providers: [
     ChallengesService,

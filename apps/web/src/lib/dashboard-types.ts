@@ -7,6 +7,7 @@ export interface DashboardUser {
   email: string
   level: number
   streak: number
+  role: 'student' | 'teacher'
 }
 
 export interface Fragment {

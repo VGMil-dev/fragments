@@ -35,6 +35,11 @@ const NAV_ITEMS = [
   { id: 'settings', icon: Settings, label: { es: 'Ajustes', en: 'Settings' }, href: '/settings' },
 ]
 
+const TEACHER_NAV = [
+  { id: 'admin-challenges', icon: Library, label: { es: 'Retos (Admin)', en: 'Challenges (Admin)' }, href: '/teacher/challenges/new' },
+  { id: 'analytics', icon: Sparkles, label: { es: 'Analytics', en: 'Analytics' }, href: '/teacher/analytics' },
+]
+
 const SECONDARY_NAV = [
   { id: 'library', icon: Library, label: { es: 'Biblioteca', en: 'Library' } },
   { id: 'archive', icon: Archive, label: { es: 'Archivo', en: 'Archive' } },
@@ -55,6 +60,8 @@ export function Sidebar({
     await authClient.signOut()
     router.push('/login')
   }
+
+  const primaryNav = user.role === 'teacher' ? [...NAV_ITEMS, ...TEACHER_NAV] : NAV_ITEMS
 
   return (
     <aside className="w-[240px] shrink-0 h-screen bg-[var(--base)] border-r border-white/5 flex flex-col p-5 gap-8 overflow-y-auto">
@@ -82,14 +89,14 @@ export function Sidebar({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{user.name}</p>
           <p className="text-[11px] text-white/40 truncate">
-            {dict.level} {user.level} · {dict.alma}
+            {user.role === 'teacher' ? 'Docente' : `${dict.level} ${user.level} · ${dict.alma}`}
           </p>
         </div>
       </motion.div>
 
       {/* Primary Nav */}
       <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
+        {primaryNav.map((item) => {
           const isActive = activeNav === item.id
           return (
             <Link 

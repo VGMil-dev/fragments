@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { PistonService } from './piston.service';
 import { PhaseEvaluatorService } from './phase-evaluator.service';
 import { SettingsService } from '../settings/settings.service';
+import { AnalyticsGateway } from '../analytics/analytics.gateway';
 
 export interface SubmitDto {
   content: string;
@@ -22,11 +23,15 @@ export class SubmissionService {
     private piston: PistonService,
     private evaluator: PhaseEvaluatorService,
     private settings: SettingsService,
+    private analytics: AnalyticsGateway,
   ) {}
 
   async submit(phaseId: string, dto: SubmitDto): Promise<SubmitResult> {
     const { rows: [phase] } = await this.pool.query(
-      'SELECT id, kind, content FROM challenge_phase WHERE id = $1',
+      `SELECT p.id, p.kind, p.content, c.id as challenge_id, c.teacher_id, c.title as challenge_title
+       FROM challenge_phase p
+       JOIN challenge c ON c.id = p.challenge_id
+       WHERE p.id = $1`,
       [phaseId],
     );
     if (!phase) throw new Error('Phase not found');
@@ -70,6 +75,17 @@ export class SubmissionService {
          ON CONFLICT (user_id) DO UPDATE SET ach_balance = lumen_progress.ach_balance + EXCLUDED.ach_balance, updated_at = NOW()`,
         [dto.userId, achEarned],
       );
+    }
+
+    if (phase.teacher_id) {
+      this.analytics.emitSubmission(phase.teacher_id, {
+        userId: dto.userId,
+        challengeId: phase.challenge_id,
+        challengeTitle: phase.challenge_title,
+        phaseId,
+        passed,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     return { passed, feedback, achEarned };
