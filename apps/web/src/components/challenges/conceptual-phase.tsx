@@ -9,11 +9,12 @@ interface Props {
   question: string;
   onResult: (passed: boolean, achEarned: number) => void;
   onActivity: () => void;
+  isPreview?: boolean;
 }
 
 type Status = 'idle' | 'checking' | 'passed' | 'failed';
 
-export function ConceptualPhase({ phaseId, challengeId, question, onResult, onActivity }: Props) {
+export function ConceptualPhase({ phaseId, challengeId, question, onResult, onActivity, isPreview = false }: Props) {
   const [answer, setAnswer] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [feedback, setFeedback] = useState('');
@@ -21,6 +22,16 @@ export function ConceptualPhase({ phaseId, challengeId, question, onResult, onAc
   async function handleSubmit() {
     if (!answer.trim()) return;
     setStatus('checking');
+
+    if (isPreview) {
+      setTimeout(() => {
+        setStatus('passed');
+        setFeedback('¡Excelente respuesta! (Simulación de preview)');
+        onResult(true, 10);
+      }, 1000);
+      return;
+    }
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/challenges/${challengeId}/phases/${phaseId}/submit`,

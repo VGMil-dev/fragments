@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getChallenge } from '@/lib/challenges-service';
-import { ChallengeShell } from './challenge-shell';
+import { ChallengeShell } from '@/components/challenges/challenge-shell';
 
 const API_INTERNAL = () => process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '';
 

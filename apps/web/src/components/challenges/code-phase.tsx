@@ -13,17 +13,28 @@ interface Props {
   starter: string;
   onResult: (passed: boolean, achEarned: number) => void;
   onActivity: () => void;
+  isPreview?: boolean;
 }
 
 type Status = 'idle' | 'running' | 'passed' | 'failed';
 
-export function CodePhase({ phaseId, challengeId, language, starter, onResult, onActivity }: Props) {
+export function CodePhase({ phaseId, challengeId, language, starter, onResult, onActivity, isPreview = false }: Props) {
   const [code, setCode] = useState(starter);
   const [status, setStatus] = useState<Status>('idle');
   const [feedback, setFeedback] = useState('');
 
   async function handleSubmit() {
     setStatus('running');
+
+    if (isPreview) {
+      setTimeout(() => {
+        setStatus('passed');
+        setFeedback('¡Código correcto! (Simulación de preview)');
+        onResult(true, 20);
+      }, 1500);
+      return;
+    }
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/challenges/${challengeId}/phases/${phaseId}/submit`,
