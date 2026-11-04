@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { AiAnalysisSchema, SubmissionSnapshotSchema } from "../../../../../packages/contracts/src/index.js";
+import { AiAnalysisSchema, SubmissionSnapshotSchema } from "@fragments/contracts";
 import { createMentorService, type MentorEvaluator, type PdfRenderer, type Proposal } from "./service.js";
 
 const proposal: Proposal = {
   title: "Huerto escolar",
   problem: "Registrar plantas",
-  audience: "Estudiantes",
   solution: "Una bitacora de riego",
+  goals: ["Registrar riego y crecimiento"],
   skills: ["TypeScript"],
   scope: "MVP: alta y consulta de plantas",
+  constraints: ["Funciona sin conexión"],
 };
 
 const fakeEvaluator: MentorEvaluator = {
@@ -44,7 +45,7 @@ describe("Mentor service", () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     await expect(service.evaluate({ ...proposal, title: "  " })).rejects.toMatchObject({
       code: "INVALID_PROPOSAL",
-      message: expect.stringContaining("title"),
+      message: expect.stringContaining("título"),
     });
   });
 

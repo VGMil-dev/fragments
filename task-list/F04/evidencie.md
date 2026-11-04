@@ -1,6 +1,6 @@
 # F04 — Evidence / evidencie
 
-Estado: IMPLEMENTADO EN AISLAMIENTO; listo para integrar con F03. La fila central queda pendiente del planner (solo el planner edita `task-list/TASKS.md`).
+Estado: INTEGRADO PARCIALMENTE EN `codex/fragments-mvp`; dominio conectado a `@fragments/contracts`. Sigue pendiente integración HTTP/persistencia y verificación completa. La fila central queda pendiente del planner (solo el planner edita `task-list/TASKS.md`).
 Owner: W4
 
 ## Skills consultadas
@@ -14,6 +14,8 @@ Owner: W4
 
 - `apps/api/src/features/mentor/service.ts`
 - `apps/api/src/features/mentor/service.test.ts`
+- `packages/contracts/src/index.ts` y `packages/contracts/src/index.test.ts` (DTOs compartidos fijados por el planner)
+- `docs/CONTRACTS.md`
 - `task-list/F04/evidencie.md`
 
 ## Comandos y resultados
@@ -24,6 +26,10 @@ Owner: W4
 - Ciclo TDD para alteración del snapshot: primera ejecución — exit 1, falló el caso “refuses to render when the snapshot JSON no longer matches its hash”; segunda ejecución tras corregir — incluido en las 14 pruebas pasadas.
 - `pnpm --filter @fragments/contracts build` — exit 0 (`tsc -p tsconfig.json`).
 - `pnpm exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck apps/api/src/features/mentor/service.ts apps/api/src/features/mentor/service.test.ts` — exit 1: `TS2591 Cannot find name 'node:crypto'`; el scaffold aún no declara/provee `@types/node` ni `apps/api`.
+- Integración en workspace con F03: `pnpm --filter @fragments/contracts test` — exit 0; 16 pruebas pasaron.
+- `pnpm --filter @fragments/contracts build` — exit 0.
+- `pnpm --filter @fragments/api build` y `pnpm --filter @fragments/api typecheck` — exit 0 con import desde el paquete compartido.
+- `pnpm --filter @fragments/api test` — exit 0; 7 archivos, 18 pruebas pasaron.
 
 ## Cobertura demostrada
 
@@ -37,11 +43,13 @@ Owner: W4
 ## Limitaciones
 
 - F03 debe aportar el manifiesto/configuración TypeScript de API y tipos Node para completar el chequeo de tipos sin ampliar la zona de W4.
-- Sin controlador HTTP ni persistencia: corresponden a la plataforma F03 y la integración posterior.
+- Sin controlador HTTP ni persistencia de propuestas/entregas: corresponden a la integración posterior con la plataforma F03.
 - Se usaron evaluator/PDF fake etiquetados; no se probó proveedor IA ni renderer PDF real.
 - No se modificó `task-list/TASKS.md` porque está reservado al planner.
 
 ## Hash / commit
 
 Implementación: `526aec7bce82e6ba692c7c6023f3767a22e73067` (`feat(mentor): implementar evaluacion y entregas efimeras`).
-Evidencia: se registrará en el commit documental inmediato posterior.
+Evidencia original: `582659532b0d584066331da2ecf6552d37dd5b86` (`docs(mentor): registrar evidencia de F04`).
+
+Integración parcial de contratos y compilación: `codex/fragments-mvp`; permanece sin marcar como completa hasta implementar HTTP/persistencia.

@@ -184,7 +184,9 @@ export const CreateMentorSubmissionRequestSchema = z.object({
   evaluationId: identifier,
 }).strict();
 export const CreateReviewSubmissionRequestSchema = z.object({ reviewId: identifier }).strict();
-export const MentorSubmissionResponseSchema = SubmissionSnapshotSchema;
+export const SubmissionResponseSchema = SubmissionSnapshotSchema.extend({ id: identifier }).strict();
+export const MentorSubmissionResponseSchema = SubmissionResponseSchema;
+export const ReviewSubmissionResponseSchema = SubmissionResponseSchema;
 export const VerifySubmissionResponseSchema = z.object({
   kind: z.enum(["mentor", "review"]),
   score: z.number().min(0).max(100),
@@ -212,4 +214,5 @@ export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
 export type CreateMentorSubmissionRequest = z.infer<typeof CreateMentorSubmissionRequestSchema>;
 export type CreateReviewSubmissionRequest = z.infer<typeof CreateReviewSubmissionRequestSchema>;
 export type MentorSubmissionResponse = z.infer<typeof MentorSubmissionResponseSchema>;
+export type ReviewSubmissionResponse = z.infer<typeof ReviewSubmissionResponseSchema>;
 export type VerifySubmissionResponse = z.infer<typeof VerifySubmissionResponseSchema>;

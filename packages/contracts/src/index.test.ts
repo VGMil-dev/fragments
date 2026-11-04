@@ -303,6 +303,7 @@ describe("shared API contracts", () => {
     ).toBe(true);
     expect(CreateReviewSubmissionRequestSchema.safeParse({ reviewId: "review-1" }).success).toBe(true);
     const snapshot = {
+      id: "submission-1",
       kind: "review",
       sourceId: "review-1",
       score: 78,
