@@ -1,40 +1,40 @@
 # F02 — Evidence / evidencie
 
-Estado: READY FOR PLANNER INTEGRATION; no marcar DONE hasta cablear rutas y completar captura visual.
-Owner: W2
+Estado: COMPLETADO EN WEB; endpoints Review dependen de F05 y muestran estado de error recuperable hasta su integración.
+Owner: W2; integración de rutas y UX: PLANNER.
 
-## Skills y criterio
+## Alcance integrado
 
-- Leídos: `AGENTS.md`, `SYSTEM_PROMPT_CODEX.md`, `skills/SKILLS_MATRIX.md`, `docs/SYSTEM_DESIGN.md`, `docs/CONTRACTS.md`, `docs/DESIGN_TOKENS.md`, `task-list/TASKS.md` y los archivos F02.
-- `ego-browser` v2.2.0: leído y ejecutado `ego-browser skill` (salida completa). No se abrió navegador: `App.tsx` es zona del planner y todavía no enruta las superficies F02.
-- `frontend-design`, `react-best-practices`, `web-design-guidelines`, `test-driven-development` y `verification-before-completion`: las copias originales no están instaladas en los directorios de skills locales ni en el cache local inspeccionado. No se instalaron ni se consultaron fuentes externas. Se siguieron las reglas explícitas de diseño, accesibilidad, TDD y verificación de este repositorio.
-- Los exports y paths F02 se tomaron de los contratos y el mapa aprobado por el planner; no se añadieron DTOs ni endpoints.
+- `apps/web/src/features/gallery/`, `mentor/`, `review/` y `submissions/`: flujo estudiantil composable, formularios validados con contratos compartidos, datos fake identificados, estados loading/vacío/error/éxito y descargas Markdown/PDF.
+- `apps/web/src/lib/api/`: cliente tipado, timeout/cancelación, parseo de respuestas y manejo genérico de errores.
+- `apps/web/src/App.tsx`: rutas `/student/gallery`, `/student/mentor` y `/student/review`, navegación de historial, CTAs de entrada y foco al contenido al cambiar de ruta.
+- `apps/web/vite.config.ts`: proxy local `/api` a API local en desarrollo.
+- `apps/web/src/styles/student-workspace.css`, `apps/web/src/styles/main.css`: diseño responsivo y foco visible.
+- `pnpm-lock.yaml`: importer web enlazado al contrato workspace autorizado.
 
-## Rutas implementadas
+## Verificación
 
-- `apps/web/package.json`: dependencia workspace `@fragments/contracts` autorizada por el planner. El lockfile queda a cargo del planner.
-- `apps/web/src/lib/api/api-client.ts` y `student-api.ts`: cliente de mismo origen, esquemas compartidos, timeout, cancelación, errores genéricos, validación de requests y descargas raw Markdown/PDF en memoria.
-- `apps/web/src/hooks/async-state.tsx`, `use-api-request.ts`, `data-source-badge.tsx` y estilos/tests: carga, vacío, error recuperable, éxito y marca visible para fixtures/modelos `fake/` o `fake:`.
-- `apps/web/src/features/gallery/`: galería composable con campos del contrato, selección, estado vacío y marca fake.
-- `apps/web/src/features/mentor/`: formulario con validación del esquema compartido, evaluación, guía/evidencias del response, reevaluación y generación/descarga de entrega.
-- `apps/web/src/features/review/`: validación del SHA completo, cola/progreso, hallazgos respaldados por evidencia y generación/descarga de entrega.
-- `apps/web/src/features/submissions/`: descargas temporales Markdown/PDF usando el `id` de entrega; no muestra ni persiste el código de verificación.
-- `task-list/TASKS.md`, `apps/web/src/App.tsx`, contratos, lockfile, marca y branding no se editaron.
+- `pnpm build` — exit 0; build de contracts, API y web.
+- `pnpm typecheck` — exit 0; contracts, API y web.
+- `pnpm test` — exit 0; contracts 16/16 y API 28/28.
+- `pnpm lint` — exit 0.
+- `pnpm exec vitest run apps/web/src` — exit 0; 11 archivos, 40 pruebas aprobadas.
+- `git diff --check` — exit 0.
+- Ego Lite, QA visual 390/1440: CTA de landing abre Galería; recorrido Mentor guarda una propuesta, evalúa con `fake/local-heuristic-v1`, genera entrega y descarga README/PDF; Review acepta SHA completo y presenta error recuperable del API ausente; navegación por teclado muestra foco y permite saltar al contenido.
 
-## Verificación fresca
+## Capturas
 
-- `pnpm install --frozen-lockfile --ignore-scripts --store-dir C:\Users\vgmil\.cache\pnpm\fragments` — exit 0 antes de declarar la dependencia web de contratos.
-- `pnpm install --no-frozen-lockfile --ignore-scripts --store-dir C:\Users\vgmil\.cache\pnpm\fragments` — exit 0 tras añadir el vínculo autorizado; el cambio de importer se descartó del worktree y el planner sincronizará el lockfile.
-- `pnpm --filter @fragments/contracts build` — exit 0.
-- `vitest run apps/web/src` — exit 0; 11 archivos, 40 pruebas aprobadas.
-- `pnpm --filter @fragments/contracts test` — exit 0; 1 archivo, 16 pruebas aprobadas.
-- `pnpm --filter @fragments/web typecheck` — exit 0.
-- `pnpm --filter @fragments/web build` — exit 0. `App.tsx` sigue siendo la landing F01, por lo que este build no incluye todavía las nuevas rutas.
-- Se ejecutaron primero pruebas rojas para los módulos nuevos; después las suites anteriores pasaron en verde.
+Guardadas en `task-list/F07/screenshots/` (SHA-256):
 
-## Capturas, hash y limitaciones
+- `f02-gallery-390.png` — `b7cf822deb19e8141722ab47a6c5d78611464a29b946d2ba0c66a885eb1df695`
+- `f02-gallery-1440.png` — `0fb17ee79d24232005aa39c4fad3f5aa7bfa64c82357d5f1e52fc596beb9d24d`
+- `f02-mentor-result-390.png` — `a66cf3893d43a64de2e38d2261f4bfcb1e83ed2ef1d586a75e51c5ca2fcaab07`
+- `f02-review-unavailable-390.png` — `99799d8a200719a2afa89c2e780062255696947fd762102dc720742057139367`
+- `f02-keyboard-focus-390.png` — `9df51e197e3776cdb12104b8348e703823831f9fc8992cbfadf407530142b613`
 
-- Capturas / logs: no hay captura de F02; las superficies todavía no están conectadas a rutas. El planner debe integrar el enrutamiento y validar 390/1440 px, teclado y foco con ego(lite).
-- Hash / commit de implementación W2: `74c62fc3c8371260ba1636e2922e1d2633d6ddae`.
-- Limitación: la verificación visual/E2E completa depende de integración del planner. Las skills originales listadas arriba tampoco están disponibles localmente; ego-browser sí lo está.
-- No se marcó F02 como DONE ni se actualizó `task-list/TASKS.md`.
+## Limitaciones y commits
+
+- La galería no tiene aún contenido opt-in/coincidencias y muestra estado vacío cuando F04 devuelve su lista vacía.
+- La interfaz Review está implementada, pero los endpoints F05 no existen; la captura demuestra el manejo genérico sin filtrar datos de respuesta.
+- La evaluación y la generación de PDF probadas son fake/locales, sin proveedor IA ni servicio externo.
+- Commits del trabajo F02 importado: `ac9243f` y `df0e191`. La integración del planner se registra en un commit separado.
