@@ -95,6 +95,42 @@ export const InspectorChallengeSchema = InspectorChallengePublicSchema.extend({
   teacherHint: nonEmptyText,
 }).strict();
 
+export const InspectorDefenseRecordRequestSchema = z.object({
+  mutationObserved: z.boolean(),
+  restorationConfirmed: z.boolean(),
+  notes: z.string().trim().max(2000),
+}).strict();
+
+export const InspectorDefenseRecordSchema = InspectorDefenseRecordRequestSchema.extend({
+  recordedAt: z.iso.datetime(),
+}).strict();
+
+export const InspectorChallengeStatusSchema = z.enum(["pending", "assigned", "completed", "obsolete"]);
+
+export const InspectorChallengeRecordResponseSchema = z.object({
+  id: identifier,
+  reviewId: identifier,
+  projectId: identifier,
+  commitSha: gitObjectId,
+  challenge: InspectorChallengeSchema,
+  status: InspectorChallengeStatusSchema,
+  createdAt: z.iso.datetime(),
+  assignedTo: identifier.optional(),
+  assignedAt: z.iso.datetime().optional(),
+  supersededByCommitSha: gitObjectId.optional(),
+  defense: InspectorDefenseRecordSchema.optional(),
+}).strict();
+
+export const InspectorChallengeRecordsResponseSchema = z.array(InspectorChallengeRecordResponseSchema).max(500);
+
+export const InspectorStudentChallengeResponseSchema = z.object({
+  id: identifier,
+  status: z.enum(["assigned", "completed"]),
+  challenge: InspectorChallengePublicSchema,
+}).strict();
+
+export const InspectorAssignChallengeRequestSchema = z.object({}).strict();
+
 export const SubmissionSnapshotSchema = z
   .object({
     kind: z.enum(["mentor", "review"]),
@@ -204,6 +240,9 @@ export type RepositorySnapshot = z.infer<typeof RepositorySnapshotSchema>;
 export type AiAnalysis = z.infer<typeof AiAnalysisSchema>;
 export type InspectorChallenge = z.infer<typeof InspectorChallengeSchema>;
 export type InspectorChallengePublic = z.infer<typeof InspectorChallengePublicSchema>;
+export type InspectorDefenseRecordRequest = z.infer<typeof InspectorDefenseRecordRequestSchema>;
+export type InspectorChallengeRecordResponse = z.infer<typeof InspectorChallengeRecordResponseSchema>;
+export type InspectorStudentChallengeResponse = z.infer<typeof InspectorStudentChallengeResponseSchema>;
 export type SubmissionSnapshot = z.infer<typeof SubmissionSnapshotSchema>;
 export type GalleryEntry = z.infer<typeof GalleryEntrySchema>;
 export type CreateProposalRequest = z.infer<typeof CreateProposalRequestSchema>;

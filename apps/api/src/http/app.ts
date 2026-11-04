@@ -5,6 +5,8 @@ import { z } from "zod";
 import type { TeacherSessionService } from "../auth/session-service.js";
 import { createMentorHttp } from "../features/mentor/http.js";
 import type { createMentorService } from "../features/mentor/service.js";
+import { createInspectorHttp } from "../features/inspector/http.js";
+import type { createInspectorService } from "../features/inspector/service.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -13,8 +15,13 @@ function sendError(response: ServerResponse, status: number, code: string, messa
   response.writeHead(status).end(JSON.stringify(errorSchema.parse({ ok: false, error: { code, message } })));
 }
 
-export function createHttpHandler(database: DatabaseSync, options: { auth?: TeacherSessionService; mentor?: ReturnType<typeof createMentorService> } = {}) {
+export function createHttpHandler(database: DatabaseSync, options: {
+  auth?: TeacherSessionService;
+  mentor?: ReturnType<typeof createMentorService>;
+  inspector?: ReturnType<typeof createInspectorService>;
+} = {}) {
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor) : undefined;
+  const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");
@@ -63,9 +70,14 @@ export function createHttpHandler(database: DatabaseSync, options: { auth?: Teac
       return;
     }
     if (mentorHandler && await mentorHandler(request, response) === "handled") return;
+    if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
   };
 }
 
-export function createApiServer(database: DatabaseSync, options: { auth?: TeacherSessionService; mentor?: ReturnType<typeof createMentorService> } = {}) { return createServer(createHttpHandler(database, options)); }
+export function createApiServer(database: DatabaseSync, options: {
+  auth?: TeacherSessionService;
+  mentor?: ReturnType<typeof createMentorService>;
+  inspector?: ReturnType<typeof createInspectorService>;
+} = {}) { return createServer(createHttpHandler(database, options)); }

@@ -13,6 +13,9 @@ import {
   FeedbackFindingSchema,
   InspectorChallengePublicSchema,
   InspectorChallengeSchema,
+  InspectorChallengeRecordResponseSchema,
+  InspectorDefenseRecordRequestSchema,
+  InspectorStudentChallengeResponseSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
@@ -337,5 +340,46 @@ describe("shared API contracts", () => {
         studentName: "Private",
       }).success,
     ).toBe(false);
+  });
+
+  it("validates Inspector defense requests and keeps teacher hints out of student responses", () => {
+    const record = {
+      id: "challenge-1",
+      reviewId: "review-1",
+      projectId: "project-1",
+      commitSha: "b".repeat(40),
+      challenge: {
+        evaluationId: "review-1",
+        sourceEvidence: [{ source: "repository", path: "src/math.ts", lines: [2, 4], digest }],
+        precondition: "Existe un acumulador.",
+        mutation: "Invierte la condición.",
+        demonstration: "Comprueba el resultado anterior.",
+        restoration: "Devuelve la condición a su forma original.",
+        estimatedMinutes: 15,
+        teacherHint: "Revisa el acumulador.",
+      },
+      status: "pending",
+      createdAt: now,
+    };
+    const assigned = { ...record, status: "assigned" as const, assignedTo: "teacher-1", assignedAt: now };
+    const completed = {
+      ...assigned,
+      status: "completed" as const,
+      defense: { mutationObserved: true, restorationConfirmed: true, notes: "Registrado.", recordedAt: now },
+    };
+
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: " Bien " }).data)
+      .toEqual({ mutationObserved: true, restorationConfirmed: true, notes: "Bien" });
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: "x".repeat(2001) }).success).toBe(false);
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: "", teacherHint: "private" }).success).toBe(false);
+    expect(InspectorChallengeRecordResponseSchema.safeParse(record).success).toBe(true);
+    expect(InspectorChallengeRecordResponseSchema.safeParse(assigned).success).toBe(true);
+    expect(InspectorChallengeRecordResponseSchema.safeParse(completed).success).toBe(true);
+    expect(InspectorStudentChallengeResponseSchema.safeParse({
+      id: "challenge-1", status: "assigned", challenge: Object.fromEntries(Object.entries(record.challenge).filter(([key]) => key !== "teacherHint")),
+    }).success).toBe(true);
+    expect(InspectorStudentChallengeResponseSchema.safeParse({
+      id: "challenge-1", status: "assigned", challenge: record.challenge,
+    }).success).toBe(false);
   });
 });

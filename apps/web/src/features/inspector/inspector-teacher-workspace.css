@@ -1,0 +1,22 @@
+.inspector-workspace { width: min(100% - 2rem, 960px); margin: clamp(1.5rem, 5vw, 4rem) auto; color: var(--navy); }
+.inspector-workspace__header { margin-bottom: 1.5rem; }
+.inspector-workspace__home { display: inline-block; margin-bottom: 1.2rem; color: var(--muted); font-size: .85rem; font-weight: 700; text-decoration: none; }
+.inspector-workspace__home:focus-visible { outline: 3px solid var(--cornflower); outline-offset: 3px; }
+.inspector-workspace__header p { margin: 0 0 .55rem; color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.inspector-workspace__header h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3rem); }
+.inspector-workspace__header span { display: block; margin-top: .5rem; color: var(--muted); }
+.inspector-workspace__lookup { display: grid; grid-template-columns: minmax(12rem, 1fr) auto auto; align-items: end; gap: .65rem; margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--border-soft); border-radius: .8rem; background: white; }
+.inspector-workspace__lookup label { grid-column: 1 / -1; color: var(--muted); font-size: .85rem; font-weight: 700; }
+.inspector-workspace__lookup input { min-width: 0; height: 2.8rem; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: .55rem; color: var(--navy); font: inherit; }
+.inspector-workspace__lookup button { min-height: 2.8rem; padding: .55rem .8rem; border: 0; border-radius: .55rem; background: var(--navy); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.inspector-workspace__lookup button:disabled { cursor: not-allowed; opacity: .55; }
+.inspector-workspace__lookup :focus-visible { outline: 3px solid var(--cornflower); outline-offset: 3px; }
+.inspector-workspace__select-label { display: grid; gap: .45rem; margin-bottom: 1rem; color: var(--muted); font-size: .85rem; font-weight: 700; }
+.inspector-workspace__select-label select { min-height: 2.8rem; padding: .55rem .75rem; border: 1px solid var(--border); border-radius: .55rem; background: white; color: var(--navy); font: inherit; }
+.inspector-workspace__select-label select:focus-visible { outline: 3px solid var(--cornflower); outline-offset: 3px; }
+@media (max-width: 600px) {
+  .inspector-workspace { width: min(100% - 1rem, 960px); }
+  .inspector-workspace__lookup { grid-template-columns: 1fr 1fr; }
+  .inspector-workspace__lookup input { grid-column: 1 / -1; }
+  .inspector-workspace__lookup button { width: 100%; }
+}

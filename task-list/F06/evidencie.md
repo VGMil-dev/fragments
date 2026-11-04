@@ -1,57 +1,54 @@
 # F06 — Evidence / evidencie
 
-**Estado:** IMPLEMENTADO PARCIALMENTE EN AISLAMIENTO. La lógica de dominio y el panel docente están listos para integrar. F06 sigue abierto: no hay rutas de Inspector, DTOs de asignación/defensa, persistencia SQLite, pantalla conectada al flujo ni E2E visual.
+Estado: PARCIAL. Inspector ahora tiene contratos compartidos, SQLite, rutas HTTP con sesión docente, cliente tipado, panel/ruta web y E2E con Review/provider fake. No se marca F06 como completada: el runner normal todavía no inyecta el servicio, no hay verificador/login docente habilitado y F05 aún no persiste ni expone snapshots Review.
 
-**Owner:** W6.
+Owner: W6; integración y contratos: PLANNER.
+Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `codex/fragments-mvp` (`b984de4`).
 
-## Skills consultadas
+## Rutas implementadas
 
-- `ego-browser`: lectura directa de `C:\Users\vgmil\.agents\skills\ego-browser\SKILL.md`. No se abrió navegador: el panel no está conectado a una ruta ni puede verificarse en la app. Se hará E2E con ego(lite) al integrar el flujo visible.
-- `backend-architecture`, `test-driven-development`, `verification-before-completion`: no se encontraron `SKILL.md` locales en las carpetas consultadas. Se aplicó separación de puertos, pruebas red/verde y verificación con comandos frescos.
-- Criterio de diseño aplicado: se reutilizan `InspectorChallengeSchema` y `InspectorChallengePublicSchema`, la paleta y las variables del sistema visual, teclado y diseño adaptable.
+- Contratos: `packages/contracts/src/index.ts`, `packages/contracts/src/index.test.ts`, `docs/CONTRACTS.md`.
+- Dominio existente alineado a contratos: `apps/api/src/features/inspector/service.ts`.
+- Persistencia SQLite: migración runtime v3 en `apps/api/src/db/migrate.ts`, espejo `apps/api/migrations/003-inspector.sql`, repositorio `apps/api/src/features/inspector/repository.ts`.
+- HTTP: `apps/api/src/features/inspector/http.ts`, registrado en `apps/api/src/http/app.ts`; rutas docente GET/POST desafíos, asignación y defensa con cookie firmada verificada, límites de body, envelopes genéricos y `Cache-Control: no-store`.
+- Web: `apps/web/src/lib/api/inspector-api.ts`; panel y workspace en `apps/web/src/features/inspector/`; ruta `/teacher/inspector`, link de pie y foco en `apps/web/src/App.tsx`.
+- Diseño de contrato y rutas: `docs/SYSTEM_DESIGN.md`.
+- Criterios, intención y limitaciones: `task-list/F06/intent.md`, `task-list/F06/spec.md`.
 
-## Rutas cambiadas
+## Seguridad y comportamiento
 
-- `apps/api/src/features/inspector/service.ts`
-- `apps/api/src/features/inspector/service.test.ts`
-- `apps/web/src/features/inspector/InspectorTeacherPanel.tsx`
-- `apps/web/src/features/inspector/inspector-teacher-panel.css`
-- `task-list/F06/intent.md`
-- `task-list/F06/spec.md`
-- `task-list/F06/evidencie.md`
+- Las rutas rechazan sesión ausente; la identidad de docente sale del HMAC session cookie, no del body.
+- El reto de la respuesta estudiante usa el schema público; el hint privado se filtra antes de serializar y el schema estricto rechaza `teacherHint`.
+- Rechazo por SHA obsoleto, snapshot/digest/rango de línea inválido o hallazgo no verificado; nunca se ejecuta código del repositorio.
+- El almacén persiste estado, desafío privado, asignación, SHA sucesor y defensa. Las respuestas privadas no se cachean.
+- Los drivers de E2E están rotulados como fake y solo corren en pruebas/QA local; no se llamó a GitHub ni a AI Gateway.
 
-## Cobertura implementada
+## Verificación fresca
 
-- Un reto solo se crea desde un Review existente cuya revisión y snapshot comparten el SHA exacto actual.
-- La fuente del reto la selecciona el dominio desde un hallazgo `verified`; ruta y digest deben existir en el snapshot validado y las líneas deben estar dentro del archivo. El proveedor no decide la ruta.
-- El flujo privado valida `InspectorChallengeSchema`; la salida para estudiante construye y valida `InspectorChallengePublicSchema`, que rechaza `teacherHint`.
-- Asignar requiere docente; registrar defensa exige el docente asignador y una entrada estricta de mutación, restauración y nota limitada.
-- Un commit nuevo obsoleta retos pendientes, congela los asignados con `supersededByCommitSha` y conserva retos realizados/defensas.
-- Pruebas usan `fake/local` provider y store en memoria. No se llama a IA/GitHub ni se ejecuta código estudiantil.
-- El panel docente muestra fuente, precondición, mutación, demostración y restauración; la ayuda se separa en una sección identificada como privada. El componente sigue aislado y no altera `App` ni el routing global.
+- `pnpm install --frozen-lockfile --ignore-scripts --store-dir C:\Users\vgmil\.cache\pnpm\fragments --config.confirmModulesPurge=false` — exit 0; lockfile vigente, sin scripts de paquetes.
+- TDD contratos: prueba nueva primero falló (1 archivo, 1 fallo por schema ausente); después `pnpm exec vitest run packages/contracts/src/index.test.ts` — exit 0; 17/17.
+- `pnpm build` — exit 0; 3 paquetes.
+- `pnpm typecheck` — exit 0; 4 tareas de workspace.
+- `pnpm test` — exit 0; contracts 17/17, API 34/34 (10 archivos).
+- `pnpm lint` — exit 0; lint declarado en contracts.
+- `pnpm exec vitest run apps/api/src/features/inspector apps/web/src/lib/api/inspector-api.test.ts apps/web/src` — exit 0; 14 archivos, 47 pruebas.
+- `git diff --check` — exit 0.
+- `ego-browser skill` — v2.2.0 leído y ejecutado hasta `[ego-browser:skill] end of guide`.
+- E2E Ego Lite con SQLite en memoria, sesión de docente de fixture, Review/provider fake y proxy local: login 200, cargar revisión, crear→asignar→registrar defensa, recargar reto persistido; el estado final fue `Realizado`, el hint solo apareció en espacio docente. Capturas a 390px y 1440px abajo.
 
-## Comandos ejecutados y resultados
+## Capturas / SHA-256
 
-- `pnpm install --frozen-lockfile --ignore-scripts --store-dir C:\Users\vgmil\.cache\pnpm\fragments --config.confirmModulesPurge=false` — exit 0; worktree preparado sin ejecutar scripts de dependencias.
-- `pnpm --filter @fragments/contracts build` — exit 0.
-- `pnpm lint` — exit 0; Turbo ejecutó el lint declarado por contratos.
-- `pnpm --filter @fragments/api build` — exit 0.
-- `pnpm --filter @fragments/api typecheck` — exit 0.
-- `pnpm --filter @fragments/api test` — exit 0; 8 archivos, 22 pruebas pasaron.
-- `pnpm --filter @fragments/web build` — exit 0.
-- `pnpm --filter @fragments/web typecheck` — exit 0, incluye el panel Inspector aislado.
-- El ciclo de TDD tuvo fallas iniciales para reto no asignado y evidencia sin hallazgo verificado; después de ajustar reglas y fixtures, las 22 pruebas pasan.
+- `task-list/F06/screenshots/inspector-defense-390.png` — `21a1564da23b39320857232848761469f16f14460da1ac53fe4977836bb358ae`
+- `task-list/F06/screenshots/inspector-defense-1440.png` — `283f0c4a7d0b085ae0518ca0e8226413a6af66a28c30a80148db8c1adc189607`
 
-## Limitaciones / trabajo pendiente
+## Pendiente de integración antes de DONE
 
-- Contratos compartidos no incluyen DTOs para asignación/registro ni respuesta de reto con estado y expiración; no se editaron por instrucción del planner. El router fijo enumera `POST /api/inspector/:reviewId/challenges` y `POST /api/inspector/challenges/:id/record`; el planner debe fijar sus payloads antes de conectarlos.
-- Falta repositorio SQLite e integración con la persistencia real de Review.
-- La autenticación docente debe proteger las rutas; el servicio recibe `teacherId` ya verificado por el borde HTTP.
-- El panel usa importación de tipos desde el source compartido mientras el package link de `apps/web` queda pendiente de integración F02. El planner puede cambiarlo a `@fragments/contracts` cuando se agregue esa dependencia.
-- No se probó E2E ni se capturaron screenshots porque la pantalla no tiene una ruta visible. La prueba visual debe usar exclusivamente ego(lite).
-- No se ejecutó evaluación Promptfoo ni proveedor de IA real; el dominio se probó con un fake determinista.
+- El entrypoint normal `apps/api/src/main.ts` no crea `InspectorService`: F05 no expone ni persiste la revisión/snapshot que requiere Inspector.
+- No se habilitó autenticación docente real. El runner falla cerrado si `AUTH_ENABLED` se activa sin verificador; la UI no tiene formulario de inicio de sesión. El E2E usó un verificador de fixture aislado.
+- La E2E integrada usa una revisión fake verificada; falta la conexión a la persistencia y snapshots exactos de F05.
+- Por esos motivos, F06 y F07 siguen `[ ]` en `task-list/TASKS.md`. Este cierre no invocó GitHub/Gateway ni desplegó servicios.
 
-## Hash / commit
+## Commits
 
-Implementación parcial: `47c6d37d76b9379a3a7e6d34d281e49ba5c9c602` (`feat(f06): implementa retos Inspector privados`).
-Estado real: sin integrar en `codex/fragments-mvp`; no se marcó F06 como completada.
+- Merge de integración: `b984de4` (raíz actualizada sin reescribir historial).
+- Commit de implementación: se registra después de la verificación y se anota el hash en el commit de evidencia siguiente.

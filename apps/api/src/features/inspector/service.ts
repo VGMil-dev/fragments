@@ -1,7 +1,9 @@
 import {
   AiAnalysisSchema,
+  InspectorDefenseRecordRequestSchema,
   InspectorChallengePublicSchema,
   InspectorChallengeSchema,
+  InspectorStudentChallengeResponseSchema,
   RepositorySnapshotSchema,
   type AiAnalysis,
   type EvidenceReference,
@@ -114,23 +116,9 @@ function validateTeacherId(teacherId: string): void {
 }
 
 function validateDefense(value: unknown): Omit<DefenseRecord, "recordedAt"> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw error("INVALID_DEFENSE_RECORD", "Registra la mutación, la restauración y una nota breve.");
-  }
-  const input = value as Record<string, unknown>;
-  const allowed = new Set(["mutationObserved", "restorationConfirmed", "notes"]);
-  if (Object.keys(input).some((key) => !allowed.has(key))
-    || typeof input.mutationObserved !== "boolean"
-    || typeof input.restorationConfirmed !== "boolean"
-    || typeof input.notes !== "string"
-    || input.notes.trim().length > 2000) {
-    throw error("INVALID_DEFENSE_RECORD", "Registra solo el resultado de mutación, restauración y notas sin datos privados.");
-  }
-  return {
-    mutationObserved: input.mutationObserved,
-    restorationConfirmed: input.restorationConfirmed,
-    notes: input.notes.trim(),
-  };
+  const parsed = InspectorDefenseRecordRequestSchema.safeParse(value);
+  if (!parsed.success) throw error("INVALID_DEFENSE_RECORD", "Registra solo el resultado de mutación, restauración y notas sin datos privados.");
+  return parsed.data;
 }
 
 export function createInspectorService(dependencies: InspectorDependencies) {
@@ -199,11 +187,11 @@ export function createInspectorService(dependencies: InspectorDependencies) {
         throw error("CHALLENGE_NOT_ASSIGNED", "El reto todavía no está disponible para el estudiante.");
       }
       const { teacherHint: _privateHint, ...publicChallenge } = InspectorChallengeSchema.parse(record.challenge);
-      return {
+      return InspectorStudentChallengeResponseSchema.parse({
         id: record.id,
         status: record.status,
         challenge: InspectorChallengePublicSchema.parse(publicChallenge),
-      };
+      });
     },
 
     async assignChallenge(id: string, teacherId: string): Promise<InspectorRecord> {

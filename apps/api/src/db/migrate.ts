@@ -59,6 +59,23 @@ const migrations = [
     );
     CREATE INDEX IF NOT EXISTS submissions_source ON submissions(kind, source_id);`,
   },
+  {
+    version: 3,
+    sql: `CREATE TABLE IF NOT EXISTS inspector_challenges (
+      id TEXT PRIMARY KEY,
+      review_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      commit_sha TEXT NOT NULL,
+      challenge_json TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'assigned', 'completed', 'obsolete')),
+      created_at TEXT NOT NULL,
+      assigned_to TEXT,
+      assigned_at TEXT,
+      superseded_by_commit_sha TEXT,
+      defense_json TEXT
+    );
+    CREATE INDEX IF NOT EXISTS inspector_challenges_review ON inspector_challenges(review_id, created_at);`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

@@ -2,13 +2,15 @@
 
 **Problema:** un reto Inspector debe partir de evidencia verificada de un commit exacto y mantener la guía docente privada al estudiante.
 
-**Objetivo:** implementar la lógica de dominio que crea retos de mutación inversa, controla asignación y registro de defensa, y conserva/obsoleta retos cuando cambia el commit. Añadir un panel docente aislado sin modificar el router general.
+**Objetivo:** implementar un slice Inspector conectado que crea retos de mutación inversa desde evidencia verificada, mantiene la guía docente privada, permite asignar y registrar defensa, conserva/obsoleta retos al cambiar el commit y presenta un panel docente accesible.
 
-**No objetivos:** no ejecutar código de estudiantes, llamar a GitHub o IA real, editar contratos compartidos, añadir rutas no fijadas, persistencia SQLite, ni mostrar `teacherHint` en una vista de estudiante.
+**No objetivos:** no ejecutar código de estudiantes, llamar a GitHub o IA real, ni mostrar `teacherHint` en una vista de estudiante.
+
+**Nota de integración del planner:** después de la entrega aislada W6, se autorizó ampliar `packages/contracts` para los DTOs Inspector y fijar rutas, persistencia SQLite e integración del panel en App. Los endpoints se protegen con sesión docente. La conexión con Review real permanece condicionada a que F05 exponga y persista snapshot verificado.
 
 **Owner:** W6.
 
 **Skills consultadas:**
-- `ego-browser`: se leyó `C:\Users\vgmil\.agents\skills\ego-browser\SKILL.md`; no se inició navegador porque el panel todavía no está conectado a una ruta visible.
+- `ego-browser`: se leyó y ejecutó el skill v2.2.0; QA visual con Ego Lite realizado para `/teacher/inspector` a 390px y 1440px.
 - `backend-architecture`, `test-driven-development`, `verification-before-completion`: no se encontraron archivos locales `SKILL.md` en las carpetas `.codex/skills` y `.agents/skills` consultadas. Se aplicó TDD con tests locales y adaptadores inyectables.
-- Criterio de diseño: usar `InspectorChallengeSchema` y `InspectorChallengePublicSchema` existentes; mantener UI móvil, legible y con notas privadas delimitadas visualmente.
+- Criterio de diseño: reutilizar contratos compartidos de reto privado/público y registro; mantener UI móvil, legible, con nota privada delimitada y rutas teacher-only.

@@ -6,10 +6,13 @@ import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
 import { MentorScreen } from "./features/mentor";
 import { ReviewScreen } from "./features/review";
+import { InspectorTeacherWorkspace } from "./features/inspector";
+import { createInspectorApi } from "./lib/api/inspector-api";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
 const studentApi = createStudentApi(createApiClient());
+const inspectorApi = createInspectorApi(createApiClient());
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<GalleryEntry[]>>({ status: "loading" });
@@ -90,8 +93,8 @@ export function App() {
     document.documentElement.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
     document.documentElement.style.scrollBehavior = "";
-    if (path.startsWith("/student/")) {
-      requestAnimationFrame(() => document.getElementById("student-content")?.focus({ preventScroll: true }));
+    if (path.startsWith("/student/") || path === "/teacher/inspector") {
+      requestAnimationFrame(() => document.getElementById("route-content")?.focus({ preventScroll: true }));
     }
   }, [path]);
 
@@ -101,6 +104,9 @@ export function App() {
   }
 
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
+  if (path === "/teacher/inspector") {
+    return <div id="route-content" tabIndex={-1}><InspectorTeacherWorkspace api={inspectorApi} navigate={navigate} /></div>;
+  }
 
   return (
     <>
@@ -165,6 +171,7 @@ export function App() {
       <footer className="site-footer">
         <a className="brand brand--footer" href="#inicio" aria-label="Fragments, volver al inicio"><BrandMark className="brand__icon" /><span className="brand__name">fragments<span className="brand__period">.</span></span></a>
         <p>Imagina. Construye. Demuestra.</p>
+        <a href="/teacher/inspector" onClick={(event) => { event.preventDefault(); navigate("/teacher/inspector"); }}>Área docente</a>
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
       </footer>
     </>

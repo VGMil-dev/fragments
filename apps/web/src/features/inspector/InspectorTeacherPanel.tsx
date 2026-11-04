@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { InspectorChallenge } from "../../../../../packages/contracts/src/index.js";
+import type { InspectorChallenge } from "@fragments/contracts";
 import "./inspector-teacher-panel.css";
 
 type InspectorStatus = "pending" | "assigned" | "completed" | "obsolete";
