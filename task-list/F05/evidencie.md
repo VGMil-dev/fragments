@@ -71,3 +71,19 @@ Skills originales se leyeron desde los repositorios de origen porque no estaban 
 
 **Hash / commit:** `a5c3f4b` (implementación; evidencia adicional se registra en un commit documental posterior).
 **Pendiente:** planner integra la ruta/persistencia en el paquete API común y actualiza `task-list/TASKS.md` tras revisión.
+
+## Seguimiento — contratos compartidos
+
+**Estado:** IN PROGRESS; rutas y SQLite siguen pendientes.
+
+El servicio ahora importa `@fragments/contracts`. La entrada pública se valida con `ReviewRequestSchema` y contiene únicamente owner/repo/SHA. `projectId`, `rubricVersion` y `evaluatorVersion` se pasan por un contexto interno separado. El estado de review se valida con `ReviewResponseSchema`; la entrega con `SubmissionResponseSchema` (incluye `id` y snapshot inmutable); la respuesta de verificación se valida con `VerifySubmissionResponseSchema` e informa `integrityValid`.
+
+El worker branch todavía tiene el contrato anterior y carece del paquete `apps/api`. Para probar el cambio sin editar contratos/planner files, se generó un alias temporal bajo `C:\Users\vgmil\.codex\tmp\f05-contract-validation-affce9f772234e6ea3033b01a49c2453`, apuntando a `packages/contracts/src/index.ts` del commit compartido `918453c`.
+
+Comandos frescos del seguimiento:
+
+- `pnpm exec vitest run --config C:\Users\vgmil\.codex\tmp\f05-contract-validation-affce9f772234e6ea3033b01a49c2453\vitest.config.mjs apps/api/src/features/review/review.service.test.ts` — salida 0; 1 archivo, 9 pruebas aprobadas contra los contratos compartidos.
+- `pnpm exec tsc --project C:\Users\vgmil\.codex\tmp\f05-contract-validation-affce9f772234e6ea3033b01a49c2453\tsconfig.review.json` — salida 0, sin errores.
+- Un primer chequeo de tipos detectó que el contrato exporta `SubmissionResponseSchema` pero no un tipo `SubmissionResponse`; el tipo interno ahora se deriva con `ReturnType<typeof SubmissionResponseSchema.parse>`, sin duplicar el DTO.
+
+**Commit de alineación:** `fc7309a` — `fix(f05): alinear review con contratos compartidos`. Las rutas cambiadas permanecen dentro de los archivos F05 propios; no se tocó `TASKS.md`, `MANIFEST.sha256.json`, lockfile, package root ni contratos compartidos.
