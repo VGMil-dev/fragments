@@ -5,6 +5,7 @@ import { createRepositoryPacker } from "../../adapters/repomix/repository-packer
 import { createAiProvider } from "../../adapters/ai/ai-provider.js";
 import { createPdfRenderer } from "../../adapters/ai/pdf-renderer.js";
 import { createInMemoryReviewStore } from "./in-memory-review-store.js";
+import { ReviewRequestSchema, SubmissionResponseSchema, VerifySubmissionResponseSchema } from "@fragments/contracts";
 
 const source = "export function total(items: number[]) {\n  return items.reduce((a, b) => a + b, 0)\n}\n";
 const sha256 = async (value: string) => {
@@ -13,6 +14,8 @@ const sha256 = async (value: string) => {
 };
 const commitSha = "a".repeat(40);
 const fileSha = "b".repeat(40);
+const publicRequest = { owner: "student", repo: "demo", commitSha };
+const reviewContext = { projectId: "project-1", rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" };
 
 async function fixture(overrides: Partial<ReviewDependencies> = {}) {
   const snapshotContent = {
@@ -69,10 +72,12 @@ async function fixture(overrides: Partial<ReviewDependencies> = {}) {
 describe("review vertical slice", () => {
   it("analyzes the requested exact commit and returns the first guidance level", async () => {
     const f = await fixture();
-    const result = await f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" });
+    expect(ReviewRequestSchema.parse(publicRequest)).toEqual(publicRequest);
+    const result = await f.service.review(publicRequest, reviewContext);
 
     expect(f.repository.getCommitSnapshot).toHaveBeenCalledWith({ owner: "student", repo: "demo", commitSha });
     expect(f.packer.pack).toHaveBeenCalledWith(expect.objectContaining({ files: f.snapshot.files }), { maxBytes: 100_000, maxTokens: 20_000 });
+    expect(result).toMatchObject({ status: "completed", owner: "student", repo: "demo", commitSha, progress: 100 });
     expect((await f.service.getFeedback(result.id, 1)).findings).toHaveLength(1);
     const evidence = (await f.service.getFeedback(result.id, 1)).findings[0]?.evidence[0];
     expect(evidence?.source === "repository" ? evidence.path : undefined).toBe("src/math.ts");
@@ -81,14 +86,21 @@ describe("review vertical slice", () => {
   it("rejects a driver that returns another commit without exposing repository contents", async () => {
     const f = await fixture({ repository: { getCommitSnapshot: vi.fn(async () => ({ owner: "student", repo: "demo", commitSha: "d".repeat(40), files: [], digest: "c".repeat(64) })) } });
 
-    await expect(f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" })).rejects.toThrow("El proveedor devolvió un commit distinto");
+    await expect(f.service.review(publicRequest, reviewContext)).rejects.toThrow("El proveedor devolvió un commit distinto");
     expect(f.ai.analyze).not.toHaveBeenCalled();
   });
 
   it("explains that a branch name or abbreviated reference must be replaced with a full commit SHA", async () => {
     const f = await fixture();
 
-    await expect(f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha: "main", rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" } as never)).rejects.toThrow("Indica el SHA completo del commit");
+    await expect(f.service.review({ ...publicRequest, commitSha: "main" }, reviewContext)).rejects.toThrow("Indica el SHA completo del commit");
+    expect(f.repository.getCommitSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("rejects internal project and rubric fields from the shared public request", async () => {
+    const f = await fixture();
+
+    await expect(f.service.review({ ...publicRequest, projectId: "spoofed", rubricVersion: "untrusted" }, reviewContext)).rejects.toThrow("propietario y repositorio de GitHub válidos");
     expect(f.repository.getCommitSnapshot).not.toHaveBeenCalled();
   });
 
@@ -103,13 +115,13 @@ describe("review vertical slice", () => {
   it("rejects findings that cite a file absent from the validated snapshot", async () => {
     const f = await fixture({ ai: { analyze: vi.fn(async () => ({ rubricVersion: "review-v1", score: 80, findings: [{ criterionId: "missing", status: "failed" as const, evidence: [{ source: "repository" as const, path: "src/missing.ts", lines: [1, 1] as [number, number], digest: "c".repeat(64) }], reason: "La evidencia debe existir.", guidanceLevel: 1 as const }], limitations: [], modelId: "fake-review-v1", inputDigest: await sha256("commit snapshot") })) } });
 
-    await expect(f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" })).rejects.toThrow("La evidencia cita un archivo que no está en el commit");
+    await expect(f.service.review(publicRequest, reviewContext)).rejects.toThrow("La evidencia cita un archivo que no está en el commit");
   });
 
   it("uses an idempotency key for a cached exact commit and rubric", async () => {
     const f = await fixture();
-    const result = await f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" });
-    const cached = await f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" });
+    const result = await f.service.review(publicRequest, reviewContext);
+    const cached = await f.service.review(publicRequest, reviewContext);
 
     expect(cached.id).toBe(result.id);
     expect(f.ai.analyze).toHaveBeenCalledTimes(1);
@@ -120,15 +132,19 @@ describe("review vertical slice", () => {
       { criterionId: "step-1", status: "verified" as const, evidence: [{ source: "repository" as const, path: "src/math.ts", lines: [1, 1] as [number, number], digest: await digestSnapshot({ owner: "student", repo: "demo", commitSha, files: [{ path: "src/math.ts", content: source, sha: fileSha }] }) }], reason: "Primera pista.", guidanceLevel: 1 as const },
       { criterionId: "step-3", status: "not_verified" as const, evidence: [{ source: "repository" as const, path: "src/math.ts", lines: [2, 2] as [number, number], digest: await digestSnapshot({ owner: "student", repo: "demo", commitSha, files: [{ path: "src/math.ts", content: source, sha: fileSha }] }) }], reason: "Tercera pista.", guidanceLevel: 3 as const },
     ], limitations: [], modelId: "fake-review-v1", inputDigest: await sha256("commit snapshot") })) } });
-    const result = await f.service.review({ projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" });
+    const result = await f.service.review(publicRequest, reviewContext);
 
     expect((await f.service.getFeedback(result.id, 1)).findings.map((finding) => finding.criterionId)).toEqual(["step-1"]);
     expect(f.pdf.render).not.toHaveBeenCalled();
     const report = await f.service.createPdf(result.id);
 
     expect(new TextDecoder().decode(report.bytes)).toContain("%PDF-1.4");
-    expect(await f.service.verify(report.verificationCode)).toMatchObject({ valid: true, kind: "review", sourceId: result.id });
+    expect(SubmissionResponseSchema.parse(report.submission)).toMatchObject({ id: report.submission.id, kind: "review", sourceId: result.id });
+    expect(VerifySubmissionResponseSchema.parse(await f.service.verify(report.verificationCode))).toMatchObject({ integrityValid: true, kind: "review" });
     expect(f.pdf.render).toHaveBeenCalledOnce();
+    await f.submissions.save({ ...report.submission, snapshotJson: { ...report.submission.snapshotJson, changed: true } });
+    expect(await f.service.verify(report.verificationCode)).toMatchObject({ integrityValid: false });
+    await expect(f.service.verify("invalid")).rejects.toThrow("código de verificación no es válido o no se encontró");
     const multipage = await createPdfRenderer().render(Array.from({ length: 61 }, (_, index) => `línea ${index + 1}`).join("\n"));
     expect(new TextDecoder().decode(multipage)).toContain("/Count 2");
   });
@@ -163,17 +179,18 @@ describe("review vertical slice", () => {
       createVerificationCode: () => "z".repeat(32),
     });
 
-    const request = { projectId: "project-1", owner: "student", repo: "demo", commitSha, rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" };
-    const first = await service.review(request);
-    const second = await service.review(request);
+    const first = await service.review(publicRequest, reviewContext);
+    const second = await service.review(publicRequest, reviewContext);
     const report = await service.createPdf(first.id);
 
     expect(second.id).toBe(first.id);
+    expect(first.status).toBe("completed");
+    if (first.status !== "completed") throw new Error("La revisión falsa debe completarse.");
     expect(first.analysis.limitations.join(" ")).toContain(".env");
     expect(packedText).toContain("src/math.ts");
     expect(packedText).not.toContain("never-send-this-value");
     expect(packedText).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz");
     expect(new TextDecoder().decode(report.bytes)).toMatch(/^%PDF-1\.4/);
-    expect(await service.verify(report.verificationCode)).toMatchObject({ valid: true, score: 82, commitSha });
+    expect(await service.verify(report.verificationCode)).toMatchObject({ integrityValid: true, score: 82, kind: "review" });
   });
 });

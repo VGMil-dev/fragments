@@ -1,4 +1,4 @@
-import { RepositorySnapshotSchema, type RepositorySnapshot } from "../../../../../packages/contracts/src/index.js";
+import { RepositorySnapshotSchema, type RepositorySnapshot } from "@fragments/contracts";
 
 export type ExactCommitRequest = { owner: string; repo: string; commitSha: string };
 

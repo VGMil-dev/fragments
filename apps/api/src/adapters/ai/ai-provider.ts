@@ -1,4 +1,4 @@
-import { AiAnalysisSchema, type AiAnalysis } from "../../../../../packages/contracts/src/index.js";
+import { AiAnalysisSchema, type AiAnalysis } from "@fragments/contracts";
 
 export type AiReviewInput = { packedText: string; rubricVersion: string; inputDigest: string };
 

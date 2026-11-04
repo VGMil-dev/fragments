@@ -4,7 +4,7 @@
 
 ## Entradas
 
-`projectId`, `owner`, `repo`, SHA completo, `rubricVersion` y `evaluatorVersion`. El lector de repositorios acepta solo owner/repo/SHA, nunca una URL arbitraria ni una rama.
+La entrada pública usa `ReviewRequestSchema`: `owner`, `repo` y SHA completo. El servicio recibe por separado el contexto interno `projectId`, `rubricVersion` y `evaluatorVersion` para clavear y versionar el análisis; esos campos no se aceptan en el DTO público. El lector de repositorios recibe solo owner/repo/SHA, nunca una URL arbitraria ni una rama.
 
 ## Flujo y salidas
 
@@ -12,7 +12,8 @@
 2. Empaquetar contenido textual de forma determinista en memoria con límites de bytes y tokens; omitir secretos, archivos binarios, dependencias, lockfiles y entradas sobre el presupuesto. Informar rutas omitidas.
 3. Solicitar análisis al puerto `AiProvider`; validar `AiAnalysisSchema`, huella de entrada y evidencia existente en el snapshot. No guardar el snapshot completo.
 4. Guardar el resultado por la clave idempotente `(projectId, commitSha, rubricVersion, evaluatorVersion)` mediante el puerto `EvaluationRepository`.
-5. Servir hallazgos por niveles 1–4; crear PDF y token de verificación solo al solicitarlo, con snapshot de entrega sin bytes PDF persistidos.
+5. Validar la respuesta del análisis con `ReviewResponseSchema`; servir hallazgos por niveles 1–4.
+6. Crear PDF y token de verificación solo al solicitarlo, validando la entrega con `SubmissionResponseSchema` y la consulta pública con `VerifySubmissionResponseSchema`; no persistir bytes PDF.
 
 ## Criterios verificables
 
