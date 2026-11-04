@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+node_modules/
+dist/
+coverage/
+.data/
+.turbo/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
