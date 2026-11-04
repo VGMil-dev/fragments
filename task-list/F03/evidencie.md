@@ -1,12 +1,12 @@
 # F03 — Evidence / evidencie
 
-Estado: READY FOR CLOSEOUT (implementación y verificación ejecutadas; falta guardar el hash de implementación después del commit)
+Estado: DONE
 Owner: W3
 
 ## Skills y criterio aplicado
 
 - `backend-architecture` (`we-are-singular/skills`, [SKILL.md original](https://github.com/we-are-singular/skills/blob/main/skills/backend-architecture/SKILL.md)): límites de HTTP, servicio, persistencia y configuración; repositorio mantiene transacciones; schemas en los bordes. Se descartaron framework, factories y capas extra sin reutilización; se conservó un único puerto de verificación de credenciales porque es un límite real de auth y permite un fake de prueba.
-- `test-driven-development` (`obra/superpowers`, [SKILL.md original](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md)): pruebas de config, lease, recuperación, validación HTTP y sesión antes de su comportamiento; se observaron fallos esperados y luego resultados verdes. El hardening final del atributo `Secure` tuvo una prueba que falló primero y pasó tras el cambio.
+- `test-driven-development` (`obra/superpowers`, [SKILL.md original](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md)): config, lease, recuperación, validación HTTP y servicio de sesión siguieron red/green con fallos esperados. El hardening final del atributo `Secure` también tuvo un fallo observado antes de pasar. Límite: la implementación inicial del firmante HMAC precedió a su prueba unitaria específica; esa prueba se añadió después y pasó, así que esa pieza no tuvo ciclo red/green previo.
 - `verification-before-completion` (`obra/superpowers`, [SKILL.md original](https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md)): se repitieron suite, tipos, compilación, Docker ARM64, configuración y health/persistencia antes del cierre.
 
 ## Rutas cambiadas
@@ -63,7 +63,7 @@ docker compose -f docker-compose.yml up -d --build
 exit 0; servicio fragments-api-1 inició; `GET /health` devolvió {"ok":true,"data":{"status":"ok","database":"ready"}}.
 ```
 
-Persistencia real del volumen: inserté una fila de prueba con `idempotency_key=volume-check-key` en `/app/data/fragments.sqlite`; después `docker compose -f docker-compose.yml restart api`, health volvió a estar listo y una consulta devolvió `persisted rows: 1`. Bajé Compose de desarrollo sin borrar el volumen; inicié Compose de producción y health volvió a responder con `persisted rows: 1`. `docker compose -f docker-compose.prod.yml up -d --build` terminó con exit 0. Limpiaré el contenedor y el volumen de prueba después del cierre.
+Persistencia real del volumen: inserté una fila de prueba con `idempotency_key=volume-check-key` en `/app/data/fragments.sqlite`; después `docker compose -f docker-compose.yml restart api`, health volvió a estar listo y una consulta devolvió `persisted rows: 1`. Bajé Compose de desarrollo sin borrar el volumen; inicié Compose de producción y health volvió a responder con `persisted rows: 1`. `docker compose -f docker-compose.prod.yml up -d --build` terminó con exit 0. Tras verificar, `docker compose -f docker-compose.prod.yml down -v` removió contenedor, red y volumen de prueba (exit 0).
 
 Primeras construcciones ARM64 descubrieron que el contexto Docker podía copiar `node_modules` de Windows y que los comandos `pnpm --filter ...` volvían a instalar en build. Añadí `.dockerignore` para excluir `.env*`, node_modules, bases locales y artefactos; el Dockerfile ejecuta los compiladores ya instalados directamente, con scripts ignorados. El build ARM64 final y la imagen de producción pasan sin ejecutar scripts lifecycle de dependencias.
 
@@ -82,7 +82,7 @@ Driver: `node:sqlite` integrado, sin addon ni compilación nativa, sobre Node **
 
 ## Hash / commit
 
-Pendiente de registrar el hash del commit de implementación en el commit de cierre documental. No marcar DONE hasta completar ese campo y actualizar `task-list/TASKS.md`.
+Commit de implementación: `626511d82c32d46cc37867707ad44ca1ca51022e` (`feat(api): implementar base HTTP y SQLite`). El commit documental registra DONE en `task-list/TASKS.md`.
 
 ## Capturas / logs
 
