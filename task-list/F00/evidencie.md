@@ -51,7 +51,7 @@ Owner: PLANNER
 
 ## Capturas, hash y limitaciones
 - Capturas: no aplica en la fase de configuración.
-- Hash/commit: implementación F00 `279f08f0f53ea1e66eba51b373128a7825e990b9`; commit de cierre de evidencia pendiente.
+- Hash/commit: implementación F00 `279f08f0f53ea1e66eba51b373128a7825e990b9`; este registro de cierre se incluye en un commit de documentación F00.
 - La inicialización local se hizo en la carpeta activa del producto nuevo; no se creó remoto ni se borró contenido.
 - Contratos base creados desde `docs/CONTRACTS.md`; teacher hint ahora queda excluido del esquema público de Inspector y cada finding contiene referencias de evidencia tipadas.
 - No se despacharon agentes. El host ofrece hasta tres slots de agentes incluyendo al coordinador, por debajo de los seis solicitados; se usarán lotes después de cerrar y registrar el contrato base.
