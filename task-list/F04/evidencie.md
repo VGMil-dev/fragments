@@ -1,6 +1,6 @@
 # F04 — Evidence / evidencie
 
-Estado: INTEGRADO PARCIALMENTE EN `codex/fragments-mvp`; dominio, endpoints básicos y persistencia SQLite ya están conectados a `@fragments/contracts`. La fila central sigue pendiente porque las coincidencias con galería opt-in y la edición/versionado de borradores no están integradas. La fila central queda pendiente del planner (solo el planner edita `task-list/TASKS.md`).
+Estado: INTEGRADO PARCIALMENTE EN `codex/fragments-mvp`; dominio, endpoints y persistencia SQLite están conectados a `@fragments/contracts`. La fila queda pendiente porque las coincidencias con galería opt-in y la edición/versionado de borradores no están integradas.
 Owner: W4
 
 ## Skills consultadas
@@ -37,6 +37,7 @@ Owner: W4
 - `pnpm --filter @fragments/api test` — exit 0; 7 archivos, 18 pruebas pasaron.
 - Tras integrar endpoints y persistencia: `pnpm --filter @fragments/api test` — exit 0; 7 archivos, 19 pruebas pasaron, incluyendo propuesta→evaluación fake→entrega inmutable→README/PDF efímeros→verificación.
 - `pnpm --filter @fragments/api build` y `pnpm --filter @fragments/api typecheck` — exit 0 después de la integración HTTP.
+- Verificación fresca tras integrar F02/F05: `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm exec vitest run apps/web/src` y `git diff --check` — todos exit 0; API 28/28, contracts 16/16 y web 40/40.
 
 ## Cobertura demostrada
 
@@ -46,6 +47,7 @@ Owner: W4
 - Snapshot inmutable y alteraciones de su contenido son rechazadas al generar README/PDF.
 - README se crea bajo demanda sin revelar nota; PDF usa el puerto falso solo cuando se solicita. No se guardan los bytes o README.
 - Sin aprobación docente ni llamadas a servicios externos; no se ejecuta código de estudiante.
+- QA manual Ego Lite de la integración F02 en 390/1440px confirmó CTA→Galería y propuesta→evaluación fake→entrega→descarga; la galería permanece vacía al no existir aún el catálogo opt-in.
 
 ## Limitaciones
 
@@ -60,4 +62,4 @@ Owner: W4
 Implementación: `526aec7bce82e6ba692c7c6023f3767a22e73067` (`feat(mentor): implementar evaluacion y entregas efimeras`).
 Evidencia original: `582659532b0d584066331da2ecf6552d37dd5b86` (`docs(mentor): registrar evidencia de F04`).
 
-Integración parcial de contratos, HTTP y SQLite: `codex/fragments-mvp`; permanece sin marcar como completa hasta integrar galería opt-in y coincidencias, edición/versionado de borrador y Review.
+Integración parcial de contratos, HTTP y SQLite: `codex/fragments-mvp`; permanece pendiente hasta integrar galería opt-in y coincidencias, y edición/versionado de borradores.
