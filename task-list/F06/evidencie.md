@@ -51,4 +51,4 @@ Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `c
 ## Commits
 
 - Merge de integración: `b984de4` (raíz actualizada sin reescribir historial).
-- Commit de implementación: se registra después de la verificación y se anota el hash en el commit de evidencia siguiente.
+- Implementación F06 parcial: `c1c29eb` (`feat(f06): integra Inspector docente`).
