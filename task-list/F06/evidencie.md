@@ -53,4 +53,5 @@
 
 ## Hash / commit
 
-Se completará al registrar el commit de implementación.
+Implementación parcial: `47c6d37d76b9379a3a7e6d34d281e49ba5c9c602` (`feat(f06): implementa retos Inspector privados`).
+Estado real: sin integrar en `codex/fragments-mvp`; no se marcó F06 como completada.
