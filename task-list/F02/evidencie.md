@@ -35,6 +35,6 @@ Owner: W2
 ## Capturas, hash y limitaciones
 
 - Capturas / logs: no hay captura de F02; las superficies todavía no están conectadas a rutas. El planner debe integrar el enrutamiento y validar 390/1440 px, teclado y foco con ego(lite).
-- Hash / commit: pendiente del commit de W2.
+- Hash / commit de implementación W2: `74c62fc3c8371260ba1636e2922e1d2633d6ddae`.
 - Limitación: la verificación visual/E2E completa depende de integración del planner. Las skills originales listadas arriba tampoco están disponibles localmente; ego-browser sí lo está.
 - No se marcó F02 como DONE ni se actualizó `task-list/TASKS.md`.
