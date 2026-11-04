@@ -5,7 +5,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | ID | Owner | Dependencias | Criterio verificable | Estado |
 |---|---|---|---|---|
 | F00 | PLANNER | — | Auditoría no destructiva, skills, `.env.example`/`.env` local, pausa humana y preflight; después contratos y Turbo/pnpm inicial | [x] |
-| F01 | W1 | F00 | UI identidad, home, icon.svg/favicon/metadata y assets en navegador 390/1440 | [ ] |
+| F01 | W1 | F00 | UI identidad, home, icon.svg/favicon/metadata y assets en navegador 390/1440 | [x] |
 | F02 | W2 | F00 | Flujo alumno galería→Mentor→Review→descarga mock→estados de error con cliente tipado | [ ] |
 | F03 | W3 | F00 | API/SQLite WAL/job lease/auth docente/Docker dev-prod; integración test+health | [ ] |
 | F04 | W4 | F00,F03 contratos | Mentor propuesta→evaluación→snapshot→README/PDF efímeros y verificación | [ ] |

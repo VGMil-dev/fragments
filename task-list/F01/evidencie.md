@@ -1,6 +1,6 @@
 # F01 — Evidence / evidencie
 
-Estado: VERIFICADO; implementación comprometida. La tabla central corresponde a PLANNER.
+Estado: COMPLETE — implementado, integrado y verificado en la rama de trabajo.
 Owner: W1
 
 ## Skills leídas y decisiones
@@ -47,11 +47,20 @@ Las cuatro capturas se generaron con ego(lite) y se inspeccionaron visualmente. 
 
 ## Hash / commit
 
-`d0f9a56a4683fd4c187afa368297efc1807a55ee` — `feat(f01): crear identidad y landing`.
+Implementación aislada: `d0f9a56a4683fd4c187afa368297efc1807a55ee` — `feat(f01): crear identidad y landing`.
+Integración en `codex/fragments-mvp`: `2a92524`.
+
+## Verificación de integración
+
+- `pnpm install --lockfile-only --ignore-scripts` → código 0; lockfile actualizado para `@fragments/web`.
+- `pnpm install --frozen-lockfile --ignore-scripts --store-dir C:\Users\vgmil\.cache\pnpm\fragments` → código 0.
+- `pnpm build` → 2 paquetes exitosos (`@fragments/contracts`, `@fragments/web`).
+- `pnpm typecheck` → 2 paquetes exitosos.
+- `pnpm test` → 9/9 pruebas de contratos aprobadas.
+- `pnpm lint` → contrato aprobado; web no declara tarea lint.
 
 ## Limitaciones
 
-- Los originales `SKILL.md` de diseño no están instalados; no se descargaron por las restricciones de red del encargo.
+- Los originales `SKILL.md` de diseño no están instalados localmente; se leyeron directamente desde sus repositorios oficiales, sin instalar skills ni ejecutar scripts.
 - F01 solo entrega la landing e identidad. La galería y los flujos de dominio corresponden a tareas posteriores.
-- La tabla `task-list/TASKS.md` pertenece a PLANNER y se mantiene sin cambios en este worktree.
 - No se leyó ni tocó `.env`.
