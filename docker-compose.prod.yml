@@ -1,0 +1,18 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    environment:
+      API_PORT: "3000"
+      DATABASE_PATH: /app/data/fragments.sqlite
+      AUTH_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - fragments-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  fragments-data:
