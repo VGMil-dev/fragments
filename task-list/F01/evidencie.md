@@ -1,6 +1,6 @@
 # F01 — Evidence / evidencie
 
-Estado: VERIFICADO; pendiente registrar el hash del commit de implementación en esta evidencia y actualizar la tabla central por PLANNER.
+Estado: VERIFICADO; implementación comprometida. La tabla central corresponde a PLANNER.
 Owner: W1
 
 ## Skills leídas y decisiones
@@ -23,8 +23,8 @@ Owner: W1
 
 - `ego-browser skill` — salida completa v2.2.0; código 0.
 - `pnpm install --filter @fragments/web --lockfile=false --ignore-scripts --offline` — código 1; el paquete Vite no estaba en cache local (`ERR_PNPM_NO_OFFLINE_TARBALL`).
-- `pnpm import` — código 1 (`ERR_PNPM_LOCKFILE_NOT_FOUND`). El comando retiró el lockfile rastreado de la base; se restauró inmediatamente con `git restore -- pnpm-lock.yaml`. El lockfile terminó sin cambios.
-- `npm install --ignore-scripts --no-save --package-lock=false --workspaces=false` — código 0; bootstrap local sin modificar manifiestos de lock.
+- `pnpm import` — código 1 (`ERR_PNPM_LOCKFILE_NOT_FOUND`). Al revisar el estado tras los intentos pnpm, el lockfile rastreado faltaba; se restauró inmediatamente con `git restore -- pnpm-lock.yaml` y quedó sin cambios.
+- `npm install --ignore-scripts --no-save --package-lock=false --workspaces=false` desde `apps/web` — código 0 en los dos bootstraps; instaló Vite y luego React/types localmente, sin modificar manifiestos de lock.
 - `npm run typecheck` desde `apps/web` — código 0.
 - `npm run build` desde `apps/web` — código 0; Vite 8.3.5 transformó 17 módulos y generó HTML, CSS y JS (225.30 kB, 70.18 kB gzip).
 - `ego-browser nodejs -e "await import('file:///C:/Users/vgmil/.codex/worktrees/f01-brand/Fragments/task-list/F01/validate-f01.mjs')"` — código 0. Salida de viewport: 390: documento/cuerpo 390 px; 768: 768 px; 1440: 1425 px. En los tres tamaños el CTA quedó dentro del viewport, el hero cargó y no hubo anclas rotas.
@@ -44,7 +44,7 @@ Las cuatro capturas se generaron con ego(lite) y se inspeccionaron visualmente. 
 
 ## Hash / commit
 
-Pendiente: registrar aquí el hash de implementación después del commit.
+`d0f9a56a4683fd4c187afa368297efc1807a55ee` — `feat(f01): crear identidad y landing`.
 
 ## Limitaciones
 
