@@ -1,4 +1,4 @@
-import type { RepositorySnapshot } from "../../../../../packages/contracts/src/index.js";
+import type { RepositorySnapshot } from "@fragments/contracts";
 import { sha256, type PackedRepository } from "../../features/review/review.service.js";
 
 const excludedPath = /(?:^|\/)(?:\.git|node_modules|dist|build|coverage|\.next|\.ssh)(?:\/|$)|(?:^|\/)(?:\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|[^/]*(?:secret|credential)[^/]*|package-lock\.json|pnpm-lock\.yaml|npm-shrinkwrap\.json|bun\.lockb?|.*\.(?:lock|png|jpe?g|gif|webp|ico|pdf|zip|gz|sqlite|db|pem|key|p12|wasm|woff2?|ttf|mp4|mov))$/i;

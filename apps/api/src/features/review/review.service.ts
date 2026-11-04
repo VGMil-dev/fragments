@@ -1,29 +1,35 @@
 import {
   AiAnalysisSchema,
+  ReviewRequestSchema,
+  ReviewResponseSchema,
   RepositorySnapshotSchema,
-  SubmissionSnapshotSchema,
+  SubmissionResponseSchema,
+  VerifySubmissionResponseSchema,
   type AiAnalysis,
   type FeedbackFinding,
   type RepositorySnapshot,
+  type ReviewRequest,
+  type ReviewResponse,
   type SubmissionSnapshot,
-} from "../../../../../packages/contracts/src/index.js";
+} from "@fragments/contracts";
 
-export type ReviewRequest = {
+export type ReviewContext = {
+  projectId: string;
+  rubricVersion: string;
+  evaluatorVersion: string;
+};
+type SubmissionResponseData = ReturnType<typeof SubmissionResponseSchema.parse>;
+export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
+export type ReviewRecord = {
+  id: string;
+  key: string;
   projectId: string;
   owner: string;
   repo: string;
   commitSha: string;
   rubricVersion: string;
   evaluatorVersion: string;
-};
-export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
-export type ReviewRecord = {
-  id: string;
-  key: string;
-  projectId: string;
-  commitSha: string;
-  rubricVersion: string;
-  evaluatorVersion: string;
+  updatedAt: string;
   packedDigest: string;
   analysis: AiAnalysis;
 };
@@ -38,12 +44,13 @@ export interface ReviewDependencies {
     save(record: ReviewRecord): Promise<ReviewRecord>;
   };
   submissions: {
-    save(snapshot: SubmissionSnapshot): Promise<void>;
-    getByVerificationCode(code: string): Promise<SubmissionSnapshot | null>;
+    save(snapshot: SubmissionResponseData): Promise<void>;
+    getByVerificationCode(code: string): Promise<unknown | null>;
   };
   pdf: { render(report: string): Promise<Uint8Array> };
   now?: () => Date;
   createId?: () => string;
+  createSubmissionId?: () => string;
   createVerificationCode?: () => string;
   maxBytes?: number;
   maxTokens?: number;
@@ -66,8 +73,8 @@ export function digestSnapshot(snapshot: Omit<RepositorySnapshot, "digest">): Pr
   return sha256(canonicalJson(snapshot));
 }
 
-async function keyFor(request: ReviewRequest): Promise<string> {
-  return sha256(canonicalJson({ projectId: request.projectId, commitSha: request.commitSha.toLowerCase(), rubricVersion: request.rubricVersion, evaluatorVersion: request.evaluatorVersion }));
+async function keyFor(request: ReviewRequest, context: ReviewContext): Promise<string> {
+  return sha256(canonicalJson({ projectId: context.projectId, commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
 }
 
 function randomToken(bytes: number): string {
@@ -76,17 +83,27 @@ function randomToken(bytes: number): string {
 }
 
 function parseReviewRequest(value: unknown): ReviewRequest {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Indica el proyecto y el commit completo que quieres revisar.");
-  const input = value as Record<string, unknown>;
-  if (Object.keys(input).some((key) => !["projectId", "owner", "repo", "commitSha", "rubricVersion", "evaluatorVersion"].includes(key))) throw new Error("La solicitud contiene campos no admitidos.");
-  const { projectId, owner, repo, commitSha, rubricVersion, evaluatorVersion } = input;
-  if (typeof projectId !== "string" || !projectId.trim() || projectId.length > 128) throw new Error("Indica un identificador de proyecto válido.");
-  if (typeof owner !== "string" || !/^[A-Za-z0-9-]{1,39}$/.test(owner)) throw new Error("Indica un propietario de GitHub válido.");
-  if (typeof repo !== "string" || !/^[A-Za-z0-9_.-]{1,100}$/.test(repo)) throw new Error("Indica un repositorio de GitHub válido.");
-  if (typeof commitSha !== "string" || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(commitSha)) throw new Error("Indica el SHA completo del commit que quieres revisar.");
-  if (typeof rubricVersion !== "string" || !rubricVersion.trim() || rubricVersion.length > 64) throw new Error("Indica una versión de rúbrica válida.");
-  if (typeof evaluatorVersion !== "string" || !evaluatorVersion.trim() || evaluatorVersion.length > 64) throw new Error("Indica una versión de evaluador válida.");
-  return { projectId: projectId.trim(), owner, repo, commitSha: commitSha.toLowerCase(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim() };
+  const parsed = ReviewRequestSchema.safeParse(value);
+  if (parsed.success) return { ...parsed.data, commitSha: parsed.data.commitSha.toLowerCase() };
+  if (parsed.error.issues.some((issue) => issue.path.includes("commitSha"))) throw new Error("Indica el SHA completo del commit que quieres revisar.");
+  throw new Error("Indica un propietario y repositorio de GitHub válidos.");
+}
+
+function parseReviewContext(value: unknown): ReviewContext {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Falta el contexto interno del proyecto.");
+  const context = value as Record<string, unknown>;
+  const { projectId, rubricVersion, evaluatorVersion } = context;
+  if (typeof projectId !== "string" || !projectId.trim() || projectId.length > 128) throw new Error("Falta el contexto interno del proyecto.");
+  if (typeof rubricVersion !== "string" || !rubricVersion.trim() || rubricVersion.length > 64) throw new Error("Falta la versión interna de rúbrica.");
+  if (typeof evaluatorVersion !== "string" || !evaluatorVersion.trim() || evaluatorVersion.length > 64) throw new Error("Falta la versión interna del evaluador.");
+  return { projectId: projectId.trim(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim() };
+}
+
+function toPublicReviewResponse(record: ReviewRecord): ReviewResponse {
+  return ReviewResponseSchema.parse({
+    id: record.id, owner: record.owner, repo: record.repo, commitSha: record.commitSha,
+    status: "completed", analysis: record.analysis, progress: 100, updatedAt: record.updatedAt,
+  });
 }
 
 async function validateSnapshot(raw: unknown, request: ReviewRequest): Promise<RepositorySnapshot> {
@@ -130,6 +147,7 @@ async function validateEvidence(analysis: AiAnalysis, snapshot: RepositorySnapsh
 export function createReviewService(dependencies: ReviewDependencies) {
   const now = dependencies.now ?? (() => new Date());
   const id = dependencies.createId ?? (() => randomToken(12));
+  const submissionId = dependencies.createSubmissionId ?? (() => randomToken(12));
   const verificationCode = dependencies.createVerificationCode ?? (() => randomToken(24));
   const maxBytes = dependencies.maxBytes ?? 100_000;
   const maxTokens = dependencies.maxTokens ?? 20_000;
@@ -141,25 +159,26 @@ export function createReviewService(dependencies: ReviewDependencies) {
   }
 
   return {
-    async review(rawRequest: ReviewRequest) {
+    async review(rawRequest: unknown, rawContext: unknown) {
       const request = parseReviewRequest(rawRequest);
-      const key = await keyFor(request);
+      const context = parseReviewContext(rawContext);
+      const key = await keyFor(request, context);
       const cached = await dependencies.evaluations.getByKey(key);
-      if (cached) return { ...cached, feedback: await this.getFeedback(cached.id, 1) };
+      if (cached) return toPublicReviewResponse(cached);
 
       const snapshot = await validateSnapshot(await dependencies.repository.getCommitSnapshot({ owner: request.owner, repo: request.repo, commitSha: request.commitSha }), request);
       const packed = await dependencies.packer.pack(snapshot, { maxBytes, maxTokens });
       if (new TextEncoder().encode(packed.text).length > maxBytes || packed.tokenCount > maxTokens) throw new Error("El contenido empaquetado supera el presupuesto de revisión.");
       if (await sha256(packed.text) !== packed.inputDigest) throw new Error("La huella del contenido empaquetado no coincide.");
-      const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({ packedText: packed.text, rubricVersion: request.rubricVersion, inputDigest: packed.inputDigest })), snapshot, packed.inputDigest);
-      if (analysis.rubricVersion !== request.rubricVersion) throw new Error("El análisis devolvió una rúbrica distinta a la solicitada.");
+      const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({ packedText: packed.text, rubricVersion: context.rubricVersion, inputDigest: packed.inputDigest })), snapshot, packed.inputDigest);
+      if (analysis.rubricVersion !== context.rubricVersion) throw new Error("El análisis devolvió una rúbrica distinta a la solicitada.");
       if (packed.omittedPaths?.length) analysis.limitations.push(`El presupuesto omitió ${packed.omittedPaths.length} archivo(s): ${packed.omittedPaths.slice(0, 20).join(", ")}${packed.omittedPaths.length > 20 ? ", …" : ""}.`);
       const record = await dependencies.evaluations.save({
-        id: id(), key, projectId: request.projectId, commitSha: snapshot.commitSha,
-        rubricVersion: request.rubricVersion, evaluatorVersion: request.evaluatorVersion,
-        packedDigest: packed.inputDigest, analysis,
+        id: id(), key, projectId: context.projectId, owner: request.owner, repo: request.repo, commitSha: snapshot.commitSha,
+        rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion,
+        updatedAt: now().toISOString(), packedDigest: packed.inputDigest, analysis,
       });
-      return { ...record, feedback: await this.getFeedback(record.id, 1) };
+      return toPublicReviewResponse(record);
     },
 
     getFeedback(reviewId: string, guidanceLevel: 1 | 2 | 3 | 4) {
@@ -176,11 +195,15 @@ export function createReviewService(dependencies: ReviewDependencies) {
       const record = await getRecord(reviewId);
       const code = verificationCode();
       const createdAt = now().toISOString();
-      const submission = SubmissionSnapshotSchema.parse({
+      const snapshot = {
         kind: "review", sourceId: record.id, score: record.analysis.score,
         snapshotJson: { commitSha: record.commitSha, findings: record.analysis.findings, limitations: record.analysis.limitations, evaluatorVersion: record.evaluatorVersion },
-        contentHash: await sha256(canonicalJson({ reviewId: record.id, commitSha: record.commitSha, analysis: record.analysis })),
         verificationCode: code, rubricVersion: record.rubricVersion, createdAt,
+      } satisfies Omit<SubmissionSnapshot, "contentHash">;
+      const submission = SubmissionResponseSchema.parse({
+        ...snapshot,
+        id: submissionId(),
+        contentHash: await sha256(canonicalJson(snapshot)),
       });
       const text = ["Fragments · Informe de Review", `Commit: ${record.commitSha}`, `Puntaje orientativo: ${record.analysis.score}/100`, "", ...record.analysis.findings.flatMap((finding) => [
         `${finding.criterionId} (${finding.status}) — ${finding.reason}`,
@@ -188,13 +211,22 @@ export function createReviewService(dependencies: ReviewDependencies) {
       ]), ...record.analysis.limitations.map((limitation) => `Límite: ${limitation}`), "", `Verificación: ${code}`].join("\n");
       const bytes = await dependencies.pdf.render(text);
       await dependencies.submissions.save(submission);
-      return { bytes, contentType: "application/pdf" as const, verificationCode: code };
+      return { bytes, contentType: "application/pdf" as const, verificationCode: code, submission };
     },
 
     async verify(code: string) {
-      if (!/^[A-Za-z0-9_-]{24,128}$/.test(code)) return { valid: false as const };
-      const submission = await dependencies.submissions.getByVerificationCode(code);
-      return submission ? { valid: true as const, kind: submission.kind, sourceId: submission.sourceId, score: submission.score, commitSha: submission.snapshotJson.commitSha, createdAt: submission.createdAt } : { valid: false as const };
+      if (!/^[A-Za-z0-9_-]{24,128}$/.test(code)) throw new Error("El código de verificación no es válido o no se encontró.");
+      const rawSubmission = await dependencies.submissions.getByVerificationCode(code);
+      if (!rawSubmission) throw new Error("El código de verificación no es válido o no se encontró.");
+      const submission = SubmissionResponseSchema.parse(rawSubmission);
+      const { id: _id, contentHash, ...snapshot } = submission;
+      return VerifySubmissionResponseSchema.parse({
+        kind: submission.kind,
+        score: submission.score,
+        rubricVersion: submission.rubricVersion,
+        createdAt: submission.createdAt,
+        integrityValid: await sha256(canonicalJson(snapshot)) === contentHash,
+      });
     },
   };
 }
