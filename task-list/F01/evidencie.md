@@ -1,11 +1,54 @@
 # F01 — Evidence / evidencie
-Estado: NOT STARTED
+
+Estado: VERIFICADO; pendiente registrar el hash del commit de implementación en esta evidencia y actualizar la tabla central por PLANNER.
 Owner: W1
-Skills leídas: pendiente
-Rutas cambiadas: pendiente
-Comandos realizados y códigos de salida: pendiente
-Pruebas y resultados: pendiente
-Capturas / logs: pendiente
-Hash / commit: pendiente
-Limitaciones: pendiente
-**Regla:** nunca cambiar a DONE sin evidencia fresca.
+
+## Skills leídas y decisiones
+
+- `ego-browser`: leído desde `C:\Program Files\Citro Labs\ego lite\Application\0.6.2.7\ego-skills\ego-browser\SKILL.md`; `ego-browser skill` terminó con código 0 y mostró la guía v2.2.0 completa. Se usó ego(lite) para las capturas, navegación, métricas de viewport, teclado y preferencia de movimiento. La ventana inició minimizada; se confirmó con `Browser.getWindowForTarget` y se restauró con el comando documentado `Browser.setWindowBounds` antes de capturar.
+- `frontend-design`, `web-design-guidelines` y `react-best-practices`: `skills/SKILLS_MATRIX.md` enumera sus fuentes, pero sus `SKILL.md` originales no están instalados en `C:\Users\vgmil\.codex\skills` ni `C:\Users\vgmil\.agents\skills`. No se descargaron skills ni se contactó GitHub. Se siguió el brief Pixel Garden, la paleta y los criterios de accesibilidad/performance de los documentos del repositorio.
+- Dirección visual: composición editorial propia con el arte original de Fragments, jerarquía tipográfica sans, paleta aprobada y una sola acción primaria que lleva a “Cómo funciona”. No se copió la referencia suministrada.
+- Accesibilidad: landmarks semánticos, enlace para saltar al contenido, foco de teclado visible, anclas funcionales, etiquetas y alt decorativo apropiados. Se respeta `prefers-reduced-motion` con transiciones casi nulas y cero animaciones activas. No se añadieron dependencias de animación.
+- Rendimiento: app React mínima con Vite; no se añadió router, estado global ni código de cliente innecesario. El hero quedó en WebP de 146,180 bytes (origen PNG: 1,643,283 bytes) y se carga con prioridad alta porque aparece en el primer viewport.
+
+## Rutas cambiadas
+
+- `apps/web/index.html`, `apps/web/package.json`, `apps/web/tsconfig.json`, `apps/web/vite.config.ts`
+- `apps/web/src/App.tsx`, `apps/web/src/main.tsx`, `apps/web/src/components/brand/BrandMark.tsx`, `apps/web/src/components/brand/brand-mark.svg`
+- `apps/web/src/styles/main.css`, `apps/web/src/styles/tokens.css`
+- `apps/web/public/icon.svg`, `apps/web/public/favicon.svg`, `apps/web/public/apple-touch-icon.svg`, `apps/web/public/og-image.svg`, `apps/web/public/hero-fragments.webp`, `apps/web/public/flower.svg`, `apps/web/public/sparkle.svg`
+- `task-list/F01/intent.md`, `task-list/F01/spec.md`, `task-list/F01/validate-f01.mjs`, `task-list/F01/screenshots/*`
+
+## Comandos ejecutados y resultados
+
+- `ego-browser skill` — salida completa v2.2.0; código 0.
+- `pnpm install --filter @fragments/web --lockfile=false --ignore-scripts --offline` — código 1; el paquete Vite no estaba en cache local (`ERR_PNPM_NO_OFFLINE_TARBALL`).
+- `pnpm import` — código 1 (`ERR_PNPM_LOCKFILE_NOT_FOUND`). El comando retiró el lockfile rastreado de la base; se restauró inmediatamente con `git restore -- pnpm-lock.yaml`. El lockfile terminó sin cambios.
+- `npm install --ignore-scripts --no-save --package-lock=false --workspaces=false` — código 0; bootstrap local sin modificar manifiestos de lock.
+- `npm run typecheck` desde `apps/web` — código 0.
+- `npm run build` desde `apps/web` — código 0; Vite 8.3.5 transformó 17 módulos y generó HTML, CSS y JS (225.30 kB, 70.18 kB gzip).
+- `ego-browser nodejs -e "await import('file:///C:/Users/vgmil/.codex/worktrees/f01-brand/Fragments/task-list/F01/validate-f01.mjs')"` — código 0. Salida de viewport: 390: documento/cuerpo 390 px; 768: 768 px; 1440: 1425 px. En los tres tamaños el CTA quedó dentro del viewport, el hero cargó y no hubo anclas rotas.
+- Teclado ego(lite): primer Tab enfocó “Saltar al contenido” con outline sólido de 3 px; Enter activó el enlace. Enter en el CTA llegó a `#como-funciona`.
+- Motion ego(lite): `prefers-reduced-motion` activo, transición `1e-05s`, cero elementos con animación activa.
+- Metadata ego(lite): title, description, theme-color y etiquetas Open Graph devolvieron los valores Fragments configurados.
+- Recursos ego(lite): icon.svg, favicon.svg, apple-touch-icon.svg, og-image.svg, hero-fragments.webp, flower.svg y sparkle.svg devolvieron HTTP 200.
+
+## Capturas
+
+- `task-list/F01/screenshots/f01-mobile-390.png`
+- `task-list/F01/screenshots/f01-tablet-768.png`
+- `task-list/F01/screenshots/f01-desktop-1440.png`
+- `task-list/F01/screenshots/f01-tablet-focus-768.png`
+
+Las cuatro capturas se generaron con ego(lite) y se inspeccionaron visualmente. En móvil el título, la explicación y el CTA aparecen antes de la ilustración. En tablet la ilustración queda completa dentro del ancho disponible. En escritorio se conserva la composición de dos columnas.
+
+## Hash / commit
+
+Pendiente: registrar aquí el hash de implementación después del commit.
+
+## Limitaciones
+
+- Los originales `SKILL.md` de diseño no están instalados; no se descargaron por las restricciones de red del encargo.
+- F01 solo entrega la landing e identidad. La galería y los flujos de dominio corresponden a tareas posteriores.
+- La tabla `task-list/TASKS.md` pertenece a PLANNER y se mantiene sin cambios en este worktree.
+- No se leyó ni tocó `.env`.
