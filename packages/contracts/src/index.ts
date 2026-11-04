@@ -141,6 +141,7 @@ export const ProposalEvaluationResponseSchema = z.object({
   proposalVersion: z.number().int().min(1),
   viability: z.enum(["feasible", "needs_revision", "not_feasible"]),
   analysis: AiAnalysisSchema,
+  guidance: z.array(nonEmptyText.max(1000)).max(12),
   similarityMatches: z.array(z.object({
     galleryId: identifier,
     title: nonEmptyText.max(160),

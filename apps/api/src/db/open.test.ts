@@ -16,7 +16,8 @@ describe("SQLite platform", () => {
     const secondDb = openDatabase(path);
     try {
       expect(firstDb.prepare("PRAGMA journal_mode").get()?.journal_mode).toBe("wal");
-      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(1);
+      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(2);
+      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(2);
       const first = new QueueRepository(firstDb); const second = new QueueRepository(secondDb);
       const job = first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "cross-connection" });
       expect(first.claim("worker-a", 1000, 10)?.id).toBe(job.id);
