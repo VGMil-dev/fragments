@@ -10,3 +10,13 @@
 8. Idempotencia por `(projectId,commitSha,rubricVersion,evaluatorVersion)`; Mentor por JSON canónico+rúbrica.
 9. Provider drivers (`AiProvider`, `RepoDriver`, `PackerDriver`, `PdfRenderer`, `EvaluationRepository`) con fake in-memory para pruebas; no API framework coupling en dominio.
 10. Prohibido modificar packages/contracts tras congelar interfaz sin aprobación y actualización de consumidores. Evitar complejidad incidental: un solo API+worker desde misma app, una SQLite y no redis.
+
+## DTOs para F02/F04/F05
+
+Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envuelven en `ApiResult<T>` en respuestas HTTP:
+
+- `GET /api/gallery` responde `GalleryResponse`: tarjetas públicas opt-in con id, título, resumen, habilidades, etiquetas y duración estimada. No acepta identidad de alumno ni datos de repositorio.
+- `POST /api/proposals` acepta `CreateProposalRequest`; respuestas y evaluaciones usan `ProposalResponse` y `ProposalEvaluationResponse`. Las evaluaciones llevan versión de propuesta, viabilidad, análisis con evidencia y coincidencias de galería.
+- `POST /api/reviews` acepta `ReviewRequest` con `owner`, `repo` y SHA exacto; se rechazan URLs arbitrarias. La creación devuelve `ReviewQueuedResponse`; consulta devuelve `ReviewResponse` discriminada por estado y nunca expone trazas internas.
+- Las solicitudes de entrega usan `CreateMentorSubmissionRequest` y `CreateReviewSubmissionRequest`; la respuesta persistida tiene forma `SubmissionSnapshot` (`MentorSubmissionResponse` es el alias del mismo esquema).
+- La verificación pública usa `VerifySubmissionResponse`, un resumen mínimo de integridad, rúbrica, nota y fecha; no incluye nombre ni datos privados.

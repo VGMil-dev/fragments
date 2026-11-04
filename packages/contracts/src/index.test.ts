@@ -4,15 +4,55 @@ import { z } from "zod";
 import {
   AiAnalysisSchema,
   ApiResultSchema,
+  CreateMentorSubmissionRequestSchema,
+  CreateProposalRequestSchema,
+  CreateReviewSubmissionRequestSchema,
   EvidenceReferenceSchema,
+  GalleryEntrySchema,
+  GalleryResponseSchema,
   FeedbackFindingSchema,
   InspectorChallengePublicSchema,
   InspectorChallengeSchema,
+  MentorSubmissionResponseSchema,
+  ProposalEvaluationResponseSchema,
+  ProposalResponseSchema,
+  ReviewRequestSchema,
+  ReviewResponseSchema,
+  ReviewQueuedResponseSchema,
   RepositorySnapshotSchema,
   SubmissionSnapshotSchema,
+  VerifySubmissionResponseSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
+const now = "2026-11-04T12:00:00.000Z";
+
+const proposal = {
+  title: "Huerto escolar interactivo",
+  problem: "El curso no cuenta con una forma sencilla de registrar el crecimiento de sus plantas.",
+  solution: "Una aplicación local registra medidas y muestra cómo cambian con el tiempo.",
+  goals: ["Registrar medidas semanales", "Comparar el crecimiento por planta"],
+  skills: ["TypeScript", "SQLite"],
+  scope: "Una pantalla de registro, una tabla local y un resumen visual.",
+  constraints: ["Debe funcionar en el laboratorio sin conexión"],
+};
+
+const analysis = {
+  rubricVersion: "1.0.0",
+  score: 78,
+  findings: [
+    {
+      criterionId: "scope",
+      status: "verified" as const,
+      evidence: [{ source: "proposal" as const, field: "scope", digest }],
+      reason: "El alcance cabe en un prototipo formativo.",
+      guidanceLevel: 1,
+    },
+  ],
+  limitations: [],
+  modelId: "fake/local",
+  inputDigest: digest,
+};
 
 describe("shared API contracts", () => {
   it("accepts both standard API result variants", () => {
@@ -172,5 +212,128 @@ describe("shared API contracts", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("accepts opt-in gallery cards without student or repository identity fields", () => {
+    const entry = {
+      id: "gallery-1",
+      title: "Huerto escolar interactivo",
+      summary: "Registra el crecimiento de plantas con una aplicación local.",
+      skills: ["TypeScript", "SQLite"],
+      tags: ["ciencia", "web"],
+      estimatedMinutes: 90,
+    };
+
+    expect(GalleryEntrySchema.safeParse(entry).success).toBe(true);
+    expect(GalleryResponseSchema.safeParse([entry]).success).toBe(true);
+    expect(GalleryEntrySchema.safeParse({ ...entry, studentId: "student-1" }).success).toBe(false);
+  });
+
+  it("validates proposal requests and versioned proposal responses", () => {
+    expect(CreateProposalRequestSchema.safeParse(proposal).success).toBe(true);
+    expect(CreateProposalRequestSchema.safeParse({ ...proposal, goals: [] }).success).toBe(false);
+    expect(
+      ProposalResponseSchema.safeParse({ id: "proposal-1", version: 2, proposal, updatedAt: now }).success,
+    ).toBe(true);
+  });
+
+  it("validates evidence-backed Mentor evaluation and similarity matches", () => {
+    const result = ProposalEvaluationResponseSchema.safeParse({
+      evaluationId: "evaluation-1",
+      proposalId: "proposal-1",
+      proposalVersion: 2,
+      viability: "feasible",
+      analysis,
+      similarityMatches: [
+        { galleryId: "gallery-1", title: "Huerto comunitario", reason: "Comparte el seguimiento de plantas." },
+      ],
+      evaluatedAt: now,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a GitHub owner/repo/commit request and rejects arbitrary repository URLs", () => {
+    const request = { owner: "student", repo: "course-project", commitSha: "b".repeat(40) };
+    expect(ReviewRequestSchema.safeParse(request).success).toBe(true);
+    expect(ReviewRequestSchema.safeParse({ ...request, repositoryUrl: "http://127.0.0.1/secret" }).success).toBe(false);
+  });
+
+  it("validates queued and completed Review responses without unsafe exception fields", () => {
+    const queued = ReviewQueuedResponseSchema.safeParse({
+      id: "review-1",
+      owner: "student",
+      repo: "course-project",
+      commitSha: "b".repeat(40),
+      status: "queued",
+      createdAt: now,
+    });
+    const completed = ReviewResponseSchema.safeParse({
+      id: "review-1",
+      owner: "student",
+      repo: "course-project",
+      commitSha: "b".repeat(40),
+      status: "completed",
+      analysis,
+      progress: 100,
+      updatedAt: now,
+    });
+    const unsafe = ReviewResponseSchema.safeParse({
+      id: "review-1",
+      owner: "student",
+      repo: "course-project",
+      commitSha: "b".repeat(40),
+      status: "failed",
+      errorStack: "secret-bearing stack trace",
+      updatedAt: now,
+    });
+
+    expect(queued.success).toBe(true);
+    expect(completed.success).toBe(true);
+    expect(unsafe.success).toBe(false);
+  });
+
+  it("validates submission requests and their shared snapshot response", () => {
+    expect(
+      CreateMentorSubmissionRequestSchema.safeParse({
+        proposalId: "proposal-1",
+        proposalVersion: 2,
+        evaluationId: "evaluation-1",
+      }).success,
+    ).toBe(true);
+    expect(CreateReviewSubmissionRequestSchema.safeParse({ reviewId: "review-1" }).success).toBe(true);
+    const snapshot = {
+      kind: "review",
+      sourceId: "review-1",
+      score: 78,
+      snapshotJson: { commitSha: "b".repeat(40), analysis },
+      contentHash: digest,
+      verificationCode: "verify_123456789012345678901234",
+      rubricVersion: "1.0.0",
+      createdAt: now,
+    };
+    expect(MentorSubmissionResponseSchema.safeParse(snapshot).success).toBe(true);
+  });
+
+  it("returns only a minimal integrity verification summary", () => {
+    expect(
+      VerifySubmissionResponseSchema.safeParse({
+        kind: "mentor",
+        score: 78,
+        rubricVersion: "1.0.0",
+        createdAt: now,
+        integrityValid: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      VerifySubmissionResponseSchema.safeParse({
+        kind: "mentor",
+        score: 78,
+        rubricVersion: "1.0.0",
+        createdAt: now,
+        integrityValid: true,
+        studentName: "Private",
+      }).success,
+    ).toBe(false);
   });
 });
