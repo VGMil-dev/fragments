@@ -87,3 +87,14 @@ Comandos frescos del seguimiento:
 - Un primer chequeo de tipos detectó que el contrato exporta `SubmissionResponseSchema` pero no un tipo `SubmissionResponse`; el tipo interno ahora se deriva con `ReturnType<typeof SubmissionResponseSchema.parse>`, sin duplicar el DTO.
 
 **Commit de alineación:** `fc7309a` — `fix(f05): alinear review con contratos compartidos`. Las rutas cambiadas permanecen dentro de los archivos F05 propios; no se tocó `TASKS.md`, `MANIFEST.sha256.json`, lockfile, package root ni contratos compartidos.
+
+## Integración en raíz
+
+**Estado:** PARCIAL; el dominio y los adaptadores aislados están integrados en `codex/fragments-mvp`, pero F05 no está completa.
+
+- Commits importados: `feat(F05): implementar review aislado por commit`, evidencia original, alineación de contratos y evidencia de alineación. La alineación ahora importa `@fragments/contracts` y separa el request público del contexto interno.
+- `pnpm --filter @fragments/api build` — exit 0.
+- `pnpm --filter @fragments/api typecheck` — exit 0.
+- `pnpm --filter @fragments/api test` — exit 0; 8 archivos y 28 pruebas, incluidas las 9 del servicio Review.
+
+**Pendiente para DONE:** rutas HTTP, persistencia SQLite de evaluaciones/entregas, worker/cola, lector real de GitHub, AI SDK/Gateway configurado por servidor e integración de descarga/verificación con la UI. No se hicieron solicitudes externas ni se afirma un análisis real del Gateway.
