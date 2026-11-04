@@ -244,6 +244,7 @@ describe("shared API contracts", () => {
       proposalVersion: 2,
       viability: "feasible",
       analysis,
+      guidance: ["¿Qué parte puedes validar primero?"],
       similarityMatches: [
         { galleryId: "gallery-1", title: "Huerto comunitario", reason: "Comparte el seguimiento de plantas." },
       ],

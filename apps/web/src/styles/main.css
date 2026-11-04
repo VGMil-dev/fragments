@@ -6,7 +6,7 @@ body { margin: 0; background: var(--paper); color: var(--navy); font-family: var
 a { color: inherit; }
 a:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 3px; }
 .skip-link { position: fixed; top: 1rem; left: 1rem; z-index: 10; transform: translateY(-160%); padding: .7rem 1rem; background: var(--navy); color: white; }
-.skip-link:focus { transform: translateY(0); }
+.skip-link:focus-visible { transform: translateY(0); }
 .site-header { height: 88px; max-width: 1280px; padding: 0 52px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-soft); }
 .brand { display: inline-flex; gap: 10px; align-items: center; text-decoration: none; }
 .brand__icon { display: block; width: 40px; height: 40px; object-fit: contain; border-radius: 10px; }

@@ -1,0 +1,25 @@
+.async-state {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 22px;
+  border: 1px solid var(--border-soft, #DCE4E9);
+  background: var(--paper-white, #FFFDF8);
+}
+
+.async-state__title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.async-state__copy {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--muted, #5F7183);
+  font-size: 14px;
+}
+
+.async-state__action { margin-top: 8px; }
+.async-state--error { border-color: var(--warning, #B97A33); }
+.async-state .button:focus-visible { outline: 3px solid var(--blue, #4776A9); outline-offset: 3px; }

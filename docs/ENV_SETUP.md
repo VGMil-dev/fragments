@@ -14,6 +14,8 @@ Codex genera `.env.example` y un `.env` local SIN sobrescribir claves existentes
 
 Para comprobar configuración local sin mostrar valores, consulta únicamente los nombres ausentes y el estado de formato. Nunca uses `Get-Content .env`, `cat .env`, `printenv` ni `env` en logs o evidencias. Una comprobación de presencia no prueba conectividad ni validez de una clave. No se prueba el Gateway ni GitHub hasta que el usuario pida una prueba opt-in con presupuesto controlado.
 
+El slice Mentor local devuelve una evaluación demostrativa con `modelId: fake/local-heuristic-v1` y `limitations` explícitas. No consume `AI_GATEWAY_API_KEY` ni representa una evaluación real de IA; el PDF local sí se genera bajo demanda y no se persiste.
+
 Añadir otras variables **solo si son necesarias**. No usar credenciales de Moodle, ni exponer `AI_GATEWAY_API_KEY`/`GITHUB_TOKEN`/`SESSION_SECRET` mediante `VITE_*` o respuestas HTTP. Guardar valores solo en `.env` local o secretos del entorno de producción. En Docker Compose enlazar variables como secretos de runtime, sin incrustarlos en imágenes. Solo mostrar nombres de variables ausentes y resultados redactados del preflight.
 
 **Orden obligatorio**: inspeccionar y leer skills → crear plantilla, `.env` y gitignore → presentar checklist de variables → **PARAR** → usuario completa el archivo en su PC → confirma «configuración lista, continúa» → validar sin imprimir secretos → iniciar scaffold/6 workers. No requerir claves reales para documentar contratos; el planner NO debe usar esa excepción para despachar workers antes del permiso.

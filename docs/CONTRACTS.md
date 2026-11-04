@@ -16,7 +16,7 @@
 Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envuelven en `ApiResult<T>` en respuestas HTTP:
 
 - `GET /api/gallery` responde `GalleryResponse`: tarjetas públicas opt-in con id, título, resumen, habilidades, etiquetas y duración estimada. No acepta identidad de alumno ni datos de repositorio.
-- `POST /api/proposals` acepta `CreateProposalRequest`; respuestas y evaluaciones usan `ProposalResponse` y `ProposalEvaluationResponse`. Las evaluaciones llevan versión de propuesta, viabilidad, análisis con evidencia y coincidencias de galería.
+- `POST /api/proposals` acepta `CreateProposalRequest`; respuestas y evaluaciones usan `ProposalResponse` y `ProposalEvaluationResponse`. Las evaluaciones llevan versión de propuesta, viabilidad, análisis con evidencia, guía socrática y coincidencias de galería.
 - `POST /api/reviews` acepta `ReviewRequest` con `owner`, `repo` y SHA exacto; se rechazan URLs arbitrarias. La creación devuelve `ReviewQueuedResponse`; consulta devuelve `ReviewResponse` discriminada por estado y nunca expone trazas internas.
 - Las solicitudes de entrega usan `CreateMentorSubmissionRequest` y `CreateReviewSubmissionRequest`; sus respuestas `MentorSubmissionResponse` y `ReviewSubmissionResponse` incluyen un `id` de servidor junto al `SubmissionSnapshot` inmutable. Usa el `id` para descargar artefactos; `verificationCode` solo sirve para verificación.
 - Las descargas de README y PDF devuelven respectivamente `text/markdown` y `application/pdf` sin envoltura JSON; errores y respuestas de API normales usan `ApiResult<T>`.
