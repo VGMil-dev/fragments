@@ -6,7 +6,7 @@ services:
       target: runtime
     environment:
       API_PORT: "3000"
-      DATABASE_PATH: /app/data/fragments.sqlite
+      DATABASE_URL: file:/app/data/fragments.sqlite
       AUTH_ENABLED: "false"
     ports:
       - "3000:3000"

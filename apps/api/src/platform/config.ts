@@ -17,9 +17,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (authEnabled && !env.SESSION_SECRET) throw new Error("SESSION_SECRET es obligatorio para habilitar auth.");
   if (authEnabled && (env.SESSION_SECRET?.length ?? 0) < 32) throw new Error("SESSION_SECRET debe tener al menos 32 caracteres.");
 
+  const databaseUrl = env.DATABASE_URL ?? "file:./data/fragments.sqlite";
+  if (!databaseUrl.startsWith("file:") || databaseUrl.length <= "file:".length || databaseUrl.includes("?")) {
+    throw new Error("DATABASE_URL debe ser una ruta SQLite con prefijo file:.");
+  }
+
   return {
     port,
-    databasePath: env.DATABASE_PATH ?? "./data/fragments.sqlite",
+    databasePath: databaseUrl.slice("file:".length),
     authEnabled,
     ...(authEnabled ? { sessionSecret: env.SESSION_SECRET! } : {}),
   };

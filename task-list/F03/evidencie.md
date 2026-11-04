@@ -78,11 +78,16 @@ Driver: `node:sqlite` integrado, sin addon ni compilación nativa, sobre Node **
 - `AUTH_ENABLED=true` exige `SESSION_SECRET`; además el proceso falla cerrado hasta conectar un verificador docente real. La ruta de login y firma se ejercitan con fake driver de test solamente; no se crea ni habilita una cuenta docente de producción.
 - El esquema persistente de sesiones queda preparado; el token actual se firma con HMAC y expiración. No se implementan revocación, recuperación de contraseña ni políticas de alta docente en S0.
 - Node built-in SQLite permanece en release candidate (Stability 1.2), documentado arriba.
-- El lockfile raíz no incluye el importer nuevo de API por límite de ownership; instalación local y Docker usan `--lockfile=false`. Planner debe sincronizar el lockfile en integración.
+- En integración, Planner sincronizó el importer API al `pnpm-lock.yaml` con `pnpm install --lockfile-only --ignore-scripts`; la instalación congelada pasó.
+- Se alineó `DATABASE_URL` con `.env.example` y Compose: el API acepta rutas SQLite `file:...`, rechaza otros esquemas y no usa un alias `DATABASE_PATH` que no estaba documentado.
+- Suite raíz tras integrar web/API: `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint` terminan con exit 0; 13 pruebas API y 9 de contratos pasan. `lint` solo se ejecuta en contratos, que es el único paquete con script lint.
+- Compose de la rama raíz con `--env-file .env.example` (sin leer el `.env` real): build/up exit 0; `/health` devuelve `ok` y SQLite `ready`; el archivo `/app/data/fragments.sqlite` existe antes y después de reiniciar API; `docker compose down -v` limpia el volumen efímero de integración.
 
 ## Hash / commit
 
-Commit de implementación: `626511d82c32d46cc37867707ad44ca1ca51022e` (`feat(api): implementar base HTTP y SQLite`). El commit documental registra DONE en `task-list/TASKS.md`.
+Commit de implementación del worker: `626511d82c32d46cc37867707ad44ca1ca51022e` (`feat(api): implementar base HTTP y SQLite`). Commit de integración del planner: `757c789` (`feat(api): implementar base HTTP y SQLite`). El cierre del worker quedó en `dca2e270c43cbc80c12b9a7c194df611abe44eb4`; el planner mantiene F03 marcado `[x]` en `task-list/TASKS.md`.
+
+Fix de integración del planner: `DATABASE_URL` documentado y probado con SQLite en `codex/fragments-mvp`; commit separado del worker.
 
 ## Capturas / logs
 
