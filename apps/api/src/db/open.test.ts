@@ -16,8 +16,10 @@ describe("SQLite platform", () => {
     const secondDb = openDatabase(path);
     try {
       expect(firstDb.prepare("PRAGMA journal_mode").get()?.journal_mode).toBe("wal");
-      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(3);
-      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(3);
+      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(5);
+      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(5);
+      expect(firstDb.prepare("PRAGMA table_info(proposals)").all().some((column) => column.name === "owner_hash")).toBe(true);
+      expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_budget_reservations'").get()?.name).toBe("ai_budget_reservations");
       const first = new QueueRepository(firstDb); const second = new QueueRepository(secondDb);
       const job = first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "cross-connection" });
       expect(first.claim("worker-a", 1000, 10)?.id).toBe(job.id);

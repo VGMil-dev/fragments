@@ -29,4 +29,24 @@ describe("QueueRepository", () => {
     expect(repo.claim("worker-a", 1000, 10)?.id).toBe(job.id);
     expect(repo.claim("worker-b", 1011, 10)?.id).toBe(job.id);
   });
+
+  it("completes a leased job only for its current worker", () => {
+    const repo = queue();
+    const job = repo.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "done-key" });
+    repo.claim("worker-a", 1000, 10);
+
+    expect(repo.complete(job.id, "worker-b", 1001)).toBe(false);
+    expect(repo.complete(job.id, "worker-a", 1001)).toBe(true);
+    expect(repo.claim("worker-b", 2000, 10)).toBeNull();
+  });
+
+  it("requeues a transient failure and terminally fails an exhausted job", () => {
+    const repo = queue();
+    const job = repo.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "failure-key" });
+    repo.claim("worker-a", 1000, 10);
+    expect(repo.fail(job.id, "worker-a", { retry: true, maxAttempts: 2, now: 1001 })).toBe("retry");
+    expect(repo.claim("worker-b", 1002, 10)?.attempts).toBe(2);
+    expect(repo.fail(job.id, "worker-b", { retry: true, maxAttempts: 2, now: 1003 })).toBe("failed");
+    expect(repo.claim("worker-c", 2000, 10)).toBeNull();
+  });
 });

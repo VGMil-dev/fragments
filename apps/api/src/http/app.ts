@@ -1,4 +1,4 @@
-import { ApiResultSchema } from "@fragments/contracts";
+import { ApiResultSchema, TeacherLoginRequestSchema, TeacherSessionResponseSchema } from "@fragments/contracts";
 import type { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
@@ -7,6 +7,10 @@ import { createMentorHttp } from "../features/mentor/http.js";
 import type { createMentorService } from "../features/mentor/service.js";
 import { createInspectorHttp } from "../features/inspector/http.js";
 import type { createInspectorService } from "../features/inspector/service.js";
+import { createReviewHttp } from "../features/review/http.js";
+import type { ReviewContextResolver } from "../features/review/http.js";
+import type { createReviewService } from "../features/review/review.service.js";
+import type { createSqliteReviewStore } from "../features/review/sqlite-store.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -19,9 +23,11 @@ export function createHttpHandler(database: DatabaseSync, options: {
   auth?: TeacherSessionService;
   mentor?: ReturnType<typeof createMentorService>;
   inspector?: ReturnType<typeof createInspectorService>;
+  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
 } = {}) {
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
+  const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");
@@ -33,6 +39,15 @@ export function createHttpHandler(database: DatabaseSync, options: {
       } catch {
         response.writeHead(503).end(JSON.stringify({ ok: false, error: { code: "NOT_READY", message: "El servicio no está listo." } }));
       }
+      return;
+    }
+    if (request.method === "GET" && request.url === "/api/teacher/session") {
+      const token = readCookie(request, "fragments_session");
+      const session = token ? options.auth?.verify(token) ?? null : null;
+      const data = TeacherSessionResponseSchema.parse(session
+        ? { authenticated: true, teacherId: session.teacherId, expiresAt: session.expiresAt }
+        : { authenticated: false });
+      response.writeHead(200).end(JSON.stringify(ApiResultSchema(TeacherSessionResponseSchema).parse({ ok: true, data })));
       return;
     }
     if (request.method === "POST" && request.url === "/api/teacher/session") {
@@ -49,7 +64,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
         sendError(response, 400, "INVALID_INPUT", "La solicitud no es válida.");
         return;
       }
-      const credentials = z.object({ email: z.string().email().max(254), password: z.string().min(1).max(1024) }).strict().safeParse(parsed);
+      const credentials = TeacherLoginRequestSchema.safeParse(parsed);
       if (!credentials.success) {
         sendError(response, 400, "INVALID_INPUT", "La solicitud no es válida.");
         return;
@@ -71,6 +86,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
     }
     if (mentorHandler && await mentorHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
+    if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
   };
@@ -80,4 +96,10 @@ export function createApiServer(database: DatabaseSync, options: {
   auth?: TeacherSessionService;
   mentor?: ReturnType<typeof createMentorService>;
   inspector?: ReturnType<typeof createInspectorService>;
+  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
 } = {}) { return createServer(createHttpHandler(database, options)); }
+
+function readCookie(request: IncomingMessage, name: string): string | undefined {
+  const prefix = `${name}=`;
+  return request.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length);
+}

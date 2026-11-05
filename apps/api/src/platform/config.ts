@@ -2,7 +2,11 @@ export interface AppConfig {
   port: number;
   databasePath: string;
   authEnabled: boolean;
-  sessionSecret?: string;
+  githubTokenConfigured: boolean;
+  aiGatewayKeyConfigured: boolean;
+  aiGatewayModel?: string;
+  aiGatewayMaxInputUsdPerMillion?: number;
+  aiGatewayMaxOutputUsdPerMillion?: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -10,7 +14,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const port = Number(portText);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("API_PORT debe ser un puerto válido.");
 
-  const authEnabled = env.AUTH_ENABLED === "true";
+  const authEnabled = env.AUTH_ENABLED === undefined ? Boolean(env.SESSION_SECRET) : env.AUTH_ENABLED === "true";
   if (env.AUTH_ENABLED !== undefined && env.AUTH_ENABLED !== "true" && env.AUTH_ENABLED !== "false") {
     throw new Error("AUTH_ENABLED debe ser true o false.");
   }
@@ -22,10 +26,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("DATABASE_URL debe ser una ruta SQLite con prefijo file:.");
   }
 
+  const inputRate = parsePositiveRate(env.AI_GATEWAY_MAX_INPUT_USD_PER_MILLION, "AI_GATEWAY_MAX_INPUT_USD_PER_MILLION");
+  const outputRate = parsePositiveRate(env.AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION, "AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION");
+  const model = env.AI_GATEWAY_MODEL?.trim();
+  if (model && model.length > 200) throw new Error("AI_GATEWAY_MODEL supera el tamaño permitido.");
+
   return {
     port,
     databasePath: databaseUrl.slice("file:".length),
     authEnabled,
-    ...(authEnabled ? { sessionSecret: env.SESSION_SECRET! } : {}),
+    githubTokenConfigured: Boolean(env.GITHUB_TOKEN?.trim()),
+    aiGatewayKeyConfigured: Boolean(env.AI_GATEWAY_API_KEY?.trim()),
+    ...(model ? { aiGatewayModel: model } : {}),
+    ...(inputRate !== undefined ? { aiGatewayMaxInputUsdPerMillion: inputRate } : {}),
+    ...(outputRate !== undefined ? { aiGatewayMaxOutputUsdPerMillion: outputRate } : {}),
   };
+}
+
+function parsePositiveRate(value: string | undefined, name: string): number | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 1_000_000) throw new Error(`${name} debe ser un máximo de precio positivo por millón de tokens.`);
+  return parsed;
 }

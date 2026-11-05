@@ -69,6 +69,7 @@ export interface InspectorDependencies {
       commitSha: string;
       evidence: EvidenceReference;
       findingReason: string;
+      evidenceExcerpt: string;
     }): Promise<ChallengeDraft>;
   };
   store: InspectorStore;
@@ -92,7 +93,7 @@ function error(code: string, message: string): InspectorError {
   return new InspectorError(code, message);
 }
 
-function verifiedEvidence(review: ReviewEvidence): { evidence: EvidenceReference; findingReason: string } {
+function verifiedEvidence(review: ReviewEvidence): { evidence: EvidenceReference; findingReason: string; evidenceExcerpt: string } {
   const snapshot = RepositorySnapshotSchema.safeParse(review.snapshot);
   const analysis = AiAnalysisSchema.safeParse(review.analysis);
   if (!snapshot.success || !analysis.success
@@ -125,7 +126,10 @@ function verifiedEvidence(review: ReviewEvidence): { evidence: EvidenceReference
       if (start > sourceLines.length || end > sourceLines.length) {
         throw error("INVALID_REVIEW_EVIDENCE", "La evidencia cita líneas fuera del archivo.");
       }
-      return { evidence, findingReason: finding.reason };
+      if (end - start > 49) throw error("INVALID_REVIEW_EVIDENCE", "La evidencia seleccionada es demasiado amplia para crear un reto seguro.");
+      const excerpt = sourceLines.slice(start - 1, end).map((line, index) => `${start + index}: ${line}`).join("\n");
+      if (!excerpt || new TextEncoder().encode(excerpt).byteLength > 4_000) throw error("INVALID_REVIEW_EVIDENCE", "La evidencia seleccionada supera el tamaño seguro para crear un reto.");
+      return { evidence, findingReason: finding.reason, evidenceExcerpt: `${evidence.path}\n${excerpt}` };
     }
   }
   throw error("NO_VERIFIED_EVIDENCE", "La revisión no tiene evidencia verificada para crear un reto.");
@@ -168,12 +172,13 @@ export function createInspectorService(dependencies: InspectorDependencies) {
         await this.reconcileCommit(review.id);
         throw error("REVIEW_STALE", "El proyecto tiene un commit nuevo. Usa la revisión más reciente.");
       }
-      const { evidence, findingReason } = verifiedEvidence(review);
+      const { evidence, findingReason, evidenceExcerpt } = verifiedEvidence(review);
       const draft = await dependencies.provider.createChallenge({
         reviewId: review.id,
         commitSha: review.commitSha,
         evidence,
         findingReason,
+        evidenceExcerpt,
       });
       const challenge = InspectorChallengeSchema.parse({
         evaluationId: review.id,

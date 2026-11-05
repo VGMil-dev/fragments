@@ -21,6 +21,8 @@ import {
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
   UpdateProposalRequestSchema,
+  TeacherLoginRequestSchema,
+  TeacherSessionResponseSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
@@ -60,6 +62,13 @@ const analysis = {
 };
 
 describe("shared API contracts", () => {
+  it("validates teacher login and session responses without exposing session tokens", () => {
+    expect(TeacherLoginRequestSchema.safeParse({ email: "teacher@example.test", password: "fake-password" }).success).toBe(true);
+    expect(TeacherLoginRequestSchema.safeParse({ email: "invalid", password: "x" }).success).toBe(false);
+    expect(TeacherSessionResponseSchema.safeParse({ authenticated: false }).success).toBe(true);
+    expect(TeacherSessionResponseSchema.safeParse({ authenticated: true, teacherId: "teacher-1", expiresAt: 10_000 }).success).toBe(true);
+    expect(TeacherSessionResponseSchema.safeParse({ authenticated: true, teacherId: "teacher-1", expiresAt: 10_000, token: "secret" }).success).toBe(false);
+  });
   it("accepts both standard API result variants", () => {
     const resultSchema = ApiResultSchema(z.object({ id: z.string() }));
     const success = resultSchema.safeParse({

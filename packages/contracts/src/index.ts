@@ -20,6 +20,12 @@ export const ApiErrorSchema = z
   .object({ code: nonEmptyText, message: nonEmptyText })
   .strict();
 
+export const TeacherLoginRequestSchema = z.object({ email: z.string().trim().email().max(254), password: z.string().min(1).max(1024) }).strict();
+export const TeacherSessionResponseSchema = z.discriminatedUnion("authenticated", [
+  z.object({ authenticated: z.literal(true), teacherId: identifier, expiresAt: z.number().int().positive() }).strict(),
+  z.object({ authenticated: z.literal(false) }).strict(),
+]);
+
 export function ApiResultSchema<T extends z.ZodType>(dataSchema: T) {
   return z.discriminatedUnion("ok", [
     z.object({ ok: z.literal(true), data: dataSchema }).strict(),
@@ -237,6 +243,8 @@ export const VerifySubmissionResponseSchema = z.object({
 }).strict();
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+export type TeacherLoginRequest = z.infer<typeof TeacherLoginRequestSchema>;
+export type TeacherSessionResponse = z.infer<typeof TeacherSessionResponseSchema>;
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 export type EvidenceReference = z.infer<typeof EvidenceReferenceSchema>;
 export type FeedbackFinding = z.infer<typeof FeedbackFindingSchema>;

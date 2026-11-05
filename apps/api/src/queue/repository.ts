@@ -40,6 +40,25 @@ export class QueueRepository {
       .run(now + leaseDurationMs, now, now, jobId, workerId, now).changes === 1;
   }
 
+  complete(jobId: string, workerId: string, now = Date.now()): boolean {
+    return this.database.prepare(`UPDATE jobs SET status='done', lease_owner=NULL, lease_until=NULL, heartbeat_at=NULL, updated_at=?
+      WHERE id=? AND status='leased' AND lease_owner=? AND lease_until>?`)
+      .run(now, jobId, workerId, now).changes === 1;
+  }
+
+  fail(jobId: string, workerId: string, options: { retry: boolean; maxAttempts: number; now?: number }): "retry" | "failed" | "stale" {
+    if (!Number.isInteger(options.maxAttempts) || options.maxAttempts < 1) throw new Error("maxAttempts debe ser un entero positivo.");
+    const now = options.now ?? Date.now();
+    const row = this.database.prepare("SELECT attempts FROM jobs WHERE id=? AND status='leased' AND lease_owner=? AND lease_until>?")
+      .get(jobId, workerId, now);
+    if (!row) return "stale";
+    const canRetry = options.retry && Number(row.attempts) < options.maxAttempts;
+    this.database.prepare(`UPDATE jobs SET status=?, lease_owner=NULL, lease_until=NULL, heartbeat_at=NULL, updated_at=?
+      WHERE id=? AND status='leased' AND lease_owner=? AND lease_until>?`)
+      .run(canRetry ? "pending" : "failed", now, jobId, workerId, now);
+    return canRetry ? "retry" : "failed";
+  }
+
   private map(row: Record<string, unknown>): Job {
     return { id: String(row.id), type: String(row.type), payload: JSON.parse(String(row.payload_json)), status: String(row.status), attempts: Number(row.attempts), leaseOwner: row.lease_owner ? String(row.lease_owner) : null, leaseUntil: row.lease_until === null ? null : Number(row.lease_until) };
   }

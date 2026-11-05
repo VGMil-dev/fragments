@@ -9,6 +9,10 @@ import { createMentorService } from "../features/mentor/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
 import { createInspectorService, type ReviewEvidence } from "../features/inspector/service.js";
 import { createInspectorRepository } from "../features/inspector/repository.js";
+import { createInspectorTeacherSessionService } from "../features/inspector/teacher-auth.js";
+import { createTeacherAccount, hashTeacherPassword } from "../auth/sqlite-teacher-verifier.js";
+import { createReviewService } from "../features/review/review.service.js";
+import { createSqliteReviewStore } from "../features/review/sqlite-store.js";
 
 const servers: ReturnType<typeof createServer>[] = [];
 const databases: DatabaseSync[] = [];
@@ -27,6 +31,40 @@ describe("HTTP API", () => {
     const response = await fetch(`http://127.0.0.1:${address.port}/health`);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, data: { status: "ok", database: "ready" } });
+  });
+
+  it("registers Review HTTP routes in the composed API and persists an enqueued job", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const store = createSqliteReviewStore(db);
+    const service = createReviewService({
+      repository: { async getCommitSnapshot() { throw new Error("The queued job is not processed in this test."); } },
+      packer: { async pack() { throw new Error("The queued job is not processed in this test."); } },
+      ai: { async analyze() { throw new Error("The queued job is not processed in this test."); } },
+      evaluations: store.evaluations,
+      submissions: store.submissions,
+      pdf: { async render(text) { return new TextEncoder().encode(text); } },
+    });
+    const server = createServer(createHttpHandler(db, { review: {
+      store,
+      service,
+      resolveContext: async (_request, input) => ({ projectId: `${input.owner}/${input.repo}`, rubricVersion: "review-test-v1", evaluatorVersion: "fake-test-v1" }),
+    } }));
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const created = await fetch(`${base}/api/reviews`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ owner: "VGMil-dev", repo: "fragments-test-app", commitSha: "a".repeat(40) }),
+    });
+    expect(created.status).toBe(202);
+    const body = await created.json() as { data: { id: string; status: string } };
+    expect(body.data.status).toBe("queued");
+    expect(store.getJob(body.data.id)).toMatchObject({ status: "queued", owner: "VGMil-dev", repo: "fragments-test-app" });
+    const read = await fetch(`${base}/api/reviews/${body.data.id}`);
+    expect(await read.json()).toMatchObject({ ok: true, data: { id: body.data.id, status: "queued" } });
   });
 
   it("returns a uniform non-reflecting envelope for unknown paths", async () => {
@@ -74,6 +112,29 @@ describe("HTTP API", () => {
     expect(await response.json()).toMatchObject({ ok: true, data: { teacherId: "teacher-fixture-01" } });
   });
 
+  it("authenticates a provisioned SQLite teacher and reports the signed session without returning its token", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const passwordHash = await hashTeacherPassword("fake-local-password-123");
+    createTeacherAccount(db, { id: "teacher-real-test", email: "teacher@example.test", passwordHash });
+    const auth = createInspectorTeacherSessionService(db, "sqlite-auth-test-secret-0123456789abcdef");
+    const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const denied = await fetch(`${base}/api/teacher/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "wrong-password" }) });
+    expect(denied.status).toBe(401);
+    const login = await fetch(`${base}/api/teacher/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "fake-local-password-123" }) });
+    expect(login.status).toBe(200);
+    const sessionCookie = login.headers.get("set-cookie")?.split(";")[0];
+    expect(sessionCookie).toMatch(/^fragments_session=.+$/);
+    const session = await fetch(`${base}/api/teacher/session`, { headers: { cookie: sessionCookie! } });
+    const body = await session.text();
+    expect(session.status).toBe(200);
+    expect(JSON.parse(body)).toMatchObject({ ok: true, data: { authenticated: true, teacherId: "teacher-real-test" } });
+    expect(body).not.toContain("fragments_session");
+  });
+
   it("runs the Mentor proposal-to-delivery and public verification flow", async () => {
     const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
     const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
@@ -94,10 +155,12 @@ describe("HTTP API", () => {
       }),
     });
     expect(proposalResponse.status).toBe(201);
+    const ownerCookie = proposalResponse.headers.get("set-cookie")?.split(";")[0];
+    expect(ownerCookie).toMatch(/^fragments_proposal_owner=.+$/);
     const proposalBody = await proposalResponse.json() as { data: { id: string; version: number; proposal: { title: string } } };
     expect(proposalBody.data.proposal.title).toBe("Huerto escolar interactivo");
 
-    const evaluationResponse = await fetch(`${base}/api/proposals/${proposalBody.data.id}/review`, { method: "POST" });
+    const evaluationResponse = await fetch(`${base}/api/proposals/${proposalBody.data.id}/review`, { method: "POST", headers: { cookie: ownerCookie! } });
     expect(evaluationResponse.status).toBe(200);
     const evaluationBody = await evaluationResponse.json() as { data: { evaluationId: string; proposalVersion: number; analysis: { modelId: string }; guidance: string[] } };
     expect(evaluationBody.data.proposalVersion).toBe(1);
@@ -105,7 +168,7 @@ describe("HTTP API", () => {
     expect(evaluationBody.data.guidance.length).toBeGreaterThan(0);
 
     const submissionResponse = await fetch(`${base}/api/mentor-submissions`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+      method: "POST", headers: { "content-type": "application/json", cookie: ownerCookie! }, body: JSON.stringify({
         proposalId: proposalBody.data.id,
         proposalVersion: proposalBody.data.version,
         evaluationId: evaluationBody.data.evaluationId,
@@ -115,13 +178,13 @@ describe("HTTP API", () => {
     const submissionBody = await submissionResponse.json() as { data: { id: string; verificationCode: string } };
     expect(submissionBody.data.id).toBeTruthy();
 
-    const readme = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/readme`);
+    const readme = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/readme`, { headers: { cookie: ownerCookie! } });
     expect(readme.headers.get("content-type")).toContain("text/markdown");
     const readmeText = await readme.text();
     expect(readmeText).toContain("# Huerto escolar interactivo");
     expect(readmeText).not.toContain("puntaje");
 
-    const pdf = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/pdf`);
+    const pdf = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/pdf`, { headers: { cookie: ownerCookie! } });
     expect(pdf.headers.get("content-type")).toBe("application/pdf");
     expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(100);
 

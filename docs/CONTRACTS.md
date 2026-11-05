@@ -24,3 +24,4 @@ Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envu
 - Las solicitudes de entrega usan `CreateMentorSubmissionRequest` y `CreateReviewSubmissionRequest`; sus respuestas `MentorSubmissionResponse` y `ReviewSubmissionResponse` incluyen un `id` de servidor junto al `SubmissionSnapshot` inmutable. Usa el `id` para descargar artefactos; `verificationCode` solo sirve para verificación.
 - Las descargas de README y PDF devuelven respectivamente `text/markdown` y `application/pdf` sin envoltura JSON; errores y respuestas de API normales usan `ApiResult<T>`.
 - La verificación pública usa `VerifySubmissionResponse`, un resumen mínimo de integridad, rúbrica, nota y fecha; no incluye nombre ni datos privados.
+- `POST /api/teacher/session` acepta `TeacherLoginRequest` y establece la sesión firmada solo en cookie `HttpOnly`; `GET /api/teacher/session` responde `TeacherSessionResponse` sin devolver el token. No existe registro público de docentes.

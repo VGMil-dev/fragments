@@ -43,8 +43,10 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
   let currentCommit = options.commitSha ?? commitA;
   const review = options.review === undefined ? await makeReview() : options.review;
   let nextId = 0;
+  let receivedEvidenceExcerpt = "";
   const provider = {
-    async createChallenge() {
+    async createChallenge(input: { evidenceExcerpt: string }) {
+      receivedEvidenceExcerpt = input.evidenceExcerpt;
       return {
         precondition: "La función suma la lista recibida.",
         mutation: "Explica qué cambiarías para invertir temporalmente la condición del bucle.",
@@ -67,18 +69,19 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
     now: () => new Date("2026-11-04T12:00:00.000Z"),
     createId: () => `challenge-${++nextId}`,
   });
-  return { service, changeCommit(sha: string) { currentCommit = sha; } };
+  return { service, changeCommit(sha: string) { currentCommit = sha; }, getEvidenceExcerpt() { return receivedEvidenceExcerpt; } };
 }
 
 describe("Inspector service", () => {
   it("creates a challenge from evidence on the exact reviewed commit and hides the teacher hint from students", async () => {
-    const { service } = await fixture();
+    const { service, getEvidenceExcerpt } = await fixture();
     const created = await service.createChallenge("review-1");
 
     expect(created.commitSha).toBe(commitA);
     expect(InspectorChallengeSchema.safeParse(created.challenge).success).toBe(true);
     expect(created.challenge.sourceEvidence).toHaveLength(1);
     expect(created.challenge.teacherHint).toContain("Observa el acumulador");
+    expect(getEvidenceExcerpt()).toBe("src/total.ts\n1: export const total = (values: number[]) => values.reduce((a, b) => a + b, 0);");
 
     await service.assignChallenge(created.id, "teacher-1");
     const student = await service.getStudentChallenge(created.id);
