@@ -123,6 +123,7 @@ Capturas y SHA-256:
 **Resultado:** criterios originales completados. Se respetó `codex/fragments-mvp`; no se desplegó, no se ejecutó código de estudiantes y no se realizaron solicitudes nuevas al AI Gateway. La base temporal SQLite existente se preservó.
 
 - Commit de prueba Better Auth: `c630d6f` (`test(auth): aisla validacion de esquema del fixture`).
+- Commit documental de cierre F07: `0d2c6d9` (`docs(f07): cierra QA visual y regresion`).
 
 ### Diagnóstico y QA Ego Lite
 
