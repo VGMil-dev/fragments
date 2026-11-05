@@ -53,6 +53,7 @@ Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `c
 - Merge de integración inicial: `b984de4` (raíz actualizada sin reescribir historial).
 - Merge actual de `codex/fragments-mvp`: `13fcdf9` (merge limpio; incorporó contratos upstream sin conflictos).
 - Implementación F06 parcial: `c1c29eb` (`feat(f06): integra Inspector docente`).
+- W6 — evidencia exacta y auth local: `e0c9ad5` (`feat(f06): valida evidencia y sesion docente`).
 
 ## Seguimiento W6 — snapshot exacto y credenciales docentes
 
@@ -61,6 +62,8 @@ Se añadieron dos adaptadores dentro de `apps/api/src/features/inspector/`:
 - `review-adapter.ts` carga el Review por ID y vuelve a solicitar su snapshot usando el owner, repo y SHA guardados. Rechaza otra identidad/commit y recalcula el digest canónico antes de devolver evidencia al dominio. El dominio valida de nuevo el SHA, identidad disponible, unicidad de rutas, ruta de evidencia, digest y rango real de líneas.
 - `teacher-auth.ts` verifica hashes scrypt con parámetros/formato acotados en `teachers.password_hash` y construye el `TeacherSessionService` existente con `SessionAuth`. `createInspectorTeacherPasswordHash()` genera hashes para un provisioning manual controlado; no crea usuarios ni muestra o almacena contraseñas en logs.
 - La composición compartida aún debe pasar al adaptador un lookup Review con `getById(id)` y `getLatestCommit(projectId)`, junto con un lector de snapshot por SHA. El runner no inyecta todavía este adaptador ni el verificador, y la UI no tiene login; por eso F06 sigue parcial.
+- Interfaz pendiente para el planner: `createInspectorService({ reviews: createInspectorReviewAdapter({ reviews: { getById, getLatestCommit }, repository: { getCommitSnapshot } }), provider, store })`; `createInspectorTeacherSessionService(database, sessionSecret)` construye el auth service que el runner debe inyectar en `createApiServer`. `getLatestCommit(projectId)` debe representar el último commit aceptado/persistido para ese proyecto.
+- El provisioning sigue siendo manual: una operación local controlada calcula `password_hash` con `createInspectorTeacherPasswordHash()` y agrega el docente a `teachers(id,email,password_hash,created_at)`. No se añadió cuenta, ruta de registro ni comando que solicite o imprima contraseñas.
 - No se encontraron tres SHAs públicos en los fixtures locales; los casos Promptfoo son fixtures de salida y no se hicieron solicitudes externas para probar GitHub.
 
 Verificación fresca después del merge y cambios:
