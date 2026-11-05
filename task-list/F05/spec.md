@@ -34,5 +34,5 @@ El slice queda integrado en el runner API compartido con rutas, SQLite, queue wo
 - [x] Rutas HTTP, persistencia SQLite, cola y worker con lease/heartbeat.
 - [x] Snapshot filtrado y empaquetado por Repomix, sin ejecutar el repositorio.
 - [x] Barrera local de USD 1 con estimación, reserva atómica y settlement por recibo; cerrar nuevas solicitudes si falta rate card/recibo o el coste supera la reserva.
-- [ ] Una evaluación real por commit A/B/C con el modelo de `.env`: no ejecutada porque faltan `AI_GATEWAY_MAX_INPUT_USD_PER_MILLION` y `AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION`. Gasto AI Gateway: USD 0.
-- [x] Señales de características verificadas para los commits A/B/C vía GitHub y Repomix local; hallazgos live del modelo siguen pendientes.
+- [x] Una evaluación real por commit A/B/C con el modelo configurado en `.env`; recibos asentados en el ledger SQLite.
+- [x] Señales de características verificadas para commits A/B/C por GitHub, Repomix y hallazgos live con evidencia ligada al snapshot.

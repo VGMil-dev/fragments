@@ -1,6 +1,6 @@
 # F05 — Evidence / evidencie
 
-**Estado actual:** PARCIAL. Review ya está conectado a rutas, SQLite, cola, GitHub público, Repomix y AI Gateway; falta una evaluación real de IA, bloqueada por la ausencia de tarifas máximas para estimar el coste.
+**Estado actual:** COMPLETA. Review fue verificado en commits A/B/C con Gateway real, recibos de coste, persistencia, idempotencia, PDF y hash; Promptfoo pasó sus fixtures locales.
 
 **Owner:** W5
 
@@ -121,3 +121,24 @@ Comandos frescos del seguimiento:
 - `pnpm --filter @fragments/api test` — exit 0; 8 archivos y 28 pruebas, incluidas las 9 del servicio Review.
 
 **Pendiente para DONE:** rutas HTTP, persistencia SQLite de evaluaciones/entregas, worker/cola, lector real de GitHub, AI SDK/Gateway configurado por servidor e integración de descarga/verificación con la UI. No se hicieron solicitudes externas ni se afirma un análisis real del Gateway.
+
+## Revalidación integrada — 2026-11-05
+
+**Rama:** `codex/fragments-mvp`. **Responsables:** W5 `f05_promptfoo` en `C:\Users\vgmil\.codex\worktrees\f05-review\Fragments` (`task/f05-review`, commit `a2cd9f0aad9c13e96ce4c027211bf193d32bfe58`); Planner para las pruebas de servicio real. Skill de verificación aplicada por el Planner: `verification-before-completion`.
+
+- A/B/C se consultaron por GET al repositorio público `VGMil-dev/fragments-test-app`; SHA exacto de cada commit validado. Repomix oficial empacó snapshots temporales, filtrados y acotados; no se ejecutó código del repositorio.
+- `POST /api/reviews` + polling produjo tres evaluaciones completadas, cada una con tres hallazgos y citas/rangos verificados en su snapshot. Ledger persistido: A USD 0.000193; B USD 0.000203; C USD 0.000242.
+- Repetir A devolvió el mismo ID de trabajo; la cantidad de reservas no aumentó. Para C, entrega Review → 201; PDF → 200, 1,526 bytes; verificación → 200, `integrityValid: true`, hash de 64 caracteres.
+- Se corrigió el mapeo local de evidencia para aceptar citas literales consecutivas que abarcan líneas adyacentes; el proveedor deriva localmente el rango exacto. El prompt pide conservar orden, puntuación y saltos de línea. Pruebas: `gateway-review-provider.test.ts` (incluye cita multilínea) y `review.service.test.ts`.
+- `npx.cmd --yes promptfoo@0.125.1 eval --config promptfooconfig.yaml --no-cache --no-progress-bar --no-table` desde `evals/`, con telemetría/actualización/caché desactivadas: 3/3 aprobados, 0 fallidos, 0 errores. Configuración usa exclusivamente `fake-local-review`.
+- La tabla del ledger integrado contiene seis recibos settled de IA (Review A/B/C, Mentor y dos retos Inspector), total USD 0.000836. Los tokens no se persisten. Las pruebas diagnósticas previas en bases aisladas se contabilizaron por recibos cuando existían y por su reserva máxima cuando no existía recibo; cota agregada de todas las ejecuciones autorizadas: menos de USD 0.01 del máximo acumulado USD 1.
+- Tarifas verificadas para el proveedor/modelo configurado: Qwen 3.7 Flash vía Alibaba Cloud, entrada USD 0.03/M y salida USD 0.13/M, según [catálogo Vercel AI Gateway](https://vercel.com/ai-gateway/models/qwen3.7-flash), consulta del 2026-11-04. Vercel advierte que sus budgets son soft limits; el ledger local no representa garantía del proveedor.
+
+**Estado:** criterios F05 cumplidos; el commit Planner `ab3aa60` y la regresión fresca se registran abajo y en `task-list/TASKS.md`.
+
+## Cierre Planner — 2026-11-05
+
+- `pnpm exec turbo test --force` — salida 0; contratos 18/18 y API 78/78, 21 archivos.
+- `pnpm exec turbo typecheck --force`, `pnpm exec turbo build --force`, `pnpm exec turbo lint --force`, `git diff --check` — salida 0.
+- Promptfoo 0.125.1: 3/3 fixtures falsos aprobados, 0 errores; se documenta arriba.
+- Commit de integración Planner: `ab3aa60` (`feat(mvp): cierra integracion autorizada`). Criterios F05 completos; tarea cerrada en `task-list/TASKS.md`.

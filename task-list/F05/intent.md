@@ -6,6 +6,10 @@ Owner: W5
 
 El estudiante necesita una revisión formativa ligada a un commit de GitHub concreto. El análisis debe usar solo un snapshot validado, limitar los datos enviados, justificar cada hallazgo con evidencia real y permitir generar un PDF verificable solo cuando se solicite.
 
+## Revalidación integrada — 2026-11-05
+
+Con autorización explícita para lecturas públicas de GitHub y uso de Gateway, se evaluaron A/B/C y se verificaron persistencia, idempotencia, PDF y hash. El detalle está en `evidencie.md`.
+
 ## Alcance
 
 - Validar `ReviewRequestSchema` compartido (propietario, repositorio y SHA completo); rechazar URLs, ramas y commits distintos.
@@ -19,7 +23,7 @@ El estudiante necesita una revisión formativa ligada a un commit de GitHub conc
 
 ## No objetivos
 
-No ejecutar código del repositorio. No hacer solicitudes a GitHub, Gateway, Moodle o URLs dadas por el usuario. No guardar snapshots completos ni PDFs. No modificar contratos, crear `apps/api/package.json` ni conectar rutas/SQLite del API todavía inexistente en este checkout.
+No ejecutar código del repositorio. Las solicitudes externas se limitan a pruebas públicas autorizadas y con ledger; no contactar Moodle ni URLs arbitrarias. No guardar snapshots completos ni PDFs ni modificar contratos.
 
 ## Skills consultadas
 

@@ -1,6 +1,6 @@
 # F06 — Evidence / evidencie
 
-Estado actual: PARCIAL. Inspector está conectado a Review, SQLite, AI Gateway y autenticación docente real. Falta validar la generación real con Gateway y un acceso de una cuenta docente provisionada.
+Estado actual: COMPLETA. Better Auth, provisioning local, sesión docente, autorización, creación de reto, asignación, defensa persistida y denegación anónima fueron verificados en integración.
 
 Owner: W6; integración y contratos: PLANNER.
 Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `codex/fragments-mvp` (`b984de4`).
@@ -87,3 +87,25 @@ Verificación fresca después del merge y cambios:
 - No hay `TEACHER_EMAIL` ni `TEACHER_PASSWORD` en el `.env` y no se provisionó cuenta. Las pruebas de login correcto usan credenciales fake en SQLite temporal dentro de Vitest.
 - No se envió evidencia ni prompt al Gateway; el provider falla cerrado sin tasas máximas configuradas. No se probó generación en vivo.
 - F06 permanece `[ ]` hasta verificar una sesión de una cuenta docente provisionada y una generación real autorizada sobre evidencia del repo.
+
+## Revalidación integrada con Better Auth — 2026-11-05
+
+**Rama:** `codex/fragments-mvp`. **Responsable W6:** agente `f06_better_auth_audit`, worktree `C:\Users\vgmil\.codex\worktrees\f06-inspector\Fragments`, rama `task/f06-inspector`, commit final `36ebdc04522ecbb9f2eb98cc517a0e1ff33c61a9`. **Planner:** integración y QA. Skills: `ego-browser` v2.2.0, pruebas específicas/TDD y `verification-before-completion`.
+
+- Better Auth 1.7.17 reemplaza la autoridad artesanal de sesiones; tablas de auth migradas en SQLite. `createMigratedFragmentsAuth` aplica y vuelve a comprobar el plan de migración; la validación runtime automática del paquete se desactivó después de que Node `node:sqlite` reportara falsos errores de esquema al inicializar. Signup público permanece deshabilitado.
+- `pnpm --filter @fragments/api provision:teacher` → salida 0; segundo intento idempotente indicó cuenta local existente. No se imprimieron email, contraseña ni secreto.
+- Ego Lite: login docente exitoso; sesión comprobada tras reload y reinicio del API. Logout dejó sesión nula. Recurso Inspector anónimo → 401 `AUTH_REQUIRED`.
+- Creación real de retos desde Review C: una prueba temprana persistió el reto pero expuso que `projectId` `owner/repo` no cumplía el contrato. El adapter ahora lo mapea a un ID estable permitido; una nueva prueba respondió POST 201, asignación 200 y defensa 200. GET lista respondió 200 con dos registros `completed` y sus banderas de mutación/restauración. Ledger Inspector: dos recibos, total USD 0.000111.
+- Captura Ego Lite de escritorio: `task-list/F07/screenshots/inspector-desktop.png`. El viewport observado fue 982×921; no se declara QA móvil aquí.
+- `pnpm --filter @fragments/api exec vitest run src/features/inspector/review-adapter.test.ts src/features/inspector/service.test.ts src/features/inspector/http.test.ts` — 9 pruebas aprobadas.
+
+**Estado:** criterios funcionales y de seguridad F06 cumplidos; cierre Planner registrado en `task-list/TASKS.md`.
+
+## Cierre Planner — 2026-11-05
+
+- Commit de integración Planner: `ab3aa60` (`feat(mvp): cierra integracion autorizada`).
+- `pnpm --filter @fragments/api provision:teacher` — salida 0; el segundo intento informó que la cuenta local ya existe. No se registraron valores de credenciales.
+- Ego Lite comprobó login, persistencia de sesión después de recarga/reinicio, logout y respuesta anónima `401 AUTH_REQUIRED`; evidencia funcional anterior en esta página.
+- `pnpm exec turbo test --force` — salida 0; contratos 18/18 y API 78/78. Se observó un log genérico no fatal de validación de esquema al bloquear signup; la inspección del plan tras migración dio 0 pendientes, 0 índices pendientes y 0 problemas.
+- `pnpm exec turbo typecheck --force`, `pnpm exec turbo build --force`, `pnpm exec turbo lint --force`, `git diff --check` — salida 0.
+- Criterios F06 completos; tarea cerrada en `task-list/TASKS.md`.

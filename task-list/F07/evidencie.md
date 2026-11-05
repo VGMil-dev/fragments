@@ -1,6 +1,6 @@
 # F07 — Evidence / evidencie
 
-Estado: PARCIAL; integración del planner para F02 y QA visual local completados. F05/F06 y validación completa de despliegue/proveedores siguen pendientes.
+Estado: ABIERTA. La integración F04–F06, Promptfoo y persistencia Docker están verificadas. Falta QA responsive visual con viewport móvil utilizable; no se declara MVP global completo.
 Owner: PLANNER.
 
 ## Integración de rutas y UX
@@ -38,7 +38,7 @@ Capturas y SHA-256:
 - `pnpm exec vitest run apps/web/src` — exit 0; 11 archivos, 40 pruebas.
 - `git diff --check` — exit 0.
 
-## Pendiente
+## Pendiente al cierre F02 previo — 2026-11-04
 
 - F05: endpoints Review, almacenamiento/cola SQLite, reader GitHub real, AI Gateway y fixtures Promptfoo.
 - F06: integrar panel/rutas/contrato de Inspector tras alinear alcance compartido.
@@ -76,3 +76,44 @@ Capturas y SHA-256:
 - La configuración existente solo referencia `fake-local-review`, pero la evaluación real de calidad con Gateway no se ejecutó. No hay resultados ni puntuaciones de Promptfoo para reportar.
 - Sin tarifas máximas del Gateway, F04/F05/F06 quedan sin llamadas de IA según el límite autorizado. Gasto externo de IA observado: USD 0. No hubo despliegues.
 - F07 continúa `[ ]` hasta ejecutar Promptfoo correctamente, completar pruebas AI Gateway autorizadas, y repetir visual QA con viewport usable. No se ejecutó Playwright.
+
+## Revalidación final integrada — 2026-11-05
+
+**Rama:** `codex/fragments-mvp`. **Responsable:** Planner. Skills: `ego-browser` v2.2.0 y `verification-before-completion`. No se usó Playwright, Puppeteer ni Cypress.
+
+### Regresión
+
+- `pnpm test` — salida 0; contratos 18/18, API 78/78 (21 archivos), web 12 archivos dentro de la suite del workspace.
+- `pnpm typecheck` — salida 0; API, contratos y web.
+- `pnpm build` — salida 0; los tres paquetes del workspace.
+- `pnpm lint` — salida 0; la configuración actual ejecuta lint/typecheck en contratos solamente.
+- `git diff --check` — salida 0 antes del commit de integración.
+- Después de ajustar la inicialización/migración Better Auth, `pnpm --filter @fragments/api exec vitest run src/auth/better-auth.test.ts src/http/app.test.ts` — 9 pruebas aprobadas, sin warnings de esquema.
+
+### Promptfoo y Docker Compose
+
+- Promptfoo 0.125.1: 3/3 fixtures locales aprobados, 0 errores; no hubo proveedor de pago.
+- `docker compose config --quiet` — salida 0. `docker compose up -d --build` construyó y arrancó el API. `/health` devolvió `status=ok`, `database=ready`.
+- Se creó una propuesta con opt-in local, se reinició `api` y Galería siguió devolviendo una fila. `docker compose stop api` detuvo el servicio; se conservó el volumen `fragments_fragments-data`.
+
+### Ego Lite
+
+- La guía `ego-browser skill` v2.2.0 se leyó/ejecutó antes del navegador. Viewport real reportado: 982×921, no 0×0.
+- Verificó login, sesión persistente, consulta de Review, reto real, asignación, defensa persistida, logout y rechazo anónimo (401). La captura de escritorio es `screenshots/inspector-desktop.png`.
+- Se intentó ajustar el viewport con el CDP de Ego Lite; la API disponible no permitió establecer dimensiones móviles. No se afirma responsive 390px ni se inventó una captura móvil. Este es el bloqueo restante para F07.
+
+### Coste acumulado
+
+- En la base integrada, seis recibos settled suman USD 0.000836; el ledger no persiste desglose de tokens.
+- Incluyendo las pruebas diagnósticas anteriores en bases aisladas y contando cada recibo desconocido por su reserva máxima, la cota acumulada se mantiene bajo USD 0.01 del presupuesto autorizado de USD 1.00.
+- No hubo despliegue ni solicitudes a Moodle. Las lecturas GitHub fueron GET a repositorios públicos autorizados.
+
+**Estado:** F07 permanece abierta por falta de verificación visual y captura de viewport móvil; no se declara MVP global completo.
+
+### Cierre de integración Planner — 2026-11-05
+
+- Commit de código integrado: `ab3aa60` (`feat(mvp): cierra integracion autorizada`).
+- Regresión ejecutada sin caché: `pnpm exec turbo test --force` (contratos 18/18, API 78/78), `pnpm exec turbo typecheck --force`, `pnpm exec turbo build --force`, `pnpm exec turbo lint --force`, `git diff --check` — todo con salida 0.
+- El aviso genérico de Better Auth sobre validación de esquema aparece en la prueba de signup deshabilitado; es no fatal. El plan de migración post-run informa cero tablas/columnas e índices pendientes y cero problemas.
+- F04–F06 figuran completadas en `task-list/TASKS.md`. F07 sigue abierta exclusivamente por no poder establecer ni validar viewport 390px en Ego Lite; la captura disponible es de escritorio (982×921).
+- SHA-256 de `task-list/F07/screenshots/inspector-desktop.png`: `26FC9A0DA464BB8F7D262D2229D9AAC1ADDF88E31A26B8823BE6D54ADD2C6BFE`.
