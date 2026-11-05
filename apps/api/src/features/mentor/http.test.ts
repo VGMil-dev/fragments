@@ -23,7 +23,10 @@ async function start() {
     CREATE TABLE submissions (id TEXT PRIMARY KEY, kind TEXT NOT NULL, source_id TEXT NOT NULL, score REAL NOT NULL, snapshot_json TEXT NOT NULL, content_hash TEXT NOT NULL, verification_code TEXT NOT NULL, rubric_version TEXT NOT NULL, created_at TEXT NOT NULL);
   `);
   const service = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
-  const server = createServer(async (request, response) => { await createMentorHttp(database, service)(request, response); });
+  const mentorHandler = createMentorHttp(database, service);
+  const server = createServer(async (request, response) => {
+    if (await mentorHandler(request, response) === "unhandled") response.writeHead(404).end();
+  });
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -84,5 +87,19 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ optIn: true }) });
     await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ optIn: false }) });
     expect((await (await fetch(`${base}/api/gallery`)).json() as { data: Array<{ id: string }> }).data).toEqual([]);
+  });
+
+  it("leaves Review verification codes for the Review route", async () => {
+    const base = await start();
+    const database = databases.at(-1)!;
+    database.prepare(`INSERT INTO submissions
+      (id, kind, source_id, score, snapshot_json, content_hash, verification_code, rubric_version, created_at)
+      VALUES (?, 'review', ?, ?, ?, ?, ?, ?, ?)`)
+      .run("review-submission", "review-1", 80, JSON.stringify({ commitSha: "a".repeat(40), findings: [], limitations: [] }),
+        "b".repeat(64), "c".repeat(32), "review-test-v1", "2026-11-04T00:00:00.000Z");
+
+    const response = await fetch(`${base}/api/verify/${"c".repeat(32)}`);
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("");
   });
 });

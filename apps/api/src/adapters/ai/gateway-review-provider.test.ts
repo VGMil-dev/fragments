@@ -69,4 +69,13 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
     const analysis = await provider.analyze(repeated) as { findings: Array<{ evidence: Array<{ lines: [number, number] }> }> };
     expect(analysis.findings[0]?.evidence.map(({ lines }) => lines)).toEqual([[1, 1], [2, 2]]);
   });
+
+  it("maps a literal citation spanning adjacent snapshot lines to the full line range", async () => {
+    const multiline = { ...input, snapshotFiles: [{ path: "App.tsx", content: "export function validate(input) {\n  return input.name.trim();\n}" }] };
+    const citation = "export function validate(input) {\n  return input.name.trim();";
+    const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger: makeLedger(),
+      generate: async () => ({ value: { ...result, findings: [{ ...result.findings[0]!, evidence: [{ path: "App.tsx", quote: citation }] }] }, costUsd: 0 }) });
+    const analysis = await provider.analyze(multiline) as { findings: Array<{ evidence: Array<{ lines: [number, number] }> }> };
+    expect(analysis.findings[0]?.evidence).toMatchObject([{ lines: [1, 2] }]);
+  });
 });

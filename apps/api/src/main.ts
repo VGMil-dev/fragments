@@ -7,7 +7,7 @@ import { createPdfRenderer } from "./adapters/ai/pdf-renderer.js";
 import { createGitHubRestRepositoryReader } from "./adapters/github/github-rest-client.js";
 import { runOfficialRepomix } from "./adapters/repomix/official-runner.js";
 import { createRepomixRepositoryPacker } from "./adapters/repomix/repomix.repository-packer.js";
-import { createInspectorTeacherSessionService } from "./features/inspector/teacher-auth.js";
+import { createMigratedFragmentsAuth, createFragmentsAuthService } from "./auth/better-auth.js";
 import { createInspectorReviewAdapter } from "./features/inspector/review-adapter.js";
 import { createInspectorRepository } from "./features/inspector/repository.js";
 import { createInspectorService } from "./features/inspector/service.js";
@@ -76,9 +76,10 @@ const inspector = createInspectorService({
   },
   store: createInspectorRepository(database),
 });
-const auth = config.authEnabled && process.env.SESSION_SECRET
-  ? createInspectorTeacherSessionService(database, process.env.SESSION_SECRET)
+const betterAuth = config.authEnabled && process.env.BETTER_AUTH_SECRET
+  ? await createMigratedFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
   : undefined;
+const auth = betterAuth ? createFragmentsAuthService(betterAuth) : undefined;
 
 const review = {
   store: reviewStore,

@@ -78,4 +78,12 @@ describe("Inspector review adapter", () => {
     await expect(f.adapter.getById("missing")).resolves.toBeNull();
     await expect(f.adapter.getLatestCommit("project-fixture")).resolves.toBe(sha);
   });
+
+  it("maps repository project keys to a contract-safe id for Inspector responses", async () => {
+    const f = await fixture();
+    f.review.projectId = "classroom/fragments-fixture";
+    const review = await f.adapter.getById("review-fixture");
+    expect(review?.projectId).toMatch(/^p-[a-f0-9]{32}$/);
+    await expect(f.adapter.getLatestCommit(review!.projectId)).resolves.toBe(sha);
+  });
 });

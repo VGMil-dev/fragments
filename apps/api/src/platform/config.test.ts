@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "./config.js";
 
 describe("loadConfig", () => {
-  it("uses a server-only database path and reports auth disabled when no secret is configured", () => {
+  it("uses a server-only database path and reports auth disabled without a Better Auth secret", () => {
     const config = loadConfig({ API_PORT: "4312", DATABASE_URL: "file:./private.sqlite" });
 
     expect(config.port).toBe(4312);
     expect(config.databasePath).toBe("./private.sqlite");
     expect(config.authEnabled).toBe(false);
-    expect(JSON.stringify(config)).not.toContain("SESSION_SECRET");
+    expect(config).toMatchObject({ betterAuthSecretConfigured: false, betterAuthUrl: "http://localhost:4312", publicAppUrl: "http://localhost:5173" });
+    expect(JSON.stringify(config)).not.toContain("BETTER_AUTH_SECRET");
   });
 
-  it("enables real teacher auth by default when a session secret is supplied", () => {
-    expect(loadConfig({ SESSION_SECRET: "a-session-secret-with-at-least-32-characters" }).authEnabled).toBe(true);
+  it("enables Better Auth by default when its secret is supplied", () => {
+    expect(loadConfig({ BETTER_AUTH_SECRET: "a-better-auth-secret-with-at-least-32-characters" }).authEnabled).toBe(true);
   });
 
   it("requires a SQLite file URL and rejects unsupported database schemes", () => {
@@ -34,9 +35,10 @@ describe("loadConfig", () => {
     expect(JSON.stringify(config)).not.toContain("fake-github-token-do-not-log");
   });
 
-  it("rejects invalid ports and refuses auth activation without a session secret", () => {
+  it("rejects invalid ports and refuses auth activation without a Better Auth secret", () => {
     expect(() => loadConfig({ API_PORT: "0" })).toThrow();
-    expect(() => loadConfig({ AUTH_ENABLED: "true" })).toThrow(/SESSION_SECRET/);
+    expect(() => loadConfig({ AUTH_ENABLED: "true" })).toThrow(/BETTER_AUTH_SECRET/);
+    expect(() => loadConfig({ BETTER_AUTH_SECRET: "short" })).toThrow(/32 caracteres/);
     expect(() => loadConfig({ AI_GATEWAY_MAX_INPUT_USD_PER_MILLION: "0" })).toThrow(/AI_GATEWAY_MAX_INPUT_USD_PER_MILLION/);
     expect(() => loadConfig({ AI_GATEWAY_MODEL: "fixture/model", AI_GATEWAY_MAX_INPUT_USD_PER_MILLION: "1", AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION: "1" })).toThrow(/AI_GATEWAY_PROVIDER_ONLY/);
   });

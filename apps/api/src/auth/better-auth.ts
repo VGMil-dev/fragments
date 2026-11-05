@@ -10,6 +10,7 @@ export interface FragmentsAuthOptions {
   baseURL?: string;
   publicAppURL?: string;
   allowSignUp?: boolean;
+  validateSchema?: boolean;
 }
 
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
@@ -29,6 +30,7 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     secret: options.secret,
     baseURL,
     trustedOrigins,
+    advanced: { database: { validateSchema: options.validateSchema ?? true } },
     emailAndPassword: {
       enabled: true,
       disableSignUp: !options.allowSignUp,
@@ -49,6 +51,16 @@ export type FragmentsAuthInstance = ReturnType<typeof createFragmentsAuth>;
 export async function migrateFragmentsAuth(auth: FragmentsAuthInstance): Promise<void> {
   const migration = await getMigrations(auth.options);
   await migration.runMigrations();
+}
+
+export async function createMigratedFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions): Promise<FragmentsAuthInstance> {
+  const migrationAuth = createFragmentsAuth(database, { ...options, validateSchema: false });
+  await migrateFragmentsAuth(migrationAuth);
+  const schema = await getMigrations(migrationAuth.options);
+  if (schema.toBeCreated.length > 0 || schema.toBeAdded.length > 0) {
+    throw new Error("La migración de Better Auth no dejó el esquema listo para iniciar el servicio.");
+  }
+  return createFragmentsAuth(database, { ...options, validateSchema: false });
 }
 
 export function createFragmentsAuthService(auth: FragmentsAuthInstance) {

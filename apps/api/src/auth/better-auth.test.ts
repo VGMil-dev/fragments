@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import type { IncomingMessage } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import { createFragmentsAuth, createFragmentsAuthService, migrateFragmentsAuth } from "./better-auth.js";
+import { createFragmentsAuth, createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => { for (const database of databases.splice(0)) database.close(); });
@@ -9,8 +9,7 @@ afterEach(() => { for (const database of databases.splice(0)) database.close(); 
 async function fixture(allowSignUp = true) {
   const database = new DatabaseSync(":memory:");
   databases.push(database);
-  const auth = createFragmentsAuth(database, { secret: "test-only-better-auth-secret-0123456789", allowSignUp });
-  await migrateFragmentsAuth(auth);
+  const auth = await createMigratedFragmentsAuth(database, { secret: "test-only-better-auth-secret-0123456789", allowSignUp });
   return { database, auth, service: createFragmentsAuthService(auth) };
 }
 

@@ -200,10 +200,14 @@ export function createInspectorService(dependencies: InspectorDependencies) {
     async listForTeacher(reviewId: string): Promise<InspectorRecord[]> {
       const review = await requireReview(reviewId);
       await this.reconcileCommit(reviewId);
-      return dependencies.store.listByReview(reviewId).then((records) => records.map((record) => ({
+      const records = await dependencies.store.listByReview(reviewId);
+      const normalized = await Promise.all(records.map((record) => record.projectId === review.projectId
+        ? record
+        : dependencies.store.update({ ...record, projectId: review.projectId })));
+      return normalized.map((record) => ({
         ...record,
         challenge: InspectorChallengeSchema.parse(record.challenge),
-      })).sort((left, right) => left.createdAt.localeCompare(right.createdAt)));
+      })).sort((left, right) => left.createdAt.localeCompare(right.createdAt));
     },
 
     async getStudentChallenge(id: string): Promise<{ id: string; status: "assigned" | "completed"; challenge: InspectorChallengePublic }> {

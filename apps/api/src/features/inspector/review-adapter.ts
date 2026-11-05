@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { RepositorySnapshotSchema } from "@fragments/contracts";
 import type { ReviewRecord } from "../review/review.service.js";
 import { digestSnapshot } from "../review/review.service.js";
@@ -19,6 +20,13 @@ export function createInspectorReviewAdapter(dependencies: {
   reviews: InspectorReviewLookup;
   repository: InspectorExactCommitReader;
 }) {
+  const sourceProjectIds = new Map<string, string>();
+  function contractProjectId(value: string): string {
+    if (/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(value)) return value;
+    const id = `p-${createHash("sha256").update(value).digest("hex").slice(0, 32)}`;
+    sourceProjectIds.set(id, value);
+    return id;
+  }
   return {
     async getById(id: string): Promise<ReviewEvidence | null> {
       const record = await dependencies.reviews.getById(id);
@@ -39,7 +47,7 @@ export function createInspectorReviewAdapter(dependencies: {
       }
       return {
         id: record.id,
-        projectId: record.projectId,
+        projectId: contractProjectId(record.projectId),
         owner: record.owner,
         repo: record.repo,
         commitSha: record.commitSha,
@@ -48,7 +56,7 @@ export function createInspectorReviewAdapter(dependencies: {
       };
     },
     getLatestCommit(projectId: string) {
-      return dependencies.reviews.getLatestCommit(projectId);
+      return dependencies.reviews.getLatestCommit(sourceProjectIds.get(projectId) ?? projectId);
     },
   };
 }

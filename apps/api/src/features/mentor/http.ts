@@ -171,15 +171,10 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
     const verifyMatch = request.method === "GET" && url.pathname.match(/^\/api\/verify\/([A-Za-z0-9_-]{24,128})$/);
     if (verifyMatch) {
       const submission = repository.getSubmissionByCode(verifyMatch[1]!);
-      if (!submission) {
-        sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
-        return "handled";
+      if (!submission || submission.kind !== "mentor") {
+        return "unhandled";
       }
       try {
-        if (submission.kind !== "mentor") {
-          sendError(response, 503, "VERIFICATION_UNAVAILABLE", "La verificación de este tipo de entrega no está habilitada.");
-          return "handled";
-        }
         service.renderReadme(submission);
         sendJson(response, 200, { ok: true, data: VerifySubmissionResponseSchema.parse({
           kind: submission.kind,

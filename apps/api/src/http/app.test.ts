@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { createHttpHandler } from "./app.js";
 import { migrate } from "../db/migrate.js";
-import { createFragmentsAuth, createFragmentsAuthService, migrateFragmentsAuth } from "../auth/better-auth.js";
+import { createMigratedFragmentsAuth, createFragmentsAuthService } from "../auth/better-auth.js";
 import { createMentorService } from "../features/mentor/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
 import { createInspectorService, type ReviewEvidence } from "../features/inspector/service.js";
@@ -179,13 +179,12 @@ describe("HTTP API", () => {
       createId: () => "challenge-1",
       now: () => new Date("2026-11-04T12:00:00.000Z"),
     });
-    const authInstance = createFragmentsAuth(db, {
+    const authInstance = await createMigratedFragmentsAuth(db, {
       secret: "http-test-better-auth-secret-0123456789",
       baseURL: "http://localhost:3000",
       publicAppURL: "http://localhost:5173",
       allowSignUp: true,
     });
-    await migrateFragmentsAuth(authInstance);
     const auth = createFragmentsAuthService(authInstance);
     const server = createServer(createHttpHandler(db, { auth, inspector })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

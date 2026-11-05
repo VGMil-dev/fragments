@@ -8,13 +8,11 @@ import { MentorScreen } from "./features/mentor";
 import { ReviewScreen } from "./features/review";
 import { TeacherGate } from "./features/inspector";
 import { createInspectorApi } from "./lib/api/inspector-api";
-import { createTeacherApi } from "./lib/api/teacher-api";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
 const studentApi = createStudentApi(createApiClient());
 const inspectorApi = createInspectorApi(createApiClient());
-const teacherApi = createTeacherApi(createApiClient());
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<GalleryEntry[]>>({ status: "loading" });
@@ -107,7 +105,7 @@ export function App() {
 
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/inspector") {
-    return <div id="route-content" tabIndex={-1}><TeacherGate teacherApi={teacherApi} inspectorApi={inspectorApi} navigate={navigate} /></div>;
+    return <div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div>;
   }
 
   return (

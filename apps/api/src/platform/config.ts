@@ -2,6 +2,9 @@ export interface AppConfig {
   port: number;
   databasePath: string;
   authEnabled: boolean;
+  betterAuthSecretConfigured: boolean;
+  betterAuthUrl: string;
+  publicAppUrl: string;
   githubTokenConfigured: boolean;
   aiGatewayKeyConfigured: boolean;
   aiGatewayModel?: string;
@@ -15,12 +18,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const port = Number(portText);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("API_PORT debe ser un puerto válido.");
 
-  const authEnabled = env.AUTH_ENABLED === undefined ? Boolean(env.SESSION_SECRET) : env.AUTH_ENABLED === "true";
+  const authEnabled = env.AUTH_ENABLED === undefined ? Boolean(env.BETTER_AUTH_SECRET) : env.AUTH_ENABLED === "true";
   if (env.AUTH_ENABLED !== undefined && env.AUTH_ENABLED !== "true" && env.AUTH_ENABLED !== "false") {
     throw new Error("AUTH_ENABLED debe ser true o false.");
   }
-  if (authEnabled && !env.SESSION_SECRET) throw new Error("SESSION_SECRET es obligatorio para habilitar auth.");
-  if (authEnabled && (env.SESSION_SECRET?.length ?? 0) < 32) throw new Error("SESSION_SECRET debe tener al menos 32 caracteres.");
+  if (authEnabled && !env.BETTER_AUTH_SECRET) throw new Error("BETTER_AUTH_SECRET es obligatorio para habilitar auth.");
+  if (env.BETTER_AUTH_SECRET && env.BETTER_AUTH_SECRET.length < 32) throw new Error("BETTER_AUTH_SECRET debe tener al menos 32 caracteres.");
+
+  const betterAuthUrl = parseHttpUrl(env.BETTER_AUTH_URL ?? `http://localhost:${port}`, "BETTER_AUTH_URL");
+  const publicAppUrl = parseHttpUrl(env.PUBLIC_APP_URL ?? "http://localhost:5173", "PUBLIC_APP_URL");
 
   const databaseUrl = env.DATABASE_URL ?? "file:./data/fragments.sqlite";
   if (!databaseUrl.startsWith("file:") || databaseUrl.length <= "file:".length || databaseUrl.includes("?")) {
@@ -41,6 +47,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port,
     databasePath: databaseUrl.slice("file:".length),
     authEnabled,
+    betterAuthSecretConfigured: Boolean(env.BETTER_AUTH_SECRET),
+    betterAuthUrl,
+    publicAppUrl,
     githubTokenConfigured: Boolean(env.GITHUB_TOKEN?.trim()),
     aiGatewayKeyConfigured: Boolean(env.AI_GATEWAY_API_KEY?.trim()),
     ...(model ? { aiGatewayModel: model } : {}),
@@ -48,6 +57,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     ...(inputRate !== undefined ? { aiGatewayMaxInputUsdPerMillion: inputRate } : {}),
     ...(outputRate !== undefined ? { aiGatewayMaxOutputUsdPerMillion: outputRate } : {}),
   };
+}
+
+function parseHttpUrl(value: string, name: string): string {
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error(`${name} debe ser una URL HTTP o HTTPS válida.`); }
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error(`${name} debe ser una URL HTTP o HTTPS válida.`);
+  return parsed.origin;
 }
 
 function parsePositiveRate(value: string | undefined, name: string): number | undefined {
