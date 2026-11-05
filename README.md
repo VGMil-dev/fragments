@@ -65,7 +65,9 @@ pnpm lint
 La evaluación Promptfoo local con fixtures fake se ejecuta desde `evals/`:
 
 ```powershell
+Push-Location evals
 npx.cmd --yes promptfoo@0.125.1 eval --config promptfooconfig.yaml --no-cache --no-progress-bar --no-table
+Pop-Location
 ```
 
 ## Estado
