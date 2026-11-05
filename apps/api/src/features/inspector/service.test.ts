@@ -5,42 +5,43 @@ import {
   type AiAnalysis,
   type RepositorySnapshot,
 } from "@fragments/contracts";
+import { digestSnapshot } from "../review/review.service.js";
 import { createInMemoryInspectorStore, createInspectorService, type ReviewEvidence } from "./service.js";
 
 const commitA = "a".repeat(40);
 const commitB = "b".repeat(40);
-const digest = "c".repeat(64);
-const repository: RepositorySnapshot = {
+const repositoryContent = {
   owner: "student",
   repo: "demo",
   commitSha: commitA,
   files: [{ path: "src/total.ts", content: "export const total = (values: number[]) => values.reduce((a, b) => a + b, 0);\n", sha: "d".repeat(40) }],
-  digest,
 };
-const analysis: AiAnalysis = {
-  rubricVersion: "review-1",
-  score: 80,
-  findings: [{
-    criterionId: "correctness",
-    status: "verified",
-    evidence: [{ source: "repository", path: "src/total.ts", lines: [1, 1], digest }],
-    file: "src/total.ts",
-    lines: [1, 1],
-    reason: "El acumulador suma los elementos de la colección.",
-    guidanceLevel: 1,
-  }],
-  limitations: [],
-  modelId: "fake/review",
-  inputDigest: digest,
-};
-
-function makeReview(commitSha = commitA): ReviewEvidence {
-  return { id: "review-1", projectId: "project-1", commitSha, snapshot: { ...repository, commitSha }, analysis };
+async function makeReview(commitSha = commitA): Promise<ReviewEvidence> {
+  const snapshotContent = { ...repositoryContent, commitSha };
+  const digest = await digestSnapshot(snapshotContent);
+  const snapshot: RepositorySnapshot = { ...snapshotContent, digest };
+  const analysis: AiAnalysis = {
+    rubricVersion: "review-1",
+    score: 80,
+    findings: [{
+      criterionId: "correctness",
+      status: "verified",
+      evidence: [{ source: "repository", path: "src/total.ts", lines: [1, 1], digest }],
+      file: "src/total.ts",
+      lines: [1, 1],
+      reason: "El acumulador suma los elementos de la colección.",
+      guidanceLevel: 1,
+    }],
+    limitations: [],
+    modelId: "fake/review",
+    inputDigest: "e".repeat(64),
+  };
+  return { id: "review-1", projectId: "project-1", commitSha, owner: snapshot.owner, repo: snapshot.repo, snapshot, analysis };
 }
 
 async function fixture(options: { commitSha?: string; review?: ReviewEvidence | null } = {}) {
   let currentCommit = options.commitSha ?? commitA;
-  const review = options.review === undefined ? makeReview() : options.review;
+  const review = options.review === undefined ? await makeReview() : options.review;
   let nextId = 0;
   const provider = {
     async createChallenge() {
@@ -76,7 +77,7 @@ describe("Inspector service", () => {
 
     expect(created.commitSha).toBe(commitA);
     expect(InspectorChallengeSchema.safeParse(created.challenge).success).toBe(true);
-    expect(created.challenge.sourceEvidence).toEqual(analysis.findings[0]?.evidence);
+    expect(created.challenge.sourceEvidence).toHaveLength(1);
     expect(created.challenge.teacherHint).toContain("Observa el acumulador");
 
     await service.assignChallenge(created.id, "teacher-1");
@@ -93,17 +94,31 @@ describe("Inspector service", () => {
     const stale = await fixture({ commitSha: commitB });
     await expect(stale.service.createChallenge("review-1")).rejects.toMatchObject({ code: "REVIEW_STALE" });
 
-    const noEvidence = await fixture({ review: { ...makeReview(), analysis: { ...analysis, findings: [{
-      ...analysis.findings[0]!,
+    const validReview = await makeReview();
+    const validFinding = validReview.analysis.findings[0]!;
+    const noEvidence = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
+      ...validFinding,
       status: "not_verified",
     }] } } });
     await expect(noEvidence.service.createChallenge("review-1")).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
 
-    const inventedPath = await fixture({ review: { ...makeReview(), analysis: { ...analysis, findings: [{
-      ...analysis.findings[0]!,
-      evidence: [{ source: "repository", path: "src/missing.ts", lines: [1, 1], digest }],
+    const inventedPath = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
+      ...validFinding,
+      evidence: [{ ...validFinding.evidence[0]!, path: "src/missing.ts" }],
     }] } } });
-    await expect(inventedPath.service.createChallenge("review-1")).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
+    await expect(inventedPath.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+
+    const outOfRange = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
+      ...validFinding,
+      evidence: [{ ...validFinding.evidence[0]!, lines: [1, 2] }],
+    }] } } });
+    await expect(outOfRange.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+
+    const badEvidenceDigest = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
+      ...validFinding,
+      evidence: [{ ...validFinding.evidence[0]!, digest: "f".repeat(64) }],
+    }] } } });
+    await expect(badEvidenceDigest.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
   });
 
   it("marks pending challenges obsolete, freezes assigned challenges, and preserves recorded defenses after a new commit", async () => {

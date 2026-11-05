@@ -50,5 +50,23 @@ Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `c
 
 ## Commits
 
-- Merge de integración: `b984de4` (raíz actualizada sin reescribir historial).
+- Merge de integración inicial: `b984de4` (raíz actualizada sin reescribir historial).
+- Merge actual de `codex/fragments-mvp`: `13fcdf9` (merge limpio; incorporó contratos upstream sin conflictos).
 - Implementación F06 parcial: `c1c29eb` (`feat(f06): integra Inspector docente`).
+
+## Seguimiento W6 — snapshot exacto y credenciales docentes
+
+Se añadieron dos adaptadores dentro de `apps/api/src/features/inspector/`:
+
+- `review-adapter.ts` carga el Review por ID y vuelve a solicitar su snapshot usando el owner, repo y SHA guardados. Rechaza otra identidad/commit y recalcula el digest canónico antes de devolver evidencia al dominio. El dominio valida de nuevo el SHA, identidad disponible, unicidad de rutas, ruta de evidencia, digest y rango real de líneas.
+- `teacher-auth.ts` verifica hashes scrypt con parámetros/formato acotados en `teachers.password_hash` y construye el `TeacherSessionService` existente con `SessionAuth`. `createInspectorTeacherPasswordHash()` genera hashes para un provisioning manual controlado; no crea usuarios ni muestra o almacena contraseñas en logs.
+- La composición compartida aún debe pasar al adaptador un lookup Review con `getById(id)` y `getLatestCommit(projectId)`, junto con un lector de snapshot por SHA. El runner no inyecta todavía este adaptador ni el verificador, y la UI no tiene login; por eso F06 sigue parcial.
+- No se encontraron tres SHAs públicos en los fixtures locales; los casos Promptfoo son fixtures de salida y no se hicieron solicitudes externas para probar GitHub.
+
+Verificación fresca después del merge y cambios:
+
+- `pnpm exec vitest run apps/api/src/features/inspector` — exit 0; 4 archivos, 11 pruebas (incluye reader exacto, digest alterado, identidad distinta, rangos inválidos y auth scrypt offline).
+- `pnpm --filter @fragments/api test` — exit 0; 12 archivos, 40 pruebas.
+- `pnpm --filter @fragments/api typecheck` — exit 0.
+- `git diff --check` — exit 0.
+- No se llamó a GitHub, AI Gateway ni servicios externos; no se leyó `.env` ni se ejecutó código de repositorios de estudiantes.

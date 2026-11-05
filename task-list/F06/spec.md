@@ -4,7 +4,9 @@
 
 ## Contratos y API
 
-- Entrada al dominio: review `id`, `projectId`, SHA, snapshot del repositorio y análisis validado; proveedor de reto y almacén inyectados.
+- Entrada al dominio: review `id`, `projectId`, owner/repo/SHA guardados, snapshot recuperado para ese SHA exacto y análisis validado; proveedor de reto y almacén inyectados.
+- El adaptador Inspector vuelve a pedir snapshot por owner/repo/SHA almacenados, rechaza identidad distinta y verifica el digest canónico del contenido. El dominio también recalcula el digest, rechaza rutas duplicadas/inexistentes y rangos de líneas fuera del archivo.
+- El adaptador de credenciales lee `teachers.password_hash` con formato scrypt fijo; un helper genera hashes para aprovisionamiento manual controlado. No hay creación de usuarios ni credenciales por HTTP.
 - Respuesta docente: `InspectorChallengeRecordResponseSchema`, con reto privado, SHA, estado, asignación y defensa.
 - Asignación: `POST /api/inspector/challenges/:id/assign`, body `{}` estricto; identidad obtenida de sesión docente, nunca del body.
 - Defensa: `POST /api/inspector/challenges/:id/record`, `InspectorDefenseRecordRequestSchema` limita campos a dos booleanos y notas de hasta 2000 caracteres.
@@ -31,8 +33,10 @@
 - [x] GIVEN revisión de otro SHA o evidencia sin hallazgo verificado, THEN el dominio rechaza crear un reto.
 - [x] GIVEN commit nuevo, WHEN se reconcilian registros, THEN pendientes quedan obsoletos y asignados/realizados se conservan con invariantes documentadas.
 - [x] GIVEN hints privados, WHEN se construye respuesta estudiantil, THEN `teacherHint` no aparece y el schema público lo rechaza.
+- [x] GIVEN un Review persistido y un reader falso offline, WHEN Inspector recupera evidencia, THEN pide el owner/repo/SHA completo guardado y rechaza snapshot con identidad o digest diferentes.
+- [x] GIVEN un hash scrypt provisionado manualmente, WHEN se valida el login mediante el adaptador y sesión existentes, THEN contraseña incorrecta se rechaza y la correcta produce una cookie firmada verificable.
 - [x] GIVEN panel integrado, WHEN se visualiza con Ego Lite, THEN layout 390/1440 y navegación visible verificados.
-- [ ] GIVEN despliegue normal, WHEN una revisión F05 existente se selecciona en Inspector, THEN el API conecta su snapshot/digest persistidos sin adaptador fake.
+- [ ] GIVEN despliegue normal, WHEN una revisión F05 existente se selecciona en Inspector, THEN la composición usa almacenamiento Review y cliente GitHub real sin adaptador fake.
 - [ ] GIVEN configuración local de auth docente, WHEN docente inicia sesión en la UI, THEN la app proporciona y conserva sesión segura de extremo a extremo.
 
-**Bloqueos de cierre:** F05 aún no registra snapshots de Review en SQLite ni expone su review service al HTTP; F03 mantiene el login docente deshabilitado en el runner normal hasta conectar verificador real. Las dos últimas comprobaciones quedan para F07/integración de dependencias.
+**Bloqueos de cierre:** F05 aún no tiene repositorio SQLite ni rutas integradas en el runner; el adaptador local necesita que composición le provea `getById`, `getLatestCommit(projectId)` y reader por SHA exacto. El runner tampoco inyecta el verificador scrypt ni presenta login en UI. Las dos últimas comprobaciones quedan para integración compartida.

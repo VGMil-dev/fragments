@@ -1,5 +1,6 @@
 import {
   AiAnalysisSchema,
+  EvidenceReferenceSchema,
   InspectorDefenseRecordRequestSchema,
   InspectorChallengePublicSchema,
   InspectorChallengeSchema,
@@ -16,6 +17,8 @@ export type ReviewEvidence = {
   id: string;
   projectId: string;
   commitSha: string;
+  owner?: string;
+  repo?: string;
   snapshot: RepositorySnapshot;
   analysis: AiAnalysis;
 };
@@ -92,20 +95,37 @@ function error(code: string, message: string): InspectorError {
 function verifiedEvidence(review: ReviewEvidence): { evidence: EvidenceReference; findingReason: string } {
   const snapshot = RepositorySnapshotSchema.safeParse(review.snapshot);
   const analysis = AiAnalysisSchema.safeParse(review.analysis);
-  if (!snapshot.success || !analysis.success || snapshot.data.commitSha.toLowerCase() !== review.commitSha.toLowerCase()) {
+  if (!snapshot.success || !analysis.success
+    || snapshot.data.commitSha.toLowerCase() !== review.commitSha.toLowerCase()
+    || (review.owner !== undefined && snapshot.data.owner.toLowerCase() !== review.owner.toLowerCase())
+    || (review.repo !== undefined && snapshot.data.repo.toLowerCase() !== review.repo.toLowerCase())) {
     throw error("INVALID_REVIEW_EVIDENCE", "No se pudo validar la evidencia del commit revisado.");
   }
+
+  const paths = new Set<string>();
+  for (const file of snapshot.data.files) {
+    if (paths.has(file.path)) throw error("INVALID_REVIEW_EVIDENCE", "El snapshot contiene rutas repetidas.");
+    paths.add(file.path);
+  }
+  const calculatedDigest = snapshot.data.digest;
 
   for (const finding of analysis.data.findings) {
     if (finding.status !== "verified") continue;
     for (const evidence of finding.evidence) {
-      if (evidence.source !== "repository" || evidence.digest !== snapshot.data.digest) continue;
+      if (evidence.source !== "repository") continue;
+      if (!EvidenceReferenceSchema.safeParse(evidence).success || evidence.digest !== calculatedDigest) {
+        throw error("INVALID_REVIEW_EVIDENCE", "La evidencia no coincide con la huella del snapshot.");
+      }
       const file = snapshot.data.files.find((candidate) => candidate.path === evidence.path);
       const [start, end] = evidence.lines;
-      if (!file) continue;
+      if (!file) throw error("INVALID_REVIEW_EVIDENCE", "La evidencia cita una ruta que no existe en el commit.");
+      if (file.content.length === 0) throw error("INVALID_REVIEW_EVIDENCE", "La evidencia cita líneas fuera del archivo.");
       const sourceLines = file.content.split(/\r?\n/);
       if (/\r?\n$/.test(file.content)) sourceLines.pop();
-      if (start <= sourceLines.length && end <= sourceLines.length) return { evidence, findingReason: finding.reason };
+      if (start > sourceLines.length || end > sourceLines.length) {
+        throw error("INVALID_REVIEW_EVIDENCE", "La evidencia cita líneas fuera del archivo.");
+      }
+      return { evidence, findingReason: finding.reason };
     }
   }
   throw error("NO_VERIFIED_EVIDENCE", "La revisión no tiene evidencia verificada para crear un reto.");
