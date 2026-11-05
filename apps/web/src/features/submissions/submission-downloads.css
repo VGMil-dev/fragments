@@ -1,0 +1,21 @@
+.submission-downloads {
+  display: grid;
+  gap: 15px;
+  padding: 23px;
+  border: 1px solid var(--border, #AFC4D9);
+  background: var(--paper-white, #FFFDF8);
+}
+
+.submission-downloads h2 { margin: 0 0 6px; font-size: 20px; }
+.submission-downloads p:not(.student-screen__eyebrow) { margin: 0; color: var(--muted, #5F7183); font-size: 14px; }
+.submission-downloads .student-screen__eyebrow { margin-bottom: 8px; }
+.submission-downloads__actions { display: flex; flex-wrap: wrap; gap: 11px; }
+.submission-downloads__actions button:disabled { cursor: wait; opacity: .75; }
+.submission-downloads .button:focus-visible { outline: 3px solid var(--blue, #4776A9); outline-offset: 3px; }
+.submission-downloads .submission-downloads__error { color: #8B3B31; }
+
+@media (max-width: 560px) {
+  .submission-downloads { padding: 18px; }
+  .submission-downloads__actions { flex-direction: column; }
+  .submission-downloads__actions button { width: 100%; }
+}

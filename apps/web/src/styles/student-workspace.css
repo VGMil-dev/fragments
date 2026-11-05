@@ -1,0 +1,20 @@
+.student-workspace { min-height: 100vh; padding-bottom: 3rem; }
+.student-workspace__nav { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: 76px; padding: .75rem clamp(1rem, 4vw, 3.25rem); border-bottom: 1px solid var(--border-soft); background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(12px); }
+.student-workspace__nav nav { display: flex; align-items: center; gap: clamp(.8rem, 3vw, 2.25rem); }
+.student-workspace__nav nav a, .student-workspace__home { color: var(--muted); font-size: .85rem; font-weight: 650; text-decoration: none; }
+.student-workspace__nav nav a[aria-current="page"] { color: var(--blue); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.student-workspace__home { padding: .5rem 0; color: var(--navy); }
+.student-workspace__content { width: min(100% - 2rem, 1120px); margin: 2rem auto 0; }
+.student-workspace__content:focus { outline: none; }
+.student-workspace__content .student-screen { width: 100%; }
+.student-workspace__inspiration { width: min(100% - 2rem, 1000px); margin: 0 auto 1rem; padding: .75rem 1rem; border-left: 3px solid var(--blue); background: var(--powder); color: var(--navy); font-size: .9rem; }
+
+@media (max-width: 560px) {
+  .student-workspace__nav { min-height: 68px; gap: .5rem; padding-inline: 1rem; }
+  .student-workspace__nav .brand { gap: .4rem; }
+  .student-workspace__nav .brand__icon { width: 32px; height: 32px; }
+  .student-workspace__nav .brand__name { font-size: 19px; }
+  .student-workspace__nav nav { gap: .65rem; }
+  .student-workspace__nav nav a, .student-workspace__home { font-size: .75rem; }
+  .student-workspace__content { width: min(100% - 1rem, 1120px); margin-top: 1rem; }
+}

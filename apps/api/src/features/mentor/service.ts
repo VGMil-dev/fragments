@@ -1,14 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AiAnalysisSchema, SubmissionSnapshotSchema, type AiAnalysis, type SubmissionSnapshot } from "../../../../../packages/contracts/src/index.js";
+import { AiAnalysisSchema, CreateProposalRequestSchema, SubmissionSnapshotSchema, type AiAnalysis, type SubmissionSnapshot } from "@fragments/contracts";
 
-export type Proposal = {
-  title: string;
-  problem: string;
-  audience: string;
-  solution: string;
-  skills: string[];
-  scope: string;
-};
+export type Proposal = ReturnType<typeof CreateProposalRequestSchema.parse>;
 
 export type Similarity = { title: string; overlap: string; similarity: number };
 export type MentorEvaluation = {
@@ -47,27 +40,10 @@ export class MentorInputError extends Error {
   constructor(message: string) { super(message); this.name = "MentorInputError"; }
 }
 
-const fields = ["title", "problem", "audience", "solution", "skills", "scope"] as const;
-
 function validateProposal(value: unknown): Proposal {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new MentorInputError("Revisa los campos: title, problem, audience, solution, skills y scope.");
-  }
-  const input = value as Record<string, unknown>;
-  const invalid = fields.filter((field) => {
-    const item = input[field];
-    if (field === "skills") return !Array.isArray(item) || item.length < 1 || item.length > 12 || item.some((s) => typeof s !== "string" || !s.trim() || s.length > 80);
-    return typeof item !== "string" || !item.trim() || item.length > 1200;
-  });
-  if (invalid.length) throw new MentorInputError(`Corrige estos campos: ${invalid.join(", ")}.`);
-  return {
-    title: (input.title as string).trim(),
-    problem: (input.problem as string).trim(),
-    audience: (input.audience as string).trim(),
-    solution: (input.solution as string).trim(),
-    skills: (input.skills as string[]).map((s) => s.trim()),
-    scope: (input.scope as string).trim(),
-  };
+  const parsed = CreateProposalRequestSchema.safeParse(value);
+  if (!parsed.success) throw new MentorInputError("Revisa título, problema, solución, objetivos, habilidades, alcance y restricciones.");
+  return parsed.data;
 }
 
 function canonical(value: unknown): string {
@@ -151,9 +127,11 @@ export function createMentorService(options: Options) {
       const proposal = snapshot.snapshotJson.proposal as Proposal;
       return [
         `# ${proposal.title}`, "", `## Problema\n${proposal.problem}`, "",
-        `## Público\n${proposal.audience}`, "", `## Solución\n${proposal.solution}`, "",
+        `## Solución\n${proposal.solution}`, "",
+        `## Objetivos\n${proposal.goals.map((goal) => `- ${goal}`).join("\n")}`, "",
         `## Habilidades\n${proposal.skills.map((skill) => `- ${skill}`).join("\n")}`, "",
         `## Alcance inicial\n${proposal.scope}`, "",
+        `## Restricciones\n${proposal.constraints.map((constraint) => `- ${constraint}`).join("\n")}`, "",
       ].join("\n");
     },
 
