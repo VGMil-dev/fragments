@@ -19,7 +19,7 @@
 - SQLite almacena reto, estado, autor de asignación, SHA reemplazante y defensa; no persiste archivos fuente o código ejecutable.
 - Se crea reto solo para review del commit actual con evidencia `verified` que coincide con digest/ruta/líneas del snapshot.
 - Pending pasa a obsolete ante commit nuevo; assigned conserva su contenido y registra SHA sucesor; completed y defensa se conservan.
-- Nunca se ejecuta código del estudiante ni se llama a GitHub/IA en tests; el HTTP E2E usa review/provider fake explícitos.
+- Nunca se ejecuta código del estudiante. Los tests usan review/provider fake; las lecturas GitHub autorizadas son GET a repositorios públicos. AI Gateway real no se invoca hasta disponer de tasas máximas.
 
 ## UI
 
@@ -39,4 +39,11 @@
 - [ ] GIVEN despliegue normal, WHEN una revisión F05 existente se selecciona en Inspector, THEN la composición usa almacenamiento Review y cliente GitHub real sin adaptador fake.
 - [ ] GIVEN configuración local de auth docente, WHEN docente inicia sesión en la UI, THEN la app proporciona y conserva sesión segura de extremo a extremo.
 
-**Bloqueos de cierre:** F05 aún no tiene repositorio SQLite ni rutas integradas en el runner; el adaptador local necesita que composición le provea `getById`, `getLatestCommit(projectId)` y reader por SHA exacto. El runner tampoco inyecta el verificador scrypt ni presenta login en UI. Las dos últimas comprobaciones quedan para integración compartida.
+## Seguimiento de integración autorizada — 2026-11-04
+
+- [x] Composición normal obtiene Review SQLite y reader por SHA exacto.
+- [x] Login docente real con hash scrypt y sesión firmada; UI presenta login y consulta sesión.
+- [x] Anónimo devuelve 401; el secreto docente no se serializa al estudiante.
+- [x] Reto queda vinculado a líneas fuente verificadas y exige cita literal del provider.
+- [ ] Inicio de sesión en browser con cuenta provisionada: no hay variables locales TEACHER_EMAIL/TEACHER_PASSWORD y no se creó una cuenta.
+- [ ] Generación IA live: bloqueada por tarifas máximas ausentes; no se envió prompt ni se consumió presupuesto.

@@ -26,4 +26,13 @@ La entrada pública usa `ReviewRequestSchema`: `owner`, `repo` y SHA completo. E
 
 ## Límites de integración
 
-El worktree parte del scaffold F00 y no contiene `apps/api`, sus dependencias, router ni persistencia SQLite. Por ello este slice permanece como módulos TS aislados bajo `apps/api/src`, con pruebas directas; no se crea otro `package.json` ni se cambia el contrato compartido. W3/planner integra la composición HTTP y persistencia cuando exista el paquete común.
+El slice queda integrado en el runner API compartido con rutas, SQLite, queue worker, lector público de GitHub y Repomix oficial sobre un árbol temporal seguro.
+
+## Integración autorizada — 2026-11-04
+
+- [x] Revisión por SHA exacto sobre repositorios públicos; no aceptar privados, ramas ni URLs arbitrarias.
+- [x] Rutas HTTP, persistencia SQLite, cola y worker con lease/heartbeat.
+- [x] Snapshot filtrado y empaquetado por Repomix, sin ejecutar el repositorio.
+- [x] Barrera local de USD 1 con estimación, reserva atómica y settlement por recibo; cerrar nuevas solicitudes si falta rate card/recibo o el coste supera la reserva.
+- [ ] Una evaluación real por commit A/B/C con el modelo de `.env`: no ejecutada porque faltan `AI_GATEWAY_MAX_INPUT_USD_PER_MILLION` y `AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION`. Gasto AI Gateway: USD 0.
+- [x] Señales de características verificadas para los commits A/B/C vía GitHub y Repomix local; hallazgos live del modelo siguen pendientes.

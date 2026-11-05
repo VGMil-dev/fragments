@@ -13,4 +13,8 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F06 | W6 | F00,F05 contrato | Inspector retos privados inversos→sesión→estado; pruebas seguridad y UI | [ ] |
 | F07 | PLANNER | F01..F06 | Integración real, ego(lite), Promptfoo, QA, documentación final, despliegue local | [ ] |
 
+## Estado de cierre de integración — 2026-11-04
+
+F04–F07 siguen abiertas (`[ ]`) porque faltan criterios externos verificables: las tarifas máximas del AI Gateway no están configuradas, Promptfoo no pudo arrancar por un paquete transitivo ausente y Ego Lite informó un viewport 0×0 para interacción/capturas visuales. El código y verificaciones locales quedan documentados en las evidencias de cada tarea. No se contabilizan integraciones de IA como exitosas ni se inventan puntuaciones.
+
 Dependencias F03/F05 son de integración, no bloquean trabajo paralelo con fake drivers y contratos congelados. Cada worker debe producir código compilable de su zona o informe de bloqueo claro. Cada tarea tiene `intent.md`, `spec.md`, `evidencie.md`.

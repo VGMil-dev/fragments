@@ -1,6 +1,6 @@
 # F04 — Evidence / evidencie
 
-Estado: IMPLEMENTADO EN AISLAMIENTO; listo para integrar con F03. La fila central queda pendiente del planner (solo el planner edita `task-list/TASKS.md`).
+Estado actual: PARCIAL. Mentor, versionado, galería opt-in y conexión al evaluador Gateway están integrados; evaluación real del Gateway pendiente porque faltan tarifas máximas verificables en `.env`.
 Owner: W4
 
 ## Skills consultadas
@@ -45,3 +45,19 @@ Owner: W4
 
 Implementación: `526aec7bce82e6ba692c7c6023f3767a22e73067` (`feat(mentor): implementar evaluacion y entregas efimeras`).
 Evidencia: se registrará en el commit documental inmediato posterior.
+
+## Seguimiento de integración — 2026-11-04
+
+- Integración compartida con Review/Inspector y barrera de costes: `7d1417d` (`feat(mvp): integra flujos con proveedores seguros`).
+- Integración raíz de la implementación Mentor: commit de la rama `codex/fragments-mvp` `4d5247f` (`feat(f04): implementar mentor y galeria opt-in`).
+- `apps/api/src/main.ts` conecta el evaluador Gateway con el ledger SQLite; la galería, edición optimista por versión, historial y opt-in usan la persistencia existente.
+- `apps/api/migrations/005-mentor-revisions.sql` agrega revisiones y opt-in por propuesta; el runner también ejecuta estas migraciones.
+- Ego Lite observó Galería vacía al inicio. Desde la app local se comprobó alta de propuesta `201`, edición `200` versión 2, historial `200` con 2 versiones, opt-in `200` y 1 entrada visible.
+- `pnpm test` — exit 0; API 78/78 y contratos 18/18.
+- `pnpm --filter @fragments/api typecheck` y `pnpm --filter @fragments/web typecheck` — exit 0.
+
+### Bloqueo y límites
+
+- El `.env` tiene `AI_GATEWAY_API_KEY` y `AI_GATEWAY_MODEL`, pero no `AI_GATEWAY_MAX_INPUT_USD_PER_MILLION` ni `AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION`. El evaluador falla cerrado antes de despachar sin ambas tasas. No se hizo ninguna solicitud a AI Gateway; gasto externo observado: USD 0.
+- Vercel documenta sus budgets como soft limits; por ello el ledger local estima, reserva llamadas en curso y contabiliza recibos, pero no se afirma un límite estricto del proveedor. [Documentación de budgets de Vercel AI Gateway](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets).
+- F04 permanece `[ ]` en `task-list/TASKS.md` hasta probar una evaluación real autorizada con pricing verificable.

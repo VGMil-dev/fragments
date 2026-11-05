@@ -7,3 +7,10 @@
 - [ ] GIVEN rama o commit ajeno, THEN se respeta seguridad de contratos y límites.
 - [ ] Pruebas específicas: TDD de propuestas similares, snapshot, hash, PDF/README bajo demanda.
 **No hacer:** No imponer aprobación docente.
+
+## Integración autorizada — 2026-11-04
+
+- [x] Mentor persiste propuestas versionadas, cambios con versión esperada, historial y galería solo con opt-in.
+- [x] Comparaciones se calculan localmente sobre entradas opt-in.
+- [ ] Evaluación Gateway real usa presupuesto/ledger compartido y reporta recibo: bloqueada hasta configurar tarifas máximas por millón de tokens. No realizar llamada si faltan tasas.
+- [x] Ego Lite comprobó alta, edición, historial y opt-in vía API de la app local.

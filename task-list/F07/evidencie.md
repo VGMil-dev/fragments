@@ -46,3 +46,33 @@ Capturas y SHA-256:
 - Repetir QA integrado cuando F05/F06 estén conectados; no se probó proveedor remoto ni despliegue Docker de extremo a extremo en este cierre.
 - Commit de integración F02: `86ee816` (`feat(f02): conecta flujo estudiantil`).
 - Este commit registra la evidencia parcial de F07; la tarea global sigue abierta.
+
+## Seguimiento de integración — 2026-11-04
+
+- Commit de integración verificado: `7d1417d` (`feat(mvp): integra flujos con proveedores seguros`).
+
+### Verificación automatizada
+
+- `pnpm build` — exit 0; API, contratos y web (3/3 paquetes).
+- `pnpm test` — exit 0; API 78/78 y contratos 18/18.
+- `pnpm --filter @fragments/web exec vitest run src` — exit 0; 12 archivos, 42 pruebas.
+- `pnpm typecheck` — exit 0; 4/4 tareas del workspace.
+- `pnpm lint` — exit 0; la configuración actual ejecuta lint/typecheck en contratos solamente.
+- `git diff --check` — exit 0.
+
+### Ego Lite / QA local
+
+- `ego-browser skill` completó la guía instalada v2.2.0 antes de usar el browser.
+- API temporal: `/health` → 200, SQLite ready; Vite → 200. La sesión docente anónima → `authenticated:false`.
+- En Ego Lite se inspeccionaron landing, Galería y Mentor. El viewport reportó 0×0, por lo que el click visual caducó y no se afirman pruebas visuales ni breakpoints móviles.
+- Se usó `page.fetch()` documentado por Ego Lite a través del proxy de la app: crear propuesta 201, editar 200 a versión 2, historial 200 con dos versiones, activar opt-in 200 y galería con una entrada.
+- Inspector sin sesión → 401. No se hizo login de una persona porque no existe cuenta provisionada localmente.
+- TaskSpace Ego Lite y servidores locales se cerraron al terminar.
+
+### Promptfoo y servicios externos
+
+- Se intentó `pnpm dlx promptfoo@0.125.1 eval -c evals/promptfooconfig.yaml --no-cache --output task-list/F07/promptfoo-results.json` con telemetría, actualizaciones, sharing y generación remota desactivados.
+- Promptfoo descargó su CLI efímera pero no inició la evaluación: `ERR_MODULE_NOT_FOUND @nodable/entities` desde `fast-xml-parser@5.12.0`. Intentar añadir el paquete auxiliar como segundo `dlx` package no resolvió el árbol; no se tocó `pnpm-lock.yaml` por este problema externo.
+- La configuración existente solo referencia `fake-local-review`, pero la evaluación real de calidad con Gateway no se ejecutó. No hay resultados ni puntuaciones de Promptfoo para reportar.
+- Sin tarifas máximas del Gateway, F04/F05/F06 quedan sin llamadas de IA según el límite autorizado. Gasto externo de IA observado: USD 0. No hubo despliegues.
+- F07 continúa `[ ]` hasta ejecutar Promptfoo correctamente, completar pruebas AI Gateway autorizadas, y repetir visual QA con viewport usable. No se ejecutó Playwright.

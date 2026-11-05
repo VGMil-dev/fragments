@@ -4,9 +4,9 @@
 
 **Objetivo:** implementar un slice Inspector conectado que crea retos de mutación inversa desde evidencia verificada, mantiene la guía docente privada, permite asignar y registrar defensa, conserva/obsoleta retos al cambiar el commit y presenta un panel docente accesible.
 
-**No objetivos:** no ejecutar código de estudiantes, llamar a GitHub o IA real, ni mostrar `teacherHint` en una vista de estudiante.
+**No objetivos:** no ejecutar código de estudiantes ni mostrar `teacherHint` en una vista de estudiante. Las llamadas autorizadas a GitHub/AI Gateway solo pueden usar repositorios públicos, evidencia verificada y el ledger F05.
 
-**Nota de integración del planner:** después de la entrega aislada W6, se autorizó ampliar `packages/contracts` para los DTOs Inspector y fijar rutas, persistencia SQLite e integración del panel en App. Los endpoints se protegen con sesión docente. Este slice añade adaptadores propios de Inspector para reconstruir Review desde el owner/repo/SHA guardado y verificar scrypt contra la tabla docente; la composición de API/login sigue a cargo del planner y requiere persistencia Review integrada.
+**Nota de integración:** después de la entrega aislada W6 se integraron contratos, rutas, SQLite, la composición normal del API y login docente por cookie firmada. La generación real solo se permite a partir del fragmento literal de evidencia verificada y con el ledger de F05.
 
 **Owner:** W6.
 

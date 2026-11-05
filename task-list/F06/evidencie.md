@@ -1,6 +1,6 @@
 # F06 — Evidence / evidencie
 
-Estado: PARCIAL. Inspector ahora tiene contratos compartidos, SQLite, rutas HTTP con sesión docente, cliente tipado, panel/ruta web y E2E con Review/provider fake. No se marca F06 como completada: el runner normal todavía no inyecta el servicio, no hay verificador/login docente habilitado y F05 aún no persiste ni expone snapshots Review.
+Estado actual: PARCIAL. Inspector está conectado a Review, SQLite, AI Gateway y autenticación docente real. Falta validar la generación real con Gateway y un acceso de una cuenta docente provisionada.
 
 Owner: W6; integración y contratos: PLANNER.
 Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `codex/fragments-mvp` (`b984de4`).
@@ -75,3 +75,15 @@ Verificación fresca después del merge y cambios:
 - `pnpm --filter @fragments/api typecheck` — exit 0.
 - `git diff --check` — exit 0.
 - No se llamó a GitHub, AI Gateway ni servicios externos; no se leyó `.env` ni se ejecutó código de repositorios de estudiantes.
+
+## Seguimiento de integración — 2026-11-04
+
+- Integración compartida de sesión/login, adapter Review y proveedor AI grounded: `7d1417d` (`feat(mvp): integra flujos con proveedores seguros`).
+- `apps/api/src/main.ts` adapta el Review SQLite a `createInspectorReviewAdapter`, vuelve a leer el snapshot exacto del SHA público y conecta `createInspectorRepository` y el proveedor Gateway con el ledger compartido.
+- La salida al provider contiene el fragmento literal de las líneas verificadas de Review; el provider requiere una cita literal dentro de ese fragmento y rechaza patrones de secretos. No se ejecuta contenido del repositorio.
+- Se añadió `GET /api/teacher/session`, formulario web de login y provisioning local de cuentas usando hash scrypt. Si hay `SESSION_SECRET` y no se sobreescribe `AUTH_ENABLED`, auth queda activada; no se agregó usuario/contraseña por defecto.
+- `pnpm test` — exit 0; API 78/78, incluidos scrypt/SQLite, session cookie, acceso Inspector anónimo rechazado y flujo del reto con provider fake rotulado.
+- Ego Lite comprobó `GET /api/teacher/session`: 200 y `authenticated:false`; acceso a ruta Inspector sin cookie: 401.
+- No hay `TEACHER_EMAIL` ni `TEACHER_PASSWORD` en el `.env` y no se provisionó cuenta. Las pruebas de login correcto usan credenciales fake en SQLite temporal dentro de Vitest.
+- No se envió evidencia ni prompt al Gateway; el provider falla cerrado sin tasas máximas configuradas. No se probó generación en vivo.
+- F06 permanece `[ ]` hasta verificar una sesión de una cuenta docente provisionada y una generación real autorizada sobre evidencia del repo.
