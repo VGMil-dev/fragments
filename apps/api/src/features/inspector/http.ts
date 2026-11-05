@@ -5,7 +5,7 @@ import {
   InspectorChallengeRecordsResponseSchema,
   InspectorDefenseRecordRequestSchema,
 } from "@fragments/contracts";
-import type { TeacherSessionService } from "../../auth/session-service.js";
+import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { InspectorError, type createInspectorService } from "./service.js";
 
 type InspectorService = ReturnType<typeof createInspectorService>;
@@ -39,10 +39,6 @@ async function readJson(request: IncomingMessage, response: ServerResponse): Pro
   }
 }
 
-function cookie(request: IncomingMessage, name: string): string | undefined {
-  return request.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
-}
-
 function statusFor(error: unknown): number {
   if (!(error instanceof InspectorError)) return 500;
   if (error.code.startsWith("INVALID_")) return 400;
@@ -51,7 +47,7 @@ function statusFor(error: unknown): number {
   return 500;
 }
 
-export function createInspectorHttp(service: InspectorService, auth?: TeacherSessionService) {
+export function createInspectorHttp(service: InspectorService, auth?: FragmentsAuthService) {
   return async function handleInspectorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     const listMatch = url.pathname.match(/^\/api\/inspector\/([A-Za-z0-9_-]{1,100})\/challenges$/);
@@ -63,9 +59,12 @@ export function createInspectorHttp(service: InspectorService, auth?: TeacherSes
       sendError(response, 503, "AUTH_DISABLED", "El acceso docente no está habilitado.");
       return "handled";
     }
-    const sessionToken = cookie(request, "fragments_session");
-    const session = sessionToken ? auth.verify(sessionToken) : null;
-    if (!session) {
+    let teacherId: string | null;
+    try { teacherId = await auth.teacherId(request); } catch {
+      sendError(response, 503, "AUTH_UNAVAILABLE", "No se pudo validar la sesión docente.");
+      return "handled";
+    }
+    if (!teacherId) {
       sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como docente para continuar.");
       return "handled";
     }
@@ -89,7 +88,7 @@ export function createInspectorHttp(service: InspectorService, auth?: TeacherSes
           sendError(response, 400, "INVALID_INPUT", "No se requieren campos para asignar el reto.");
           return "handled";
         }
-        const record = await service.assignChallenge(assignMatch[1]!, session.teacherId);
+        const record = await service.assignChallenge(assignMatch[1]!, teacherId);
         sendJson(response, 200, { ok: true, data: InspectorChallengeRecordResponseSchema.parse(record) });
         return "handled";
       }
@@ -101,7 +100,7 @@ export function createInspectorHttp(service: InspectorService, auth?: TeacherSes
           sendError(response, 400, "INVALID_INPUT", "Registra la mutación, restauración y una nota de hasta 2000 caracteres.");
           return "handled";
         }
-        const record = await service.recordDefense(recordMatch[1]!, session.teacherId, body.data);
+        const record = await service.recordDefense(recordMatch[1]!, teacherId, body.data);
         sendJson(response, 200, { ok: true, data: InspectorChallengeRecordResponseSchema.parse(record) });
         return "handled";
       }

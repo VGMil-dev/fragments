@@ -5,6 +5,14 @@
 .inspector-workspace__header p { margin: 0 0 .55rem; color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
 .inspector-workspace__header h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3rem); }
 .inspector-workspace__header span { display: block; margin-top: .5rem; color: var(--muted); }
+.inspector-workspace__login { display: grid; gap: .55rem; width: min(100%, 28rem); padding: 1.2rem; border: 1px solid var(--border-soft); border-radius: .8rem; background: white; }
+.inspector-workspace__login label { color: var(--muted); font-size: .85rem; font-weight: 700; }
+.inspector-workspace__login input { min-width: 0; min-height: 2.8rem; margin-bottom: .55rem; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: .55rem; color: var(--navy); font: inherit; }
+.inspector-workspace__login button, .inspector-workspace__logout { min-height: 2.8rem; padding: .55rem .8rem; border: 0; border-radius: .55rem; background: var(--navy); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.inspector-workspace__login button:disabled { cursor: wait; opacity: .65; }
+.inspector-workspace__login :focus-visible, .inspector-workspace__logout:focus-visible { outline: 3px solid var(--cornflower); outline-offset: 3px; }
+.inspector-workspace__login [role="alert"] { margin: .3rem 0 0; color: var(--error, #a32323); }
+.inspector-workspace__logout { margin-top: .8rem; background: transparent; color: var(--navy); border: 1px solid var(--border); }
 .inspector-workspace__lookup { display: grid; grid-template-columns: minmax(12rem, 1fr) auto auto; align-items: end; gap: .65rem; margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--border-soft); border-radius: .8rem; background: white; }
 .inspector-workspace__lookup label { grid-column: 1 / -1; color: var(--muted); font-size: .85rem; font-weight: 700; }
 .inspector-workspace__lookup input { min-width: 0; height: 2.8rem; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: .55rem; color: var(--navy); font: inherit; }

@@ -3,14 +3,11 @@ import { createServer } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { createHttpHandler } from "./app.js";
 import { migrate } from "../db/migrate.js";
-import { SessionAuth } from "../auth/session.js";
-import { TeacherSessionService } from "../auth/session-service.js";
+import { createFragmentsAuth, createFragmentsAuthService, migrateFragmentsAuth } from "../auth/better-auth.js";
 import { createMentorService } from "../features/mentor/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
 import { createInspectorService, type ReviewEvidence } from "../features/inspector/service.js";
 import { createInspectorRepository } from "../features/inspector/repository.js";
-import { createInspectorTeacherSessionService } from "../features/inspector/teacher-auth.js";
-import { createTeacherAccount, hashTeacherPassword } from "../auth/sqlite-teacher-verifier.js";
 import { createReviewService } from "../features/review/review.service.js";
 import { createSqliteReviewStore } from "../features/review/sqlite-store.js";
 
@@ -80,59 +77,15 @@ describe("HTTP API", () => {
     expect(body).not.toContain("redact-me");
   });
 
-  it("rejects malformed teacher-session input without echoing credentials", async () => {
+  it("does not expose Better Auth endpoints when authentication is not configured", async () => {
     const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
     const server = createServer(createHttpHandler(db)); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
-    const response = await fetch(`http://127.0.0.1:${address.port}/api/teacher/session`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "not-an-email", password: "sensitive-value" }),
-    });
-    const body = await response.text();
-    expect(response.status).toBe(400);
-    expect(JSON.parse(body)).toEqual({ ok: false, error: { code: "INVALID_INPUT", message: "La solicitud no es válida." } });
-    expect(body).not.toContain("sensitive-value");
-  });
-
-  it("creates a teacher session through the injected fake credential verifier", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
-    const auth = new TeacherSessionService({
-      async verify(email, password) { return email === "teacher@example.test" && password === "fake-fixture-password" ? "teacher-fixture-01" : null; },
-    }, new SessionAuth("http-test-session-secret-".repeat(2)));
-    const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const address = server.address();
-    if (!address || typeof address === "string") throw new Error("Expected TCP address");
-    const response = await fetch(`http://127.0.0.1:${address.port}/api/teacher/session`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "fake-fixture-password" }),
-    });
-    expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toMatch(/^fragments_session=.+; HttpOnly; Secure; SameSite=Strict; Path=\//);
-    expect(await response.json()).toMatchObject({ ok: true, data: { teacherId: "teacher-fixture-01" } });
-  });
-
-  it("authenticates a provisioned SQLite teacher and reports the signed session without returning its token", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
-    const passwordHash = await hashTeacherPassword("fake-local-password-123");
-    createTeacherAccount(db, { id: "teacher-real-test", email: "teacher@example.test", passwordHash });
-    const auth = createInspectorTeacherSessionService(db, "sqlite-auth-test-secret-0123456789abcdef");
-    const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const address = server.address();
-    if (!address || typeof address === "string") throw new Error("Expected TCP address");
-    const base = `http://127.0.0.1:${address.port}`;
-    const denied = await fetch(`${base}/api/teacher/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "wrong-password" }) });
-    expect(denied.status).toBe(401);
-    const login = await fetch(`${base}/api/teacher/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "fake-local-password-123" }) });
-    expect(login.status).toBe(200);
-    const sessionCookie = login.headers.get("set-cookie")?.split(";")[0];
-    expect(sessionCookie).toMatch(/^fragments_session=.+$/);
-    const session = await fetch(`${base}/api/teacher/session`, { headers: { cookie: sessionCookie! } });
-    const body = await session.text();
-    expect(session.status).toBe(200);
-    expect(JSON.parse(body)).toMatchObject({ ok: true, data: { authenticated: true, teacherId: "teacher-real-test" } });
-    expect(body).not.toContain("fragments_session");
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/auth/get-session`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ ok: false, error: { code: "AUTH_DISABLED" } });
   });
 
   it("runs the Mentor proposal-to-delivery and public verification flow", async () => {
@@ -226,9 +179,12 @@ describe("HTTP API", () => {
       createId: () => "challenge-1",
       now: () => new Date("2026-11-04T12:00:00.000Z"),
     });
-    const auth = new TeacherSessionService({
-      async verify(email) { return email === "teacher@example.test" ? "teacher-1" : null; },
-    }, new SessionAuth("inspector-http-test-secret-".repeat(2)));
+    const authInstance = createFragmentsAuth(db, {
+      secret: "http-test-better-auth-secret-0123456789",
+      allowSignUp: true,
+    });
+    await migrateFragmentsAuth(authInstance);
+    const auth = createFragmentsAuthService(authInstance);
     const server = createServer(createHttpHandler(db, { auth, inspector })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -239,9 +195,22 @@ describe("HTTP API", () => {
     expect(unauthorized.status).toBe(401);
     expect(await unauthorized.text()).not.toContain("teacherHint");
 
-    const issued = await auth.login("teacher@example.test", "fake-fixture-password");
-    expect(issued).toBeTruthy();
-    const headers = { cookie: `fragments_session=${issued!.token}`, "content-type": "application/json" };
+    const signup = await fetch(`${base}/api/auth/sign-up/email`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Docente de prueba", email: "teacher@example.test", password: "fixture-password-2026" }),
+    });
+    expect(signup.status).toBe(200);
+    const signupBody = await signup.json() as { user: { id: string } };
+    db.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(signupBody.user.id);
+    const login = await fetch(`${base}/api/auth/sign-in/email`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "teacher@example.test", password: "fixture-password-2026" }),
+    });
+    expect(login.status).toBe(200);
+    const setCookies = login.headers.getSetCookie();
+    const cookie = setCookies.map((part) => part.split(";", 1)[0]).join("; ");
+    expect(cookie).toContain("session_token=");
+    const headers = { cookie, "content-type": "application/json" };
     const createdResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST", headers });
     expect(createdResponse.status).toBe(201);
     const createdBody = await createdResponse.json() as { data: { id: string; challenge: { teacherHint: string }; status: string } };
@@ -262,5 +231,10 @@ describe("HTTP API", () => {
     expect(listed).toContain("teacherHint");
     expect(listed).toContain("Se explicó y restauró.");
     expect(listResponse.headers.get("cache-control")).toBe("no-store");
+
+    const logout = await fetch(`${base}/api/auth/sign-out`, { method: "POST", headers: { cookie } });
+    expect(logout.status).toBe(200);
+    const afterLogout = await fetch(`${base}/api/inspector/review-1/challenges`, { headers: { cookie } });
+    expect(afterLogout.status).toBe(401);
   });
 });
