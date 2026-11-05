@@ -6,6 +6,7 @@ import {
   ApiResultSchema,
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
+  GalleryOptInRequestSchema,
   CreateReviewSubmissionRequestSchema,
   EvidenceReferenceSchema,
   GalleryEntrySchema,
@@ -16,6 +17,7 @@ import {
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
+  UpdateProposalRequestSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
@@ -232,6 +234,11 @@ describe("shared API contracts", () => {
   it("validates proposal requests and versioned proposal responses", () => {
     expect(CreateProposalRequestSchema.safeParse(proposal).success).toBe(true);
     expect(CreateProposalRequestSchema.safeParse({ ...proposal, goals: [] }).success).toBe(false);
+    expect(UpdateProposalRequestSchema.safeParse({ ...proposal, expectedVersion: 2 }).success).toBe(true);
+    expect(UpdateProposalRequestSchema.safeParse({ ...proposal, expectedVersion: 0 }).success).toBe(false);
+    expect(UpdateProposalRequestSchema.safeParse({ ...proposal, expectedVersion: 2, ownerId: "student-1" }).success).toBe(false);
+    expect(GalleryOptInRequestSchema.safeParse({ optIn: true }).success).toBe(true);
+    expect(GalleryOptInRequestSchema.safeParse({ optIn: true, studentId: "student-1" }).success).toBe(false);
     expect(
       ProposalResponseSchema.safeParse({ id: "proposal-1", version: 2, proposal, updatedAt: now }).success,
     ).toBe(true);

@@ -129,6 +129,10 @@ export const GalleryEntrySchema = z.object({
 export const GalleryResponseSchema = z.array(GalleryEntrySchema).max(500);
 
 export const CreateProposalRequestSchema = ProposalDraftSchema;
+export const UpdateProposalRequestSchema = ProposalDraftSchema.extend({
+  expectedVersion: z.number().int().min(1),
+}).strict();
+export const GalleryOptInRequestSchema = z.object({ optIn: z.boolean() }).strict();
 export const ProposalResponseSchema = z.object({
   id: identifier,
   version: z.number().int().min(1),
@@ -207,6 +211,8 @@ export type InspectorChallengePublic = z.infer<typeof InspectorChallengePublicSc
 export type SubmissionSnapshot = z.infer<typeof SubmissionSnapshotSchema>;
 export type GalleryEntry = z.infer<typeof GalleryEntrySchema>;
 export type CreateProposalRequest = z.infer<typeof CreateProposalRequestSchema>;
+export type UpdateProposalRequest = z.infer<typeof UpdateProposalRequestSchema>;
+export type GalleryOptInRequest = z.infer<typeof GalleryOptInRequestSchema>;
 export type ProposalResponse = z.infer<typeof ProposalResponseSchema>;
 export type ProposalEvaluationResponse = z.infer<typeof ProposalEvaluationResponseSchema>;
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
