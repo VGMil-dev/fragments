@@ -11,10 +11,10 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F04 | W4 | F00,F03 contratos | Mentor propuesta→evaluación→snapshot→README/PDF efímeros y verificación | [x] |
 | F05 | W5 | F00,F03 contratos | Review GitHub commit→Repomix→AI gateway→evaluación→PDF, Promptfoo fixtures | [x] |
 | F06 | W6 | F00,F05 contrato | Inspector retos privados inversos→sesión→estado; pruebas seguridad y UI | [x] |
-| F07 | PLANNER | F01..F06 | Integración real, ego(lite), Promptfoo, QA, documentación final, despliegue local | [ ] |
+| F07 | PLANNER | F01..F06 | Integración real, ego(lite), Promptfoo, QA, documentación final, despliegue local | [x] |
 
 ## Estado de cierre de integración — 2026-11-05
 
-El commit Planner `ab3aa60` integra Better Auth, adaptadores corregidos y configuración local. F04–F06 quedan cerradas con pruebas Gateway, recibos, Promptfoo, sesión docente y defensa persistida; sus evidencias incluyen comandos frescos y este hash. F07 sigue abierta únicamente porque Ego Lite no permitió fijar/verificar viewport móvil 390px. No se afirma QA responsive móvil ni despliegue. La advertencia de esquema Better Auth en el test de signup bloqueado es no fatal; el plan de migración posterior queda sin pendientes.
+El commit Planner `ab3aa60` integra Better Auth, adaptadores corregidos y configuración local. F04–F06 quedan cerradas con pruebas Gateway, recibos, Promptfoo, sesión docente y defensa persistida. F07 se completó el 2026-11-05: Ego Lite verificó 390×844 y 1440×900; regresión sin caché, Promptfoo local y persistencia tras reiniciar API quedaron documentados en `task-list/F07/evidencie.md`. Un fixture de prueba Better Auth se aisló para eliminar un warning espurio; el registro público permanece bloqueado. No se desplegó. Commit F07: `c630d6f`; commit documental final registrado en su evidencia.
 
 Dependencias F03/F05 son de integración, no bloquean trabajo paralelo con fake drivers y contratos congelados. Cada worker debe producir código compilable de su zona o informe de bloqueo claro. Cada tarea tiene `intent.md`, `spec.md`, `evidencie.md`.
