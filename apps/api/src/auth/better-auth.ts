@@ -8,17 +8,27 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 export interface FragmentsAuthOptions {
   secret: string;
   baseURL?: string;
+  publicAppURL?: string;
   allowSignUp?: boolean;
 }
 
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
   if (options.secret.length < 32) throw new Error("BETTER_AUTH_SECRET debe tener al menos 32 caracteres.");
   const baseURL = options.baseURL ?? "http://localhost:3000";
+  const trustedOrigins = [...new Set([baseURL, options.publicAppURL]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      const url = new URL(value);
+      if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password) {
+        throw new Error("Las URL de Better Auth deben usar HTTP(S) y no incluir credenciales.");
+      }
+      return url.origin;
+    }))];
   return betterAuth({
     database,
     secret: options.secret,
     baseURL,
-    trustedOrigins: [baseURL],
+    trustedOrigins,
     emailAndPassword: {
       enabled: true,
       disableSignUp: !options.allowSignUp,

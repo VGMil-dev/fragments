@@ -181,6 +181,8 @@ describe("HTTP API", () => {
     });
     const authInstance = createFragmentsAuth(db, {
       secret: "http-test-better-auth-secret-0123456789",
+      baseURL: "http://localhost:3000",
+      publicAppURL: "http://localhost:5173",
       allowSignUp: true,
     });
     await migrateFragmentsAuth(authInstance);
@@ -196,20 +198,24 @@ describe("HTTP API", () => {
     expect(await unauthorized.text()).not.toContain("teacherHint");
 
     const signup = await fetch(`${base}/api/auth/sign-up/email`, {
-      method: "POST", headers: { "content-type": "application/json" },
+      method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:5173" },
       body: JSON.stringify({ name: "Docente de prueba", email: "teacher@example.test", password: "fixture-password-2026" }),
     });
     expect(signup.status).toBe(200);
     const signupBody = await signup.json() as { user: { id: string } };
     db.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(signupBody.user.id);
     const login = await fetch(`${base}/api/auth/sign-in/email`, {
-      method: "POST", headers: { "content-type": "application/json" },
+      method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:5173" },
       body: JSON.stringify({ email: "teacher@example.test", password: "fixture-password-2026" }),
     });
     expect(login.status).toBe(200);
     const setCookies = login.headers.getSetCookie();
     const cookie = setCookies.map((part) => part.split(";", 1)[0]).join("; ");
     expect(cookie).toContain("session_token=");
+    const session = await fetch(`${base}/api/auth/get-session`, { headers: { cookie, origin: "http://localhost:5173" } });
+    expect(session.status).toBe(200);
+    expect(await session.json()).toMatchObject({ user: { id: signupBody.user.id, isTeacher: true } });
+
     const headers = { cookie, "content-type": "application/json" };
     const createdResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST", headers });
     expect(createdResponse.status).toBe(201);
@@ -232,7 +238,9 @@ describe("HTTP API", () => {
     expect(listed).toContain("Se explicó y restauró.");
     expect(listResponse.headers.get("cache-control")).toBe("no-store");
 
-    const logout = await fetch(`${base}/api/auth/sign-out`, { method: "POST", headers: { cookie } });
+    const logout = await fetch(`${base}/api/auth/sign-out`, {
+      method: "POST", headers: { cookie, origin: "http://localhost:5173" },
+    });
     expect(logout.status).toBe(200);
     const afterLogout = await fetch(`${base}/api/inspector/review-1/challenges`, { headers: { cookie } });
     expect(afterLogout.status).toBe(401);

@@ -26,6 +26,17 @@ async function createAccount(database: DatabaseSync, auth: Awaited<ReturnType<ty
 }
 
 describe("Better Auth integration", () => {
+  it("trusts only the normalized API and configured public app origins", async () => {
+    const database = new DatabaseSync(":memory:");
+    databases.push(database);
+    const auth = createFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173/",
+    });
+    expect(auth.options.trustedOrigins).toEqual(expect.arrayContaining(["http://localhost:3000", "http://localhost:5173"]));
+  });
+
   it("disables public sign-up unless a test or provisioning flow explicitly enables it", async () => {
     const { auth } = await fixture(false);
     await expect(auth.api.signUpEmail({ body: { name: "Blocked", email: "blocked@example.test", password: "fixture-password-2026" } }))
