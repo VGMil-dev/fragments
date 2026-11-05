@@ -1,0 +1,16 @@
+:root {
+  color-scheme: light;
+  --paper: #FCF9F1;
+  --paper-deep: #F6F2E8;
+  --paper-white: #FFFDF8;
+  --navy: #17345C;
+  --blue: #4776A9;
+  --cornflower: #6E9BCC;
+  --powder: #D8EAF9;
+  --border: #AFC4D9;
+  --border-soft: #DCE4E9;
+  --success: #3D7F6B;
+  --warning: #B97A33;
+  --muted: #5F7183;
+  --font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}

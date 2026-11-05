@@ -1,0 +1,130 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { createServer } from "node:http";
+import { DatabaseSync } from "node:sqlite";
+import { createHttpHandler } from "./app.js";
+import { migrate } from "../db/migrate.js";
+import { SessionAuth } from "../auth/session.js";
+import { TeacherSessionService } from "../auth/session-service.js";
+import { createMentorService } from "../features/mentor/service.js";
+import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
+
+const servers: ReturnType<typeof createServer>[] = [];
+const databases: DatabaseSync[] = [];
+afterEach(async () => {
+  await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
+  for (const db of databases.splice(0)) db.close();
+});
+
+describe("HTTP API", () => {
+  it("reports SQLite readiness without exposing environment secrets", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const server = createServer(createHttpHandler(db)); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const response = await fetch(`http://127.0.0.1:${address.port}/health`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, data: { status: "ok", database: "ready" } });
+  });
+
+  it("returns a uniform non-reflecting envelope for unknown paths", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const server = createServer(createHttpHandler(db)); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const response = await fetch(`http://127.0.0.1:${address.port}/private?token=redact-me`);
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(JSON.parse(body)).toEqual({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
+    expect(body).not.toContain("redact-me");
+  });
+
+  it("rejects malformed teacher-session input without echoing credentials", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const server = createServer(createHttpHandler(db)); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/teacher/session`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "not-an-email", password: "sensitive-value" }),
+    });
+    const body = await response.text();
+    expect(response.status).toBe(400);
+    expect(JSON.parse(body)).toEqual({ ok: false, error: { code: "INVALID_INPUT", message: "La solicitud no es válida." } });
+    expect(body).not.toContain("sensitive-value");
+  });
+
+  it("creates a teacher session through the injected fake credential verifier", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const auth = new TeacherSessionService({
+      async verify(email, password) { return email === "teacher@example.test" && password === "fake-fixture-password" ? "teacher-fixture-01" : null; },
+    }, new SessionAuth("http-test-session-secret-".repeat(2)));
+    const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/teacher/session`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "teacher@example.test", password: "fake-fixture-password" }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toMatch(/^fragments_session=.+; HttpOnly; Secure; SameSite=Strict; Path=\//);
+    expect(await response.json()).toMatchObject({ ok: true, data: { teacherId: "teacher-fixture-01" } });
+  });
+
+  it("runs the Mentor proposal-to-delivery and public verification flow", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
+    const server = createServer(createHttpHandler(db, { mentor })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const proposalResponse = await fetch(`${base}/api/proposals`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+        title: "Huerto escolar interactivo",
+        problem: "El curso no tiene una forma sencilla de registrar el crecimiento de sus plantas.",
+        solution: "Una aplicación local permite registrar medidas y ver su evolución semanal.",
+        goals: ["Registrar medidas", "Comparar plantas"],
+        skills: ["TypeScript", "SQLite"],
+        scope: "Una pantalla permite agregar y consultar medidas por planta.",
+        constraints: ["Funciona sin conexión"],
+      }),
+    });
+    expect(proposalResponse.status).toBe(201);
+    const proposalBody = await proposalResponse.json() as { data: { id: string; version: number; proposal: { title: string } } };
+    expect(proposalBody.data.proposal.title).toBe("Huerto escolar interactivo");
+
+    const evaluationResponse = await fetch(`${base}/api/proposals/${proposalBody.data.id}/review`, { method: "POST" });
+    expect(evaluationResponse.status).toBe(200);
+    const evaluationBody = await evaluationResponse.json() as { data: { evaluationId: string; proposalVersion: number; analysis: { modelId: string }; guidance: string[] } };
+    expect(evaluationBody.data.proposalVersion).toBe(1);
+    expect(evaluationBody.data.analysis.modelId).toBe("fake/local-heuristic-v1");
+    expect(evaluationBody.data.guidance.length).toBeGreaterThan(0);
+
+    const submissionResponse = await fetch(`${base}/api/mentor-submissions`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+        proposalId: proposalBody.data.id,
+        proposalVersion: proposalBody.data.version,
+        evaluationId: evaluationBody.data.evaluationId,
+      }),
+    });
+    expect(submissionResponse.status).toBe(201);
+    const submissionBody = await submissionResponse.json() as { data: { id: string; verificationCode: string } };
+    expect(submissionBody.data.id).toBeTruthy();
+
+    const readme = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/readme`);
+    expect(readme.headers.get("content-type")).toContain("text/markdown");
+    const readmeText = await readme.text();
+    expect(readmeText).toContain("# Huerto escolar interactivo");
+    expect(readmeText).not.toContain("puntaje");
+
+    const pdf = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/pdf`);
+    expect(pdf.headers.get("content-type")).toBe("application/pdf");
+    expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(100);
+
+    const verified = await fetch(`${base}/api/verify/${submissionBody.data.verificationCode}`);
+    expect(verified.status).toBe(200);
+    expect(await verified.json()).toMatchObject({ ok: true, data: { kind: "mentor", integrityValid: true } });
+  });
+});

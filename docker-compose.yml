@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: build
+    command: ./apps/api/node_modules/.bin/tsx watch apps/api/src/main.ts
+    environment:
+      API_PORT: "3000"
+      DATABASE_URL: file:/app/data/fragments.sqlite
+      AUTH_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/api:/app/apps/api
+      - fragments-data:/app/data
+
+volumes:
+  fragments-data:
