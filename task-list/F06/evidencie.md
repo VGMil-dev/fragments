@@ -54,6 +54,7 @@ Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `c
 - Merge actual de `codex/fragments-mvp`: `13fcdf9` (merge limpio; incorporó contratos upstream sin conflictos).
 - Implementación F06 parcial: `c1c29eb` (`feat(f06): integra Inspector docente`).
 - W6 — evidencia exacta y auth local: `e0c9ad5` (`feat(f06): valida evidencia y sesion docente`).
+- Registro documental de la evidencia: `b17bdf9` (`docs(f06): registra verificacion de integracion`).
 
 ## Seguimiento W6 — snapshot exacto y credenciales docentes
 
