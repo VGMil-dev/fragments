@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AiAnalysisSchema, CreateProposalRequestSchema, SubmissionSnapshotSchema, type AiAnalysis, type SubmissionSnapshot } from "@fragments/contracts";
+import { AiAnalysisSchema, CreateProposalRequestSchema, SubmissionSnapshotSchema, type AiAnalysis, type GalleryEntry, type SubmissionSnapshot } from "@fragments/contracts";
 
 export type Proposal = ReturnType<typeof CreateProposalRequestSchema.parse>;
 
-export type Similarity = { title: string; overlap: string; similarity: number };
+export type Similarity = { galleryId?: string; title: string; overlap: string; similarity: number };
 export type MentorEvaluation = {
   analysis: AiAnalysis;
   guidance: string[];
@@ -68,12 +68,72 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
+const stopWords = new Set("a al algo algunas algunos ante antes como con contra cual cuando de del desde donde durante e el ella en entre era es esa ese eso esta estaba estas este esto estos fue ha hasta hay la las le les lo los mas me mi mucho muy ni no nos o para pero por porque que se sin sobre su sus te tu un una unas uno unos y ya proyecto propuesta problema solucion objetivos habilidades alcance restricciones".split(" "));
+const conceptGroups = [
+  ["cultivo", "huerto", "jardin", "cultivo", "planta", "plantas", "siembra", "riego", "regar"],
+  ["medicion", "medir", "medida", "medidas", "registro", "registrar", "seguimiento", "crecimiento", "monitoreo"],
+  ["aula", "aula", "escuela", "escolar", "curso", "clase", "estudiante", "estudiantes", "estudiant", "alumno"],
+  ["audio", "audio", "musica", "cancion", "canciones", "sonido", "reproducir", "lista"],
+];
+const conceptByTerm = new Map(conceptGroups.flatMap(([concept, ...members]) => members.map((member) => [member, concept] as const)));
+
+function normalizeTerm(term: string): string {
+  const normalized = term.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (normalized.length > 6 && normalized.endsWith("ciones")) return `${normalized.slice(0, -6)}cion`;
+  if (normalized.length > 5 && normalized.endsWith("ando")) return normalized.slice(0, -4);
+  if (normalized.length > 5 && normalized.endsWith("iendo")) return normalized.slice(0, -5);
+  if (normalized.length > 4 && normalized.endsWith("es")) return normalized.slice(0, -2);
+  if (normalized.length > 3 && normalized.endsWith("s")) return normalized.slice(0, -1);
+  return normalized;
+}
+
+function terms(text: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const raw of text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []) {
+    const normalized = normalizeTerm(raw);
+    const term = conceptByTerm.get(normalized) ?? normalized;
+    if (term.length < 3 || stopWords.has(term)) continue;
+    counts.set(term, (counts.get(term) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function proposalText(proposal: Proposal): string {
+  return [proposal.title, proposal.problem, proposal.solution, ...proposal.goals, ...proposal.skills, proposal.scope, ...proposal.constraints].join(" ");
+}
+
+function galleryText(entry: GalleryEntry): string {
+  return [entry.title, entry.summary, ...entry.skills, ...entry.tags].join(" ");
+}
+
+function compareGallery(proposal: Proposal, entries: GalleryEntry[]): Similarity[] {
+  const query = terms(proposalText(proposal));
+  const candidates = entries.map((entry) => {
+    const document = terms(galleryText(entry));
+    const overlap = [...query.keys()].filter((term) => document.has(term));
+    const dot = overlap.reduce((total, term) => total + query.get(term)! * document.get(term)!, 0);
+    const queryNorm = Math.sqrt([...query.values()].reduce((sum, value) => sum + value * value, 0));
+    const documentNorm = Math.sqrt([...document.values()].reduce((sum, value) => sum + value * value, 0));
+    const score = queryNorm && documentNorm ? dot / (queryNorm * documentNorm) : 0;
+    return { galleryId: entry.id, title: entry.title, overlap, similarity: score };
+  });
+  return candidates.filter((item) => item.similarity >= 0.12 && item.overlap.length > 0)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 20)
+    .map((item) => ({
+      galleryId: item.galleryId,
+      title: item.title,
+      overlap: `Comparte temas clave: ${item.overlap.slice(0, 3).join(", ")}.`,
+      similarity: Number(item.similarity.toFixed(4)),
+    }));
+}
+
 export function createMentorService(options: Options) {
   const now = options.now ?? (() => new Date());
   const token = options.token ?? (() => randomBytes(24).toString("base64url"));
 
   return {
-    async evaluate(rawProposal: unknown): Promise<MentorEvaluation> {
+    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = []): Promise<MentorEvaluation> {
       const proposal = validateProposal(rawProposal);
       const proposalDigest = digest(proposal);
       const result = await options.evaluator.evaluate({ proposal, proposalDigest });
@@ -93,7 +153,7 @@ export function createMentorService(options: Options) {
         return { title: item.title.trim(), overlap: item.overlap.trim(), similarity: item.similarity };
       });
       if (result.guidance.some((line) => !line.trim())) throw new Error("El evaluador devolvió una guía inválida.");
-      return deepFreeze({ analysis, guidance: [...result.guidance], similarities });
+      return deepFreeze({ analysis, guidance: [...result.guidance], similarities: compareGallery(proposal, galleryEntries) });
     },
 
     async createSubmission(input: { sourceId: string; proposal: unknown; evaluation: MentorEvaluation }): Promise<SubmissionSnapshot> {

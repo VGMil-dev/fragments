@@ -49,13 +49,24 @@ describe("Mentor service", () => {
     });
   });
 
-  it("uses a typed evaluator for viability/similarity and validates shared findings", async () => {
+  it("uses a typed evaluator and validates shared findings", async () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     const result = await service.evaluate(proposal);
     expect(AiAnalysisSchema.safeParse(result.analysis).success).toBe(true);
     expect(result.analysis.score).toBe(82);
-    expect(result.similarities[0]?.title).toBe("Jardin escolar");
+    expect(result.similarities).toEqual([]);
     expect(result.guidance).toHaveLength(1);
+  });
+
+  it("ranks opt-in gallery proposals by normalized topic similarity", async () => {
+    const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
+    const result = await service.evaluate(proposal, [
+      { id: "garden", title: "Cultivo en aula", summary: "Medición del crecimiento", skills: ["TypeScript"], tags: ["agricultura"], estimatedMinutes: 90 },
+      { id: "music", title: "Lista de música", summary: "Reproducir canciones favoritas", skills: ["Audio"], tags: ["música"] },
+    ]);
+    expect(result.similarities[0]).toMatchObject({ galleryId: "garden", title: "Cultivo en aula" });
+    expect(result.similarities[0]?.similarity).toBeGreaterThan(0.1);
+    expect(result.similarities.some((match) => match.galleryId === "music")).toBe(false);
   });
 
   it("creates an immutable, reproducible contract snapshot with random lookup token", async () => {

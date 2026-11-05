@@ -1,12 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseSync } from "node:sqlite";
 import {
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
+  GalleryOptInRequestSchema,
   GalleryResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
+  UpdateProposalRequestSchema,
   SubmissionResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
@@ -22,7 +24,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
   return async function handleMentorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (request.method === "GET" && url.pathname === "/api/gallery") {
-      sendJson(response, 200, { ok: true, data: GalleryResponseSchema.parse([]) });
+      sendJson(response, 200, { ok: true, data: GalleryResponseSchema.parse(repository.listGallery()) });
       return "handled";
     }
 
@@ -34,14 +36,57 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta.");
         return "handled";
       }
-      const saved = repository.createProposal(proposal.data);
+      const currentOwner = readOwnerToken(request);
+      const ownerToken = currentOwner ?? randomBytes(32).toString("base64url");
+      const saved = repository.createProposal(proposal.data, hashOwnerToken(ownerToken));
+      if (!currentOwner) response.setHeader("set-cookie", `fragments_proposal_owner=${ownerToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
+      return "handled";
+    }
+
+    const proposalMatch = url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})$/);
+    const ownerToken = readOwnerToken(request);
+    const ownerHash = ownerToken ? hashOwnerToken(ownerToken) : null;
+    if (request.method === "PUT" && proposalMatch) {
+      if (!ownerHash) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      const raw = await readJson(request, response);
+      if (raw === undefined) return "handled";
+      const input = UpdateProposalRequestSchema.safeParse(raw);
+      if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta y la versión que editas."); return "handled"; }
+      const saved = repository.updateProposal(proposalMatch[1]!, ownerHash, input.data.expectedVersion, input.data);
+      if (saved.status !== "updated") {
+        if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
+        else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
+        return "handled";
+      }
+      sendJson(response, 200, { ok: true, data: saved.proposal });
+      return "handled";
+    }
+
+    const historyMatch = request.method === "GET" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/versions$/);
+    if (historyMatch) {
+      const history = ownerHash ? repository.getProposalHistory(historyMatch[1]!, ownerHash) : null;
+      if (!history) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      sendJson(response, 200, { ok: true, data: history.map((entry) => ProposalResponseSchema.parse(entry)) });
+      return "handled";
+    }
+
+    const galleryOptInMatch = request.method === "PUT" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/gallery-opt-in$/);
+    if (galleryOptInMatch) {
+      if (!ownerHash) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      const raw = await readJson(request, response);
+      if (raw === undefined) return "handled";
+      const input = GalleryOptInRequestSchema.safeParse(raw);
+      if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Indica si quieres publicar esta versión de la propuesta."); return "handled"; }
+      const result = repository.setGalleryOptIn(galleryOptInMatch[1]!, ownerHash, input.data.optIn);
+      if (result.status === "not_found") { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      sendJson(response, 200, { ok: true, data: GalleryOptInRequestSchema.parse(input.data) });
       return "handled";
     }
 
     const evaluateMatch = request.method === "POST" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/review$/);
     if (evaluateMatch) {
-      const proposal = repository.getProposal(evaluateMatch[1]!);
+      const proposal = ownerHash ? repository.getOwnedProposal(evaluateMatch[1]!, ownerHash) : null;
       if (!proposal) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         return "handled";
@@ -49,7 +94,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
       try {
         const evaluatedAt = new Date().toISOString();
         const evaluationId = randomUUID();
-        const result = await service.evaluate(proposal.proposal);
+        const result = await service.evaluate(proposal.proposal, repository.listGallery());
         const responseData = ProposalEvaluationResponseSchema.parse({
           evaluationId,
           proposalId: proposal.id,
@@ -57,7 +102,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
           viability: result.analysis.score >= 75 ? "feasible" : result.analysis.score >= 50 ? "needs_revision" : "not_feasible",
           analysis: result.analysis,
           guidance: result.guidance,
-          similarityMatches: [],
+          similarityMatches: result.similarities.filter((item) => item.galleryId).map((item) => ({ galleryId: item.galleryId!, title: item.title, reason: item.overlap })),
           evaluatedAt,
         });
         repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, new Date(evaluatedAt));
@@ -76,7 +121,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         sendError(response, 400, "INVALID_INPUT", "Revisa los datos de la entrega.");
         return "handled";
       }
-      const proposal = repository.getProposal(input.data.proposalId);
+      const proposal = ownerHash ? repository.getOwnedProposal(input.data.proposalId, ownerHash) : null;
       if (!proposal || proposal.version !== input.data.proposalVersion) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la versión de propuesta.");
         return "handled";
@@ -101,6 +146,10 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
     if (artifactMatch) {
       const saved = repository.getSubmission(artifactMatch[1]!);
       if (!saved || saved.snapshot.kind !== "mentor") {
+        sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
+        return "handled";
+      }
+      if (!ownerHash || !repository.getOwnedProposal(saved.snapshot.sourceId, ownerHash)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
         return "handled";
       }
@@ -147,6 +196,16 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
 
     return "unhandled";
   };
+}
+
+function readOwnerToken(request: IncomingMessage): string | null {
+  const cookie = request.headers.cookie ?? "";
+  const match = cookie.match(/(?:^|;\s*)fragments_proposal_owner=([A-Za-z0-9_-]{32,128})(?:;|$)/);
+  return match?.[1] ?? null;
+}
+
+function hashOwnerToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 async function readJson(request: IncomingMessage, response: ServerResponse): Promise<unknown | undefined> {
