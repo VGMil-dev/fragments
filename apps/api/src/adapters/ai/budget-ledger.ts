@@ -7,6 +7,13 @@ const RESERVATION_MARGIN = 2;
 export type AiGatewayRateCard = { inputUsdPerMillion: number; outputUsdPerMillion: number };
 type CostReceipt<T> = { value: T; costUsd?: number };
 
+export function parseGatewayCostUsd(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : undefined;
+  if (typeof value !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export type AiBudgetSummary = { limitMicroUsd: number; settledMicroUsd: number; reservedMicroUsd: number; availableMicroUsd: number; blocked: boolean };
 
 export class AiBudgetUnavailableError extends Error {

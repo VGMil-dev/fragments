@@ -25,7 +25,7 @@ export type ReviewAiBudget = {
   timeoutMs: number;
   signal: AbortSignal;
 };
-export type ReviewAiInput = { packedText: string; rubricVersion: string; inputDigest: string; snapshotDigest: string; budget: ReviewAiBudget };
+export type ReviewAiInput = { packedText: string; snapshotFiles: Array<{ path: string; content: string }>; rubricVersion: string; inputDigest: string; snapshotDigest: string; budget: ReviewAiBudget };
 export type ReviewProcessingSignal = { signal?: AbortSignal };
 type SubmissionResponseData = ReturnType<typeof SubmissionResponseSchema.parse>;
 export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
@@ -211,6 +211,7 @@ export function createReviewService(dependencies: ReviewDependencies) {
       const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
       const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({
         packedText: packed.text,
+        snapshotFiles: snapshot.files.map(({ path, content }) => ({ path, content })),
         rubricVersion: context.rubricVersion,
         inputDigest: packed.inputDigest,
         snapshotDigest: snapshot.digest,

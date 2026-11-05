@@ -5,6 +5,7 @@ export interface AppConfig {
   githubTokenConfigured: boolean;
   aiGatewayKeyConfigured: boolean;
   aiGatewayModel?: string;
+  aiGatewayProviderOnly?: string;
   aiGatewayMaxInputUsdPerMillion?: number;
   aiGatewayMaxOutputUsdPerMillion?: number;
 }
@@ -30,6 +31,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const outputRate = parsePositiveRate(env.AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION, "AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION");
   const model = env.AI_GATEWAY_MODEL?.trim();
   if (model && model.length > 200) throw new Error("AI_GATEWAY_MODEL supera el tamaño permitido.");
+  const providerOnly = env.AI_GATEWAY_PROVIDER_ONLY?.trim();
+  if (providerOnly && !/^[a-z0-9][a-z0-9-]{0,63}$/.test(providerOnly)) throw new Error("AI_GATEWAY_PROVIDER_ONLY debe identificar un proveedor válido.");
+  if ((inputRate !== undefined || outputRate !== undefined) && (inputRate === undefined || outputRate === undefined || !providerOnly || !model)) {
+    throw new Error("Los máximos de precio requieren modelo y AI_GATEWAY_PROVIDER_ONLY para fijar la tarifa presupuestada.");
+  }
 
   return {
     port,
@@ -38,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     githubTokenConfigured: Boolean(env.GITHUB_TOKEN?.trim()),
     aiGatewayKeyConfigured: Boolean(env.AI_GATEWAY_API_KEY?.trim()),
     ...(model ? { aiGatewayModel: model } : {}),
+    ...(providerOnly ? { aiGatewayProviderOnly: providerOnly } : {}),
     ...(inputRate !== undefined ? { aiGatewayMaxInputUsdPerMillion: inputRate } : {}),
     ...(outputRate !== undefined ? { aiGatewayMaxOutputUsdPerMillion: outputRate } : {}),
   };

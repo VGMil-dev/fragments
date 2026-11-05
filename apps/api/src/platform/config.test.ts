@@ -24,11 +24,12 @@ describe("loadConfig", () => {
     const config = loadConfig({
       AI_GATEWAY_API_KEY: "fake-secret-do-not-log",
       AI_GATEWAY_MODEL: "fixture/model",
+      AI_GATEWAY_PROVIDER_ONLY: "fixture-provider",
       AI_GATEWAY_MAX_INPUT_USD_PER_MILLION: "1.25",
       AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION: "3.5",
       GITHUB_TOKEN: "fake-github-token-do-not-log",
     });
-    expect(config).toMatchObject({ githubTokenConfigured: true, aiGatewayKeyConfigured: true, aiGatewayModel: "fixture/model", aiGatewayMaxInputUsdPerMillion: 1.25, aiGatewayMaxOutputUsdPerMillion: 3.5 });
+    expect(config).toMatchObject({ githubTokenConfigured: true, aiGatewayKeyConfigured: true, aiGatewayModel: "fixture/model", aiGatewayProviderOnly: "fixture-provider", aiGatewayMaxInputUsdPerMillion: 1.25, aiGatewayMaxOutputUsdPerMillion: 3.5 });
     expect(JSON.stringify(config)).not.toContain("fake-secret-do-not-log");
     expect(JSON.stringify(config)).not.toContain("fake-github-token-do-not-log");
   });
@@ -37,5 +38,6 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ API_PORT: "0" })).toThrow();
     expect(() => loadConfig({ AUTH_ENABLED: "true" })).toThrow(/SESSION_SECRET/);
     expect(() => loadConfig({ AI_GATEWAY_MAX_INPUT_USD_PER_MILLION: "0" })).toThrow(/AI_GATEWAY_MAX_INPUT_USD_PER_MILLION/);
+    expect(() => loadConfig({ AI_GATEWAY_MODEL: "fixture/model", AI_GATEWAY_MAX_INPUT_USD_PER_MILLION: "1", AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION: "1" })).toThrow(/AI_GATEWAY_PROVIDER_ONLY/);
   });
 });

@@ -33,7 +33,7 @@ const repomix = createRepomixRepositoryPacker(runOfficialRepomix);
 
 const mentor = createMentorService({
   evaluator: config.aiGatewayKeyConfigured
-    ? createGatewayMentorEvaluator({ ...(config.aiGatewayModel ? { modelId: config.aiGatewayModel } : {}), gatewayKeyConfigured: true, ...(rates ? { rates } : {}), ledger })
+    ? createGatewayMentorEvaluator({ ...(config.aiGatewayModel ? { modelId: config.aiGatewayModel } : {}), ...(config.aiGatewayProviderOnly ? { providerOnly: config.aiGatewayProviderOnly } : {}), gatewayKeyConfigured: true, ...(rates ? { rates } : {}), ledger })
     : createLocalMentorEvaluator(),
   pdf: mentorPdf,
 });
@@ -42,7 +42,7 @@ const reviewStore = createSqliteReviewStore(database);
 const reviewService = createReviewService({
   repository: { getCommitSnapshot: (input, options) => github.readCommitSnapshot(input, options) },
   packer: repomix,
-  ai: createGatewayReviewAiProvider({ ...(config.aiGatewayModel ? { modelId: config.aiGatewayModel } : {}), gatewayKeyConfigured: config.aiGatewayKeyConfigured, ...(rates ? { rates } : {}), ledger }),
+  ai: createGatewayReviewAiProvider({ ...(config.aiGatewayModel ? { modelId: config.aiGatewayModel } : {}), ...(config.aiGatewayProviderOnly ? { providerOnly: config.aiGatewayProviderOnly } : {}), gatewayKeyConfigured: config.aiGatewayKeyConfigured, ...(rates ? { rates } : {}), ledger }),
   evaluations: reviewStore.evaluations,
   submissions: reviewStore.submissions,
   pdf,
@@ -58,6 +58,7 @@ const inspectorReviews = createInspectorReviewAdapter({
 });
 const gatewayInspectorProvider = createGatewayInspectorProvider({
   ...(config.aiGatewayModel ? { modelId: config.aiGatewayModel } : {}),
+  ...(config.aiGatewayProviderOnly ? { providerOnly: config.aiGatewayProviderOnly } : {}),
   gatewayKeyConfigured: config.aiGatewayKeyConfigured,
   ...(rates ? { rates } : {}),
   ledger,

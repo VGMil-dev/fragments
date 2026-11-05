@@ -10,6 +10,7 @@ afterEach(() => { for (const db of databases.splice(0)) db.close(); });
 
 const input = {
   packedText: "Commit exact sha\n### App.tsx\nexport default function App() { return null; }",
+  snapshotFiles: [{ path: "App.tsx", content: "export default function App() { return null; }" }],
   rubricVersion: "review-test-v1",
   inputDigest: "a".repeat(64),
   snapshotDigest: "b".repeat(64),
@@ -17,7 +18,7 @@ const input = {
 };
 const result = {
   score: 72,
-  findings: [{ criterionId: "app-entry", status: "verified" as const, evidence: [{ path: "App.tsx", lines: [1, 1] as [number, number] }], file: "App.tsx", lines: [1, 1] as [number, number], reason: "La ruta contiene el punto de entrada observado.", guidanceLevel: 1 }],
+  findings: [{ criterionId: "app-entry", status: "verified" as const, evidence: [{ path: "App.tsx", quote: "export default function App()" }], reason: "La ruta contiene el punto de entrada observado.", guidanceLevel: 1 }],
   limitations: ["La evaluación es orientativa."],
 };
 
@@ -35,6 +36,7 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
     expect(generate.mock.calls[0]?.[0].prompt).toContain("no confiable");
     expect(analysis).toMatchObject({ modelId: "fixture/model", inputDigest: input.inputDigest });
     expect(analysis.findings[0]?.evidence[0]?.digest).toBe(input.snapshotDigest);
+    expect(analysis.findings[0]?.evidence[0]).toMatchObject({ path: "App.tsx", lines: [1, 1] });
   });
 
   it("does not dispatch without a configured gateway key, model, or rate card", async () => {
@@ -52,5 +54,19 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
       generate: async () => ({ value: result }) });
     await expect(provider.analyze(input)).rejects.toThrow(AiBudgetUnavailableError);
     expect(ledger.summary().blocked).toBe(true);
+  });
+
+  it("rejects quotes that are absent from the exact snapshot", async () => {
+    const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger: makeLedger(),
+      generate: async () => ({ value: { ...result, findings: [{ ...result.findings[0]!, evidence: [{ path: "App.tsx", quote: "missing citation text" }] }] }, costUsd: 0 }) });
+    await expect(provider.analyze(input)).rejects.toThrow(/no está presente/);
+  });
+
+  it("resolves repeated literal citations to every exact source line", async () => {
+    const repeated = { ...input, snapshotFiles: [{ path: "App.tsx", content: "export default function App() { return null; }\nexport default function App() { return null; }" }] };
+    const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger: makeLedger(),
+      generate: async () => ({ value: result, costUsd: 0 }) });
+    const analysis = await provider.analyze(repeated) as { findings: Array<{ evidence: Array<{ lines: [number, number] }> }> };
+    expect(analysis.findings[0]?.evidence.map(({ lines }) => lines)).toEqual([[1, 1], [2, 2]]);
   });
 });

@@ -1,13 +1,20 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { migrate } from "../../db/migrate.js";
-import { AiBudgetUnavailableError, estimateAiCallCostMicroUsd, SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { AiBudgetUnavailableError, estimateAiCallCostMicroUsd, parseGatewayCostUsd, SqliteAiBudgetLedger } from "./budget-ledger.js";
 
 const databases: DatabaseSync[] = [];
 function ledger(limit = 1_000_000) { const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db); return new SqliteAiBudgetLedger(db, limit); }
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });
 
 describe("SqliteAiBudgetLedger", () => {
+  it("normalizes Gateway receipts returned as finite decimal strings", () => {
+    expect(parseGatewayCostUsd("0.0000123")).toBe(0.0000123);
+    expect(parseGatewayCostUsd(0)).toBe(0);
+    expect(parseGatewayCostUsd("Infinity")).toBeUndefined();
+    expect(parseGatewayCostUsd("-0.1")).toBeUndefined();
+  });
+
   it("estimates with a configured upper rate card and fails closed without one", () => {
     expect(estimateAiCallCostMicroUsd({ inputTokens: 10_000, outputTokens: 1_000, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 } })).toBe(14_000);
     expect(() => estimateAiCallCostMicroUsd({ inputTokens: 10_000, outputTokens: 1_000 })).toThrow(AiBudgetUnavailableError);
