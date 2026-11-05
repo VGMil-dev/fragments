@@ -55,6 +55,7 @@ Branch: `task/f06-inspector`, actualizada mediante merge no destructivo desde `c
 - Implementación F06 parcial: `c1c29eb` (`feat(f06): integra Inspector docente`).
 - W6 — evidencia exacta y auth local: `e0c9ad5` (`feat(f06): valida evidencia y sesion docente`).
 - Registro documental de la evidencia: `b17bdf9` (`docs(f06): registra verificacion de integracion`).
+- Enlace de hashes de evidencia: `10f81d7` (`docs(f06): enlaza evidencia y commit`).
 
 ## Seguimiento W6 — snapshot exacto y credenciales docentes
 
