@@ -1,0 +1,13 @@
+.data-source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--warning, #B97A33);
+  border-radius: 2px;
+  background: #FFF7E9;
+  color: var(--navy, #17345C);
+  font-size: 12px;
+  font-weight: 650;
+}

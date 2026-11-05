@@ -1,0 +1,26 @@
+{
+  "repository": "VGMil-dev/fragments-test-app",
+  "cases": [
+    {
+      "label": "A",
+      "commitSha": "1104f4046a8049e7736b14748c9f02d5a9f7a533",
+      "evidence": ["App.tsx"],
+      "verified": ["local React hook state", "required name and description inputs", "FlatList listing"],
+      "notPresent": ["required field validation", "name search", "recovered status"]
+    },
+    {
+      "label": "B",
+      "commitSha": "a66a8da27aec0f2b5a25a3ddd67142688ed8c518",
+      "evidence": ["App.tsx", "src/domain/lost-items.ts", "tests/lost-items.test.mjs"],
+      "verified": ["trimmed required field validation", "inline validation errors", "local React hook state", "FlatList listing"],
+      "notPresent": ["name search", "recovered status"]
+    },
+    {
+      "label": "C",
+      "commitSha": "e2b54b2a3760b22a509c89a8b1345d0e5f4e1781",
+      "evidence": ["App.tsx", "src/domain/lost-items.ts", "tests/lost-items.test.mjs"],
+      "verified": ["trimmed required field validation", "case-insensitive name search", "local React hook state", "FlatList listing", "mark item recovered", "unit tests for validation, search and recovery"],
+      "notPresent": []
+    }
+  ]
+}

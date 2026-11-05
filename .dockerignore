@@ -1,0 +1,14 @@
+.git
+.env*
+node_modules
+**/node_modules
+**/dist
+.turbo
+**/.turbo
+coverage
+**/coverage
+data
+**/data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

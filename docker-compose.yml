@@ -1,52 +1,19 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fragments
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fragments"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   api:
-    build: ./apps/api
-    ports:
-      - "3001:3001"
+    env_file: .env
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: build
+    command: ./apps/api/node_modules/.bin/tsx watch apps/api/src/main.ts
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/fragments
-      BETTER_AUTH_SECRET: supersecret-change-in-production
-      BETTER_AUTH_URL: http://localhost:3001
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/auth/ok"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  web:
-    build: ./apps/web
+      API_PORT: "3000"
+      DATABASE_URL: file:/app/data/fragments.sqlite
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      API_INTERNAL_URL: http://api:3001
-    depends_on:
-      api:
-        condition: service_healthy
+    volumes:
+      - ./apps/api:/app/apps/api
+      - fragments-data:/app/data
 
 volumes:
-  postgres_data:
+  fragments-data:

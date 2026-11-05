@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254" role="img" aria-labelledby="title desc">
+ <title id="title">Fragments</title>
+ <desc id="desc">Icono de fragmentos modulares azul marino y celeste, con símbolo de código, barras, destello y píxeles sobre fondo crema</desc>
+ <defs>
+  <radialGradient id="paper" cx="50%" cy="42%" r="78%"><stop stop-color="#FFF9F0"/><stop offset=".7" stop-color="#FCF5E9"/><stop offset="1" stop-color="#F6EEE1"/></radialGradient>
+  <linearGradient id="navy" x1="0" y1="0" x2=".88" y2="1" objectBoundingBox="true"><stop stop-color="#0B2C68"/><stop offset="1" stop-color="#092454"/></linearGradient>
+  <linearGradient id="electric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4D87EF"/><stop offset="1" stop-color="#4777DE"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A1CCF5"/><stop offset="1" stop-color="#8EBDEE"/></linearGradient>
+  <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5386EC"/><stop offset="1" stop-color="#4273DF"/></linearGradient>
+ </defs>
+ <!-- Original canvas and surrounding navy border -->
+ <rect width="1254" height="1254" fill="url(#paper)"/>
+ <path d="M300 79H919C1062 79 1177 197 1177 338V921C1177 1061 1065 1175 926 1175H316C173 1175 71 1067 71 924V338C71 195 161 79 300 79Z" fill="none" stroke="#092656" stroke-width="27" stroke-linejoin="round"/>
+ <!-- Top left fragment: broad asymmetric domed corner and small soft lip -->
+ <path d="M309 515V440C309 355 371 302 457 290C487 285 536 287 571 287C592 287 606 301 606 326V463C606 490 585 505 561 505H360C334 505 319 511 309 515Z" fill="url(#navy)"/>
+ <!-- Top right rounded sky tile -->
+ <path d="M682 289H756C788 289 814 315 814 347V449C814 479 790 504 758 504H681C646 504 622 477 622 448V346C622 313 646 289 682 289Z" fill="url(#sky)"/>
+ <!-- Code tile -->
+ <rect x="305" y="523" width="243" height="234" rx="60" fill="url(#electric)"/>
+ <!-- Wide navy tail / fragment -->
+ <path d="M615 524H883C911 524 929 541 929 562V597C929 678 854 741 772 741H563V573C563 542 579 524 615 524Z" fill="url(#navy)"/>
+ <!-- Analytics tile -->
+ <rect x="305" y="774" width="247" height="239" rx="55" fill="url(#navy)"/>
+ <!-- Code glyph thick, rounded -->
+ <g stroke="#FFFAF2" stroke-width="19" stroke-linecap="round" stroke-linejoin="round" fill="none">
+   <path d="M388 604L354 637L388 668"/>
+   <path d="M444 594L418 686"/>
+   <path d="M475 603L505 634L477 665"/>
+ </g>
+ <!-- chart bars -->
+ <g fill="#FFF9F0">
+   <rect x="360" y="939" width="36" height="52" rx="15"/>
+   <rect x="414" y="904" width="37" height="87" rx="16"/>
+   <rect x="468" y="862" width="37" height="129" rx="17"/>
+ </g>
+ <!-- Four-point sparkle -->
+ <path d="M890 258C902 285 920 303 949 317C921 331 903 350 891 376C880 349 863 333 831 317C863 302 878 285 890 258Z" fill="url(#spark)"/>
+ <!-- sparkle strokes -->
+ <g fill="none" stroke="#4B7FE8" stroke-width="21" stroke-linecap="round">
+  <path d="M951 217L938 250"/>
+  <path d="M1002 249L972 269"/>
+  <path d="M1010 318H975"/>
+ </g>
+ <!-- four little square fragments -->
+ <g fill="url(#sky)">
+  <rect x="852" y="850" width="56" height="56" rx="14"/>
+  <rect x="802" y="900" width="55" height="55" rx="14"/>
+  <rect x="907" y="899" width="56" height="56" rx="14"/>
+  <rect x="852" y="950" width="56" height="56" rx="14"/>
+ </g>
+</svg>
