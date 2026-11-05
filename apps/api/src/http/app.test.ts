@@ -7,6 +7,8 @@ import { SessionAuth } from "../auth/session.js";
 import { TeacherSessionService } from "../auth/session-service.js";
 import { createMentorService } from "../features/mentor/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
+import { createInspectorService, type ReviewEvidence } from "../features/inspector/service.js";
+import { createInspectorRepository } from "../features/inspector/repository.js";
 
 const servers: ReturnType<typeof createServer>[] = [];
 const databases: DatabaseSync[] = [];
@@ -126,5 +128,76 @@ describe("HTTP API", () => {
     const verified = await fetch(`${base}/api/verify/${submissionBody.data.verificationCode}`);
     expect(verified.status).toBe(200);
     expect(await verified.json()).toMatchObject({ ok: true, data: { kind: "mentor", integrityValid: true } });
+  });
+
+  it("protects Inspector private data and persists a teacher challenge through assignment and defense", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const digest = "c".repeat(64);
+    const review: ReviewEvidence = {
+      id: "review-1", projectId: "project-1", commitSha: "a".repeat(40),
+      snapshot: {
+        owner: "student", repo: "demo", commitSha: "a".repeat(40), digest,
+        files: [{ path: "src/math.ts", content: "export const add = (a, b) => a + b;\n", sha: "d".repeat(40) }],
+      },
+      analysis: {
+        rubricVersion: "review-1", score: 80, limitations: [], modelId: "fake/review", inputDigest: digest,
+        findings: [{
+          criterionId: "correctness", status: "verified", evidence: [{ source: "repository", path: "src/math.ts", lines: [1, 1], digest }],
+          file: "src/math.ts", lines: [1, 1], reason: "La función suma los valores.", guidanceLevel: 1,
+        }],
+      },
+    };
+    const inspector = createInspectorService({
+      reviews: {
+        async getById(id) { return id === review.id ? review : null; },
+        async getLatestCommit() { return review.commitSha; },
+      },
+      provider: { async createChallenge() {
+        return {
+          precondition: "Existe una función de suma.", mutation: "Invierte temporalmente la operación.",
+          demonstration: "Prueba un par de valores.", restoration: "Restaura la suma.", estimatedMinutes: 10,
+          teacherHint: "Compara el operador aritmético.",
+        };
+      } },
+      store: createInspectorRepository(db),
+      createId: () => "challenge-1",
+      now: () => new Date("2026-11-04T12:00:00.000Z"),
+    });
+    const auth = new TeacherSessionService({
+      async verify(email) { return email === "teacher@example.test" ? "teacher-1" : null; },
+    }, new SessionAuth("inspector-http-test-secret-".repeat(2)));
+    const server = createServer(createHttpHandler(db, { auth, inspector })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const base = `http://127.0.0.1:${address.port}`;
+
+    const unauthorized = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST" });
+    expect(unauthorized.status).toBe(401);
+    expect(await unauthorized.text()).not.toContain("teacherHint");
+
+    const issued = await auth.login("teacher@example.test", "fake-fixture-password");
+    expect(issued).toBeTruthy();
+    const headers = { cookie: `fragments_session=${issued!.token}`, "content-type": "application/json" };
+    const createdResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST", headers });
+    expect(createdResponse.status).toBe(201);
+    const createdBody = await createdResponse.json() as { data: { id: string; challenge: { teacherHint: string }; status: string } };
+    expect(createdBody.data.challenge.teacherHint).toContain("operador");
+    expect(createdBody.data.status).toBe("pending");
+
+    const assignedResponse = await fetch(`${base}/api/inspector/challenges/challenge-1/assign`, { method: "POST", headers, body: "{}" });
+    expect(assignedResponse.status).toBe(200);
+    const recordedResponse = await fetch(`${base}/api/inspector/challenges/challenge-1/record`, {
+      method: "POST", headers, body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, notes: "Se explicó y restauró." }),
+    });
+    expect(recordedResponse.status).toBe(200);
+    expect(await recordedResponse.json()).toMatchObject({ ok: true, data: { status: "completed", defense: { mutationObserved: true, restorationConfirmed: true } } });
+
+    const listResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { headers: { cookie: headers.cookie } });
+    const listed = await listResponse.text();
+    expect(listResponse.status).toBe(200);
+    expect(listed).toContain("teacherHint");
+    expect(listed).toContain("Se explicó y restauró.");
+    expect(listResponse.headers.get("cache-control")).toBe("no-store");
   });
 });

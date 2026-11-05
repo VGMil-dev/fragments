@@ -6,6 +6,7 @@
 4. `RepositorySnapshot = {owner,repo,commitSha,files: Array<{path,content,sha}>,digest}`; no raw fetch URLs enviados por usuarios.
 5. `AiAnalysis = {rubricVersion,score,findings,limitations,modelId,inputDigest}`; IA sin autoridad para establecer calificación final.
 6. The student-facing `InspectorChallenge` contains `{evaluationId,sourceEvidence,precondition,mutation,demonstration,restoration,estimatedMinutes}`. The private teacher variant adds `teacherHint`; serialize and validate student responses with the public schema so the hint is rejected if present.
+7. Inspector teacher routes use `InspectorChallengeRecordResponseSchema` for private state, `InspectorDefenseRecordRequestSchema` for mutation/restoration notes (strict, maximum 2000 characters), and `InspectorStudentChallengeResponseSchema` for public assigned challenges. Assignment accepts only an empty strict object. The API verifies a teacher session before reading or changing private challenge records.
 7. `SubmissionSnapshot = {kind:'mentor'|'review',sourceId,score,snapshotJson,contentHash,verificationCode,rubricVersion,createdAt}`. No almacenar PDFs ni README.
 8. Idempotencia por `(projectId,commitSha,rubricVersion,evaluatorVersion)`; Mentor por JSON canónico+rúbrica.
 9. Provider drivers (`AiProvider`, `RepoDriver`, `PackerDriver`, `PdfRenderer`, `EvaluationRepository`) con fake in-memory para pruebas; no API framework coupling en dominio.

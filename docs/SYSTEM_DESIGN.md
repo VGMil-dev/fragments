@@ -29,8 +29,8 @@ Turborepo + pnpm workspaces; `apps/web` (React + Vite + TS), `apps/api` (Node + 
 S0 base funcional web/API/health/contratos. S1 propuesta Mentor end-to-end: pantalla→API→persistencia→fixture IA→resultado. S2 entrega Mentor README+PDF efímero+verificador. S3 Review por commit en cola, feedback y PDF. S4 Inspector privado por commit y registro docente. S5 galería opt-in e integración de calidad + hardening. Cada slice debe atravesar UI, API, persistencia, pruebas y evidencia.
 
 ## Endpoints mínimos propuestos (sujetos a contrato fijado por planner)
-`GET /health`, `GET /api/gallery`, `POST /api/proposals`, `POST /api/proposals/:id/review`, `POST /api/mentor-submissions`, `GET /api/mentor-submissions/:id/readme`, `GET /api/mentor-submissions/:id/pdf`, `POST /api/reviews`, `GET /api/reviews/:id`, `POST /api/review-submissions`, `GET /api/review-submissions/:id/pdf`, `GET /api/verify/:code`, `POST /api/inspector/:reviewId/challenges`, `POST /api/inspector/challenges/:id/record`.
-La ruta pública de verificación da solo microinforme no sensible. Inspector requiere rol docente en backend. Esquemas y errores uniformes en `packages/contracts`.
+`GET /health`, `GET /api/gallery`, `POST /api/proposals`, `POST /api/proposals/:id/review`, `POST /api/mentor-submissions`, `GET /api/mentor-submissions/:id/readme`, `GET /api/mentor-submissions/:id/pdf`, `POST /api/reviews`, `GET /api/reviews/:id`, `POST /api/review-submissions`, `GET /api/review-submissions/:id/pdf`, `GET /api/verify/:code`, `GET /api/inspector/:reviewId/challenges`, `POST /api/inspector/:reviewId/challenges`, `POST /api/inspector/challenges/:id/assign`, `POST /api/inspector/challenges/:id/record`.
+La ruta pública de verificación da solo microinforme no sensible. Todas las rutas Inspector requieren sesión docente en backend, no cachean sus respuestas y validan entrada/salida con `packages/contracts`; el hint docente nunca sale en la respuesta estudiantil.
 
 ## Invariantes de datos
 - Propuesta editable = borrador; al pulsar Generar entrega se crea snapshot inmutable con campos necesarios para reconstruir README y PDF; no basta título+nota+hash.
