@@ -18,6 +18,15 @@ export type ReviewContext = {
   rubricVersion: string;
   evaluatorVersion: string;
 };
+export type ReviewAiBudget = {
+  maxInputBytes: number;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  timeoutMs: number;
+  signal: AbortSignal;
+};
+export type ReviewAiInput = { packedText: string; rubricVersion: string; inputDigest: string; snapshotDigest: string; budget: ReviewAiBudget };
+export type ReviewProcessingSignal = { signal?: AbortSignal };
 type SubmissionResponseData = ReturnType<typeof SubmissionResponseSchema.parse>;
 export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
 export type ReviewRecord = {
@@ -35,13 +44,13 @@ export type ReviewRecord = {
 };
 
 export interface ReviewDependencies {
-  repository: { getCommitSnapshot(input: Pick<ReviewRequest, "owner" | "repo" | "commitSha">): Promise<unknown> };
-  packer: { pack(snapshot: RepositorySnapshot, budget: { maxBytes: number; maxTokens: number }): Promise<PackedRepository> };
-  ai: { analyze(input: { packedText: string; rubricVersion: string; inputDigest: string }): Promise<unknown> };
+  repository: { getCommitSnapshot(input: Pick<ReviewRequest, "owner" | "repo" | "commitSha">, options?: ReviewProcessingSignal): Promise<unknown> };
+  packer: { pack(snapshot: RepositorySnapshot, budget: { maxBytes: number; maxTokens: number } & ReviewProcessingSignal): Promise<PackedRepository> };
+  ai: { analyze(input: ReviewAiInput): Promise<unknown> };
   evaluations: {
     getByKey(key: string): Promise<ReviewRecord | null>;
     getById(id: string): Promise<ReviewRecord | null>;
-    save(record: ReviewRecord): Promise<ReviewRecord>;
+    save(record: ReviewRecord, lease?: { owner: string }): Promise<ReviewRecord>;
   };
   submissions: {
     save(snapshot: SubmissionResponseData): Promise<void>;
@@ -54,6 +63,7 @@ export interface ReviewDependencies {
   createVerificationCode?: () => string;
   maxBytes?: number;
   maxTokens?: number;
+  aiBudget?: { maxOutputTokens: number; timeoutMs: number };
 }
 
 export async function sha256(value: string): Promise<string> {
@@ -75,6 +85,10 @@ export function digestSnapshot(snapshot: Omit<RepositorySnapshot, "digest">): Pr
 
 async function keyFor(request: ReviewRequest, context: ReviewContext): Promise<string> {
   return sha256(canonicalJson({ projectId: context.projectId, commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
+}
+
+export function reviewIdempotencyKey(request: ReviewRequest, context: ReviewContext): Promise<string> {
+  return keyFor(request, context);
 }
 
 function randomToken(bytes: number): string {
@@ -146,11 +160,17 @@ async function validateEvidence(analysis: AiAnalysis, snapshot: RepositorySnapsh
 
 export function createReviewService(dependencies: ReviewDependencies) {
   const now = dependencies.now ?? (() => new Date());
-  const id = dependencies.createId ?? (() => randomToken(12));
-  const submissionId = dependencies.createSubmissionId ?? (() => randomToken(12));
+  const id = dependencies.createId ?? (() => `r${randomToken(12)}`);
+  const submissionId = dependencies.createSubmissionId ?? (() => `s${randomToken(12)}`);
   const verificationCode = dependencies.createVerificationCode ?? (() => randomToken(24));
   const maxBytes = dependencies.maxBytes ?? 100_000;
   const maxTokens = dependencies.maxTokens ?? 20_000;
+  const maxOutputTokens = dependencies.aiBudget?.maxOutputTokens ?? 2_000;
+  const aiTimeoutMs = dependencies.aiBudget?.timeoutMs ?? 30_000;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || !Number.isSafeInteger(maxTokens) || maxTokens < 1 ||
+      !Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1 || !Number.isSafeInteger(aiTimeoutMs) || aiTimeoutMs < 1) {
+    throw new Error("El presupuesto de Review debe contener límites enteros positivos.");
+  }
 
   async function getRecord(reviewId: string): Promise<ReviewRecord> {
     const record = await dependencies.evaluations.getById(reviewId);
@@ -158,26 +178,51 @@ export function createReviewService(dependencies: ReviewDependencies) {
     return record;
   }
 
+  async function renderSubmissionPdf(submission: SubmissionResponseData): Promise<Uint8Array> {
+    const parsed = SubmissionResponseSchema.parse(submission);
+    if (parsed.kind !== "review") throw new Error("La entrega no corresponde a una revisión.");
+    const snapshot = parsed.snapshotJson as { commitSha?: string; findings?: FeedbackFinding[]; limitations?: string[] };
+    const findings = snapshot.findings ?? [];
+    const limitations = snapshot.limitations ?? [];
+    const text = ["Fragments · Informe de Review", `Commit: ${snapshot.commitSha ?? "desconocido"}`, `Puntaje orientativo: ${parsed.score}/100`, "", ...findings.flatMap((finding) => [
+      `${finding.criterionId} (${finding.status}) — ${finding.reason}`,
+      ...finding.evidence.map((reference) => reference.source === "repository" ? `Evidencia: ${reference.path}#L${reference.lines[0]}-L${reference.lines[1]}` : `Evidencia: ${reference.field}`),
+    ]), ...limitations.map((limitation) => `Límite: ${limitation}`), "", `Verificación: ${parsed.verificationCode}`].join("\n");
+    return dependencies.pdf.render(text);
+  }
+
   return {
-    async review(rawRequest: unknown, rawContext: unknown) {
+    async review(rawRequest: unknown, rawContext: unknown, options: { signal?: AbortSignal; reviewId?: string; leaseOwner?: string } = {}) {
       const request = parseReviewRequest(rawRequest);
       const context = parseReviewContext(rawContext);
       const key = await keyFor(request, context);
       const cached = await dependencies.evaluations.getByKey(key);
       if (cached) return toPublicReviewResponse(cached);
 
-      const snapshot = await validateSnapshot(await dependencies.repository.getCommitSnapshot({ owner: request.owner, repo: request.repo, commitSha: request.commitSha }), request);
-      const packed = await dependencies.packer.pack(snapshot, { maxBytes, maxTokens });
+      const commitRequest = { owner: request.owner, repo: request.repo, commitSha: request.commitSha };
+      const rawSnapshot = options.signal
+        ? await dependencies.repository.getCommitSnapshot(commitRequest, { signal: options.signal })
+        : await dependencies.repository.getCommitSnapshot(commitRequest);
+      const snapshot = await validateSnapshot(rawSnapshot, request);
+      const packed = await dependencies.packer.pack(snapshot, { maxBytes, maxTokens, ...(options.signal ? { signal: options.signal } : {}) });
       if (new TextEncoder().encode(packed.text).length > maxBytes || packed.tokenCount > maxTokens) throw new Error("El contenido empaquetado supera el presupuesto de revisión.");
       if (await sha256(packed.text) !== packed.inputDigest) throw new Error("La huella del contenido empaquetado no coincide.");
-      const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({ packedText: packed.text, rubricVersion: context.rubricVersion, inputDigest: packed.inputDigest })), snapshot, packed.inputDigest);
+      const timeoutSignal = AbortSignal.timeout(aiTimeoutMs);
+      const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+      const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({
+        packedText: packed.text,
+        rubricVersion: context.rubricVersion,
+        inputDigest: packed.inputDigest,
+        snapshotDigest: snapshot.digest,
+        budget: { maxInputBytes: maxBytes, maxInputTokens: maxTokens, maxOutputTokens, timeoutMs: aiTimeoutMs, signal },
+      })), snapshot, packed.inputDigest);
       if (analysis.rubricVersion !== context.rubricVersion) throw new Error("El análisis devolvió una rúbrica distinta a la solicitada.");
       if (packed.omittedPaths?.length) analysis.limitations.push(`El presupuesto omitió ${packed.omittedPaths.length} archivo(s): ${packed.omittedPaths.slice(0, 20).join(", ")}${packed.omittedPaths.length > 20 ? ", …" : ""}.`);
       const record = await dependencies.evaluations.save({
-        id: id(), key, projectId: context.projectId, owner: request.owner, repo: request.repo, commitSha: snapshot.commitSha,
+        id: options.reviewId ?? id(), key, projectId: context.projectId, owner: request.owner, repo: request.repo, commitSha: snapshot.commitSha,
         rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion,
         updatedAt: now().toISOString(), packedDigest: packed.inputDigest, analysis,
-      });
+      }, options.leaseOwner ? { owner: options.leaseOwner } : undefined);
       return toPublicReviewResponse(record);
     },
 
@@ -205,13 +250,13 @@ export function createReviewService(dependencies: ReviewDependencies) {
         id: submissionId(),
         contentHash: await sha256(canonicalJson(snapshot)),
       });
-      const text = ["Fragments · Informe de Review", `Commit: ${record.commitSha}`, `Puntaje orientativo: ${record.analysis.score}/100`, "", ...record.analysis.findings.flatMap((finding) => [
-        `${finding.criterionId} (${finding.status}) — ${finding.reason}`,
-        ...finding.evidence.map((reference) => reference.source === "repository" ? `Evidencia: ${reference.path}#L${reference.lines[0]}-L${reference.lines[1]}` : `Evidencia: ${reference.field}`),
-      ]), ...record.analysis.limitations.map((limitation) => `Límite: ${limitation}`), "", `Verificación: ${code}`].join("\n");
-      const bytes = await dependencies.pdf.render(text);
+      const bytes = await renderSubmissionPdf(submission);
       await dependencies.submissions.save(submission);
       return { bytes, contentType: "application/pdf" as const, verificationCode: code, submission };
+    },
+
+    renderSubmissionPdf(submission: SubmissionResponseData) {
+      return renderSubmissionPdf(submission);
     },
 
     async verify(code: string) {
