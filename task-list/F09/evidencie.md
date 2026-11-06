@@ -9,8 +9,10 @@ Estado: COMPLETA y verificada localmente en `codex/mentor-docx-import`, creada d
 - `pnpm typecheck`: pasa en los 3 paquetes.
 - `pnpm build`: pasa en los 3 paquetes; Mammoth queda en chunk diferido de 491.75 kB (118.68 kB gzip).
 - Pruebas F09: plantilla oficial vacía, DOCX sintético completo con respuestas, extensión incorrecta, ZIP corrupto, límite de 2 MB, expansión >8 MB, objeto incrustado, edición y guardar/evaluar por callbacks existentes.
-- Ego Lite local: abrió `/student/mentor`, descargó `fragments-mentor-propuesta.docx` y confirmó la importación de la plantilla vacía con mensaje claro; no se ejecutó guardar ni evaluación contra API.
+- Chequeo inicial Ego Lite local: abrió `/student/mentor`, descargó `fragments-mentor-propuesta.docx` y confirmó la importación de la plantilla vacía con mensaje claro.
+- Recorrido completo posterior solicitado: Ego Lite importó un DOCX sintético completo, confirmó la vista editable, guardó y recibió una evaluación real del AI Gateway: viable, 78/100, con cinco hallazgos y seis ideas para continuar. Una primera corrida detectó repetición en los datos de prueba; se corrigió el fixture y se repitió con valores únicos. Fueron dos llamadas Gateway, coste registrado total USD 0.000261.
+- La API usó una SQLite temporal aislada en el worktree; el DOCX de prueba y la base se eliminaron al terminar. No se usó ni modificó producción.
 - `git diff --check`: sin errores.
-- Sin llamadas a AI Gateway; producción y el tag `v0.1.0-mvp` no se modificaron ni desplegaron.
+- Producción y el tag `v0.1.0-mvp` no se modificaron ni desplegaron.
 
 Commit de implementación: `3fa3d49` (`feat(mentor): importar propuestas DOCX`).
