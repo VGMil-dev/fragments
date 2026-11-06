@@ -39,6 +39,8 @@ Estado: EN PROGRESO. La autorización de despliegue llegó el 2026-11-05; se con
 - Tras reiniciar solo el contenedor API, health siguió 200 y el usuario persistió en SQLite.
 - Backup de prueba `/var/backups/fragments/fragments-2026-11-06T01-30-55-779Z.sqlite`, 188416 bytes, SHA-256 `62b5ccfa1e21a9dd9bac6c7604370354c55d5bb657503ad4694e178f78520255`; restore aislado devolvió `PRAGMA integrity_check=ok` y conservó el registro docente.
 - Estado fresco: `fragments-backup.timer` `enabled` y `active`; siguiente ejecución observada 2026-11-06 03:16 UTC. Se observaron ambos contenedores saludables y el backup de prueba presente. Backup con permisos de archivo 0600 verificado en la prueba previa.
+- Revalidación posterior: `docker image inspect` confirmó `linux/arm64` para ambas imágenes; `.env` remoto `root:root 0600`; directorio de backups `root:root 0700`; volumen SQLite `fragments-data` en `/var/lib/docker/volumes/fragments-data/_data`. El timer declara `OnCalendar=*-*-* 03:15:00 UTC`, `Persistent=true` y `RandomizedDelaySec=15m` (por eso la hora de activación varía); permanece habilitado y activo.
+- La cuenta Cloudflare continúa como `agentDelegatedToUser` en Ego Lite; no se usó ni modificó la sesión en esta revalidación.
 - La prueba no llamó al AI Gateway ni a GitHub.
 
 ## Verificación y cierre
