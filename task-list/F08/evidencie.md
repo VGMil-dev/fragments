@@ -53,4 +53,4 @@ Estado: COMPLETADA. La autorización de despliegue llegó el 2026-11-05; se cont
 
 ## Verificación y cierre
 
-- Commit local de cierre de despliegue y evidencia: `9204cd85662daf68b7fabdff20c5d15ec4d37e7c` (`docs(F08): documenta ruta publica y pruebas finales`). `task-list/TASKS.md` se marca completada en el commit de cierre documental siguiente. No se hizo push. El problema observado en el destino Pits de producción queda documentado, sin cambios fuera de F08.
+- Commit local de cierre de despliegue y evidencia: `9204cd85662daf68b7fabdff20c5d15ec4d37e7c` (`docs(F08): documenta ruta publica y pruebas finales`). Commit que marca F08 completa y actualiza la lista: `6155ec0ea93f18170ac5b40a875b57d8e6f6eb7f`. No se hizo push. El problema observado en el destino Pits de producción queda documentado, sin cambios fuera de F08.
