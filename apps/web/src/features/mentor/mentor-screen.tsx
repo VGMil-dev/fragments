@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type {
   ApiResult,
   CreateMentorSubmissionRequest,
@@ -11,6 +11,7 @@ import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
 import { SubmissionDownloads } from "../submissions/submission-downloads";
 import { validateProposalDraft, type ProposalDraftFields } from "./proposal-validation";
+import { importMentorDocx, MentorDocxImportError } from "./docx-import";
 import "./mentor-screen.css";
 
 export interface MentorScreenProps {
@@ -89,6 +90,10 @@ export function MentorScreen({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<AsyncState<ProposalEvaluationResponse> | null>(initialEvaluation ?? null);
   const [submission, setSubmission] = useState<AsyncState<MentorSubmissionResponse> | null>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const importInput = useRef<HTMLInputElement>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
 
   function updateField(field: keyof ProposalDraftFields, value: string) {
@@ -98,6 +103,29 @@ export function MentorScreen({
     setEvaluation(null);
     setSubmission(null);
     setSaveMessage(null);
+    setImportMessage(null);
+  }
+
+  async function importProposal(file?: File) {
+    setImportError(null);
+    setImportMessage(null);
+    if (!file) return;
+    try {
+      const result = await importMentorDocx(file);
+      setFields(result.fields);
+      setFieldErrors({});
+      setIsDirty(true);
+      setEvaluation(null);
+      setSubmission(null);
+      setSaveMessage(null);
+      setImportMessage(result.hasAnswers
+        ? "Revisa y edita los campos importados. Guarda la propuesta para confirmar antes de evaluarla."
+        : "La plantilla no contiene respuestas. Puedes completar el formulario manualmente.");
+    } catch (error) {
+      setImportError(error instanceof MentorDocxImportError ? error.message : "No pudimos leer el documento. Descarga la plantilla y vuelve a intentarlo.");
+    } finally {
+      if (importInput.current) importInput.current.value = "";
+    }
   }
 
   async function saveProposal(event: FormEvent<HTMLFormElement>) {
@@ -177,10 +205,34 @@ export function MentorScreen({
         <DataSourceBadge mode={mode} {...(evaluation?.status === "success" ? { modelId: evaluation.data.analysis.modelId } : {})} />
       </header>
 
+      <section className="mentor-choices" aria-label="Cómo empezar tu propuesta">
+        <div className="mentor-choices__template">
+          <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">
+            Descargar plantilla Word
+          </a>
+          <label className="button button--light mentor-choices__upload">
+            Importar propuesta (.docx)
+            <input
+              ref={importInput}
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              disabled={formBusy}
+              onChange={(event) => void importProposal(event.currentTarget.files?.[0])}
+              aria-label="Importar propuesta (.docx)"
+            />
+          </label>
+        </div>
+        <button className="mentor-choices__direct" type="button" onClick={() => titleInput.current?.focus()}>
+          Crear propuesta directamente
+        </button>
+        {importMessage ? <p className="mentor-screen__success" role="status">{importMessage}</p> : null}
+        {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
+      </section>
+
       <form className="mentor-form" onSubmit={(event) => void saveProposal(event)} noValidate>
         <label className="mentor-field mentor-field--wide">
           <span>Título de la propuesta</span>
-          <input value={fields.title} maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />
+          <input ref={titleInput} value={fields.title} maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />
           {fieldErrors.title ? <small id="mentor-title-error" role="alert">{fieldErrors.title}</small> : null}
         </label>
 
