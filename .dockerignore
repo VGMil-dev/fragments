@@ -1,5 +1,8 @@
 .git
 .env*
+**/.env*
+deploy/production/.env
+deploy/production/.env.bootstrap
 node_modules
 **/node_modules
 **/dist
