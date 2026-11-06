@@ -1,6 +1,11 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MentorScreen } from "./mentor-screen";
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const proposal = {
   id: "proposal-1",
@@ -49,6 +54,17 @@ const actions = {
   onPdf: vi.fn(async () => ({ ok: true as const, data: new Blob(["pdf"]) })),
 };
 
+let mountedRoot: ReturnType<typeof createRoot> | undefined;
+let mountedContainer: HTMLDivElement | undefined;
+
+afterEach(() => {
+  if (mountedRoot) act(() => mountedRoot?.unmount());
+  mountedRoot = undefined;
+  mountedContainer?.remove();
+  mountedContainer = undefined;
+  vi.clearAllMocks();
+});
+
 describe("MentorScreen", () => {
   it("starts with a validated proposal form and no invented evaluation", () => {
     const html = renderToStaticMarkup(
@@ -57,6 +73,10 @@ describe("MentorScreen", () => {
 
     expect(html).toContain("Tu idea toma forma");
     expect(html).toContain("Guardar propuesta");
+    expect(html).toContain("Descargar plantilla Word");
+    expect(html).toContain("/templates/fragments-mentor-propuesta.docx");
+    expect(html).toContain("Importar propuesta (.docx)");
+    expect(html).toContain("Crear propuesta directamente");
     expect(html).not.toContain("72/100");
     expect(html).not.toContain("scope necesita");
   });
@@ -70,5 +90,28 @@ describe("MentorScreen", () => {
     expect(html).toContain("El alcance necesita un límite más concreto.");
     expect(html).toContain("Prueba primero con dos entradas.");
     expect(html).not.toContain("verified");
+  });
+
+  it("saves edits before evaluating through the existing Mentor callbacks", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />);
+    });
+
+    const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
+    expect(title).not.toBeNull();
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Diario de plantas editado");
+    await act(async () => title?.dispatchEvent(new Event("input", { bubbles: true })));
+    const form = mountedContainer.querySelector("form");
+    await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
+    expect(actions.onSave).toHaveBeenCalledWith(expect.objectContaining({ title: "Diario de plantas editado" }));
+    const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
+    expect(evaluate).toBeDefined();
+    await act(async () => evaluate?.click());
+    expect(actions.onEvaluate).toHaveBeenCalledWith(proposal.id);
+    expect(mountedContainer.textContent).toContain("72/100");
   });
 });

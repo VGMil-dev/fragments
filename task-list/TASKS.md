@@ -13,6 +13,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F06 | W6 | F00,F05 contrato | Inspector retos privados inversos→sesión→estado; pruebas seguridad y UI | [x] |
 | F07 | PLANNER | F01..F06 | Integración real, ego(lite), Promptfoo, QA, documentación final, despliegue local | [x] |
 | F08 | PLANNER | F07 | Despliegue de release en Oracle ARM64 con auth, web, backups SQLite y Cloudflare Tunnel; smoke checks sin secretos | [x] |
+| F09 | PLANNER | F02,F04 | Descarga de plantilla DOCX e importación local editable en Mentor; pruebas del flujo existente | [x] |
 
 ## Estado de cierre de integración — 2026-11-05
 
