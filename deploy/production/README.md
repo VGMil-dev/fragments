@@ -32,4 +32,6 @@ Para recuperar, conservar primero una copia de la base y sidecars actuales, para
 
 ## Túnel
 
-La ruta pública debe conservar el hostname existente de Pits y añadir un hostname específico de Fragments cuyo servicio de origen sea `http://127.0.0.1:3001`. El hostname final se determina desde la zona/domino autorizado del túnel. Cloudflare termina HTTPS en el borde; la conexión al origen queda limitada al loopback del host.
+El túnel remoto existente `gavanti-srv` conserva sus hostnames anteriores y publica `fragments.gavanti.org` con origen `http://127.0.0.1:3001`. Cloudflare creó el CNAME al túnel y termina HTTPS en el borde; la conexión al origen queda limitada al loopback del host.
+
+En la verificación de F08, los destinos existentes `pits.gavanti.org` (`127.0.0.1:8080`) y `pits-dev.gavanti.org` (`127.0.0.1:8081`) permanecieron en la configuración. Se observó que el primero devuelve 502 porque no había listener local en 8080; no se redirigió el hostname de producción al puerto de desarrollo ni se modificó ningún servicio de Pits.
