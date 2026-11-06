@@ -24,4 +24,5 @@ Commit de implementación: `3fa3d49` (`feat(mentor): importar propuestas DOCX`).
 - `CI=true pnpm install --frozen-lockfile` → correcto; Lockfile vigente y script de esbuild completado.
 - `pnpm exec turbo run test typecheck build lint --force` → 10/10 tareas sin caché; contratos 18/18, API 78/78, web 49/49 (145 tests); typecheck y build de los tres paquetes correctos; lint correcto.
 - `git diff --check` → sin errores.
+- Commit que habilita instalación y registra la verificación: `70e00fbd52ae70ae2585128cd26f1f5a9ccffae8`.
 - Estado: verificación local del candidato correcta. Publicación, backup, despliegue y validación de la versión v0.2.0 siguen pendientes; no se contactó GitHub ni producción durante esta revalidación.
