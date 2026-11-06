@@ -12,6 +12,10 @@ COPY apps/api apps/api
 RUN ./node_modules/.bin/tsc -p packages/contracts/tsconfig.json && ./apps/api/node_modules/.bin/tsc -p apps/api/tsconfig.json
 
 FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
+ARG SOURCE_REVISION=4553ae204160f95dfcb0886fe9741566441f3cbc
+LABEL org.opencontainers.image.title="Fragments API" \
+      org.opencontainers.image.version="v0.1.0-mvp" \
+      org.opencontainers.image.revision="$SOURCE_REVISION"
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
