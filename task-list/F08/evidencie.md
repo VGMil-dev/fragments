@@ -1,6 +1,6 @@
 # F08 — Evidencia
 
-Estado: LISTO PARA CIERRE. La autorización de despliegue llegó el 2026-11-05; se continúa en la rama `codex/fragments-mvp` con el tag local `v0.1.0-mvp` verificado contra el SHA solicitado.
+Estado: COMPLETADA. La autorización de despliegue llegó el 2026-11-05; se continúa en la rama `codex/fragments-mvp` con el tag local `v0.1.0-mvp` verificado contra el SHA solicitado.
 
 ## Preflight
 
@@ -53,4 +53,4 @@ Estado: LISTO PARA CIERRE. La autorización de despliegue llegó el 2026-11-05; 
 
 ## Verificación y cierre
 
-- Cierre pendiente: commit local de documentación/evidencia y actualización de `task-list/TASKS.md`. No se hizo push. El problema observado en el destino Pits de producción queda documentado, sin cambios fuera de F08.
+- Commit local de cierre de despliegue y evidencia: `9204cd85662daf68b7fabdff20c5d15ec4d37e7c` (`docs(F08): documenta ruta publica y pruebas finales`). `task-list/TASKS.md` se marca completada en el commit de cierre documental siguiente. No se hizo push. El problema observado en el destino Pits de producción queda documentado, sin cambios fuera de F08.
