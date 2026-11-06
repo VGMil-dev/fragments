@@ -1,16 +1,21 @@
-FROM node:24.21.0-bookworm-slim AS build
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
 ENV CI=true
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
-COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY apps/api/package.json apps/api/package.json
-RUN pnpm install --lockfile=false --ignore-scripts --shamefully-hoist
+COPY apps/web/package.json apps/web/package.json
+RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 RUN ./node_modules/.bin/tsc -p packages/contracts/tsconfig.json && ./apps/api/node_modules/.bin/tsc -p apps/api/tsconfig.json
 
-FROM node:24.21.0-bookworm-slim AS runtime
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
+ARG SOURCE_REVISION=4553ae204160f95dfcb0886fe9741566441f3cbc
+LABEL org.opencontainers.image.title="Fragments API" \
+      org.opencontainers.image.version="v0.1.0-mvp" \
+      org.opencontainers.image.revision="$SOURCE_REVISION"
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
