@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
 import { createMentorHttp } from "./http.js";
-import { createMentorService } from "./service.js";
+import { createMentorService, type MentorEvaluator } from "./service.js";
 
 const servers: Server[] = [];
 const databases: DatabaseSync[] = [];
@@ -13,7 +13,7 @@ const draft = {
   goals: ["Registrar riegos"], skills: ["TypeScript"], scope: "Una pantalla registra plantas y medidas.", constraints: ["Funciona sin conexión"],
 };
 
-async function start() {
+async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator()) {
   const database = new DatabaseSync(":memory:"); databases.push(database);
   database.exec(`
     CREATE TABLE proposals (id TEXT PRIMARY KEY, version INTEGER NOT NULL, proposal_json TEXT NOT NULL, updated_at TEXT NOT NULL, owner_hash TEXT NOT NULL);
@@ -22,7 +22,7 @@ async function start() {
     CREATE TABLE mentor_evaluations (id TEXT PRIMARY KEY, proposal_id TEXT NOT NULL, proposal_version INTEGER NOT NULL, evaluation_json TEXT NOT NULL, evaluated_at TEXT NOT NULL);
     CREATE TABLE submissions (id TEXT PRIMARY KEY, kind TEXT NOT NULL, source_id TEXT NOT NULL, score REAL NOT NULL, snapshot_json TEXT NOT NULL, content_hash TEXT NOT NULL, verification_code TEXT NOT NULL, rubric_version TEXT NOT NULL, created_at TEXT NOT NULL);
   `);
-  const service = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
+  const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
   const mentorHandler = createMentorHttp(database, service);
   const server = createServer(async (request, response) => {
     if (await mentorHandler(request, response) === "unhandled") response.writeHead(404).end();
@@ -49,6 +49,47 @@ afterEach(async () => {
 });
 
 describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
+  it("recovers the latest persisted evaluation without evaluating again", async () => {
+    const local = createLocalMentorEvaluator();
+    let evaluationCalls = 0;
+    const evaluator: MentorEvaluator = {
+      async evaluate(input) {
+        evaluationCalls += 1;
+        return local.evaluate(input);
+      },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const post = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      method: "POST",
+      headers: { cookie: proposal.cookie },
+    });
+    const saved = await post.json();
+
+    const recovered = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      headers: { cookie: proposal.cookie },
+    });
+    const denied = await fetch(`${base}/api/proposals/${proposal.id}/review`);
+
+    expect(post.status).toBe(200);
+    expect(recovered.status).toBe(200);
+    expect(await recovered.json()).toEqual(saved);
+    expect(denied.status).toBe(404);
+    expect(evaluationCalls).toBe(1);
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(1);
+
+    await fetch(`${base}/api/proposals/${proposal.id}`, {
+      method: "PUT",
+      headers: { cookie: proposal.cookie, "content-type": "application/json" },
+      body: JSON.stringify({ ...draft, title: "Huerto revisado", expectedVersion: proposal.version }),
+    });
+    const stale = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      headers: { cookie: proposal.cookie },
+    });
+    expect(stale.status).toBe(404);
+    expect(evaluationCalls).toBe(1);
+  });
+
   it("requires the owner cookie for edits, keeps history, and rejects stale versions", async () => {
     const base = await start();
     const proposal = await createProposal(base);

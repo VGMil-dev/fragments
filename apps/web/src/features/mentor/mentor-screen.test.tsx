@@ -49,6 +49,7 @@ const evaluation = {
 const actions = {
   onSave: vi.fn(async () => ({ ok: true as const, data: proposal })),
   onEvaluate: vi.fn(async () => ({ ok: true as const, data: evaluation })),
+  onRecoverEvaluation: vi.fn(async () => ({ ok: true as const, data: evaluation })),
   onGenerateSubmission: vi.fn(async () => ({ ok: false as const, error: { code: "TEST", message: "hidden" } })),
   onReadme: vi.fn(async () => ({ ok: true as const, data: "# README" })),
   onPdf: vi.fn(async () => ({ ok: true as const, data: new Blob(["pdf"]) })),
@@ -112,6 +113,36 @@ describe("MentorScreen", () => {
     expect(evaluate).toBeDefined();
     await act(async () => evaluate?.click());
     expect(actions.onEvaluate).toHaveBeenCalledWith(proposal.id);
+    expect(mountedContainer.textContent).toContain("72/100");
+  });
+
+  it("recovers a persisted evaluation after timeout without repeating the evaluation POST", async () => {
+    const evaluate = vi.fn(async () => ({
+      ok: false as const,
+      error: { code: "REQUEST_TIMEOUT", message: "La solicitud tardó demasiado." },
+    }));
+    const recover = vi.fn()
+      .mockResolvedValueOnce({ ok: false as const, error: { code: "NOT_FOUND", message: "Aún no está disponible." } })
+      .mockResolvedValueOnce({ ok: true as const, data: evaluation });
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(
+        <MentorScreen {...actions} initialProposal={proposal} onEvaluate={evaluate} onRecoverEvaluation={recover} onBack={vi.fn()} />,
+      );
+    });
+
+    const evaluateButton = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
+    await act(async () => evaluateButton?.click());
+    expect(mountedContainer.textContent).not.toContain("72/100");
+    const recoverButton = mountedContainer.querySelector<HTMLButtonElement>(".async-state button");
+    expect(recoverButton?.textContent).toBe("Recuperar evaluación");
+
+    await act(async () => recoverButton?.click());
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(recover).toHaveBeenCalledTimes(2);
     expect(mountedContainer.textContent).toContain("72/100");
   });
 });

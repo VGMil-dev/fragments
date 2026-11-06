@@ -19,6 +19,7 @@ export interface MentorScreenProps {
   initialEvaluation?: AsyncState<ProposalEvaluationResponse>;
   onSave: (draft: CreateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
   onEvaluate: (proposalId: string) => Promise<ApiResult<ProposalEvaluationResponse>>;
+  onRecoverEvaluation: (proposalId: string) => Promise<ApiResult<ProposalEvaluationResponse>>;
   onGenerateSubmission: (request: CreateMentorSubmissionRequest) => Promise<ApiResult<MentorSubmissionResponse>>;
   onReadme: (submissionId: string) => Promise<ApiResult<string>>;
   onPdf: (submissionId: string) => Promise<ApiResult<Blob>>;
@@ -75,6 +76,7 @@ export function MentorScreen({
   initialEvaluation,
   onSave,
   onEvaluate,
+  onRecoverEvaluation,
   onGenerateSubmission,
   onReadme,
   onPdf,
@@ -159,19 +161,35 @@ export function MentorScreen({
     }
   }
 
+  async function recoverEvaluation() {
+    if (!proposal) return;
+    setEvaluation({ status: "loading" });
+    try {
+      const result = await onRecoverEvaluation(proposal.id);
+      if (!result.ok) {
+        setEvaluation({ status: "error", retry: () => void recoverEvaluation() });
+        return;
+      }
+      setEvaluation({ status: "success", data: result.data });
+      setSubmission(null);
+    } catch {
+      setEvaluation({ status: "error", retry: () => void recoverEvaluation() });
+    }
+  }
+
   async function evaluateProposal() {
     if (!proposal) return;
     setEvaluation({ status: "loading" });
     try {
       const result = await onEvaluate(proposal.id);
       if (!result.ok) {
-        setEvaluation({ status: "error", retry: () => void evaluateProposal() });
+        await recoverEvaluation();
         return;
       }
       setEvaluation({ status: "success", data: result.data });
       setSubmission(null);
     } catch {
-      setEvaluation({ status: "error", retry: () => void evaluateProposal() });
+      await recoverEvaluation();
     }
   }
 
@@ -291,7 +309,7 @@ export function MentorScreen({
             <h2 id="mentor-evaluation-title">Revisa tu propuesta</h2>
             <p>Guarda los cambios antes de pedir una nueva evaluación.</p>
           </div>
-          <button className="button button--light" type="button" disabled={!proposal || isDirty || saving || evaluation?.status === "loading"} onClick={() => void evaluateProposal()}>
+          <button className="button button--light" type="button" disabled={!proposal || isDirty || saving || evaluation?.status === "loading" || evaluation?.status === "error"} onClick={() => void evaluateProposal()}>
             {evaluation?.status === "success" ? "Reevaluar" : "Evaluar propuesta"}
           </button>
         </div>
@@ -299,6 +317,7 @@ export function MentorScreen({
         {evaluation ? (
           <AsyncStateView
             state={evaluation}
+            retryLabel="Recuperar evaluación"
             render={(result) => (
               <section className="mentor-result" aria-label="Resultado de la evaluación">
                 <div className="mentor-result__summary">

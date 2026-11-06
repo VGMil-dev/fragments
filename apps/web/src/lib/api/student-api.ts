@@ -51,7 +51,7 @@ function encodeId(id: string): string | null {
   return value ? encodeURIComponent(value) : null;
 }
 
-export function createStudentApi(client: ApiClient) {
+export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiClient = client) {
   return {
     getGallery(signal?: AbortSignal): Promise<ApiResult<GalleryEntry[]>> {
       return client.request("/api/gallery", GalleryResponseSchema, withSignal(signal));
@@ -66,7 +66,13 @@ export function createStudentApi(client: ApiClient) {
     evaluateProposal(proposalId: string, signal?: AbortSignal): Promise<ApiResult<ProposalEvaluationResponse>> {
       const id = encodeId(proposalId);
       if (!id) return Promise.resolve(invalid<ProposalEvaluationResponse>());
-      return client.request(`/api/proposals/${id}/review`, ProposalEvaluationResponseSchema, withSignal(signal, { method: "POST" }));
+      return mentorEvaluationClient.request(`/api/proposals/${id}/review`, ProposalEvaluationResponseSchema, withSignal(signal, { method: "POST" }));
+    },
+
+    recoverProposalEvaluation(proposalId: string, signal?: AbortSignal): Promise<ApiResult<ProposalEvaluationResponse>> {
+      const id = encodeId(proposalId);
+      if (!id) return Promise.resolve(invalid<ProposalEvaluationResponse>());
+      return client.request(`/api/proposals/${id}/review`, ProposalEvaluationResponseSchema, withSignal(signal));
     },
 
     createReview(input: ReviewRequest, signal?: AbortSignal): Promise<ApiResult<ReviewResponse>> {

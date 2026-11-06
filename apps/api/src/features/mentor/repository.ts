@@ -118,6 +118,13 @@ export function createMentorRepository(database: DatabaseSync) {
       return row ? JSON.parse(row.evaluation_json) as MentorEvaluation : null;
     },
 
+    getLatestEvaluation(proposalId: string, proposalVersion: number): { id: string; evaluation: MentorEvaluation; evaluatedAt: string } | null {
+      const row = database.prepare(`SELECT id, evaluation_json, evaluated_at FROM mentor_evaluations
+        WHERE proposal_id = ? AND proposal_version = ? ORDER BY evaluated_at DESC, rowid DESC LIMIT 1`)
+        .get(proposalId, proposalVersion) as { id: string; evaluation_json: string; evaluated_at: string } | undefined;
+      return row ? { id: row.id, evaluation: JSON.parse(row.evaluation_json) as MentorEvaluation, evaluatedAt: row.evaluated_at } : null;
+    },
+
     saveSubmission(id: string, value: SubmissionSnapshot): void {
       const snapshot = SubmissionSnapshotSchema.parse(value);
       database.prepare(`INSERT INTO submissions

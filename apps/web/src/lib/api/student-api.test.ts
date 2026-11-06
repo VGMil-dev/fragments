@@ -14,6 +14,40 @@ describe("createStudentApi", () => {
     expect(fetcher).toHaveBeenCalledWith("/api/gallery", expect.any(Object));
   });
 
+  it("recovers a persisted Mentor evaluation with a read-only request", async () => {
+    const evaluation = {
+      evaluationId: "evaluation-1",
+      proposalId: "proposal-1",
+      proposalVersion: 1,
+      viability: "needs_revision",
+      analysis: {
+        rubricVersion: "mentor-gateway-v1",
+        score: 72,
+        findings: [{
+          criterionId: "scope",
+          status: "not_verified",
+          evidence: [{ source: "proposal", field: "scope", digest: "a".repeat(64) }],
+          reason: "El alcance necesita un límite más concreto.",
+          guidanceLevel: 1,
+        }],
+        limitations: [],
+        modelId: "alibaba/qwen3.7-flash",
+        inputDigest: "b".repeat(64),
+      },
+      guidance: ["Prueba primero con dos entradas."],
+      similarityMatches: [],
+      evaluatedAt: "2026-11-06T05:15:53.547Z",
+    } as const;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, data: evaluation }), { status: 200 }),
+    );
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.recoverProposalEvaluation("proposal-1")).resolves.toEqual({ ok: true, data: evaluation });
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/proposals/proposal-1/review");
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe("GET");
+  });
+
   it("rejects an invalid proposal before sending it", async () => {
     const fetcher = vi.fn<typeof fetch>();
     const api = createStudentApi(createApiClient({ fetcher }));

@@ -11,7 +11,7 @@ import { createInspectorApi } from "./lib/api/inspector-api";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
-const studentApi = createStudentApi(createApiClient());
+const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const inspectorApi = createInspectorApi(createApiClient());
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
@@ -60,6 +60,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             <MentorScreen
               onSave={(draft) => studentApi.saveProposal(draft)}
               onEvaluate={(proposalId) => studentApi.evaluateProposal(proposalId)}
+              onRecoverEvaluation={(proposalId) => studentApi.recoverProposalEvaluation(proposalId)}
               onGenerateSubmission={(request) => studentApi.createMentorSubmission(request)}
               onReadme={(submissionId) => studentApi.downloadMentorReadme(submissionId)}
               onPdf={(submissionId) => studentApi.downloadMentorPdf(submissionId)}

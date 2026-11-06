@@ -85,6 +85,23 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
     }
 
     const evaluateMatch = request.method === "POST" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/review$/);
+    const recoverEvaluationMatch = request.method === "GET" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/review$/);
+    if (recoverEvaluationMatch) {
+      const proposal = ownerHash ? repository.getOwnedProposal(recoverEvaluationMatch[1]!, ownerHash) : null;
+      const latest = proposal ? repository.getLatestEvaluation(proposal.id, proposal.version) : null;
+      if (!proposal || !latest) {
+        sendError(response, 404, "NOT_FOUND", "No se encontró una evaluación guardada para esta versión.");
+        return "handled";
+      }
+      try {
+        const responseData = evaluationResponse(latest.id, proposal.id, proposal.version, latest.evaluation, latest.evaluatedAt);
+        sendJson(response, 200, { ok: true, data: responseData });
+      } catch {
+        sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo recuperar la evaluación guardada.");
+      }
+      return "handled";
+    }
+
     if (evaluateMatch) {
       const proposal = ownerHash ? repository.getOwnedProposal(evaluateMatch[1]!, ownerHash) : null;
       if (!proposal) {
@@ -95,16 +112,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         const evaluatedAt = new Date().toISOString();
         const evaluationId = randomUUID();
         const result = await service.evaluate(proposal.proposal, repository.listGallery());
-        const responseData = ProposalEvaluationResponseSchema.parse({
-          evaluationId,
-          proposalId: proposal.id,
-          proposalVersion: proposal.version,
-          viability: result.analysis.score >= 75 ? "feasible" : result.analysis.score >= 50 ? "needs_revision" : "not_feasible",
-          analysis: result.analysis,
-          guidance: result.guidance,
-          similarityMatches: result.similarities.filter((item) => item.galleryId).map((item) => ({ galleryId: item.galleryId!, title: item.title, reason: item.overlap })),
-          evaluatedAt,
-        });
+        const responseData = evaluationResponse(evaluationId, proposal.id, proposal.version, result, evaluatedAt);
         repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, new Date(evaluatedAt));
         sendJson(response, 200, { ok: true, data: responseData });
       } catch {
@@ -191,6 +199,25 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
 
     return "unhandled";
   };
+}
+
+function evaluationResponse(
+  evaluationId: string,
+  proposalId: string,
+  proposalVersion: number,
+  evaluation: { analysis: { score: number }; guidance: string[]; similarities: Array<{ galleryId?: string; title: string; overlap: string }> },
+  evaluatedAt: string,
+) {
+  return ProposalEvaluationResponseSchema.parse({
+    evaluationId,
+    proposalId,
+    proposalVersion,
+    viability: evaluation.analysis.score >= 75 ? "feasible" : evaluation.analysis.score >= 50 ? "needs_revision" : "not_feasible",
+    analysis: evaluation.analysis,
+    guidance: evaluation.guidance,
+    similarityMatches: evaluation.similarities.filter((item) => item.galleryId).map((item) => ({ galleryId: item.galleryId!, title: item.title, reason: item.overlap })),
+    evaluatedAt,
+  });
 }
 
 function readOwnerToken(request: IncomingMessage): string | null {

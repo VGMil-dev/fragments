@@ -11,9 +11,10 @@ export interface AsyncStateViewProps<T> {
   state: AsyncState<T>;
   render: (data: T) => ReactNode;
   emptyAction?: ReactNode;
+  retryLabel?: string;
 }
 
-export function AsyncStateView<T>({ state, render, emptyAction }: AsyncStateViewProps<T>) {
+export function AsyncStateView<T>({ state, render, emptyAction, retryLabel = "Intentar de nuevo" }: AsyncStateViewProps<T>) {
   switch (state.status) {
     case "loading":
       return (
@@ -35,7 +36,7 @@ export function AsyncStateView<T>({ state, render, emptyAction }: AsyncStateView
         <section className="async-state async-state--error" role="alert" aria-labelledby="async-state-error-title">
           <h2 className="async-state__title" id="async-state-error-title">No pudimos cargar esta información</h2>
           <p className="async-state__copy">Tu trabajo sigue aquí. Revisa la conexión e inténtalo de nuevo.</p>
-          <button className="button button--primary" type="button" onClick={state.retry}>Intentar de nuevo</button>
+          <button className="button button--primary" type="button" onClick={state.retry}>{retryLabel}</button>
         </section>
       );
     case "success":
