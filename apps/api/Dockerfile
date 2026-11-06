@@ -1,4 +1,4 @@
-FROM node:24.21.0-bookworm-slim AS build
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
 ENV CI=true
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
@@ -11,7 +11,7 @@ COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 RUN ./node_modules/.bin/tsc -p packages/contracts/tsconfig.json && ./apps/api/node_modules/.bin/tsc -p apps/api/tsconfig.json
 
-FROM node:24.21.0-bookworm-slim AS runtime
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules

@@ -11,6 +11,7 @@ services:
     env_file:
       - path: .env
         required: true
+        format: raw
     environment:
       API_PORT: "3000"
       DATABASE_URL: file:/app/data/fragments.sqlite
@@ -110,6 +111,7 @@ services:
     env_file:
       - path: .env.bootstrap
         required: true
+        format: raw
     environment:
       API_PORT: "3000"
       DATABASE_URL: file:/app/data/fragments.sqlite

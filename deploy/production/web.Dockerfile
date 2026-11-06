@@ -1,4 +1,5 @@
-FROM node:24.21.0-bookworm-slim AS build
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
+ENV CI=true
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
@@ -8,9 +9,9 @@ COPY apps/web/package.json apps/web/package.json
 RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
-RUN pnpm --filter @fragments/contracts build && pnpm --filter @fragments/web build
+RUN ./node_modules/.bin/tsc -p packages/contracts/tsconfig.json && cd apps/web && ./node_modules/.bin/vite build
 
-FROM nginx:1.29-alpine AS runtime
+FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de AS runtime
 COPY deploy/production/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/apps/web/dist/ /usr/share/nginx/html/
 USER 101:101
