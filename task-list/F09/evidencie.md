@@ -1,6 +1,6 @@
 # F09 — Evidencia
 
-Estado: implementado y verificado localmente en `codex/mentor-docx-import`, creada desde `main` (`4553ae204160f95dfcb0886fe9741566441f3cbc`).
+Estado: COMPLETA y verificada localmente en `codex/mentor-docx-import`, creada desde `main` (`4553ae204160f95dfcb0886fe9741566441f3cbc`).
 
 - Plantilla original: `D:\Dev\Trabajo\Fragments\Fragments_Mentor_Plantilla_Propuesta.docx`; 40 128 bytes, ZIP válido, 18 partes, 844 351 bytes expandidos, sin macros ni relaciones externas.
 - Recurso público: `apps/web/public/templates/fragments-mentor-propuesta.docx`; SHA-256 `0F76A7525D2FD8717033CE9252D4392C686AFB3CB3B27019F270A0BECFA8E5A6`, coincide con el original.
@@ -13,4 +13,4 @@ Estado: implementado y verificado localmente en `codex/mentor-docx-import`, crea
 - `git diff --check`: sin errores.
 - Sin llamadas a AI Gateway; producción y el tag `v0.1.0-mvp` no se modificaron ni desplegaron.
 
-Commit de implementación: pendiente de registrar tras el commit.
+Commit de implementación: `3fa3d49` (`feat(mentor): importar propuestas DOCX`).
