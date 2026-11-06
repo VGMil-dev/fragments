@@ -23,6 +23,8 @@ Commit de implementación: `3fa3d49` (`feat(mentor): importar propuestas DOCX`).
 - La instalación limpia encontró que `pnpm-workspace.yaml` tenía `allowBuilds.esbuild` como marcador de texto; pnpm rechazó ejecutar el install script. Se cambió a `true` para permitir únicamente el script de `esbuild@0.25.12`, requerido por Vite.
 - `CI=true pnpm install --frozen-lockfile` → correcto; Lockfile vigente y script de esbuild completado.
 - `pnpm exec turbo run test typecheck build lint --force` → 10/10 tareas sin caché; contratos 18/18, API 78/78, web 49/49 (145 tests); typecheck y build de los tres paquetes correctos; lint correcto.
+- `docker compose -f deploy/production/docker-compose.yml --env-file deploy/production/.env.example config --quiet` → correcto, con una copia temporal local del archivo de ejemplo que se retiró inmediatamente.
+- Preflight SSH de solo lectura mediante el perfil `servidor`: Fragments API y web `healthy`, imágenes `0.1.0-mvp-arm64`, revisión `4553ae204160f95dfcb0886fe9741566441f3cbc`; Pits y PostgreSQL también `healthy`. `fragments-backup.timer` activo y habilitado; backups observados de 188416 bytes. No se modificó ni reinició ningún contenedor ni se creó un backup nuevo.
 - `git diff --check` → sin errores.
 - Commit que habilita instalación y registra la verificación: `70e00fbd52ae70ae2585128cd26f1f5a9ccffae8`.
-- Estado: verificación local del candidato correcta. Publicación, backup, despliegue y validación de la versión v0.2.0 siguen pendientes; no se contactó GitHub ni producción durante esta revalidación.
+- Estado: verificación local del candidato correcta. Publicación, backup, despliegue y validación de la versión v0.2.0 siguen pendientes. No se contactó GitHub; la inspección de producción fue de solo lectura.
