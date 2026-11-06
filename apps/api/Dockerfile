@@ -2,10 +2,11 @@ FROM node:24.21.0-bookworm-slim AS build
 ENV CI=true
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
-COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY apps/api/package.json apps/api/package.json
-RUN pnpm install --lockfile=false --ignore-scripts --shamefully-hoist
+COPY apps/web/package.json apps/web/package.json
+RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 RUN ./node_modules/.bin/tsc -p packages/contracts/tsconfig.json && ./apps/api/node_modules/.bin/tsc -p apps/api/tsconfig.json

@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup consistente de la base SQLite de Fragments
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/docker compose -f /opt/fragments/deploy/production/docker-compose.yml --profile maintenance run --rm --no-deps backup
