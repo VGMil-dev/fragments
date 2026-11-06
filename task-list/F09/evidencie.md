@@ -16,3 +16,12 @@ Estado: COMPLETA y verificada localmente en `codex/mentor-docx-import`, creada d
 - Producción y el tag `v0.1.0-mvp` no se modificaron ni desplegaron.
 
 Commit de implementación: `3fa3d49` (`feat(mentor): importar propuestas DOCX`).
+
+## Revalidación para el candidato v0.2.0 (2026-11-05)
+
+- Integrados en una rama candidata local los historiales de F08 (runtime ARM64 ya instalado) y F09 (DOCX), preservando los commits de origen. El commit de integración del código DOCX es `0af66f0`.
+- La instalación limpia encontró que `pnpm-workspace.yaml` tenía `allowBuilds.esbuild` como marcador de texto; pnpm rechazó ejecutar el install script. Se cambió a `true` para permitir únicamente el script de `esbuild@0.25.12`, requerido por Vite.
+- `CI=true pnpm install --frozen-lockfile` → correcto; Lockfile vigente y script de esbuild completado.
+- `pnpm exec turbo run test typecheck build lint --force` → 10/10 tareas sin caché; contratos 18/18, API 78/78, web 49/49 (145 tests); typecheck y build de los tres paquetes correctos; lint correcto.
+- `git diff --check` → sin errores.
+- Estado: verificación local del candidato correcta. Publicación, backup, despliegue y validación de la versión v0.2.0 siguen pendientes; no se contactó GitHub ni producción durante esta revalidación.
