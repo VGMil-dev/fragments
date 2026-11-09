@@ -11,6 +11,9 @@ import { createReviewHttp } from "../features/review/http.js";
 import type { ReviewContextResolver } from "../features/review/http.js";
 import type { createReviewService } from "../features/review/review.service.js";
 import type { createSqliteReviewStore } from "../features/review/sqlite-store.js";
+import { createTrainerHttp } from "../features/trainer/http.js";
+import { createTrainerRepository } from "../features/trainer/repository.js";
+import type { createTrainerService } from "../features/trainer/service.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -24,10 +27,12 @@ export function createHttpHandler(database: DatabaseSync, options: {
   mentor?: ReturnType<typeof createMentorService>;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
+  trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
+  const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     const pathname = new URL(request.url ?? "/", "http://fragments.local").pathname;
     if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
@@ -52,6 +57,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
     }
     if (mentorHandler && await mentorHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
+    if (trainerHandler && await trainerHandler(request, response) === "handled") return;
     if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
@@ -63,4 +69,5 @@ export function createApiServer(database: DatabaseSync, options: {
   mentor?: ReturnType<typeof createMentorService>;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
+  trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) { return createServer(createHttpHandler(database, options)); }

@@ -70,8 +70,10 @@ export interface InspectorDependencies {
       evidence: EvidenceReference;
       findingReason: string;
       evidenceExcerpt: string;
+      practicedFeatures?: string[];
     }): Promise<ChallengeDraft>;
   };
+  practicedFeatures?: (reviewId: string) => Promise<string[]>;
   store: InspectorStore;
   now?: () => Date;
   createId?: () => string;
@@ -173,12 +175,14 @@ export function createInspectorService(dependencies: InspectorDependencies) {
         throw error("REVIEW_STALE", "El proyecto tiene un commit nuevo. Usa la revisión más reciente.");
       }
       const { evidence, findingReason, evidenceExcerpt } = verifiedEvidence(review);
+      const practicedFeatures = (await dependencies.practicedFeatures?.(review.id) ?? []).slice(0, 20).map((feature) => feature.slice(0, 300));
       const draft = await dependencies.provider.createChallenge({
         reviewId: review.id,
         commitSha: review.commitSha,
         evidence,
         findingReason,
         evidenceExcerpt,
+        practicedFeatures,
       });
       const challenge = InspectorChallengeSchema.parse({
         evaluationId: review.id,

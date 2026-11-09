@@ -168,6 +168,14 @@ export function createSqliteReviewStore(database: DatabaseSync) {
       return row ? view(row) : null;
     },
 
+    listCompleted() {
+      const rows = database.prepare("SELECT * FROM jobs WHERE type = ? AND status = 'done' ORDER BY updated_at DESC LIMIT 100")
+        .all(jobType) as unknown as JobRow[];
+      return rows.map(view).filter((job) => job.record).map((job) => ({
+        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha, updatedAt: job.updatedAt,
+      }));
+    },
+
     async getLatestCommit(projectId: string): Promise<string | null> {
       const rows = database.prepare("SELECT * FROM jobs WHERE type = ? AND status = 'done' ORDER BY updated_at DESC, created_at DESC")
         .all(jobType) as unknown as JobRow[];

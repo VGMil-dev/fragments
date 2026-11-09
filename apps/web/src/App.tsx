@@ -6,13 +6,16 @@ import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
 import { MentorScreen } from "./features/mentor";
 import { ReviewScreen } from "./features/review";
+import { TrainerScreen } from "./features/trainer";
 import { TeacherGate } from "./features/inspector";
 import { createInspectorApi } from "./lib/api/inspector-api";
+import { createTrainerApi } from "./lib/api/trainer-api";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const inspectorApi = createInspectorApi(createApiClient());
+const trainerApi = createTrainerApi();
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<GalleryEntry[]>>({ status: "loading" });
@@ -43,6 +46,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Galería</a>
           <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/mentor"); }}>Mentor</a>
           <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
+          <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
         </nav>
         <a className="student-workspace__home" href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>Inicio</a>
       </header>
@@ -77,6 +81,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onBack={() => navigate("/student/mentor")}
           />
         ) : null}
+        {path === "/student/trainer" ? <TrainerScreen api={trainerApi} /> : null}
       </div>
     </div>
   );

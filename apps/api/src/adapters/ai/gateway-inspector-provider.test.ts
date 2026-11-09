@@ -27,9 +27,11 @@ describe("Gateway Inspector adapter (labelled offline generation)", () => {
       commitSha: "a".repeat(40), evidenceExcerpt,
       evidence: { path: "src/lost-items.ts", lines: [1, 1], digest: "b".repeat(64) },
       findingReason: "El filtro compara el nombre en minúsculas.",
+      practicedFeatures: ["Búsqueda por nombre"],
     });
     expect(generate).toHaveBeenCalledOnce();
     expect(generate.mock.calls[0]?.[0].prompt).toContain(evidenceExcerpt);
+    expect(generate.mock.calls[0]?.[0].prompt).toContain("Búsqueda por nombre");
     expect(challenge.teacherHint).toContain("includes");
   });
 

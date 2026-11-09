@@ -1,0 +1,53 @@
+.trainer-screen { width: min(100%, 920px); margin: 0 auto 4rem; color: var(--navy); }
+.trainer-heading { padding: clamp(1rem, 3vw, 2rem) 0 1.25rem; }
+.trainer-eyebrow { margin: 0 0 .4rem; color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.trainer-heading h1 { margin: 0; font-size: clamp(2.3rem, 6vw, 3.5rem); letter-spacing: -.045em; }
+.trainer-heading > p:last-child { margin: .35rem 0 0; color: var(--muted); font-size: 1.12rem; }
+.trainer-controls, .trainer-challenge, .trainer-history { border: 1px solid var(--border-soft); border-radius: 18px; background: var(--paper-white, #fffdf8); box-shadow: 0 10px 28px rgb(23 52 92 / 5%); }
+.trainer-controls { padding: 1.2rem; }
+.trainer-controls label { display: block; margin-bottom: .55rem; font-weight: 750; }
+.trainer-controls__row { display: flex; gap: .75rem; }
+.trainer-controls select { min-width: 0; flex: 1; padding: .8rem .9rem; border: 1px solid var(--border-soft); border-radius: 10px; background: var(--paper); color: var(--navy); font: inherit; }
+.trainer-draw, .trainer-actions button { border: 0; border-radius: 10px; background: var(--navy); color: white; padding: .8rem 1rem; font: inherit; font-weight: 750; cursor: pointer; }
+.trainer-draw:disabled { cursor: wait; opacity: .55; }
+.trainer-controls p, .trainer-commit { margin: .8rem 0 0; color: var(--muted); font-size: .86rem; }
+.trainer-controls code, .trainer-source code { overflow-wrap: anywhere; }
+.trainer-empty { margin: .85rem 0 0; color: var(--muted); }
+.trainer-message { padding: .75rem 1rem; border-left: 3px solid var(--blue); background: var(--powder); }
+.trainer-challenge { margin-top: 1.25rem; padding: clamp(1rem, 3vw, 1.7rem); }
+.trainer-challenge__top, .trainer-history__heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.trainer-challenge__top > span:last-child, .trainer-history__heading > span { color: var(--muted); font-size: .85rem; }
+.trainer-badge { display: inline-flex; border-radius: 999px; padding: .35rem .7rem; background: var(--powder); color: var(--navy); font-size: .78rem; font-weight: 800; }
+.trainer-badge--pending { background: #f7e8cd; }
+.trainer-badge--review { background: #e4e9f4; }
+.trainer-challenge__feature { margin: 1rem 0 .25rem; color: var(--blue); font-size: .84rem; font-weight: 750; }
+.trainer-challenge h2 { margin: .3rem 0 .55rem; font-size: 1.5rem; }
+.trainer-challenge > p:not(.trainer-challenge__feature) { line-height: 1.65; }
+.trainer-challenge__detail, .trainer-restoration { padding: .85rem 1rem; border-radius: 10px; background: var(--cream, #fcf9f1); }
+.trainer-challenge__detail p { margin: .35rem 0 0; }
+.trainer-source { color: var(--muted); font-size: .8rem; }
+.trainer-hints { margin-top: 1.3rem; padding-top: 1rem; border-top: 1px solid var(--border-soft); }
+.trainer-hints h3 { margin: 0 0 .7rem; font-size: 1rem; }
+.trainer-hints ol { padding-left: 1.4rem; }
+.trainer-hints li { margin: .55rem 0; line-height: 1.55; }
+.trainer-secondary, .trainer-actions button { min-height: 42px; }
+.trainer-secondary { padding: .55rem .8rem; border: 1px solid var(--border-soft); border-radius: 8px; background: transparent; color: var(--navy); font: inherit; font-weight: 700; cursor: pointer; }
+.trainer-actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1.2rem; }
+.trainer-actions button { font-size: .85rem; }
+.trainer-actions button:nth-child(2) { background: var(--blue); }
+.trainer-actions button:nth-child(3) { background: #3d7f6b; }
+.trainer-verification-note { color: var(--muted); font-size: .82rem; }
+.trainer-restoration { margin-bottom: 0; line-height: 1.55; }
+.trainer-history { margin-top: 1.3rem; padding: 1.2rem; }
+.trainer-history h2 { margin: 0; font-size: 1.35rem; }
+.trainer-history ol { padding: 0; list-style: none; }
+.trainer-history li { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-top: 1px solid var(--border-soft); }
+.trainer-history li > span:first-child { min-width: 0; }
+.trainer-history small { display: block; margin-top: .3rem; color: var(--muted); }
+.trainer-history__status { align-self: center; flex: 0 0 auto; color: var(--blue); font-size: .82rem; font-weight: 750; }
+@media (max-width: 560px) {
+  .trainer-controls__row { flex-direction: column; }
+  .trainer-draw { width: 100%; }
+  .trainer-actions button { flex: 1 1 100%; }
+  .trainer-history li { align-items: flex-start; flex-direction: column; }
+}

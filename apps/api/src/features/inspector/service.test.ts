@@ -44,9 +44,11 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
   const review = options.review === undefined ? await makeReview() : options.review;
   let nextId = 0;
   let receivedEvidenceExcerpt = "";
+  let receivedPracticedFeatures: string[] = [];
   const provider = {
-    async createChallenge(input: { evidenceExcerpt: string }) {
+    async createChallenge(input: { evidenceExcerpt: string; practicedFeatures?: string[] }) {
       receivedEvidenceExcerpt = input.evidenceExcerpt;
+      receivedPracticedFeatures = input.practicedFeatures ?? [];
       return {
         precondition: "La función suma la lista recibida.",
         mutation: "Explica qué cambiarías para invertir temporalmente la condición del bucle.",
@@ -66,15 +68,16 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
     provider,
     store,
     reviews,
+    practicedFeatures: async () => ["Búsqueda de tareas", "Filtros del catálogo"],
     now: () => new Date("2026-11-04T12:00:00.000Z"),
     createId: () => `challenge-${++nextId}`,
   });
-  return { service, changeCommit(sha: string) { currentCommit = sha; }, getEvidenceExcerpt() { return receivedEvidenceExcerpt; } };
+  return { service, changeCommit(sha: string) { currentCommit = sha; }, getEvidenceExcerpt() { return receivedEvidenceExcerpt; }, getPracticedFeatures() { return receivedPracticedFeatures; } };
 }
 
 describe("Inspector service", () => {
   it("creates a challenge from evidence on the exact reviewed commit and hides the teacher hint from students", async () => {
-    const { service, getEvidenceExcerpt } = await fixture();
+    const { service, getEvidenceExcerpt, getPracticedFeatures } = await fixture();
     const created = await service.createChallenge("review-1");
 
     expect(created.commitSha).toBe(commitA);
@@ -82,6 +85,7 @@ describe("Inspector service", () => {
     expect(created.challenge.sourceEvidence).toHaveLength(1);
     expect(created.challenge.teacherHint).toContain("Observa el acumulador");
     expect(getEvidenceExcerpt()).toBe("src/total.ts\n1: export const total = (values: number[]) => values.reduce((a, b) => a + b, 0);");
+    expect(getPracticedFeatures()).toEqual(["Búsqueda de tareas", "Filtros del catálogo"]);
 
     await service.assignChallenge(created.id, "teacher-1");
     const student = await service.getStudentChallenge(created.id);

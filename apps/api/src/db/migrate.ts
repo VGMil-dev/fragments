@@ -109,6 +109,33 @@ const migrations = [
     );
     CREATE INDEX IF NOT EXISTS mentor_gallery_public ON mentor_gallery_optins(opted_in, proposal_version, updated_at);`,
   },
+  {
+    version: 6,
+    sql: `CREATE TABLE IF NOT EXISTS trainer_sessions (
+      session_hash TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS trainer_banks (
+      review_id TEXT NOT NULL,
+      commit_sha TEXT NOT NULL,
+      challenges_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (review_id, commit_sha)
+    );
+    CREATE TABLE IF NOT EXISTS trainer_attempts (
+      id TEXT PRIMARY KEY,
+      session_hash TEXT NOT NULL REFERENCES trainer_sessions(session_hash) ON DELETE CASCADE,
+      review_id TEXT NOT NULL,
+      challenge_id TEXT NOT NULL,
+      feature TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'in_progress', 'completed', 'need_more')),
+      hints_used INTEGER NOT NULL CHECK (hints_used BETWEEN 0 AND 3),
+      attempted_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS trainer_attempt_history ON trainer_attempts(session_hash, review_id, attempted_at);
+    CREATE INDEX IF NOT EXISTS trainer_attempt_challenge ON trainer_attempts(session_hash, challenge_id, attempted_at);`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

@@ -16,6 +16,8 @@ import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
 import { createSqliteReviewStore } from "./features/review/sqlite-store.js";
 import { createReviewWorker } from "./features/review/worker.js";
+import { createTrainerRepository } from "./features/trainer/repository.js";
+import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
 import { createApiServer } from "./http/app.js";
 import { loadConfig } from "./platform/config.js";
@@ -63,8 +65,10 @@ const gatewayInspectorProvider = createGatewayInspectorProvider({
   ...(rates ? { rates } : {}),
   ledger,
 });
+const trainerStore = createTrainerRepository(database);
 const inspector = createInspectorService({
   reviews: inspectorReviews,
+  practicedFeatures: async (reviewId) => trainerStore.practicedFeatures(reviewId),
   provider: {
     async createChallenge(input) {
       if (input.evidence.source !== "repository") throw new Error("Inspector solo puede usar evidencia del repositorio.");
@@ -75,6 +79,14 @@ const inspector = createInspectorService({
     },
   },
   store: createInspectorRepository(database),
+});
+const trainer = createTrainerService({
+  reviews: {
+    listCompleted: async () => reviewStore.listCompleted(),
+    getEvidence: (id) => inspectorReviews.getById(id),
+  },
+  provider: gatewayInspectorProvider,
+  store: trainerStore,
 });
 const betterAuth = config.authEnabled && process.env.BETTER_AUTH_SECRET
   ? await createMigratedFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
@@ -91,7 +103,7 @@ const review = {
   }),
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore } });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });
