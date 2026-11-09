@@ -22,7 +22,7 @@ Estado: COMPLETADA. Owner: PLANNER. Rama: `codex/v0.3.0-trainer`, desde `origin/
 - `$env:CI='true'; pnpm exec turbo lint --force` — exit 0; lint declarado en contracts.
 - `git diff --check` — exit 0.
 - Persistencia: `apps/api/src/features/trainer/repository.test.ts` cierra y reabre una base SQLite de archivo y recupera banco, intento y resumen.
-- No se llamaron GitHub ni AI Gateway. Proveedor usado en UI/tests: `fake-provider:ego-fixture`; llamadas reales 0; coste real USD 0.
+- Configuración dev revisada sin imprimir valores secretos: AI Gateway provider `alibaba`, modelo `alibaba/qwen3.7-flash`, clave presente, máximos de precio configurados USD 0.03/M entrada y USD 0.13/M salida; límites Inspector 1500/700 tokens y 20 s. No se llamó GitHub ni AI Gateway. El ledger compartido tiene límite predeterminado USD 1.00, sin barrera específica F10 de USD 0.05: se evitó llamada facturable. Proveedor usado en UI/tests: `fake-provider:ego-fixture`; llamadas reales 0; coste real USD 0.
 
 ## Capturas locales
 
