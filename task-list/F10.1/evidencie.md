@@ -20,12 +20,12 @@ Rama: `codex/v0.3.0-trainer`, base preservada desde `origin/main`; no se creó o
 - `$env:CI='true'; pnpm exec turbo lint --force` — exit 0; 1 lint declarado.
 - `git diff --check` — exit 0.
 - Commit de implementación: `4133219a2cbd37ac0c40a0ef041fc3e3d36f4e29` — `feat(trainer): amplia variedad de retos de F10.1`.
-- Commit de prueba del caso de una opción: `3cda9a4` — `test(trainer): cubre repaso con reto unico`.
+- Commit de prueba del caso de una opción: `3cda9a4c2eb606d851c0ff6b4d6550a54fc70e11` — `test(trainer): cubre repaso con reto unico`.
 - Ego Lite v2.2.0: fixture fake local; banco de tres tareas, sorteo de 2 tareas diferentes, pistas 1–3, progreso recuperado tras recarga, repaso, viewport 390×844 sin scroll horizontal (`innerWidth=scrollWidth=390`). Capturas/logs en `task-list/F10/evidence/`.
 
 ## Review/IA live
 
-Fixture pública `VGMil-dev/fragments-test-app`, SHA exacto `e24fce1c998aec9b52d86d1d4a1a49d727936c5f`; Review terminó con 3 hallazgos `verified`. Trainer guardó 2 retos distintos en rutas separadas, descartó uno duplicado y repitió un completado como `review`. AI Gateway: `alibaba/qwen3.7-flash`, provider-only `alibaba`; 4 llamadas asentadas en corrida satisfactoria, USD 0.000294. Corrida previa completó Review pero falló al rehidratar GitHub sin token; no se guardó coste exacto al limpiar DB temporal. Límite superior de esa llamada USD 0.00172; presupuesto del siguiente ledger USD 0.04828, por lo que gasto acumulado máximo ≤ USD 0.05. No se imprimieron secretos; el token GitHub local se usó en memoria solo para GET público.
+Fixture pública `VGMil-dev/fragments-test-app`, SHA exacto `e24fce1c998aec9b52d86d1d4a1a49d727936c5f`; Review terminó con 3 hallazgos `verified`. Trainer guardó 2 retos distintos en rutas separadas, descartó uno duplicado y repitió un completado como `review`. AI Gateway: `alibaba/qwen3.7-flash`, provider-only `alibaba`; 5 llamadas reales en total (1 Review en la corrida previa fallida y 4 llamadas asentadas en la corrida satisfactoria), USD 0.000294 confirmados. Corrida previa completó Review pero falló al rehidratar GitHub sin token; no se guardó coste exacto al limpiar DB temporal. Límite superior de esa llamada USD 0.00172; presupuesto del siguiente ledger USD 0.04828, por lo que gasto acumulado máximo ≤ USD 0.05. No se imprimieron secretos; el token GitHub local se usó en memoria solo para GET público.
 
 ## Privacidad y límite
 

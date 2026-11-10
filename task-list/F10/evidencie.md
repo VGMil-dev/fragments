@@ -9,7 +9,7 @@ Estado: COMPLETADAS. Owner: PLANNER. Rama: `codex/v0.3.0-trainer`, base `origin/
 - `1539821` — cierre local y paquete de evidencia F10.
 - `8ae8b55` — registro de configuración IA local.
 - `4133219a2cbd37ac0c40a0ef041fc3e3d36f4e29` — implementación F10.1: banco variado, lease concurrente SQLite y señal UI de cantidad/repaso.
-- `3cda9a4` — test de repaso para un único reto compatible.
+- `3cda9a4c2eb606d851c0ff6b4d6550a54fc70e11` — test de repaso para un único reto compatible.
 
 ## Cambios F10.1
 
@@ -32,7 +32,7 @@ Estado: COMPLETADAS. Owner: PLANNER. Rama: `codex/v0.3.0-trainer`, base `origin/
 
 Fixture pública `VGMil-dev/fragments-test-app`; SHA completo `e24fce1c998aec9b52d86d1d4a1a49d727936c5f`, comprobado contra `HEAD` y `refs/heads/main`. Review completó sobre ese SHA y devolvió tres hallazgos verificados. Trainer generó dos retos desde rutas distintas, descartó un candidato duplicado y sorteó uno completado como repaso.
 
-Proveedor `alibaba`, modelo `alibaba/qwen3.7-flash`: 4 llamadas asentadas en la corrida satisfactoria, coste registrado USD 0.000294. Una corrida anterior facturó un Review real antes de fallar en la rehidratación GitHub sin token; el ledger temporal se limpió antes de conservar el recibo exacto. La reserva máxima calculada fue USD 0.00172. La corrida siguiente aplicó ledger aislado de USD 0.04828; cota acumulada ≤ USD 0.05. El dato no se presenta como coste exacto total. Tarifas verificadas y resultados ampliados están en `task-list/F10/evidence/03-pruebas.md`, `04-recorrido.md` y `18-tests.txt`.
+Proveedor `alibaba`, modelo `alibaba/qwen3.7-flash`: 5 llamadas reales en total (1 Review previo y 4 llamadas asentadas en la corrida satisfactoria), coste registrado USD 0.000294 en la corrida satisfactoria. Una corrida anterior facturó un Review real antes de fallar en la rehidratación GitHub sin token; el ledger temporal se limpió antes de conservar el recibo exacto. La reserva máxima calculada fue USD 0.00172. La corrida siguiente aplicó ledger aislado de USD 0.04828; cota acumulada ≤ USD 0.05. El dato no se presenta como coste exacto total. Tarifas verificadas y resultados ampliados están en `task-list/F10/evidence/03-pruebas.md`, `04-recorrido.md` y `18-tests.txt`.
 
 ## Seguridad y evidencias privadas
 
