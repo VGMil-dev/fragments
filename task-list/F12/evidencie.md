@@ -1,35 +1,37 @@
 # F12 — Evidencia de integración
 
-Estado: INCOMPLETA. Rama local `codex/v0.3.0-integration`. No crear tag, publicar ni desplegar.
+Estado: COMPLETADA en rama local `codex/v0.3.0-integration`. No publicar, desplegar ni crear tag.
 
-## Git
-- Rama Trainer confirmada: `05ba030` (incluye `4133219` y `3cda9a4`).
-- Rama Mentor confirmada: `81b185d` (incluye F11 `15491a9`).
-- Base común: `8ae8b5537c1f136d422ba122566d668c741687e5`.
-- Se creó worktree separado desde Trainer y se fusionó `codex/mentor-control` con merge normal. Conflictos únicamente en `migrate.ts`, `open.test.ts` y `TASKS.md`.
-- Commit de integración local: `d2eba8a1b5372c747f7e26d5b446b87b3b375062`.
-- `.env` no existe en este worktree. No se leyó ni imprimió ninguna clave.
+## Git y migraciones
 
-## Integración SQLite
-- Numeración canónica: v1–v6 base/Trainer, v7 `bank_ready`, v8 lease de generación Trainer, v9 configuración/versiones Mentor y metadatos de evaluación.
-- No se saltan errores ni se marca migración sin ejecutarla. Cada SQL y registro de versión se ejecuta dentro de transacción.
-- La prueba de migración conserva IDs, JSON y fecha de evaluaciones históricas y deja campos de rúbrica nuevos nulos para resultados antiguos. Prueba limpia abre dos conexiones y verifica nueve migraciones, tablas/columnas Trainer y versión Mentor sembrada; reapertura es idempotente.
-- `apps/api/src/db/migrate.test.ts` y `open.test.ts`: 2/2 aprobadas como parte de API 90/90.
+- Trainer confirmado en `05ba030`; Mentor en `81b185d` (F11 `15491a9`); merge ordinario y no destructivo.
+- Commit de integración: `d2eba8a1b5372c747f7e26d5b446b87b3b375062`. HEAD verificado antes de este cierre documental: `6235d9bcedf8e08acef8aa5b70d831899de062d3`.
+- Migraciones v1–v9 se mantienen sin cambios: v7/v8 Trainer, v9 Mentor. Las pruebas de esquema y conservación ejecutadas anteriormente constan en el commit de integración; no se repitieron.
 
-## Verificación fresca (2026-11-09)
-- `$env:CI='true'; pnpm exec turbo test --force` — exit 0; contracts 19/19, API 90/90, web 52/52 (161 total).
-- `$env:CI='true'; pnpm exec turbo typecheck --force` — exit 0, 4 tareas.
-- `$env:CI='true'; pnpm exec turbo build --force` — exit 0, 3 paquetes.
-- `$env:CI='true'; pnpm exec turbo lint --force` — exit 0; lint está configurado solo para contracts.
-- `git diff --cached --check` — exit 0 antes del commit.
+## Recorrido integrado de Ego Lite
 
-## Browser / auth / IA
-- Se levantaron fixture local Mentor con `fake-provider:mentor-control-ego-fixture` y fixture Trainer con `fake-provider:ego-fixture`; no se llamó a servicios externos.
-- Ego Lite 2.2.0 abrió la UI integrada y permitió inspeccionar el panel Mentor. Captura falló: la ventana nativa estaba minimizada. Se comprobó el bloqueo desde la interfaz de Windows; no se restauró. Las capturas escritorio/móvil y Trainer en esta rama quedan pendientes; no se afirman aprobadas.
-- Better Auth real y AI Gateway real no se probaron. El worktree carece de `.env`; coste real de esta integración: USD 0. No se expuso ni cambió configuración.
-- Inspector, aislamiento de retos, fórmula y recorridos API se cubren con suites y controles existentes; no hubo smoke de interfaz integrado completo.
+- Ego Lite 2.2.0, API temporal local, Better Auth real, SQLite temporal aislada. Cuenta de prueba y secret generados solo en ejecución; el archivo temporal se eliminó al terminar.
+- Mentor docente: login, edición, borrador, publicación v2; el estudiante vio la consigna; evaluación fake local dio 100/100 y mostró versión 2.
+- Review: fixture de commit, resultado 90/100 con evidencias de dos rutas; pantalla completa y versión móvil.
+- Trainer: dos retos distintos (`src/search.ts` y `src/validation.ts`), una pista consultada, progreso persistido, historial y repaso. En móvil se volvió a recorrer el reto y el repaso.
+- Inspector: sin sesión respondió `401 AUTH_REQUIRED`; con Better Auth docente creó, asignó y registró defensa. Captura final muestra ayuda sintética solo en área docente.
+- Móvil 390 px: Trainer, Mentor y Review registraron `innerWidth=390` y `scrollWidth=390`.
+- Proveedores usados: fake etiquetados. AI Gateway live: 0 llamadas, coste USD 0. No fue necesaria una evaluación facturable. Modelo configurado visto como metadato de desarrollo: `alibaba/qwen3.7-flash`; nunca se reveló una clave.
 
-## Evidencia privada
-- Carpeta única: `task-list/F12/evidence/`, ignorada por Git; máximo 20 archivos.
-- `git check-ignore -v task-list/F12/evidence/ego-integration.mjs` — confirma `.gitignore:21:/task-list/F12/evidence/`; no añadir su contenido al índice.
-- La limitación de Ego Lite impide cerrar F12 como completada. Falta capturar con Ego escritorio/móvil una vez disponible la ventana, ejecutar recorrido integrado y validar credenciales/modelo en configuración local sin mostrar secretos.
+## Pruebas dirigidas frescas (2026-11-09)
+
+- Better Auth, Mentor control, Trainer HTTP/service, Inspector service/review adapter y Review worker HTTP: 7 archivos, 23 tests, exit 0.
+- Trainer screen, Review screen y validación Review web: 3 archivos, 7 tests, exit 0.
+- Suite completa anterior: 161/161, typecheck, build y lint aprobados en `d2eba8a`; esta continuación no modificó código ni migraciones.
+
+## Paquete privado
+
+- [Manifiesto](evidence/manifest.md) y [comandos/resultados](evidence/commands-results.md).
+- `task-list/F12/evidence/`: 14 archivos de 20; 8 capturas Ego Lite, 4 scripts de fixture/recorrido y 2 documentos.
+- `git check-ignore -v task-list/F12/evidence/manifest.md` confirma `.gitignore`; `git ls-files task-list/F12/evidence` no lista archivos.
+- Sin `.env`, base de datos, credenciales, cookies o archivos de producción en la evidencia. Los servicios temporales quedaron detenidos.
+
+## Límites
+
+- Review/Mentor/Trainer e Inspector usan fixtures sintéticos; no se llamó a repositorios, AI Gateway, Moodle o producción.
+- No se modificaron F10, F11 ni migraciones. `main`, VPS y tag v0.3.0 permanecen intactos.
