@@ -7,7 +7,7 @@ import { createTrainerRepository } from "./repository.js";
 import { createTrainerService } from "./service.js";
 
 const sha = "a".repeat(40);
-async function fixture() {
+async function fixture(onlyOneFinding = false) {
   const source = { owner: "classroom", repo: "demo", commitSha: sha, files: [
     { path: "src/search.ts", content: "export const search = (term: string) => term.trim();\n", sha: "b".repeat(40) },
     { path: "src/cart.ts", content: "export const total = (prices: number[]) => prices.reduce((sum, price) => sum + price, 0);\n", sha: "c".repeat(40) },
@@ -21,7 +21,7 @@ async function fixture() {
       { criterionId: "search", status: "verified", evidence: [{ source: "repository", path: "src/search.ts", lines: [1, 1], digest }], reason: "La búsqueda limpia espacios antes de comparar.", guidanceLevel: 1 },
       { criterionId: "cart-total", status: "verified", evidence: [{ source: "repository", path: "src/cart.ts", lines: [1, 1], digest }], reason: "El total del carrito suma todos los precios.", guidanceLevel: 1 },
       { criterionId: "cache-key", status: "verified", evidence: [{ source: "repository", path: "src/cache.ts", lines: [1, 1], digest }], reason: "La clave de caché normaliza el texto a minúsculas.", guidanceLevel: 1 },
-    ],
+    ].slice(0, onlyOneFinding ? 1 : 3),
     limitations: [], modelId: "fake-provider:review-fixture", inputDigest: "c".repeat(64),
   };
   const review = { id: "review-1", projectId: "classroom/demo", commitSha: sha, owner: "classroom", repo: "demo", snapshot, analysis };
@@ -90,6 +90,20 @@ describe("Trainer service", () => {
       expect(f.store.isBankReady("review-1", sha)).toBe(true);
       await expect(service.draw("session-a", "review-1")).rejects.toMatchObject({ code: "NO_COMPATIBLE_CHALLENGES" });
       expect(failedCalls).toBe(3);
+    } finally { f.db.close(); }
+  });
+
+  it("allows a single compatible challenge to return as review after completion", async () => {
+    const f = await fixture(true);
+    try {
+      const first = await f.service.draw("session-a", "review-1");
+      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: first.challenge.id, status: "completed", hintsUsed: 0 });
+      const repeat = await f.service.draw("session-a", "review-1");
+      expect(first.bankSize).toBe(1);
+      expect(repeat.bankSize).toBe(1);
+      expect(repeat.category).toBe("review");
+      expect(repeat.challenge.id).toBe(first.challenge.id);
+      expect(f.providerCalls).toBe(1);
     } finally { f.db.close(); }
   });
 
