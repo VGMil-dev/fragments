@@ -1,6 +1,6 @@
 # F10.1 — Evidencia de implementación
 
-Estado: IMPLEMENTADO; falta registrar commit y cierre en TASKS.
+Estado: COMPLETADA.
 
 Rama: `codex/v0.3.0-trainer`, base preservada desde `origin/main`; no se creó otra rama.
 
@@ -13,12 +13,14 @@ Rama: `codex/v0.3.0-trainer`, base preservada desde `origin/main`; no se creó o
 
 ## Verificación fresca — 2026-11-09
 
-- `$env:CI='true'; pnpm exec turbo test --force` — exit 0, sin caché; contracts 18, API 86, web 52; total 156.
-- `$env:CI='true'; pnpm --filter @fragments/api exec vitest run src/features/trainer/service.test.ts src/features/trainer/http.test.ts src/features/trainer/repository.test.ts src/db/open.test.ts` — exit 0; 4 archivos, 8 pruebas.
+- `$env:CI='true'; pnpm exec turbo test --force` — exit 0, sin caché; contracts 18, API 87, web 52; total 157.
+- `$env:CI='true'; pnpm --filter @fragments/api exec vitest run src/features/trainer/service.test.ts src/features/trainer/http.test.ts src/features/trainer/repository.test.ts src/db/open.test.ts` — exit 0; 4 archivos, 9 pruebas.
 - `$env:CI='true'; pnpm exec turbo typecheck --force` — exit 0, 4/4 tareas.
 - `$env:CI='true'; pnpm exec turbo build --force` — exit 0, 3/3 paquetes.
 - `$env:CI='true'; pnpm exec turbo lint --force` — exit 0; 1 lint declarado.
 - `git diff --check` — exit 0.
+- Commit de implementación: `4133219a2cbd37ac0c40a0ef041fc3e3d36f4e29` — `feat(trainer): amplia variedad de retos de F10.1`.
+- Commit de prueba del caso de una opción: `3cda9a4` — `test(trainer): cubre repaso con reto unico`.
 - Ego Lite v2.2.0: fixture fake local; banco de tres tareas, sorteo de 2 tareas diferentes, pistas 1–3, progreso recuperado tras recarga, repaso, viewport 390×844 sin scroll horizontal (`innerWidth=scrollWidth=390`). Capturas/logs en `task-list/F10/evidence/`.
 
 ## Review/IA live
@@ -33,4 +35,4 @@ Fixture pública `VGMil-dev/fragments-test-app`, SHA exacto `e24fce1c998aec9b52d
 
 ## Commit
 
-Se completará después del commit de implementación: registrar su hash, actualizar `TASKS.md` a `[x]` y hacer un cierre documental separado para evitar reescribir historial.
+`task-list/TASKS.md` marca F10.1 `[x]` y apunta al commit anterior. El cierre documental es un commit separado; no se reescribió historia. Estado Git final después del cierre: rama `codex/v0.3.0-trainer`, por delante de `origin/main`, sin cambios rastreados pendientes; permanece un DOCX local ajeno al task sin stagear.

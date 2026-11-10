@@ -15,7 +15,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F08 | PLANNER | F07 | Despliegue de release en Oracle ARM64 con auth, web, backups SQLite y Cloudflare Tunnel; smoke checks sin secretos | [x] |
 | F09 | PLANNER | F02,F04 | Descarga de plantilla DOCX e importación local editable en Mentor; pruebas del flujo existente | [x] |
 | F10 | PLANNER | F08,F09 | Trainer: Review→sorteo→reto→pistas→progreso→historial→repaso; separación Inspector, Ego Lite y paquete de evidencia local ≤20 archivos | [x] |
-| F10.1 | PLANNER | F10 | Completar banco variado de retos desde Review verificado; reutilizarlo, admitir repaso, probar concurrencia y recorrer fixture pública sin ejecutar su código; evidencia local ≤20 archivos | [ ] |
+| F10.1 | PLANNER | F10 | Completar banco variado de retos desde Review verificado; reutilizarlo, admitir repaso, probar concurrencia y recorrer fixture pública sin ejecutar su código; evidencia local ≤20 archivos; commits `4133219a`/`3cda9a4` | [x] |
 
 ## Estado de cierre de integración — 2026-11-05
 
