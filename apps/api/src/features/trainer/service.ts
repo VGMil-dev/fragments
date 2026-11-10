@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { AiAnalysisSchema, EvidenceReferenceSchema, RepositorySnapshotSchema } from "@fragments/contracts";
+import { AiAnalysisSchema, EvidenceReferenceSchema, RepositorySnapshotSchema, type AiAnalysis } from "@fragments/contracts";
 import type { InspectorReviewRecord } from "../inspector/review-adapter.js";
 import type { ChallengeDraft, ReviewEvidence } from "../inspector/service.js";
 import type { TrainerAttempt, TrainerChallenge, TrainerStatus } from "./repository.js";
@@ -21,28 +21,37 @@ export class TrainerError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "TrainerError"; }
 }
 
-function pickEvidence(review: ReviewEvidence) {
+function verifiedEvidence(review: ReviewEvidence) {
   const snapshot = RepositorySnapshotSchema.safeParse(review.snapshot);
   const analysis = AiAnalysisSchema.safeParse(review.analysis);
   if (!snapshot.success || !analysis.success || snapshot.data.commitSha.toLowerCase() !== review.commitSha.toLowerCase()) {
     throw new TrainerError("INVALID_REVIEW_EVIDENCE", "No se pudo validar la evidencia del commit revisado.");
   }
+  const candidates: Array<{ evidence: Extract<AiAnalysis["findings"][number]["evidence"][number], { source: "repository" }>; findingReason: string; feature: string; excerpt: string }> = [];
+  const seen = new Set<string>();
   for (const finding of analysis.data.findings) {
     if (finding.status !== "verified") continue;
     for (const ref of finding.evidence) {
-      if (!EvidenceReferenceSchema.safeParse(ref).success || ref.source !== "repository" || ref.digest !== snapshot.data.digest) continue;
-      const file = snapshot.data.files.find((entry) => entry.path === ref.path);
+      const evidence = EvidenceReferenceSchema.parse(ref);
+      if (evidence.source !== "repository" || evidence.digest !== snapshot.data.digest) continue;
+      const file = snapshot.data.files.find((entry) => entry.path === evidence.path);
       if (!file) continue;
-      const [start, end] = ref.lines;
+      const [start, end] = evidence.lines;
       const lines = file.content.split(/\r?\n/);
       if (/\r?\n$/.test(file.content)) lines.pop();
       if (start < 1 || end < start || end > lines.length || end - start > 49) continue;
       const excerpt = lines.slice(start - 1, end).map((line, index) => `${start + index}: ${line}`).join("\n");
       if (!excerpt || new TextEncoder().encode(excerpt).byteLength > 4_000) continue;
-      return { evidence: ref, findingReason: finding.reason, feature: `${finding.criterionId}: ${finding.reason}`, excerpt: `${ref.path}\n${excerpt}` };
+      const feature = `${finding.criterionId}: ${finding.reason}`.slice(0, 1000);
+      const key = feature.normalize("NFKC").toLocaleLowerCase("es").replace(/\W+/g, " ").trim();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({ evidence, findingReason: finding.reason, feature, excerpt: `${evidence.path}\n${excerpt}` });
+      break;
     }
   }
-  throw new TrainerError("NO_VERIFIED_EVIDENCE", "La revisión no tiene evidencia verificada para crear un reto.");
+  if (!candidates.length) throw new TrainerError("NO_VERIFIED_EVIDENCE", "La revisión no tiene evidencia verificada para crear un reto.");
+  return candidates.slice(0, 5);
 }
 
 export function createTrainerService(dependencies: TrainerDependencies) {
@@ -55,30 +64,49 @@ export function createTrainerService(dependencies: TrainerDependencies) {
     const review = await dependencies.reviews.getEvidence(reviewId);
     if (!review) throw new TrainerError("REVIEW_NOT_FOUND", "No se encontró el análisis solicitado.");
     const existing = dependencies.store.getBank(review.id, review.commitSha);
-    if (existing?.length) return existing;
+    if (existing !== null && dependencies.store.isBankReady(review.id, review.commitSha)) return existing;
     const key = `${review.id}:${review.commitSha.toLowerCase()}`;
     const pending = inFlight.get(key);
     if (pending) return pending;
     const generation = (async () => {
-      const { evidence, findingReason, feature, excerpt } = pickEvidence(review);
-      const draft = await dependencies.provider.createChallenge({ reviewId: review.id, commitSha: review.commitSha, evidence, findingReason, evidenceExcerpt: excerpt });
-      const createdAt = now().toISOString();
-      const challenge: TrainerChallenge = {
-        id: createId(), reviewId: review.id, projectId: review.projectId, commitSha: review.commitSha,
-        feature, task: draft.mutation, expectedObservation: draft.demonstration, restoration: draft.restoration,
-        estimatedMinutes: draft.estimatedMinutes, sourcePath: evidence.path, sourceLines: evidence.lines,
-        hints: [
-          `Observa primero el comportamiento descrito por Review: ${findingReason}`,
-          `Busca la implementación cerca de ${evidence.path}, líneas ${evidence.lines[0]}–${evidence.lines[1]}.`,
-          "Experimenta con un cambio temporal y pequeño relacionado con el comportamiento; demuestra el efecto y restaura el código original.",
-        ], createdAt,
-      };
-      const parsed: TrainerChallenge = {
-        ...challenge,
-        task: String(challenge.task).slice(0, 1000), expectedObservation: String(challenge.expectedObservation).slice(0, 1000),
-        restoration: String(challenge.restoration).slice(0, 1000), feature: feature.slice(0, 1000),
-      };
-      return dependencies.store.saveBank(review.id, review.commitSha, [parsed], createdAt);
+      const owner = `trainer-${randomUUID()}`;
+      const deadline = Date.now() + 190_000;
+      while (!dependencies.store.claimBankGeneration(review.id, review.commitSha, owner, Date.now(), 180_000)) {
+        if (dependencies.store.isBankReady(review.id, review.commitSha)) return dependencies.store.getBank(review.id, review.commitSha) ?? [];
+        if (Date.now() >= deadline) throw new TrainerError("BANK_GENERATION_BUSY", "El banco de retos todavía se está preparando. Inténtalo de nuevo en un momento.");
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      try {
+        const candidates = verifiedEvidence(review);
+        const createdAt = now().toISOString();
+        const challenges: TrainerChallenge[] = [];
+        const existingFeatures = new Set((existing ?? []).map((challenge) => challenge.feature));
+        for (const { evidence, findingReason, feature, excerpt } of candidates) {
+          if (existingFeatures.has(feature)) continue;
+          try {
+            const draft = await dependencies.provider.createChallenge({ reviewId: review.id, commitSha: review.commitSha, evidence, findingReason, evidenceExcerpt: excerpt });
+            const taskKey = draft.mutation.normalize("NFKC").toLocaleLowerCase("es").replace(/\W+/g, " ").trim();
+            if (challenges.some((challenge) => challenge.task.normalize("NFKC").toLocaleLowerCase("es").replace(/\W+/g, " ").trim() === taskKey)
+              || (existing ?? []).some((challenge) => challenge.task.normalize("NFKC").toLocaleLowerCase("es").replace(/\W+/g, " ").trim() === taskKey)) continue;
+            challenges.push({
+              id: createId(), reviewId: review.id, projectId: review.projectId, commitSha: review.commitSha,
+              feature, task: String(draft.mutation).slice(0, 1000), expectedObservation: String(draft.demonstration).slice(0, 1000),
+              restoration: String(draft.restoration).slice(0, 1000), estimatedMinutes: draft.estimatedMinutes,
+              sourcePath: evidence.path, sourceLines: evidence.lines,
+              hints: [
+                `Observa primero el comportamiento descrito por Review: ${findingReason}`,
+                `Busca la implementación cerca de ${evidence.path}, líneas ${evidence.lines[0]}–${evidence.lines[1]}.`,
+                "Experimenta con un cambio temporal y pequeño relacionado con el comportamiento; demuestra el efecto y restaura el código original.",
+              ], createdAt,
+            });
+          } catch {
+            // Un hallazgo que no produzca un reto válido no debe impedir usar los demás.
+          }
+        }
+        return dependencies.store.saveBank(review.id, review.commitSha, challenges, createdAt, true, owner);
+      } finally {
+        dependencies.store.releaseBankGeneration(review.id, review.commitSha, owner);
+      }
     })();
     inFlight.set(key, generation);
     try { return await generation; } finally { inFlight.delete(key); }
@@ -87,8 +115,9 @@ export function createTrainerService(dependencies: TrainerDependencies) {
   return {
     listReviews: () => dependencies.reviews.listCompleted(),
     history(sessionHash: string, reviewId?: string): TrainerAttempt[] { return dependencies.store.history(sessionHash, reviewId); },
-    async draw(sessionHash: string, reviewId: string): Promise<{ challenge: TrainerChallenge; category: "new" | "pending" | "review" }> {
+    async draw(sessionHash: string, reviewId: string): Promise<{ challenge: TrainerChallenge; category: "new" | "pending" | "review"; bankSize: number }> {
       const bank = await bankFor(reviewId);
+      if (!bank.length) throw new TrainerError("NO_COMPATIBLE_CHALLENGES", "Review no encontró evidencia suficiente para preparar un reto seguro. Revisa otro análisis o consulta a tu docente.");
       const latest = new Map<string, TrainerAttempt>();
       for (const attempt of dependencies.store.history(sessionHash, reviewId).slice().reverse()) latest.set(attempt.challengeId, attempt);
       const groups = {
@@ -106,7 +135,7 @@ export function createTrainerService(dependencies: TrainerDependencies) {
       const previous = dependencies.store.history(sessionHash, reviewId)[0]?.challengeId;
       const alternatives = candidates.filter((challenge) => challenge.id !== previous);
       const selected = (alternatives.length ? alternatives : candidates)[Math.floor(Math.min(Math.max(random(), 0), 0.999999) * (alternatives.length || candidates.length))]!;
-      return { challenge: selected, category };
+      return { challenge: selected, category, bankSize: bank.length };
     },
     async record(input: { sessionHash: string; reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number }): Promise<TrainerAttempt> {
       if (!Number.isInteger(input.hintsUsed) || input.hintsUsed < 0 || input.hintsUsed > 3) throw new TrainerError("INVALID_INPUT", "La cantidad de pistas no es válida.");

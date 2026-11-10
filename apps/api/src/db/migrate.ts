@@ -136,6 +136,15 @@ const migrations = [
     CREATE INDEX IF NOT EXISTS trainer_attempt_history ON trainer_attempts(session_hash, review_id, attempted_at);
     CREATE INDEX IF NOT EXISTS trainer_attempt_challenge ON trainer_attempts(session_hash, challenge_id, attempted_at);`,
   },
+  {
+    version: 7,
+    sql: `ALTER TABLE trainer_banks ADD COLUMN bank_ready INTEGER NOT NULL DEFAULT 0 CHECK (bank_ready IN (0, 1));`,
+  },
+  {
+    version: 8,
+    sql: `ALTER TABLE trainer_banks ADD COLUMN generation_owner TEXT;
+    ALTER TABLE trainer_banks ADD COLUMN generation_lease_until INTEGER;`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

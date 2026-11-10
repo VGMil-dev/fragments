@@ -8,7 +8,11 @@ import { createApiServer } from "../../apps/api/src/http/app.ts";
 const commitSha = "a".repeat(40);
 const snapshotBody = {
   owner: "fragments-fixture", repo: "trainer-demo", commitSha,
-  files: [{ path: "src/search.ts", content: "export function search(term: string, items: string[]) {\n  const query = term.trim().toLowerCase();\n  return items.filter((item) => item.toLowerCase().includes(query));\n}\n", sha: "b".repeat(40) }],
+  files: [
+    { path: "src/search.ts", content: "export function search(term: string, items: string[]) {\n  const query = term.trim().toLowerCase();\n  return items.filter((item) => item.toLowerCase().includes(query));\n}\n", sha: "b".repeat(40) },
+    { path: "src/validation.ts", content: "export function isValidName(value: string) {\n  return value.trim().length > 0;\n}\n", sha: "d".repeat(40) },
+    { path: "tests/search.test.ts", content: "it('ignora espacios alrededor', () => {\n  expect(search(' agua ', ['Agua'])).toEqual(['Agua']);\n});\n", sha: "e".repeat(40) },
+  ],
 };
 const digest = await digestSnapshot(snapshotBody);
 const review = {
@@ -16,7 +20,11 @@ const review = {
   commitSha, snapshot: { ...snapshotBody, digest },
   analysis: {
     rubricVersion: "review-v1", score: 80,
-    findings: [{ criterionId: "search-behavior", status: "verified", evidence: [{ source: "repository", path: "src/search.ts", lines: [1, 4], digest }], file: "src/search.ts", lines: [1, 4], reason: "La búsqueda ignora mayúsculas y espacios en los extremos.", guidanceLevel: 1 }],
+    findings: [
+      { criterionId: "search-behavior", status: "verified", evidence: [{ source: "repository", path: "src/search.ts", lines: [1, 4], digest }], file: "src/search.ts", lines: [1, 4], reason: "La búsqueda ignora mayúsculas y espacios en los extremos.", guidanceLevel: 1 },
+      { criterionId: "input-validation", status: "verified", evidence: [{ source: "repository", path: "src/validation.ts", lines: [1, 3], digest }], file: "src/validation.ts", lines: [1, 3], reason: "El nombre vacío o con espacios se rechaza después de trim.", guidanceLevel: 1 },
+      { criterionId: "search-tests", status: "verified", evidence: [{ source: "repository", path: "tests/search.test.ts", lines: [1, 3], digest }], file: "tests/search.test.ts", lines: [1, 3], reason: "La prueba comprueba espacios al inicio y al final de la consulta.", guidanceLevel: 1 },
+    ],
     limitations: [], modelId: "fake-provider:ego-fixture", inputDigest: "c".repeat(64),
   },
 };
@@ -30,18 +38,19 @@ const trainer = createTrainerService({
     async getEvidence(id) { return id === review.id ? review : null; },
   },
   provider: {
-    async createChallenge() {
+    async createChallenge(input) {
       return {
         precondition: "El filtro normaliza la consulta.",
-        mutation: "Modifica temporalmente la búsqueda para que ignore los espacios iniciales, pero no los finales. Muestra el efecto y restaura el comportamiento original.",
-        demonstration: "Prueba consultas con espacios iniciales y finales y compara los resultados.",
-        restoration: "Restaura la normalización original antes de cerrar la práctica.",
+        mutation: `Modifica temporalmente ${input.evidence.path} para comprobar el hallazgo de Review. Demuestra el cambio y restaura el comportamiento.`,
+        demonstration: `Comprueba en ${input.evidence.path} el comportamiento indicado por Review.`,
+        restoration: `Restaura el comportamiento original de ${input.evidence.path} antes de cerrar la práctica.`,
         estimatedMinutes: 15,
         teacherHint: "FAKE_PRIVATE_HINT_DO_NOT_LEAK",
       };
     },
   },
   store,
+  random: () => 0,
 });
 const auth = {
   async teacherId() { return null; },

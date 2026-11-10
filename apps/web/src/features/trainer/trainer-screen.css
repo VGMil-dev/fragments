@@ -20,6 +20,7 @@
 .trainer-badge { display: inline-flex; border-radius: 999px; padding: .35rem .7rem; background: var(--powder); color: var(--navy); font-size: .78rem; font-weight: 800; }
 .trainer-badge--pending { background: #f7e8cd; }
 .trainer-badge--review { background: #e4e9f4; }
+.trainer-bank-size { margin: .7rem 0 -.55rem; color: var(--muted); font-size: .86rem; }
 .trainer-challenge__feature { margin: 1rem 0 .25rem; color: var(--blue); font-size: .84rem; font-weight: 750; }
 .trainer-challenge h2 { margin: .3rem 0 .55rem; font-size: 1.5rem; }
 .trainer-challenge > p:not(.trainer-challenge__feature) { line-height: 1.65; }

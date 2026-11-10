@@ -10,6 +10,21 @@ let directory = "";
 afterEach(() => { if (directory) rmSync(directory, { recursive: true, force: true }); directory = ""; });
 
 describe("Trainer SQLite repository", () => {
+  it("reserves one bank generator across separate SQLite connections", () => {
+    directory = mkdtempSync(join(tmpdir(), "fragments-trainer-lock-"));
+    const path = join(directory, "trainer.sqlite");
+    const firstDb = new DatabaseSync(path); migrate(firstDb);
+    const secondDb = new DatabaseSync(path); migrate(secondDb);
+    try {
+      const first = createTrainerRepository(firstDb);
+      const second = createTrainerRepository(secondDb);
+      expect(first.claimBankGeneration("review-lock", "a".repeat(40), "owner-a", 10_000, 1_000)).toBe(true);
+      expect(second.claimBankGeneration("review-lock", "a".repeat(40), "owner-b", 10_001, 1_000)).toBe(false);
+      first.releaseBankGeneration("review-lock", "a".repeat(40), "owner-a");
+      expect(second.claimBankGeneration("review-lock", "a".repeat(40), "owner-b", 10_002, 1_000)).toBe(true);
+    } finally { firstDb.close(); secondDb.close(); }
+  });
+
   it("preserves the challenge bank and session history after reopening the database", () => {
     directory = mkdtempSync(join(tmpdir(), "fragments-trainer-"));
     const path = join(directory, "trainer.sqlite");

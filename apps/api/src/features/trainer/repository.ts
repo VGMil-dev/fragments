@@ -45,10 +45,48 @@ export function createTrainerRepository(database: DatabaseSync) {
         .get(reviewId, commitSha) as { challenges_json: string } | undefined;
       return row ? JSON.parse(row.challenges_json) as TrainerChallenge[] : null;
     },
-    saveBank(reviewId: string, commitSha: string, challenges: TrainerChallenge[], createdAt: string): TrainerChallenge[] {
-      database.prepare("INSERT INTO trainer_banks(review_id, commit_sha, challenges_json, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(review_id, commit_sha) DO NOTHING")
-        .run(reviewId, commitSha, JSON.stringify(challenges), createdAt);
-      return this.getBank(reviewId, commitSha) ?? challenges;
+    isBankReady(reviewId: string, commitSha: string): boolean {
+      const row = database.prepare("SELECT bank_ready FROM trainer_banks WHERE review_id = ? AND commit_sha = ?")
+        .get(reviewId, commitSha) as { bank_ready: number } | undefined;
+      return row?.bank_ready === 1;
+    },
+    claimBankGeneration(reviewId: string, commitSha: string, owner: string, now: number, leaseMs: number): boolean {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.prepare(`INSERT OR IGNORE INTO trainer_banks(review_id, commit_sha, challenges_json, created_at, bank_ready)
+          VALUES (?, ?, '[]', ?, 0)`).run(reviewId, commitSha, new Date(now).toISOString());
+        const result = database.prepare(`UPDATE trainer_banks SET generation_owner=?, generation_lease_until=?
+          WHERE review_id=? AND commit_sha=? AND bank_ready=0
+          AND (generation_owner IS NULL OR generation_lease_until <= ?)`)
+          .run(owner, now + leaseMs, reviewId, commitSha, now);
+        database.exec("COMMIT");
+        return result.changes === 1;
+      } catch (cause) { database.exec("ROLLBACK"); throw cause; }
+    },
+    releaseBankGeneration(reviewId: string, commitSha: string, owner: string): void {
+      database.prepare("UPDATE trainer_banks SET generation_owner=NULL, generation_lease_until=NULL WHERE review_id=? AND commit_sha=? AND generation_owner=? AND bank_ready=0")
+        .run(reviewId, commitSha, owner);
+    },
+    saveBank(reviewId: string, commitSha: string, challenges: TrainerChallenge[], createdAt: string, ready = true, generationOwner?: string): TrainerChallenge[] {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const current = this.getBank(reviewId, commitSha) ?? [];
+        const byFeature = new Map(current.map((challenge) => [challenge.feature, challenge]));
+        for (const challenge of challenges) if (!byFeature.has(challenge.feature)) byFeature.set(challenge.feature, challenge);
+        const merged = [...byFeature.values()];
+        if (generationOwner) {
+          const result = database.prepare(`UPDATE trainer_banks SET challenges_json=?, bank_ready=?, generation_owner=NULL, generation_lease_until=NULL
+            WHERE review_id=? AND commit_sha=? AND generation_owner=? AND bank_ready=0`)
+            .run(JSON.stringify(merged), ready ? 1 : 0, reviewId, commitSha, generationOwner);
+          if (result.changes !== 1) throw new Error("Se perdió la reserva de generación del banco Trainer.");
+        } else {
+          database.prepare(`INSERT INTO trainer_banks(review_id, commit_sha, challenges_json, created_at, bank_ready)
+            VALUES (?, ?, ?, ?, ?) ON CONFLICT(review_id, commit_sha) DO UPDATE SET challenges_json=excluded.challenges_json, bank_ready=excluded.bank_ready`)
+            .run(reviewId, commitSha, JSON.stringify(merged), createdAt, ready ? 1 : 0);
+        }
+        database.exec("COMMIT");
+        return merged;
+      } catch (cause) { database.exec("ROLLBACK"); throw cause; }
     },
     history(sessionHash: string, reviewId?: string): TrainerAttempt[] {
       const rows = reviewId

@@ -8,7 +8,7 @@ export type TrainerChallenge = {
 };
 export type TrainerStatus = "pending" | "in_progress" | "completed" | "need_more";
 export type TrainerHistoryItem = { id: string; reviewId: string; challengeId: string; feature: string; status: TrainerStatus; hintsUsed: number; attemptedAt: string };
-type Draw = { challenge: TrainerChallenge; category: "new" | "pending" | "review" };
+type Draw = { challenge: TrainerChallenge; category: "new" | "pending" | "review"; bankSize: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function isText(value: unknown): value is string { return typeof value === "string"; }
@@ -45,7 +45,7 @@ export function createTrainerApi() {
   return {
     reviews: () => request("/api/trainer/reviews", (value) => list(value, isReview)),
     history: (reviewId?: string) => request(`/api/trainer/history${reviewId ? `?reviewId=${encodeURIComponent(reviewId)}` : ""}`, (value) => list(value, isHistoryItem)),
-    draw: (reviewId: string) => request<Draw>("/api/trainer/draw", (value) => isRecord(value) && isChallenge(value.challenge) && ["new", "pending", "review"].includes(String(value.category)) ? value as unknown as Draw : null, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reviewId }) }),
+    draw: (reviewId: string) => request<Draw>("/api/trainer/draw", (value) => isRecord(value) && isChallenge(value.challenge) && ["new", "pending", "review"].includes(String(value.category)) && isNumber(value.bankSize) && value.bankSize >= 1 && value.bankSize <= 5 ? value as unknown as Draw : null, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reviewId }) }),
     record: (input: { reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number }) => request("/api/trainer/attempts", (value) => validate(value, isHistoryItem), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }),
   };
 }

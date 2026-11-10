@@ -30,8 +30,9 @@ describe("Trainer HTTP", () => {
     const base = `http://127.0.0.1:${address.port}`;
     const drawn = await fetch(`${base}/api/trainer/draw`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reviewId: "review-1" }) });
     const cookie = drawn.headers.get("set-cookie") ?? "";
-    const drawnBody = await drawn.json() as { ok: boolean; data: { challenge: { id: string }; category: string } };
+    const drawnBody = await drawn.json() as { ok: boolean; data: { challenge: { id: string }; category: string; bankSize: number } };
     expect(drawn.status).toBe(200);
+    expect(drawnBody.data.bankSize).toBe(1);
     expect(cookie).toContain("HttpOnly");
     expect(JSON.stringify(drawnBody)).not.toContain("PRIVATE_INSPECTOR_ONLY");
     await fetch(`${base}/api/trainer/attempts`, { method: "POST", headers: { "content-type": "application/json", cookie: cookie.split(";")[0]! }, body: JSON.stringify({ reviewId: "review-1", challengeId: drawnBody.data.challenge.id, status: "completed", hintsUsed: 1 }) });

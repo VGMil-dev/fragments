@@ -22,7 +22,7 @@ function statusCode(value: unknown): number {
   if (value.code === "REVIEW_NOT_FOUND" || value.code === "CHALLENGE_NOT_FOUND") return 404;
   if (value.code === "REVIEW_STALE") return 409;
   if (value.code.startsWith("INVALID_")) return 400;
-  if (value.code === "NO_VERIFIED_EVIDENCE") return 422;
+  if (value.code === "NO_VERIFIED_EVIDENCE" || value.code === "NO_COMPATIBLE_CHALLENGES") return 422;
   return 500;
 }
 function session(request: IncomingMessage, response: ServerResponse, ensure: (hash: string, now: Date) => boolean): string {
@@ -59,7 +59,7 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
       if (request.method === "POST" && url.pathname === "/api/trainer/draw") {
         const input = z.object({ reviewId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/) }).strict().parse(await body(request));
         const result = await service.draw(sessionHash, input.reviewId);
-        const data = z.object({ challenge: TrainerChallengeSchema, category: z.enum(["new", "pending", "review"]) }).strict().parse(result);
+        const data = z.object({ challenge: TrainerChallengeSchema, category: z.enum(["new", "pending", "review"]), bankSize: z.number().int().min(1).max(5) }).strict().parse(result);
         json(response, 200, { ok: true, data }); return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/attempts") {

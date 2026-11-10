@@ -13,6 +13,7 @@ export function TrainerScreen({ api }: { api: Api }) {
   const [history, setHistory] = useState<TrainerHistoryItem[]>([]);
   const [challenge, setChallenge] = useState<TrainerChallenge | null>(null);
   const [category, setCategory] = useState<keyof typeof categoryLabels | null>(null);
+  const [bankSize, setBankSize] = useState<number | null>(null);
   const [shownHints, setShownHints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [drawing, setDrawing] = useState(false);
@@ -41,7 +42,7 @@ export function TrainerScreen({ api }: { api: Api }) {
     if (!selectedReview || drawing) return;
     setDrawing(true); setMessage(""); setShownHints(0);
     const result = await api.draw(selectedReview);
-    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); }
+    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); }
     else setMessage(result.error.message);
     setDrawing(false);
   }
@@ -81,7 +82,9 @@ export function TrainerScreen({ api }: { api: Api }) {
 
       {challenge ? (
         <article className="trainer-challenge" aria-labelledby="trainer-challenge-title">
+          {bankSize === 1 ? <p className="trainer-message" role="status">Este análisis solo tiene una funcionalidad compatible. Puedes volver a sortearla para repasar o elegir otra revisión.</p> : null}
           <div className="trainer-challenge__top"><span className={`trainer-badge trainer-badge--${category}`}>{categoryLabels[category ?? "new"]}</span><span>{challenge.estimatedMinutes} min</span></div>
+          {bankSize !== null && bankSize > 1 ? <p className="trainer-bank-size">{bankSize} retos compatibles para este análisis.</p> : null}
           <p className="trainer-challenge__feature">Funcionalidad: {challenge.feature}</p>
           <h2 id="trainer-challenge-title">Tu reto</h2>
           <p>{challenge.task}</p>
