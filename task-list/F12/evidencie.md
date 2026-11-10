@@ -7,6 +7,7 @@ Estado: INCOMPLETA. Rama local `codex/v0.3.0-integration`. No crear tag, publica
 - Rama Mentor confirmada: `81b185d` (incluye F11 `15491a9`).
 - Base común: `8ae8b5537c1f136d422ba122566d668c741687e5`.
 - Se creó worktree separado desde Trainer y se fusionó `codex/mentor-control` con merge normal. Conflictos únicamente en `migrate.ts`, `open.test.ts` y `TASKS.md`.
+- Commit de integración local: `d2eba8a1b5372c747f7e26d5b446b87b3b375062`.
 - `.env` no existe en este worktree. No se leyó ni imprimió ninguna clave.
 
 ## Integración SQLite
