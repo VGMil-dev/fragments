@@ -1,6 +1,6 @@
 # F11 — Evidencia
 
-Estado: IMPLEMENTACIÓN Y QA COMPLETOS; commit local pendiente. Rama `codex/mentor-control`, worktree aislado desde `8ae8b5537c1f136d422ba122566d668c741687e5`. F10 permanece en el checkout separado.
+Estado: COMPLETADA. Rama `codex/mentor-control`, worktree aislado desde `8ae8b5537c1f136d422ba122566d668c741687e5`. F10 permanece en el checkout separado.
 
 ## Resultado verificable
 
@@ -35,5 +35,5 @@ Estado: IMPLEMENTACIÓN Y QA COMPLETOS; commit local pendiente. Rama `codex/ment
 
 ## Git
 
-- Commit de implementación: pendiente.
+- Commit de implementación: `15491a9`.
 - No hubo push ni despliegue.
