@@ -15,15 +15,13 @@ const proposal: Proposal = {
 const fakeEvaluator: MentorEvaluator = {
   async evaluate(input) {
     return {
-      rubricVersion: "mentor-1",
-      score: 82,
-      findings: [{
-        criterionId: "viability",
-        status: "verified",
+      findings: input.config.criteria.map((criterion) => ({
+        criterionId: criterion.id,
+        status: "verified" as const,
         evidence: [{ source: "proposal", field: "scope", digest: input.proposalDigest }],
         reason: "El alcance inicial se puede demostrar.",
         guidanceLevel: 1,
-      }],
+      })),
       limitations: [],
       modelId: "fake-mentor-v1",
       inputDigest: input.proposalDigest,
@@ -53,7 +51,7 @@ describe("Mentor service", () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     const result = await service.evaluate(proposal);
     expect(AiAnalysisSchema.safeParse(result.analysis).success).toBe(true);
-    expect(result.analysis.score).toBe(82);
+    expect(result.analysis.score).toBe(100);
     expect(result.similarities).toEqual([]);
     expect(result.guidance).toHaveLength(1);
   });
@@ -92,7 +90,7 @@ describe("Mentor service", () => {
     expect(pdfCalls).toBe(0);
     const readme = service.renderReadme(submission);
     expect(readme).toContain("# Huerto escolar");
-    expect(readme).not.toContain("82");
+    expect(readme).not.toContain("100");
     expect((await service.renderPdf(submission)).byteLength).toBeGreaterThan(0);
     expect(pdfCalls).toBe(1);
   });

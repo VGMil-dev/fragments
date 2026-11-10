@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AiAnalysisSchema, CreateProposalRequestSchema, SubmissionSnapshotSchema, type AiAnalysis, type GalleryEntry, type SubmissionSnapshot } from "@fragments/contracts";
+import { AiAnalysisSchema, CreateProposalRequestSchema, MentorControlConfigSchema, SubmissionSnapshotSchema, type AiAnalysis, type GalleryEntry, type MentorControlConfig, type MentorCriterionBreakdown, type SubmissionSnapshot } from "@fragments/contracts";
 
 export type Proposal = ReturnType<typeof CreateProposalRequestSchema.parse>;
 
@@ -8,12 +8,13 @@ export type MentorEvaluation = {
   analysis: AiAnalysis;
   guidance: string[];
   similarities: Similarity[];
+  mentorContextVersion?: number;
+  mentorContext?: MentorControlConfig;
+  criterionBreakdown?: MentorCriterionBreakdown[];
 };
 
 export interface MentorEvaluator {
-  evaluate(input: { proposal: Proposal; proposalDigest: string }): Promise<{
-    rubricVersion: string;
-    score: number;
+  evaluate(input: { proposal: Proposal; proposalDigest: string; config: MentorControlConfig; contextVersion: number }): Promise<{
     findings: AiAnalysis["findings"];
     limitations: string[];
     modelId: string;
@@ -39,6 +40,22 @@ export class MentorInputError extends Error {
   readonly code = "INVALID_PROPOSAL";
   constructor(message: string) { super(message); this.name = "MentorInputError"; }
 }
+
+const defaultMentorConfig: MentorControlConfig = {
+  subject: "Proyectos estudiantiles",
+  theme: "Idea de proyecto",
+  assignment: "Describe un problema, una solución inicial y un alcance que puedas demostrar.",
+  requirements: ["Propón una primera versión pequeña y comprobable."],
+  expectedLevel: "Estudiante que inicia su proyecto",
+  rubricTitle: "Propuesta inicial",
+  criteria: [
+    { id: "problem", title: "Problema claro", description: "Explica a quién le ocurre y qué necesita resolver.", weight: 25 },
+    { id: "solution", title: "Solución relacionada", description: "La idea responde al problema descrito.", weight: 20 },
+    { id: "scope", title: "Alcance de MVP", description: "La primera versión cabe en el tiempo y nivel indicados.", weight: 25 },
+    { id: "goals", title: "Objetivos comprobables", description: "Se puede observar o comprobar si cada objetivo se logró.", weight: 15 },
+    { id: "feasibility", title: "Viabilidad inicial", description: "Las herramientas y condiciones descritas permiten empezar.", weight: 15 },
+  ],
+};
 
 function validateProposal(value: unknown): Proposal {
   const parsed = CreateProposalRequestSchema.safeParse(value);
@@ -133,14 +150,28 @@ export function createMentorService(options: Options) {
   const token = options.token ?? (() => randomBytes(24).toString("base64url"));
 
   return {
-    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = []): Promise<MentorEvaluation> {
+    proposalDigest(rawProposal: unknown): string { return digest(validateProposal(rawProposal)); },
+
+    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorControlConfig; version: number }): Promise<MentorEvaluation> {
       const proposal = validateProposal(rawProposal);
       const proposalDigest = digest(proposal);
-      const result = await options.evaluator.evaluate({ proposal, proposalDigest });
+      const config = MentorControlConfigSchema.parse(context?.config ?? defaultMentorConfig);
+      const contextVersion = context?.version ?? 1;
+      const result = await options.evaluator.evaluate({ proposal, proposalDigest, config, contextVersion });
       if (result.inputDigest !== proposalDigest) throw new Error("El evaluador devolvió un digest que no corresponde a la propuesta.");
+      const byCriterion = new Map(result.findings.map((finding) => [finding.criterionId, finding]));
+      if (byCriterion.size !== config.criteria.length || config.criteria.some((criterion) => !byCriterion.has(criterion.id))) {
+        throw new Error("El evaluador no devolvió exactamente un resultado por criterio de la rúbrica.");
+      }
+      const criterionBreakdown = config.criteria.map((criterion) => {
+        const finding = byCriterion.get(criterion.id)!;
+        const points = finding.status === "verified" ? criterion.weight : finding.status === "not_verified" ? Math.ceil(criterion.weight / 2) : 0;
+        return { criterionId: criterion.id, title: criterion.title, weight: criterion.weight, points, status: finding.status, reason: finding.reason, guidanceLevel: finding.guidanceLevel };
+      });
+      const score = criterionBreakdown.reduce((total, criterion) => total + criterion.points, 0);
       const analysis = AiAnalysisSchema.parse({
-        rubricVersion: result.rubricVersion,
-        score: result.score,
+        rubricVersion: `mentor-control-v${contextVersion}`,
+        score,
         findings: result.findings,
         limitations: result.limitations,
         modelId: result.modelId,
@@ -153,7 +184,7 @@ export function createMentorService(options: Options) {
         return { title: item.title.trim(), overlap: item.overlap.trim(), similarity: item.similarity };
       });
       if (result.guidance.some((line) => !line.trim())) throw new Error("El evaluador devolvió una guía inválida.");
-      return deepFreeze({ analysis, guidance: [...result.guidance], similarities: compareGallery(proposal, galleryEntries) });
+      return deepFreeze({ analysis, guidance: [...result.guidance], similarities: compareGallery(proposal, galleryEntries), mentorContextVersion: contextVersion, mentorContext: config, criterionBreakdown });
     },
 
     async createSubmission(input: { sourceId: string; proposal: unknown; evaluation: MentorEvaluation }): Promise<SubmissionSnapshot> {

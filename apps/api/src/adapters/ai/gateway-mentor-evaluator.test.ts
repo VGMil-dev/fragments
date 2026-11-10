@@ -23,7 +23,6 @@ const proposal = {
   constraints: ["No recopila datos personales"],
 };
 const generated = {
-  score: 74,
   findings: [{ criterionId: "scope", status: "verified" as const, evidence: [{ field: "scope" }], reason: "El alcance describe dos acciones observables.", guidanceLevel: 1 }],
   limitations: ["La evaluación es orientativa."],
   guidance: ["¿Qué mostrarás en la primera demostración?"] ,
@@ -41,13 +40,11 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       generate,
     });
 
-    const result = await evaluator.evaluate({ proposal, proposalDigest: "a".repeat(64) });
+    const result = await evaluator.evaluate({ proposal, proposalDigest: "a".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 2 });
 
     expect(generate).toHaveBeenCalledOnce();
     expect(generate.mock.calls[0]?.[0].modelId).toBe("fixture/model");
     expect(result).toMatchObject({
-      rubricVersion: "mentor-gateway-v1",
-      score: 74,
       modelId: "fixture/model",
       inputDigest: "a".repeat(64),
       findings: [{ evidence: [{ source: "proposal", field: "scope", digest: "a".repeat(64) }] }],
@@ -59,7 +56,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
   it("does not dispatch when model pricing is unavailable", async () => {
     const generate = vi.fn(async () => ({ value: generated, costUsd: 0 }));
     const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger: makeLedger(), generate });
-    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64) })).rejects.toThrow(/garantizar una reserva/);
+    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1 })).rejects.toThrow(/garantizar una reserva/);
     expect(generate).not.toHaveBeenCalled();
   });
 });

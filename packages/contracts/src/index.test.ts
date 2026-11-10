@@ -3,6 +3,9 @@ import { z } from "zod";
 
 import {
   AiAnalysisSchema,
+  MentorControlConfigSchema,
+  MentorPublishedConfigSchema,
+  MentorCriterionBreakdownSchema,
   ApiResultSchema,
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
@@ -397,5 +400,19 @@ describe("shared API contracts", () => {
     expect(InspectorStudentChallengeResponseSchema.safeParse({
       id: "challenge-1", status: "assigned", challenge: record.challenge,
     }).success).toBe(false);
+  });
+
+  it("validates Mentor themes, weighted rubrics and criterion score breakdowns", () => {
+    const config = {
+      subject: "Proyectos de aula", theme: "Huerto escolar", assignment: "Propón un MVP para el curso.",
+      requirements: ["Funciona sin conexión"], expectedLevel: "Primer proyecto",
+      rubricTitle: "Rúbrica inicial", criteria: [{ id: "scope", title: "Alcance", description: "Cabe en el curso.", weight: 100 }],
+    };
+    expect(MentorControlConfigSchema.safeParse(config).success).toBe(true);
+    expect(MentorControlConfigSchema.safeParse({ ...config, criteria: [config.criteria[0], config.criteria[0]] }).success).toBe(false);
+    expect(MentorControlConfigSchema.safeParse({ ...config, criteria: [{ ...config.criteria[0], weight: 0 }] }).success).toBe(false);
+    expect(MentorPublishedConfigSchema.safeParse({ version: 1, config, publishedAt: now }).success).toBe(true);
+    expect(MentorCriterionBreakdownSchema.safeParse({ criterionId: "scope", title: "Alcance", weight: 100, status: "not_verified", points: 50, reason: "Agrega evidencia observable.", guidanceLevel: 1 }).success).toBe(true);
+    expect(MentorCriterionBreakdownSchema.safeParse({ criterionId: "scope", title: "Alcance", weight: 100, status: "failed", points: 101, reason: "No corresponde al criterio.", guidanceLevel: 2 }).success).toBe(false);
   });
 });

@@ -6,13 +6,14 @@ import {
   CreateProposalRequestSchema,
   GalleryOptInRequestSchema,
   GalleryResponseSchema,
-  ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
   UpdateProposalRequestSchema,
   SubmissionResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
 import { createMentorRepository } from "./repository.js";
+import { createMentorControlRepository } from "./control-repository.js";
+import { proposalEvaluationResponse } from "./evaluation-response.js";
 import type { createMentorService } from "./service.js";
 
 type MentorService = ReturnType<typeof createMentorService>;
@@ -20,6 +21,8 @@ type RouteResult = "handled" | "unhandled";
 
 export function createMentorHttp(database: DatabaseSync, service: MentorService) {
   const repository = createMentorRepository(database);
+  const control = createMentorControlRepository(database);
+  const pending = new Map<string, Promise<{ id: string; evaluation: Awaited<ReturnType<MentorService["evaluate"]>>; evaluatedAt: string }>>();
 
   return async function handleMentorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
@@ -94,7 +97,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         return "handled";
       }
       try {
-        const responseData = evaluationResponse(latest.id, proposal.id, proposal.version, latest.evaluation, latest.evaluatedAt);
+        const responseData = proposalEvaluationResponse(latest.id, proposal.id, proposal.version, latest.evaluation, latest.evaluatedAt);
         sendJson(response, 200, { ok: true, data: responseData });
       } catch {
         sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo recuperar la evaluación guardada.");
@@ -109,11 +112,26 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         return "handled";
       }
       try {
-        const evaluatedAt = new Date().toISOString();
-        const evaluationId = randomUUID();
-        const result = await service.evaluate(proposal.proposal, repository.listGallery());
-        const responseData = evaluationResponse(evaluationId, proposal.id, proposal.version, result, evaluatedAt);
-        repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, new Date(evaluatedAt));
+        const active = control.getActive();
+        const inputDigest = service.proposalDigest(proposal.proposal);
+        const cacheKey = `${proposal.id}:${proposal.version}:${inputDigest}:${active.version}`;
+        let stored = repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version);
+        if (!stored) {
+          let work = pending.get(cacheKey);
+          if (!work) {
+            work = (async () => {
+              const result = await service.evaluate(proposal.proposal, repository.listGallery(), { config: active.config, version: active.version });
+              const evaluatedAt = new Date().toISOString();
+              const evaluationId = randomUUID();
+              repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, inputDigest, active.version, new Date(evaluatedAt));
+              return repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version) ?? { id: evaluationId, evaluation: result, evaluatedAt };
+            })();
+            pending.set(cacheKey, work);
+          }
+          try { stored = await work; }
+          finally { if (pending.get(cacheKey) === work) pending.delete(cacheKey); }
+        }
+        const responseData = proposalEvaluationResponse(stored.id, proposal.id, proposal.version, stored.evaluation, stored.evaluatedAt);
         sendJson(response, 200, { ok: true, data: responseData });
       } catch {
         sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo evaluar la propuesta en este momento.");
@@ -199,25 +217,6 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
 
     return "unhandled";
   };
-}
-
-function evaluationResponse(
-  evaluationId: string,
-  proposalId: string,
-  proposalVersion: number,
-  evaluation: { analysis: { score: number }; guidance: string[]; similarities: Array<{ galleryId?: string; title: string; overlap: string }> },
-  evaluatedAt: string,
-) {
-  return ProposalEvaluationResponseSchema.parse({
-    evaluationId,
-    proposalId,
-    proposalVersion,
-    viability: evaluation.analysis.score >= 75 ? "feasible" : evaluation.analysis.score >= 50 ? "needs_revision" : "not_feasible",
-    analysis: evaluation.analysis,
-    guidance: evaluation.guidance,
-    similarityMatches: evaluation.similarities.filter((item) => item.galleryId).map((item) => ({ galleryId: item.galleryId!, title: item.title, reason: item.overlap })),
-    evaluatedAt,
-  });
 }
 
 function readOwnerToken(request: IncomingMessage): string | null {

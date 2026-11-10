@@ -120,3 +120,6 @@
   .mentor-form__footer button, .mentor-evaluation__heading button { width: 100%; }
   .mentor-result { padding: 17px; }
 }
+.mentor-context { margin: 1.5rem 0; padding: 1.25rem 1.5rem; border-left: 4px solid var(--blue, #4776A9); border-radius: 0 12px 12px 0; background: var(--powder, #EDF4F8); color: var(--navy, #243747); }
+.mentor-context h2 { margin: .35rem 0; font-size: 1.3rem; }
+.mentor-context p { margin: .4rem 0; }

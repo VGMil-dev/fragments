@@ -3,21 +3,18 @@ import type { MentorEvaluator } from "./service.js";
 
 export function createLocalMentorEvaluator(): MentorEvaluator {
   return {
-    async evaluate({ proposal, proposalDigest }) {
+    async evaluate({ proposal, proposalDigest, config }) {
       const completeness = [proposal.problem, proposal.solution, proposal.scope].filter((value) => value.trim().length >= 35).length;
-      const score = Math.round(55 + completeness * 10 + Math.min(proposal.goals.length, 3) * 2);
       return {
-        rubricVersion: "mentor-demo-1",
-        score: Math.min(95, score),
-        findings: [{
-          criterionId: "scope",
-          status: completeness === 3 ? "verified" : "not_verified",
-          evidence: [{ source: "proposal", field: "scope", digest: proposalDigest }],
+        findings: config.criteria.map((criterion, index) => ({
+          criterionId: criterion.id,
+          status: completeness === 3 || index < completeness ? "verified" as const : "not_verified" as const,
+          evidence: [{ source: "proposal" as const, field: index === 0 ? "problem" : index === 1 ? "solution" : "scope", digest: proposalDigest }],
           reason: completeness === 3
-            ? "La propuesta incluye problema, solución y alcance con suficiente detalle para orientar una primera revisión."
-            : "Amplía el problema, la solución y el alcance para que una persona pueda valorar mejor el trabajo.",
+            ? "La propuesta incluye suficiente detalle para orientar una primera revisión."
+            : "Amplía esta parte para que una persona pueda valorar mejor el trabajo.",
           guidanceLevel: 1,
-        }],
+        })),
         limitations: ["Evaluación demostrativa local; no utiliza un modelo de IA."],
         modelId: "fake/local-heuristic-v1",
         inputDigest: proposalDigest,

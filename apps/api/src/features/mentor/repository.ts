@@ -107,9 +107,16 @@ export function createMentorRepository(database: DatabaseSync) {
       });
     },
 
-    saveEvaluation(id: string, proposalId: string, proposalVersion: number, evaluation: MentorEvaluation, evaluatedAt = new Date()): void {
-      database.prepare("INSERT INTO mentor_evaluations(id, proposal_id, proposal_version, evaluation_json, evaluated_at) VALUES (?, ?, ?, ?, ?)")
-        .run(id, proposalId, proposalVersion, JSON.stringify(evaluation), evaluatedAt.toISOString());
+    saveEvaluation(id: string, proposalId: string, proposalVersion: number, evaluation: MentorEvaluation, inputDigest?: string, contextVersion?: number, evaluatedAt = new Date()): void {
+      database.prepare("INSERT OR IGNORE INTO mentor_evaluations(id, proposal_id, proposal_version, evaluation_json, evaluated_at, input_digest, context_version) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .run(id, proposalId, proposalVersion, JSON.stringify(evaluation), evaluatedAt.toISOString(), inputDigest ?? null, contextVersion ?? null);
+    },
+
+    getCachedEvaluation(proposalId: string, proposalVersion: number, inputDigest: string, contextVersion: number): { id: string; evaluation: MentorEvaluation; evaluatedAt: string } | null {
+      const row = database.prepare(`SELECT id, evaluation_json, evaluated_at FROM mentor_evaluations
+        WHERE proposal_id = ? AND proposal_version = ? AND input_digest = ? AND context_version = ? LIMIT 1`)
+        .get(proposalId, proposalVersion, inputDigest, contextVersion) as { id: string; evaluation_json: string; evaluated_at: string } | undefined;
+      return row ? { id: row.id, evaluation: JSON.parse(row.evaluation_json) as MentorEvaluation, evaluatedAt: row.evaluated_at } : null;
     },
 
     getEvaluation(id: string, proposalId: string, proposalVersion: number): MentorEvaluation | null {
