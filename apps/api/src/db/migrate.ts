@@ -136,6 +136,30 @@ const migrations = [
     CREATE INDEX IF NOT EXISTS trainer_attempt_history ON trainer_attempts(session_hash, review_id, attempted_at);
     CREATE INDEX IF NOT EXISTS trainer_attempt_challenge ON trainer_attempts(session_hash, challenge_id, attempted_at);`,
   },
+  {
+    version: 7,
+    sql: `CREATE TABLE IF NOT EXISTS mentor_control_draft (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      config_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS mentor_control_versions (
+      version INTEGER PRIMARY KEY CHECK (version > 0),
+      config_json TEXT NOT NULL,
+      published_at TEXT NOT NULL,
+      published_by TEXT NOT NULL
+    );
+    INSERT OR IGNORE INTO mentor_control_versions(version, config_json, published_at, published_by) VALUES
+      (1, '{"subject":"Proyectos estudiantiles","theme":"Idea de proyecto","assignment":"Describe un problema, una solución inicial y un alcance que puedas demostrar.","requirements":["Propón una primera versión pequeña y comprobable."],"expectedLevel":"Estudiante que inicia su proyecto","rubricTitle":"Propuesta inicial","criteria":[{"id":"problem","title":"Problema claro","description":"Explica a quién le ocurre y qué necesita resolver.","weight":25},{"id":"solution","title":"Solución relacionada","description":"La idea responde al problema descrito.","weight":20},{"id":"scope","title":"Alcance de MVP","description":"La primera versión cabe en el tiempo y nivel indicados.","weight":25},{"id":"goals","title":"Objetivos comprobables","description":"Se puede observar o comprobar si cada objetivo se logró.","weight":15},{"id":"feasibility","title":"Viabilidad inicial","description":"Las herramientas y condiciones descritas permiten empezar.","weight":15}]}', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'system-seed');
+    INSERT OR IGNORE INTO mentor_control_draft(id, config_json, updated_at)
+      SELECT 1, config_json, published_at FROM mentor_control_versions WHERE version = 1;
+    ALTER TABLE mentor_evaluations ADD COLUMN input_digest TEXT;
+    ALTER TABLE mentor_evaluations ADD COLUMN context_version INTEGER;
+    CREATE UNIQUE INDEX IF NOT EXISTS mentor_evaluations_idempotency
+      ON mentor_evaluations(proposal_id, proposal_version, input_digest, context_version)
+      WHERE input_digest IS NOT NULL AND context_version IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS mentor_evaluations_history ON mentor_evaluations(evaluated_at DESC);`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

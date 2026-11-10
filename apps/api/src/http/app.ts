@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { z } from "zod";
 import type { FragmentsAuthService } from "../auth/better-auth.js";
 import { createMentorHttp } from "../features/mentor/http.js";
+import { createMentorControlHttp } from "../features/mentor/control-http.js";
 import type { createMentorService } from "../features/mentor/service.js";
 import { createInspectorHttp } from "../features/inspector/http.js";
 import type { createInspectorService } from "../features/inspector/service.js";
@@ -30,6 +31,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor) : undefined;
+  const mentorControlHandler = options.mentor ? createMentorControlHttp(database, options.auth) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
   const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession) : undefined;
@@ -56,6 +58,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
       return;
     }
     if (mentorHandler && await mentorHandler(request, response) === "handled") return;
+    if (mentorControlHandler && await mentorControlHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     if (trainerHandler && await trainerHandler(request, response) === "handled") return;
     if (reviewHandler && await reviewHandler(request, response) === "handled") return;

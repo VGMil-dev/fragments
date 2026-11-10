@@ -3,6 +3,7 @@ import {
   CreateProposalRequestSchema,
   CreateReviewSubmissionRequestSchema,
   GalleryResponseSchema,
+  MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
@@ -16,6 +17,7 @@ import {
   type CreateReviewSubmissionRequest,
   type GalleryEntry,
   type MentorSubmissionResponse,
+  type MentorPublishedConfig,
   type ProposalEvaluationResponse,
   type ProposalResponse,
   type ReviewRequest,
@@ -53,6 +55,9 @@ function encodeId(id: string): string | null {
 
 export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiClient = client) {
   return {
+    getMentorContext(signal?: AbortSignal): Promise<ApiResult<MentorPublishedConfig>> {
+      return client.request("/api/mentor/context", MentorPublishedConfigSchema, withSignal(signal));
+    },
     getGallery(signal?: AbortSignal): Promise<ApiResult<GalleryEntry[]>> {
       return client.request("/api/gallery", GalleryResponseSchema, withSignal(signal));
     },

@@ -85,6 +85,50 @@ export const AiAnalysisSchema = z
   })
   .strict();
 
+export const MentorRubricCriterionSchema = z.object({
+  id: identifier,
+  title: nonEmptyText.max(120),
+  description: nonEmptyText.max(800),
+  weight: z.number().int().min(1).max(100),
+}).strict();
+
+export const MentorControlConfigSchema = z.object({
+  subject: nonEmptyText.max(120),
+  theme: nonEmptyText.max(160),
+  assignment: nonEmptyText.max(3000),
+  requirements: z.array(nonEmptyText.max(500)).max(20),
+  expectedLevel: nonEmptyText.max(240),
+  rubricTitle: nonEmptyText.max(120),
+  criteria: z.array(MentorRubricCriterionSchema).min(1).max(10),
+}).strict().superRefine((value, context) => {
+  const ids = new Set<string>();
+  value.criteria.forEach((criterion, index) => {
+    if (ids.has(criterion.id)) context.addIssue({ code: "custom", path: ["criteria", index, "id"], message: "Cada criterio necesita un identificador distinto." });
+    ids.add(criterion.id);
+  });
+});
+
+export const MentorPublishedConfigSchema = z.object({
+  version: z.number().int().positive(),
+  config: MentorControlConfigSchema,
+  publishedAt: z.iso.datetime(),
+}).strict();
+
+export const MentorDraftConfigSchema = z.object({
+  config: MentorControlConfigSchema,
+  updatedAt: z.iso.datetime(),
+}).strict();
+
+export const MentorCriterionBreakdownSchema = z.object({
+  criterionId: identifier,
+  title: nonEmptyText.max(120),
+  weight: z.number().int().min(1).max(100),
+  status: z.enum(["verified", "not_verified", "failed"]),
+  points: z.number().int().min(0).max(100),
+  reason: nonEmptyText.max(1000),
+  guidanceLevel: z.number().int().min(1).max(4),
+}).strict();
+
 export const InspectorChallengePublicSchema = z
   .object({
     evaluationId: nonEmptyText,
@@ -193,7 +237,25 @@ export const ProposalEvaluationResponseSchema = z.object({
     title: nonEmptyText.max(160),
     reason: nonEmptyText.max(1000),
   }).strict()).max(20),
+  mentorContextVersion: z.number().int().positive().optional(),
+  mentorContext: MentorControlConfigSchema.optional(),
+  criterionBreakdown: z.array(MentorCriterionBreakdownSchema).max(10).optional(),
   evaluatedAt: z.iso.datetime(),
+}).strict();
+
+export const MentorControlEvaluationHistoryItemSchema = z.object({
+  evaluationId: identifier,
+  proposalId: identifier,
+  proposalVersion: z.number().int().positive(),
+  proposalTitle: nonEmptyText.max(160),
+  evaluatedAt: z.iso.datetime(),
+  evaluation: ProposalEvaluationResponseSchema,
+}).strict();
+
+export const MentorControlWorkspaceResponseSchema = z.object({
+  draft: MentorDraftConfigSchema,
+  active: MentorPublishedConfigSchema,
+  evaluations: z.array(MentorControlEvaluationHistoryItemSchema).max(100),
 }).strict();
 
 export const ReviewRequestSchema = z.object({
@@ -250,6 +312,11 @@ export type EvidenceReference = z.infer<typeof EvidenceReferenceSchema>;
 export type FeedbackFinding = z.infer<typeof FeedbackFindingSchema>;
 export type RepositorySnapshot = z.infer<typeof RepositorySnapshotSchema>;
 export type AiAnalysis = z.infer<typeof AiAnalysisSchema>;
+export type MentorRubricCriterion = z.infer<typeof MentorRubricCriterionSchema>;
+export type MentorControlConfig = z.infer<typeof MentorControlConfigSchema>;
+export type MentorPublishedConfig = z.infer<typeof MentorPublishedConfigSchema>;
+export type MentorDraftConfig = z.infer<typeof MentorDraftConfigSchema>;
+export type MentorCriterionBreakdown = z.infer<typeof MentorCriterionBreakdownSchema>;
 export type InspectorChallenge = z.infer<typeof InspectorChallengeSchema>;
 export type InspectorChallengePublic = z.infer<typeof InspectorChallengePublicSchema>;
 export type InspectorDefenseRecordRequest = z.infer<typeof InspectorDefenseRecordRequestSchema>;
@@ -262,6 +329,8 @@ export type UpdateProposalRequest = z.infer<typeof UpdateProposalRequestSchema>;
 export type GalleryOptInRequest = z.infer<typeof GalleryOptInRequestSchema>;
 export type ProposalResponse = z.infer<typeof ProposalResponseSchema>;
 export type ProposalEvaluationResponse = z.infer<typeof ProposalEvaluationResponseSchema>;
+export type MentorControlEvaluationHistoryItem = z.infer<typeof MentorControlEvaluationHistoryItemSchema>;
+export type MentorControlWorkspaceResponse = z.infer<typeof MentorControlWorkspaceResponseSchema>;
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
 export type ReviewQueuedResponse = z.infer<typeof ReviewQueuedResponseSchema>;
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;

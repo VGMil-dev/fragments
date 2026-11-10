@@ -1,6 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { useEffect, useState } from "react";
-import type { GalleryEntry } from "@fragments/contracts";
+import type { GalleryEntry, MentorPublishedConfig } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -10,6 +10,7 @@ import { TrainerScreen } from "./features/trainer";
 import { TeacherGate } from "./features/inspector";
 import { createInspectorApi } from "./lib/api/inspector-api";
 import { createTrainerApi } from "./lib/api/trainer-api";
+import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
@@ -21,6 +22,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [gallery, setGallery] = useState<AsyncState<GalleryEntry[]>>({ status: "loading" });
   const [reload, setReload] = useState(0);
   const [inspiration, setInspiration] = useState<GalleryEntry | undefined>();
+  const [mentorContext, setMentorContext] = useState<MentorPublishedConfig | undefined>();
 
   useEffect(() => {
     if (path !== "/student/gallery") return;
@@ -33,6 +35,13 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     });
     return () => { active = false; };
   }, [path, reload]);
+
+  useEffect(() => {
+    if (path !== "/student/mentor") return;
+    let active = true;
+    void studentApi.getMentorContext().then((result) => { if (active && result.ok) setMentorContext(result.data); });
+    return () => { active = false; };
+  }, [path]);
 
   return (
     <div className="student-workspace">
@@ -62,6 +71,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <>
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
             <MentorScreen
+              mentorContext={mentorContext}
               onSave={(draft) => studentApi.saveProposal(draft)}
               onEvaluate={(proposalId) => studentApi.evaluateProposal(proposalId)}
               onRecoverEvaluation={(proposalId) => studentApi.recoverProposalEvaluation(proposalId)}
@@ -99,7 +109,7 @@ export function App() {
     document.documentElement.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
     document.documentElement.style.scrollBehavior = "";
-    if (path.startsWith("/student/") || path === "/teacher/inspector") {
+    if (path.startsWith("/student/") || path === "/teacher/inspector" || path === "/teacher/mentor-control") {
       requestAnimationFrame(() => document.getElementById("route-content")?.focus({ preventScroll: true }));
     }
   }, [path]);
@@ -113,6 +123,7 @@ export function App() {
   if (path === "/teacher/inspector") {
     return <div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div>;
   }
+  if (path === "/teacher/mentor-control") return <div id="route-content" tabIndex={-1}><MentorControlWorkspace navigate={navigate} /></div>;
 
   return (
     <>
@@ -178,6 +189,7 @@ export function App() {
         <a className="brand brand--footer" href="#inicio" aria-label="Fragments, volver al inicio"><BrandMark className="brand__icon" /><span className="brand__name">fragments<span className="brand__period">.</span></span></a>
         <p>Imagina. Construye. Demuestra.</p>
         <a href="/teacher/inspector" onClick={(event) => { event.preventDefault(); navigate("/teacher/inspector"); }}>Área docente</a>
+        <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>Control de Mentor</a>
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
       </footer>
     </>

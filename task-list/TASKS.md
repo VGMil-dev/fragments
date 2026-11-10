@@ -15,6 +15,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F08 | PLANNER | F07 | Despliegue de release en Oracle ARM64 con auth, web, backups SQLite y Cloudflare Tunnel; smoke checks sin secretos | [x] |
 | F09 | PLANNER | F02,F04 | Descarga de plantilla DOCX e importación local editable en Mentor; pruebas del flujo existente | [x] |
 | F10 | PLANNER | F08,F09 | Trainer: Review→sorteo→reto→pistas→progreso→historial→repaso; separación Inspector, Ego Lite y paquete de evidencia local ≤20 archivos | [x] |
+| F11 | PLANNER | F10 | Control docente Mentor: editar y publicar una configuración temática/rúbrica; evaluación estructurada con puntaje de servidor, deduplicación y consulta histórica versionada | [ ] |
 
 ## Estado de cierre de integración — 2026-11-05
 

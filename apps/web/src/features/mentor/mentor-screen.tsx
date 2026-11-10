@@ -4,6 +4,7 @@ import type {
   CreateMentorSubmissionRequest,
   CreateProposalRequest,
   MentorSubmissionResponse,
+  MentorPublishedConfig,
   ProposalEvaluationResponse,
   ProposalResponse,
 } from "@fragments/contracts";
@@ -15,6 +16,7 @@ import { importMentorDocx, MentorDocxImportError } from "./docx-import";
 import "./mentor-screen.css";
 
 export interface MentorScreenProps {
+  mentorContext?: MentorPublishedConfig | undefined;
   initialProposal?: ProposalResponse;
   initialEvaluation?: AsyncState<ProposalEvaluationResponse>;
   onSave: (draft: CreateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
@@ -72,6 +74,7 @@ function evidenceLabel(evidence: ProposalEvaluationResponse["analysis"]["finding
 }
 
 export function MentorScreen({
+  mentorContext,
   initialProposal,
   initialEvaluation,
   onSave,
@@ -247,6 +250,14 @@ export function MentorScreen({
         {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
       </section>
 
+      {mentorContext ? <section className="mentor-context" aria-label="Consigna de la evaluación">
+        <p className="student-screen__eyebrow">{mentorContext.config.subject} · Versión {mentorContext.version}</p>
+        <h2>{mentorContext.config.theme}</h2>
+        <p>{mentorContext.config.assignment}</p>
+        <p><strong>Nivel esperado:</strong> {mentorContext.config.expectedLevel}</p>
+        {mentorContext.config.requirements.length ? <ul>{mentorContext.config.requirements.map((requirement) => <li key={requirement}>{requirement}</li>)}</ul> : null}
+      </section> : null}
+
       <form className="mentor-form" onSubmit={(event) => void saveProposal(event)} noValidate>
         <label className="mentor-field mentor-field--wide">
           <span>Título de la propuesta</span>
@@ -327,6 +338,13 @@ export function MentorScreen({
                   </div>
                   <p className="mentor-result__score">{result.analysis.score}/100</p>
                 </div>
+                {result.mentorContextVersion ? <p className="mentor-screen__hint">Evaluación con la versión {result.mentorContextVersion} de la rúbrica.</p> : null}
+                {result.criterionBreakdown?.length ? <ul className="mentor-findings" aria-label="Puntaje por criterio">
+                  {result.criterionBreakdown.map((criterion) => <li key={criterion.criterionId}>
+                    <p className="mentor-finding__status">{criterion.title} · {criterion.points}/{criterion.weight}</p>
+                    <p>{criterion.reason}</p>
+                  </li>)}
+                </ul> : null}
                 {result.analysis.findings.length > 0 ? (
                   <ul className="mentor-findings">
                     {result.analysis.findings.map((finding, index) => (
