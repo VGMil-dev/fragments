@@ -11,6 +11,7 @@ import { TeacherGate } from "./features/inspector";
 import { createInspectorApi } from "./lib/api/inspector-api";
 import { createTrainerApi } from "./lib/api/trainer-api";
 import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
+import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
@@ -109,7 +110,7 @@ export function App() {
     document.documentElement.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
     document.documentElement.style.scrollBehavior = "";
-    if (path.startsWith("/student/") || path === "/teacher/inspector" || path === "/teacher/mentor-control") {
+    if (path.startsWith("/student/") || path === "/teacher/inspector" || path === "/teacher/mentor-control" || path === "/teacher/reset-password") {
       requestAnimationFrame(() => document.getElementById("route-content")?.focus({ preventScroll: true }));
     }
   }, [path]);
@@ -124,6 +125,7 @@ export function App() {
     return <div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div>;
   }
   if (path === "/teacher/mentor-control") return <div id="route-content" tabIndex={-1}><MentorControlWorkspace navigate={navigate} /></div>;
+  if (path === "/teacher/reset-password") return <div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div>;
 
   return (
     <>

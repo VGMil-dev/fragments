@@ -1,10 +1,14 @@
 import { DatabaseSync } from "node:sqlite";
-import type { IncomingMessage } from "node:http";
+import { createServer, type IncomingMessage, type Server } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import { createFragmentsAuth, createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
 
 const databases: DatabaseSync[] = [];
-afterEach(() => { for (const database of databases.splice(0)) database.close(); });
+const servers: Server[] = [];
+afterEach(async () => {
+  await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))));
+  for (const database of databases.splice(0)) database.close();
+});
 
 async function fixture(allowSignUp = true) {
   const database = new DatabaseSync(":memory:");
@@ -55,5 +59,85 @@ describe("Better Auth integration", () => {
 
     database.prepare("UPDATE user SET role = 'admin' WHERE id = ?").run(student.id);
     await expect(service.teacherId(student.request)).resolves.toBe(student.id);
+  });
+
+  it("sends a single-use reset token, accepts it once, and revokes old sessions", async () => {
+    const database = new DatabaseSync(":memory:");
+    databases.push(database);
+    const deliveries: Array<{ email: string; url: string }> = [];
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      passwordResetEmailSender: async (message) => { deliveries.push(message); },
+    });
+    const teacher = await createAccount(database, auth, "teacher-reset@example.test", true);
+
+    const result = await auth.api.requestPasswordReset({ body: {
+      email: "teacher-reset@example.test",
+      redirectTo: "http://localhost:5173/teacher/reset-password",
+    } });
+    expect(result).toMatchObject({ status: true });
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0].email).toBe("teacher-reset@example.test");
+    const resetUrl = new URL(deliveries[0].url);
+    expect(resetUrl.origin).toBe("http://localhost:5173");
+    expect(resetUrl.pathname).toBe("/teacher/reset-password");
+    expect(resetUrl.search).toBe("");
+    const token = new URLSearchParams(resetUrl.hash.slice(1)).get("token");
+    expect(token).toBeTruthy();
+
+    await auth.api.resetPassword({ body: { token: token!, newPassword: "replacement-password-2026" } });
+    await expect(auth.api.getSession({ headers: new Headers({ cookie: teacher.request.headers.cookie }) })).resolves.toBeNull();
+    await expect(auth.api.resetPassword({ body: { token: token!, newPassword: "second-password-2026" } })).rejects.toThrow();
+    await expect(auth.api.signInEmail({ body: { email: "teacher-reset@example.test", password: "replacement-password-2026" } })).resolves.toBeDefined();
+  });
+
+  it("uses the same reset response for existing and unknown email addresses", async () => {
+    const database = new DatabaseSync(":memory:");
+    databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      allowSignUp: true,
+      passwordResetEmailSender: async () => undefined,
+    });
+    await createAccount(database, auth, "known@example.test", true);
+    const body = (email: string) => ({ email, redirectTo: "http://localhost:5173/teacher/reset-password" });
+    const known = await auth.api.requestPasswordReset({ body: body("known@example.test") });
+    const unknown = await auth.api.requestPasswordReset({ body: body("unknown@example.test") });
+    expect(known).toEqual(unknown);
+    expect(auth.options.emailAndPassword?.resetPasswordTokenExpiresIn).toBe(60 * 60);
+    expect(auth.options.emailAndPassword?.revokeSessionsOnPasswordReset).toBe(true);
+    expect(auth.options.rateLimit?.enabled).toBe(true);
+    expect(auth.options.rateLimit?.customRules).toMatchObject({
+      "/request-password-reset": { window: 60, max: 3 },
+      "/reset-password": { window: 60, max: 5 },
+    });
+  });
+
+  it("limits reset requests to three per minute per client", async () => {
+    const database = new DatabaseSync(":memory:");
+    databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      publicAppURL: "http://localhost:5173",
+      passwordResetEmailSender: async () => undefined,
+    });
+    const service = createFragmentsAuthService(auth);
+    const server = createServer((request, response) => service.handle(request, response));
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const statuses: number[] = [];
+    for (let index = 0; index < 4; index++) {
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/auth/request-password-reset`, {
+        method: "POST",
+        headers: { origin: "http://localhost:5173", "content-type": "application/json" },
+        body: JSON.stringify({ email: "unknown@example.test", redirectTo: "http://localhost:5173/teacher/reset-password" }),
+      });
+      statuses.push(response.status);
+    }
+    expect(statuses).toEqual([200, 200, 200, 429]);
   });
 });

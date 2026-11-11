@@ -77,7 +77,7 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
       <label>Correo<input type="email" name="email" required autoComplete="username" /></label>
       <label>Contraseña<input type="password" name="password" required autoComplete="current-password" /></label>
       <button className="button button--primary" disabled={busy}>{busy ? "Ingresando…" : "Iniciar sesión"}</button>
-    </form>{message ? <p role="alert">{message}</p> : null}
+    </form><a href="/teacher/reset-password" onClick={(event) => { event.preventDefault(); navigate("/teacher/reset-password"); }}>¿Olvidaste tu contraseña?</a>{message ? <p role="alert">{message}</p> : null}
   </main>;
 
   if (!config || !workspace) return <main className="mentor-control"><p role="alert">{message || "Cargando configuración…"}</p><button onClick={() => void load()}>Reintentar</button></main>;

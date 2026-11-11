@@ -2,6 +2,7 @@ import { getMigrations } from "better-auth/db/migration";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins";
+import { createResendPasswordResetEmailSender, type PasswordResetEmailSender } from "./resend-password-reset.js";
 import type { DatabaseSync } from "node:sqlite";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -11,6 +12,7 @@ export interface FragmentsAuthOptions {
   publicAppURL?: string;
   allowSignUp?: boolean;
   validateSchema?: boolean;
+  passwordResetEmailSender?: PasswordResetEmailSender;
 }
 
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
@@ -25,17 +27,36 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
       }
       return url.origin;
     }))];
+  const passwordResetEmailSender = options.passwordResetEmailSender ?? createResendPasswordResetEmailSender();
   return betterAuth({
     database,
     secret: options.secret,
     baseURL,
     trustedOrigins,
     advanced: { database: { validateSchema: options.validateSchema ?? true } },
+    rateLimit: {
+      enabled: true,
+      customRules: {
+        "/request-password-reset": { window: 60, max: 3 },
+        "/reset-password": { window: 60, max: 5 },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       disableSignUp: !options.allowSignUp,
       minPasswordLength: 12,
       maxPasswordLength: 1024,
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, token }) => {
+        const resetUrl = new URL("/teacher/reset-password", options.publicAppURL ?? "http://localhost:5173");
+        resetUrl.hash = new URLSearchParams({ token }).toString();
+        try {
+          await passwordResetEmailSender({ email: user.email, url: resetUrl.toString() });
+        } catch {
+          process.stderr.write("No se pudo enviar el correo de recuperación.\n");
+        }
+      },
     },
     user: {
       additionalFields: {
