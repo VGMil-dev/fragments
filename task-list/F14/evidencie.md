@@ -1,6 +1,6 @@
 # F14 — Evidencia
 
-**Estado:** INTEGRADA EN `main`; no se declara completa hasta instalar y comprobar el agente pull aislado en la VPS. No se creó ni publicó una tag nueva y no hubo despliegue.
+**Estado:** INTEGRADA Y CONFIGURADA; se prepara un último PR de endurecimiento/simulación detectado tras habilitar el agente. No se declara cerrada hasta integrar ese ajuste y volver a verificar el helper instalado. No se creó ni publicó una tag nueva y no hubo despliegue.
 
 ## Procedencia histórica de `v0.3.1` — comprobación independiente del código F14
 
@@ -41,7 +41,10 @@ Consultas y cambios del 2026-11-12 en `VGMil-dev/fragments`:
 - PR #5 se fusionó mediante merge normal; SHA de merge en `main`: `13b99a0e7af12c2dfb4377a7de390c9ad129281c`. CI `Fragments CI`, run `43269293206`, check `verify` concluyó `success`; el workflow YAML fue aceptado por GitHub Actions.
 - Los SHAs de `actions/checkout`, `pnpm/action-setup`, `actions/setup-node`, `upload-artifact`, `download-artifact` y `attest` se cotejaron contra los refs actuales de sus repositorios upstream. La tag `v4.2.2` de checkout apuntaba a `11bd719...`; se corrigió la referencia antes de abrir el PR.
 - `install-gh-cli.sh` se ejecutó desde el SHA integrado. Verificó el checksum SHA-256 publicado del keyring y fingerprint de firma; APT instaló solo `gh` 2.103.3 (`1 nuevo, 0 actualizados, 0 eliminados`). `gh attestation verify` incluye `--deny-self-hosted-runners`.
-- El agente y sus units aún no están instalados. El preflight de solo lectura confirmó que no existían la cuenta, el grupo, la configuración del agente ni el origen APT antes de iniciar F14. Se probó la plantilla `docker inspect` del instalador como root y corrigió el error antes de ejecutarlo; la plantilla corregida devolvió el revision SHA esperado para ambas imágenes.
+- El agente se instaló desde `main` SHA `35e5b800aff892e592dfa5d7a76ab098c946c7fe`. `fragments-release-poll.timer` y `fragments-release-apply.path` quedaron enabled/active. El poll inmediato terminó correctamente y no creó solicitudes.
+- La cuenta `fragments-release` tiene solo el grupo `fragments-release-request`, shell `/usr/sbin/nologin`, sin sudo ni acceso Docker. Puede leer ledger y escribir cola; `docker ps` como esa cuenta devuelve acceso denegado. Ledger: `root:fragments-release-request` 0640; estado: root y traversal limitado al grupo; cola: root/grupo en modo 1730.
+- `systemd-analyze security` evaluó ambos servicios como exposición `2.4 OK`. El aplicador corre como root solo en su unit endurecido, con capabilities vacías y acceso explícito al socket Docker. `fragments-release-apply.service` no se selecciona desde Actions ni ejecuta código de PR/tag.
+- La plantilla Docker del instalador se corrigió y verificó antes de instalar: el `revision` observado en ambos contenedores era el SHA histórico esperado. La metadata de versión de imagen sigue siendo `v0.3.0` (discrepancia heredada registrada en la línea base); la base inicial del ledger conserva tag `v0.3.1` y commit exacto sin modificar imagen.
 
 ## Pruebas locales y simulaciones F14
 
@@ -49,16 +52,17 @@ En copia limpia NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-verify-202
 
 - `node --test deploy/production/release-agent/test-release-agent-scripts.mjs` — 4/4: manifiesto y digest, rechazo de tag/objetos inválidos, metadata del bundle con tag/SHA exactos, y trigger exclusivo de tag sin rutas alternativas.
 - Tras integrar la base remota, `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas, caché desactivada: contracts 19/19, API 101/101, web 67/67; typecheck, lint y build exitosos. Build local sin variables de release dejó metadata `dev`/`null`.
-- En la VPS, con archivos temporales en `/tmp` y repo Git sintético: `python3 -m unittest -v test_release_agent` — 10/10; casos de semver, tag ligera, SHA/main, manifiesto, ledger, cola, snapshot SQLite sintético íntegro/corrupto y rollback simulado de código. No usó Docker ni datos productivos.
+- En la VPS, con archivos temporales en `/tmp` y repo Git sintético: `python3 -m unittest -v test_release_agent` — 12/12; incluye transacción completa simulada (aprobación, backup ficticio, Compose limitado a API/web, ledger) y fallo de salud con rollback automático de imágenes, sin restaurar DB. HTTP, Docker, GitHub, backup y atestación externos se mockearon; no usó Docker ni datos productivos.
 - En la VPS: `python3 -m py_compile`; `bash -n` de `install-release-agent.sh`; `systemd-analyze verify` de cuatro units — salida 0. Una validación posterior del instalador encontró y corrigió el formato de la plantilla Docker; sus dos usos se comprobaron en lectura y devolvieron el SHA histórico esperado.
 - `systemd-analyze verify` de los cuatro units en `/tmp` — salida 0; únicamente emitió avisos preexistentes de units XFS del sistema, sin errores F14.
-- La simulación de rollback usó mocks y dejó el fixture intacto. No se simuló el flujo completo de Docker real ni se creó atestación de un release nuevo porque hacerlo requeriría publicar una nueva tag.
+- `gh api repos/VGMil-dev/fragments/releases` devolvió cero releases; no hay paquete que el poller pueda desplegar. No se generó una atestación de un release nuevo ni se ejecutó Docker Compose para modificar producción porque hacerlo requeriría publicar una tag y desplegar.
+- Después de instalar el agente: Docker, timer de backups y runner compartido siguieron activos; `fragments_api=200`, `pits_dev=200`, contenedores de Pits siguieron `healthy`. No se editó ni mostró `.env`, SQLite, Pits, PostgreSQL o runner.
 
 ## Pendiente para cerrar F14
 
-- Integrar por un segundo PR la corrección encontrada en la revisión preinstalación del instalador.
-- Instalar el agente pull desde el contenido revisado e integrado de `main`; habilitar únicamente sus dos timer/path units.
-- Verificar usuario y grupos efectivos, unidades activas/endurecidas, polling sin secretos, ausencia de cambios en producción/Pits/runner y estado de salud después de la instalación.
+- Integrar por PR #7 la corrección de cierre explícito de la conexión SQLite del comprobador de backup y los tests de transacción/rollback completos con mocks.
+- Instalar esa versión exacta del helper desde `main` y verificar que los units sigan activos y que el sondeo no cree solicitudes ni modifique contenedores.
+- Actualizar la evidencia final y `TASKS.md` con el SHA de integración y salida fresca de pruebas.
 - No crear `v0.4.0`, no ejecutar release y no desplegar durante esta preparación.
 
 ## Evidencia privada
