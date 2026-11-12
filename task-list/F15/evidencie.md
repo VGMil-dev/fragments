@@ -76,8 +76,19 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - Se confirmó que `v0.4.0` no existe en refs ni releases. No se creó tag ni se publicó release o despliegue; el código sí se integró en GitHub `main` mediante PR #10. `env` y datos académicos originales permanecieron intactos. El release permanece bloqueado hasta confirmar instalación privada de OAuth y luego completar login real, revisión manual y el resto del piloto.
 
 
-## Integración en GitHub — verificación final
+## Integración en GitHub — cierre de código
 
-- PR #10: https://github.com/VGMil-dev/fragments/pull/10; merge normal a main el 2026-11-12. SHA final de main: dcaf5ae261561fe9e4367ee0b9b561e4b4a48e2f.
+- PR #10: https://github.com/VGMil-dev/fragments/pull/10; merge normal a main el 2026-11-12. SHA del merge de código F15: dcaf5ae261561fe9e4367ee0b9b561e4b4a48e2f. PR #11 incorporó la evidencia; `main` quedó entonces en `272bca247658e80061831061695bba6cadaafb12`.
 - GitHub Actions CI, run 43318272031, job verify: SUCCESS sobre el head 66eaa52af106f2368147ba82af18a9a038f55c8b. Incluyó test del release agent, instalación locked, suites, typecheck, lint y build. GitHub anotó advertencia de fin de soporte de Node.js 20 para las acciones pinneadas; no falló el job.
 - No se creó v0.4.0, no se solicitó approval de producción y no hubo despliegue. Preflight confirmó que las credenciales OAuth no constan en el .env/runtime productivo. La conexión SSH estricta expiró antes de confirmar ninguna escritura; los valores siguen sin solicitarse de nuevo. Login OAuth real permanece sin verificar. Release detenido por este control crítico.
+## Diagnóstico SSH y bloqueo de publicación — 2026-11-12
+
+- El adjunto OAuth original del chat está disponible y contiene los datos esperados; no se solicitaron otra vez. No se copiaron ni imprimieron.
+- `known_hosts` para `129.38.112.90` conserva la clave ED25519 con huella `SHA256:zzF20RQw2amdh66Pxm89w3oUCuhieg0nToMxJlGnNlQ`, coincidente con la huella previamente confiable. La verificación se mantuvo estricta.
+- DNS de `fragments.gavanti.org` resolvió a direcciones Cloudflare `104.21.14.126` y `172.67.203.91`; son proxys y no identifican el IP de origen de la VPS. El sitio público de Fragments respondió HTTP 200.
+- Desde la estación, pruebas TCP acotadas contra `129.38.112.90` agotaron el tiempo en 22, 80 y 443. OpenSSH explícito con la llave autorizada y `StrictHostKeyChecking=yes` mostró `Connecting to 129.38.112.90 port 22` y luego `connect ... timed out`. El fallo sucede antes de completar TCP/TLS SSH, intercambio de clave de host o autenticación; no demuestra un problema de llave ni permite decidir entre VM/IP/NSG/ruta de red.
+- La estación tiene ruta por defecto y acceso HTTPS público (GitHub y Cloudflare). No se pudo verificar estado de VM/VNIC/NSG, servicios Docker/systemd del agente pull, PostgreSQL ni integridad SQLite actual desde VPS.
+- Lectura pública: Fragments web HTTP 200; `pits.gavanti.org` HTTP 502 y `pits-dev.gavanti.org` HTTP 302. No se modificó Pits, PostgreSQL, red Oracle ni SSH. El 502 de Pits es una condición observada, ajena a este cambio, y debe considerarse antes del piloto compartido.
+- La copia SQLite preflight anterior conserva su resultado documentado de integridad y migración aislada; no es un backup nuevo para este release. No hubo migración productiva ni nueva copia de release.
+- Intervención indispensable fuera de esta estación: en OCI, confirmar primero que la instancia está `RUNNING` y que su VNIC aún posee `129.38.112.90`; si cambió, recuperar el IP correcto. Confirmar la ruta de subred y que NSG/security list permita TCP 22 únicamente desde el IP de salida autorizado de esta estación. No abrir SSH a `0.0.0.0/0`. No se cambió ninguna regla porque el timeout no identifica cuál capa falla.
+- `origin/main` antes de esta actualización se verificó como `272bca247658e80061831061695bba6cadaafb12`; `v0.4.0` no existe y GitHub reporta cero releases. No se creó tag, no se pidió aprobación de producción ni se desplegó. La instalación de OAuth, backup previo al release, validación del agente pull y piloto siguen pendientes; no crear/publicar la tag hasta recuperar acceso y completar esos controles.
