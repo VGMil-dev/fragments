@@ -5,6 +5,7 @@
 - Estado: implementación y QA sintético local verificados. **OAuth real no verificado; no declarar lista para producción** hasta instalar credenciales de forma segura y completar login con GitHub en una versión aislada de F15.
 - Rama `codex/f15-github-gallery`, basada en `origin/main` `704fe08c1932cdabed1303884eadf612625e94e7`.
 - Commit F15 inicial: `c43aacb8d8cc474d5c45f3acbb59d192b2148ee3` (`feat(F15): identidad GitHub y galería académica`). Evidencia inicial: `5de917da5872f21300b206b06ac75901d699967d` (`docs(F15): registrar evidencia de verificación`).
+- Commit de validación local: `65b404eb481a83977cd26b823e4f0fc7a5b5642a` (`test(F15): validar OAuth URL y preservación académica`); el SHA queda registrado también en `task-list/TASKS.md`.
 - Better Auth `1.7.17`. Los cambios de esta validación usan fake provider y datos sintéticos; no representan autenticación OAuth real.
 - Se trabajó en clon aislado `.worktrees/F15`. No se modificó `main`, no hubo merge, push, tag, despliegue, reinicio ni recreación de contenedores.
 
