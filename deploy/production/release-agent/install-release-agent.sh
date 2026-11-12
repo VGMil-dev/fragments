@@ -29,8 +29,8 @@ test -f "$production_dir/.env"
 test "$(stat -c '%U:%G:%a' "$production_dir/.env")" = root:root:600
 test "$(stat -c '%U:%G:%a' /var/backups/fragments)" = root:root:700
 test "$(stat -c '%U:%G' /var/run/docker.sock)" = root:docker
-test "$(docker inspect --format '{{.Config.Labels "org.opencontainers.image.revision"}}' fragments-api-1)" = "$release_sha"
-test "$(docker inspect --format '{{.Config.Labels "org.opencontainers.image.revision"}}' fragments-web-1)" = "$release_sha"
+test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' fragments-api-1)" = "$release_sha"
+test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' fragments-web-1)" = "$release_sha"
 test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3001/health)" = 200
 test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/)" = 200
 
