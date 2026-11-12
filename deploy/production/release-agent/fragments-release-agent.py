@@ -361,11 +361,15 @@ def integrity_check_backup(config: dict, existing: set[str]) -> dict:
     if info.st_uid != 0 or info.st_mode & 0o077:
         raise AgentError("El snapshot no tiene propietario root ni permisos privados.")
     uri = f"file:{urllib.parse.quote(str(backup))}?mode=ro"
+    database = None
     try:
-        with sqlite3.connect(uri, uri=True, timeout=10) as database:
-            result = database.execute("PRAGMA integrity_check").fetchone()
+        database = sqlite3.connect(uri, uri=True, timeout=10)
+        result = database.execute("PRAGMA integrity_check").fetchone()
     except sqlite3.Error as error:
         raise AgentError("No se pudo validar la integridad del backup SQLite.") from error
+    finally:
+        if database is not None:
+            database.close()
     if result != ("ok",):
         raise AgentError("PRAGMA integrity_check del backup no devolvió ok.")
     digest = hashlib.sha256(backup.read_bytes()).hexdigest()

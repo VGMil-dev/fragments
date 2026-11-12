@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 from pathlib import Path
 
 
@@ -153,9 +153,12 @@ class ReleaseValidationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             backup_dir = Path(directory)
             backup = backup_dir / "fragments-fixture.sqlite"
-            with sqlite3.connect(backup) as database:
+            database = sqlite3.connect(backup)
+            try:
                 database.execute("CREATE TABLE fixture (id INTEGER PRIMARY KEY)")
                 database.execute("INSERT INTO fixture VALUES (1)")
+            finally:
+                database.close()
             backup.chmod(0o600)
             original_stat = Path.stat
 
@@ -175,6 +178,98 @@ class ReleaseValidationTests(unittest.TestCase):
             with patch.object(agent, "run_checked", return_value=""), patch.object(Path, "stat", simulated_stat):
                 with self.assertRaises(agent.AgentError):
                     agent.integrity_check_backup(config, set())
+
+    def run_mock_release_transaction(self, fail_health=False):
+        root_context = tempfile.TemporaryDirectory()
+        self.addCleanup(root_context.cleanup)
+        root = Path(root_context.name)
+        state = root / "state"
+        backup_dir = root / "backups"
+        state.mkdir()
+        backup_dir.mkdir()
+        ledger_path = state / "ledger.json"
+        ledger_path.write_text(json.dumps({"schemaVersion": 1, "releases": []}), encoding="utf-8")
+        archive = root / "fragments-images.tar.gz"
+        archive.write_bytes(b"synthetic-only archive")
+        config = {
+            "stateDirectory": str(state),
+            "ledgerPath": str(ledger_path),
+            "gitDirectory": str(root / "source.git"),
+            "backupDirectory": str(backup_dir),
+            "composeDirectory": str(root),
+            "composeFile": str(root / "docker-compose.yml"),
+            "requestDirectory": str(root / "requests"),
+        }
+        manifest = release_fixture()
+        release = {"id": 123456789, "tag_name": manifest["tag"]}
+        run = {
+            "path": agent.WORKFLOW_PATH,
+            "event": "push",
+            "head_branch": manifest["tag"],
+            "head_sha": RELEASE_SHA,
+            "status": "completed",
+            "conclusion": "success",
+            "id": 123456789,
+            "repository": {"id": agent.REPOSITORY_ID},
+        }
+        jobs = {"jobs": [{"name": agent.PUBLISH_JOB, "status": "completed", "conclusion": "success"}]}
+        previous_images = {
+            "fragments-api-1": "fragments-api:previous",
+            "fragments-web-1": "fragments-web:previous",
+        }
+        neighbors = {"pits-development-app-1": {"id": "fixed-container-id", "state": "running|healthy"}}
+        health_error = [agent.AgentError("synthetic health failure")] if fail_health else []
+
+        def wait_health(*args, **kwargs):
+            if health_error:
+                raise health_error.pop(0)
+
+        with (
+            patch.object(agent, "get_release_assets", return_value=(manifest, release, archive)),
+            patch.object(agent, "request_json", side_effect=lambda url: jobs if "/jobs?" in url else run),
+            patch.object(agent, "validate_release_run"),
+            patch.object(agent, "verify_git_source"),
+            patch.object(agent, "verify_attestation"),
+            patch.object(agent, "load_archive"),
+            patch.object(agent, "container_snapshot", return_value=neighbors),
+            patch.object(agent, "image_refs_for_running", return_value=previous_images),
+            patch.object(agent, "fragments_data_volume", return_value="fragments-data"),
+            patch.object(agent, "container_health", return_value=("running", "healthy", "fragments-api:current")),
+            patch.object(agent, "integrity_check_backup", return_value={"file": "fixture.sqlite", "bytes": 32, "sha256": "d" * 64, "integrity": "ok"}),
+            patch.object(agent, "image_info", return_value={"version": "v0.3.1", "revision": "5" * 40, "architecture": "arm64"}),
+            patch.object(agent, "run_checked", return_value="") as checked_mock,
+            patch.object(agent.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout="200")),
+            patch.object(agent, "wait_for_health", side_effect=wait_health) as health_mock,
+        ):
+            if fail_health:
+                with self.assertRaises(agent.AgentError):
+                    agent.process_release(123456789, config)
+            else:
+                agent.process_release(123456789, config)
+
+        result = json.loads(ledger_path.read_text(encoding="utf-8"))
+        return result["releases"][0], health_mock, checked_mock, archive
+
+    def test_full_approved_release_transaction_simulates_only_fixed_app_services(self):
+        record, health, checked, archive = self.run_mock_release_transaction()
+        self.assertEqual(record["status"], "deployed")
+        self.assertEqual(record["backup"]["integrity"], "ok")
+        self.assertFalse(archive.exists())
+        health.assert_called_once()
+        compose_args = [call.args[0] for call in checked.call_args_list if "up" in call.args[0]]
+        self.assertEqual(len(compose_args), 1)
+        self.assertEqual(compose_args[0][-2:], ["api", "web"])
+
+    def test_failed_health_simulates_code_rollback_without_database_restore(self):
+        record, health, checked, archive = self.run_mock_release_transaction(fail_health=True)
+        self.assertEqual(record["status"], "rolled_back")
+        self.assertEqual(record["rollback"], "code_images_restored_database_untouched")
+        self.assertFalse(archive.exists())
+        self.assertEqual(health.call_count, 2)
+        self.assertTrue(health.call_args.kwargs["rollback"])
+        compose_args = [call.args[0] for call in checked.call_args_list if "up" in call.args[0]]
+        self.assertEqual(len(compose_args), 2)
+        self.assertTrue(all(arguments[-2:] == ["api", "web"] for arguments in compose_args))
 
 
 class GitProvenanceTests(unittest.TestCase):
