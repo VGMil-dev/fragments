@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { migrate } from "../../db/migrate.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
 import { createMentorHttp } from "./http.js";
-import { createMentorService, type MentorEvaluator } from "./service.js";
+import { createMentorService, MentorEvaluationFailure, type MentorEvaluator } from "./service.js";
 
 const servers: Server[] = [];
 const databases: DatabaseSync[] = [];
@@ -14,10 +14,10 @@ const draft = {
   goals: ["Registrar riegos"], skills: ["TypeScript"], scope: "Una pantalla registra plantas y medidas.", constraints: ["Funciona sin conexión"],
 };
 
-async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator()) {
+async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), logFailure?: (entry: Record<string, unknown>) => void) {
   const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
-  const mentorHandler = createMentorHttp(database, service);
+  const mentorHandler = createMentorHttp(database, service, { logFailure });
   const server = createServer(async (request, response) => {
     if (await mentorHandler(request, response) === "unhandled") response.writeHead(404).end();
   });
@@ -43,6 +43,103 @@ afterEach(async () => {
 });
 
 describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
+  it("coalesces concurrent requests for the same proposal version", async () => {
+    const local = createLocalMentorEvaluator();
+    let evaluationCalls = 0;
+    let markStarted!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => { markStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const evaluator: MentorEvaluator = {
+      async evaluate(input) {
+        evaluationCalls += 1;
+        markStarted();
+        await gate;
+        return local.evaluate(input);
+      },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const path = `${base}/api/proposals/${proposal.id}/review`;
+    const first = fetch(path, { method: "POST", headers: { cookie: proposal.cookie } });
+    await started;
+    const second = fetch(path, { method: "POST", headers: { cookie: proposal.cookie } });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    release();
+    const [firstResponse, secondResponse] = await Promise.all([first, second]);
+    const firstBody = await firstResponse.json() as { data: { evaluationId: string } };
+    const secondBody = await secondResponse.json() as { data: { evaluationId: string } };
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+    expect(evaluationCalls).toBe(1);
+    expect(secondBody.data.evaluationId).toBe(firstBody.data.evaluationId);
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(1);
+  });
+
+  it("reports a budget reservation failure without dispatching or hiding its diagnostic", async () => {
+    const diagnostics: Record<string, unknown>[] = [];
+    let evaluationCalls = 0;
+    const evaluator: MentorEvaluator = {
+      async evaluate() {
+        evaluationCalls += 1;
+        throw new MentorEvaluationFailure({ stage: "budget_reservation", errorType: "AiBudgetUnavailableError" });
+      },
+    };
+    const base = await start(evaluator, (entry) => diagnostics.push(entry));
+    const proposal = await createProposal(base);
+
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      method: "POST",
+      headers: { cookie: proposal.cookie },
+    });
+    const body = await response.json() as { error: { code: string; message: string } };
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("AI_BUDGET_UNAVAILABLE");
+    expect(body.error.message).toContain("presupuesto");
+    expect(evaluationCalls).toBe(1);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      event: "mentor_evaluation_failed",
+      stage: "budget_reservation",
+      error_type: "AiBudgetUnavailableError",
+      http_status: 503,
+      provider_http_status: null,
+      provider_code: null,
+      retry_after_ms: null,
+    });
+    expect(diagnostics[0]).toHaveProperty("duration_ms");
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+  });
+
+  it("preserves a Gateway HTTP 402 without retrying or storing an evaluation", async () => {
+    const diagnostics: Record<string, unknown>[] = [];
+    let evaluationCalls = 0;
+    const evaluator: MentorEvaluator = {
+      async evaluate() {
+        evaluationCalls += 1;
+        throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "APICallError", providerHttpStatus: 402, providerCode: "budget_exceeded" });
+      },
+    };
+    const base = await start(evaluator, (entry) => diagnostics.push(entry));
+    const proposal = await createProposal(base);
+
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      method: "POST",
+      headers: { cookie: proposal.cookie },
+    });
+    const body = await response.json() as { error: { code: string; message: string } };
+
+    expect(response.status).toBe(402);
+    expect(body.error).toMatchObject({ code: "AI_GATEWAY_BUDGET_EXCEEDED" });
+    expect(body.error.message).toContain("Vercel AI Gateway");
+    expect(evaluationCalls).toBe(1);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({ http_status: 402, provider_http_status: 402, provider_code: "budget_exceeded" });
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+  });
+
   it("recovers the latest persisted evaluation without evaluating again", async () => {
     const local = createLocalMentorEvaluator();
     let evaluationCalls = 0;

@@ -39,13 +39,13 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
     expect(analysis.findings[0]?.evidence[0]).toMatchObject({ path: "App.tsx", lines: [1, 1] });
   });
 
-  it("does not dispatch without a configured gateway key, model, or rate card", async () => {
+  it("requires Gateway configuration and uses a minimum reservation without a rate card", async () => {
     const generate = vi.fn(async () => ({ value: result, costUsd: 0 }));
     const provider = createGatewayReviewAiProvider({ gatewayKeyConfigured: false, ledger: makeLedger(), generate });
     await expect(provider.analyze(input)).rejects.toThrow(/no está configurada/);
     const configured = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger: makeLedger(), generate });
-    await expect(configured.analyze(input)).rejects.toThrow(AiBudgetUnavailableError);
-    expect(generate).not.toHaveBeenCalled();
+    await expect(configured.analyze(input)).resolves.toMatchObject({ modelId: "fixture/model" });
+    expect(generate).toHaveBeenCalledOnce();
   });
 
   it("stops future calls when the Gateway receipt is unavailable", async () => {

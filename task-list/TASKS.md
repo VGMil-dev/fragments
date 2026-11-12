@@ -20,6 +20,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F12 | PLANNER | F10.1,F11 | Integración local v0.3.0: migraciones unificadas, recorridos Mentor→Review→Trainer→Inspector, QA funcional y evidencia privada ≤20 archivos | [x] |
 | F13 | PLANNER | F12 | Indicador de versión web con metadata del build validada contra tag anotada, SHA exacto y `origin/main`; build candidato manual sin despliegue | [x] |
 | F14 | PLANNER | F13 | Release activado solo por push de nueva tag anotada `vMAJOR.MINOR.PATCH`; verificación de SHA/main, aprobación protegida, despliegue aislado, backup/rollback y ledger anti-repetición | [ ] (implementación y controles configurados; integración, verificación de CI e instalación aislada pendientes) |
+| INC-MENTOR-503 | PLANNER | v0.3.0 | Desbloquear Mentor solo con presupuesto Vercel activo y aplicable; reconciliar holdback y registrar consumo | [x] — presupuesto Fragments USD 5/No Refresh verificado; backup íntegro; desplegado `50e2ace`; evaluación real liquidada USD 0.000112 y recuperada por GET sin duplicación; evidencia en `task-list/INC-MENTOR-503/evidencie.md` |
 
 ## Estado de cierre de integración — 2026-11-05
 

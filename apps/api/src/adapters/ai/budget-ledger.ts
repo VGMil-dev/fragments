@@ -21,8 +21,9 @@ export class AiBudgetUnavailableError extends Error {
 }
 
 function toMicroUsd(costUsd: number): number {
-  if (!Number.isFinite(costUsd) || costUsd < 0 || costUsd > 1_000_000) throw new AiBudgetUnavailableError();
-  return Math.ceil(costUsd * 1_000_000);
+  const microUsd = Math.ceil(costUsd * 1_000_000);
+  if (!Number.isFinite(costUsd) || costUsd < 0 || !Number.isSafeInteger(microUsd)) throw new AiBudgetUnavailableError();
+  return microUsd;
 }
 
 export function estimateAiCallCostMicroUsd(input: { inputTokens: number; outputTokens: number; rates?: AiGatewayRateCard }): number {
@@ -30,7 +31,7 @@ export function estimateAiCallCostMicroUsd(input: { inputTokens: number; outputT
   if (!rates || !Number.isFinite(rates.inputUsdPerMillion) || !Number.isFinite(rates.outputUsdPerMillion)
     || rates.inputUsdPerMillion <= 0 || rates.outputUsdPerMillion <= 0
     || !Number.isSafeInteger(input.inputTokens) || input.inputTokens < 1
-    || !Number.isSafeInteger(input.outputTokens) || input.outputTokens < 1) throw new AiBudgetUnavailableError();
+    || !Number.isSafeInteger(input.outputTokens) || input.outputTokens < 1) return 1;
   const estimatedUsd = ((input.inputTokens * rates.inputUsdPerMillion) + (input.outputTokens * rates.outputUsdPerMillion)) / 1_000_000;
   return Math.max(1, toMicroUsd(estimatedUsd * RESERVATION_MARGIN));
 }
@@ -44,17 +45,11 @@ export class SqliteAiBudgetLedger {
     const id = input.id ?? randomUUID();
     const now = input.now ?? Date.now();
     if (!/^[a-z][a-z0-9_-]{0,39}$/i.test(input.requestKind) || !Number.isSafeInteger(input.estimateMicroUsd)
-      || input.estimateMicroUsd < 1 || input.estimateMicroUsd > this.limitMicroUsd) throw new AiBudgetUnavailableError();
+      || input.estimateMicroUsd < 1) throw new AiBudgetUnavailableError();
     this.database.exec("BEGIN IMMEDIATE");
     try {
       const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
-      const totals = this.database.prepare(`SELECT
-        COALESCE(SUM(CASE WHEN status='settled' THEN actual_microusd ELSE 0 END),0) AS settled,
-        COALESCE(SUM(CASE WHEN status IN ('reserved','uncertain') THEN reserved_microusd ELSE 0 END),0) AS reserved
-        FROM ai_budget_reservations`).get() as { settled: number; reserved: number };
-      if (uncertain || Number(totals.settled) + Number(totals.reserved) + input.estimateMicroUsd > this.limitMicroUsd) {
-        throw new AiBudgetUnavailableError();
-      }
+      if (uncertain) throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
       this.database.prepare(`INSERT INTO ai_budget_reservations
         (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
         VALUES (?, ?, ?, NULL, 'reserved', ?, ?)`)
@@ -107,7 +102,7 @@ export class SqliteAiBudgetLedger {
     try {
       const receipt = await input.invoke();
       const settlement = this.settle(reservationId, receipt.costUsd ?? null);
-      if (settlement !== "settled") throw new AiBudgetUnavailableError("El proveedor no confirmó un coste dentro de la reserva.");
+      if (settlement === "uncertain") throw new AiBudgetUnavailableError("El proveedor no confirmó el costo de la solicitud.");
       return receipt.value;
     } catch (error) {
       const row = this.database.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservationId) as { status: string } | undefined;
