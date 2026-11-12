@@ -146,10 +146,15 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).toContain("72/100");
   });
 
-  it("shows budget exhaustion directly instead of replacing it with a recovery 404", async () => {
+  it.each(["AI_BUDGET_UNAVAILABLE", "AI_GATEWAY_BUDGET_EXCEEDED"] as const)("shows %s directly instead of replacing it with a recovery 404", async (code) => {
     const evaluate = vi.fn(async () => ({
       ok: false as const,
-      error: { code: "AI_BUDGET_UNAVAILABLE", message: "La evaluación no está disponible porque se agotó el presupuesto de IA configurado." },
+      error: {
+        code,
+        message: code === "AI_GATEWAY_BUDGET_EXCEEDED"
+          ? "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto."
+          : "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.",
+      },
     }));
     const recover = vi.fn(async () => ({
       ok: false as const,
@@ -169,7 +174,7 @@ describe("MentorScreen", () => {
 
     expect(evaluate).toHaveBeenCalledOnce();
     expect(recover).not.toHaveBeenCalled();
-    expect(mountedContainer.textContent).toContain("se agotó el presupuesto de IA configurado");
+    expect(mountedContainer.textContent).toContain(code === "AI_GATEWAY_BUDGET_EXCEEDED" ? "Vercel AI Gateway alcanzó su presupuesto" : "se agotó el presupuesto de IA configurado");
     expect(mountedContainer.textContent).toContain("Volver a intentar");
   });
 });

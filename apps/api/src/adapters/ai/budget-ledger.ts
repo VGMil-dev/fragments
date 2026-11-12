@@ -48,6 +48,8 @@ export class SqliteAiBudgetLedger {
       || input.estimateMicroUsd < 1) throw new AiBudgetUnavailableError();
     this.database.exec("BEGIN IMMEDIATE");
     try {
+      const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
+      if (uncertain) throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
       this.database.prepare(`INSERT INTO ai_budget_reservations
         (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
         VALUES (?, ?, ?, NULL, 'reserved', ?, ?)`)
@@ -99,7 +101,8 @@ export class SqliteAiBudgetLedger {
     const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd });
     try {
       const receipt = await input.invoke();
-      this.settle(reservationId, receipt.costUsd ?? null);
+      const settlement = this.settle(reservationId, receipt.costUsd ?? null);
+      if (settlement === "uncertain") throw new AiBudgetUnavailableError("El proveedor no confirmó el costo de la solicitud.");
       return receipt.value;
     } catch (error) {
       const row = this.database.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservationId) as { status: string } | undefined;

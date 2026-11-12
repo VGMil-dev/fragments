@@ -15,18 +15,19 @@ describe("SqliteAiBudgetLedger", () => {
     expect(parseGatewayCostUsd("-0.1")).toBeUndefined();
   });
 
-  it("estimates with a configured upper rate card and fails closed without one", () => {
+  it("uses the configured upper rate card or a minimum reservation when rates are unavailable", () => {
     expect(estimateAiCallCostMicroUsd({ inputTokens: 10_000, outputTokens: 1_000, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 } })).toBe(14_000);
-    expect(() => estimateAiCallCostMicroUsd({ inputTokens: 10_000, outputTokens: 1_000 })).toThrow(AiBudgetUnavailableError);
+    expect(estimateAiCallCostMicroUsd({ inputTokens: 10_000, outputTokens: 1_000 })).toBe(1);
   });
 
-  it("reserves in-flight amount, releases it only before dispatch, and enforces the shared ceiling", () => {
+  it("records reservations above the old local ceiling and releases only before dispatch", () => {
     const budget = ledger(1_000_000);
     const first = budget.reserve({ requestKind: "review", estimateMicroUsd: 600_000, id: "call-one" });
     expect(budget.summary()).toMatchObject({ reservedMicroUsd: 600_000, availableMicroUsd: 400_000, blocked: false });
-    expect(() => budget.reserve({ requestKind: "review", estimateMicroUsd: 500_000, id: "call-two" })).toThrow(AiBudgetUnavailableError);
+    budget.reserve({ requestKind: "review", estimateMicroUsd: 500_000, id: "call-two" });
+    expect(budget.summary()).toMatchObject({ reservedMicroUsd: 1_100_000, availableMicroUsd: 0, blocked: false });
     expect(budget.releaseBeforeDispatch(first)).toBe(true);
-    expect(budget.summary().availableMicroUsd).toBe(1_000_000);
+    expect(budget.summary().availableMicroUsd).toBe(500_000);
   });
 
   it("reconciles a known orphaned pre-dispatch cap without changing settled history", () => {
@@ -55,11 +56,11 @@ describe("SqliteAiBudgetLedger", () => {
     expect(() => budget.reserve({ requestKind: "mentor", estimateMicroUsd: 1 })).toThrow(AiBudgetUnavailableError);
   });
 
-  it("persists a known overrun and prevents further reservations", async () => {
+  it("persists a known overrun without enforcing the old local ceiling", async () => {
     const budget = ledger(1_000_000);
     const rates = { inputUsdPerMillion: 1, outputUsdPerMillion: 1 };
-    await expect(budget.run({ requestKind: "mentor", inputTokens: 1, outputTokens: 1, rates, invoke: async () => ({ value: null, costUsd: 1.1 }) })).rejects.toThrow(AiBudgetUnavailableError);
+    await expect(budget.run({ requestKind: "mentor", inputTokens: 1, outputTokens: 1, rates, invoke: async () => ({ value: null, costUsd: 1.1 }) })).resolves.toBeNull();
     expect(budget.summary()).toMatchObject({ settledMicroUsd: 1_100_000, availableMicroUsd: 0 });
-    expect(() => budget.reserve({ requestKind: "review", estimateMicroUsd: 1 })).toThrow(AiBudgetUnavailableError);
+    expect(() => budget.reserve({ requestKind: "review", estimateMicroUsd: 1 })).not.toThrow();
   });
 });

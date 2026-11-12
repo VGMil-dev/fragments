@@ -113,6 +113,33 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
   });
 
+  it("preserves a Gateway HTTP 402 without retrying or storing an evaluation", async () => {
+    const diagnostics: Record<string, unknown>[] = [];
+    let evaluationCalls = 0;
+    const evaluator: MentorEvaluator = {
+      async evaluate() {
+        evaluationCalls += 1;
+        throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "APICallError", providerHttpStatus: 402, providerCode: "budget_exceeded" });
+      },
+    };
+    const base = await start(evaluator, (entry) => diagnostics.push(entry));
+    const proposal = await createProposal(base);
+
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
+      method: "POST",
+      headers: { cookie: proposal.cookie },
+    });
+    const body = await response.json() as { error: { code: string; message: string } };
+
+    expect(response.status).toBe(402);
+    expect(body.error).toMatchObject({ code: "AI_GATEWAY_BUDGET_EXCEEDED" });
+    expect(body.error.message).toContain("Vercel AI Gateway");
+    expect(evaluationCalls).toBe(1);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({ http_status: 402, provider_http_status: 402, provider_code: "budget_exceeded" });
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+  });
+
   it("recovers the latest persisted evaluation without evaluating again", async () => {
     const local = createLocalMentorEvaluator();
     let evaluationCalls = 0;
