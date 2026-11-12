@@ -21,7 +21,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F13 | PLANNER | F12 | Indicador de versión web con metadata del build validada contra tag anotada, SHA exacto y `origin/main`; build candidato manual sin despliegue | [x] |
 | F14 | PLANNER | F13 | Release activado solo por push de nueva tag anotada `vMAJOR.MINOR.PATCH`; verificación de SHA/main, aprobación protegida, despliegue aislado, backup/rollback y ledger anti-repetición | [x] — aprobación manual de mantenedor individual verificada por API; bypass administrativo desactivado; independencia reducida autorizada para v0.4.0 y registrada en `task-list/F14/evidencie.md` |
 | INC-MENTOR-503 | PLANNER | v0.3.0 | Desbloquear Mentor solo con presupuesto Vercel activo y aplicable; reconciliar holdback y registrar consumo | [x] — presupuesto Fragments USD 5/No Refresh verificado; backup íntegro; desplegado `50e2ace`; evaluación real liquidada USD 0.000112 y recuperada por GET sin duplicación; evidencia en `task-list/INC-MENTOR-503/evidencie.md` |
-| F15 | PLANNER | F14 | GitHub OAuth estudiantil, propiedad académica de propuestas, galería automática versionada y panel docente protegido | [ ] — suites y simulaciones locales pasan; preflight productivo confirma que faltan `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` en archivo persistente y contenedor API. OAuth real no verificado, por lo que no está lista para release; detalle en `task-list/F15/evidencie.md` |
+| F15 | PLANNER | F14 | GitHub OAuth estudiantil, propiedad académica de propuestas, galería automática versionada y panel docente protegido | [ ] — integrado en `main` por PR #10, SHA `dcaf5ae261561fe9e4367ee0b9b561e4b4a48e2f`; CI `verify` pasa; OAuth real bloqueado porque credenciales no están confirmadas en runtime productivo y SSH expiró. No publicar v0.4.0; detalle en `task-list/F15/evidencie.md` |
 
 ## Estado de cierre de integración — 2026-11-05
 
@@ -32,3 +32,4 @@ Dependencias F03/F05 son de integración, no bloquean trabajo paralelo con fake 
 ## Validación F15 — 2026-11-12
 
 API 109/109, web 57/57, contracts 19/19; typecheck/build y lint de contracts pasan. QA docente Ego Lite en escritorio y móvil y migración SQLite temporal registrados en `task-list/F15/evidencie.md`. El callback generado por fake provider coincide con `https://fragments.gavanti.org/api/auth/callback/github`; eso no verifica OAuth externo. El VPS mantiene `.env` en modo `0600`, pero aún carece de `GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET`; OAuth real sigue bloqueado y F15 no se declara lista para producción. No hubo cambios a producción.
+
