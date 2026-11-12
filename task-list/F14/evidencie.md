@@ -22,4 +22,4 @@ Los requisitos completos están en `task-list/F14/spec.md`. F14 permanece `[ ]` 
 
 ## Commit
 
-Pendiente de registrar tras el commit documental de esta definición. No representa implementación de F14.
+`3d0cbfe691e59a23b869d8d592fcee598e7cc7bc` — `docs(f14): fija activacion exclusiva por tag`. Este commit registra el requisito; no representa implementación de F14.
