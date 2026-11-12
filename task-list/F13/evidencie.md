@@ -43,3 +43,14 @@ Se creó una copia temporal desde los archivos rastreados y los cambios F13 en `
 - Código F13: `065e3b2a7da42eded9b02d1a30a801cd93779efd` — `feat(f13): muestra version verificable en la interfaz`.
 - Commit documental previo: `e6360d4601acc27ca3df9e07889e324a95994b11`; esta actualización añade la verificación real de GitHub y capturas persistentes.
 - La identidad del commit de código es `Codex <codex@localhost>` aplicada solo a ese commit; no se cambió configuración global.
+
+## Revalidación fresca durante F14 — 2026-11-12
+
+- `git fetch origin` → salida 0. `origin/main` quedó en `704fe08c1932cdabed1303884eadf612625e94e7`.
+- `git cat-file -t refs/tags/v0.3.1` → `tag`; objeto anotado `3cf5185fc5d05edc9f5c6dee2a67c5bd8e9acbac`; `refs/tags/v0.3.1^{commit}` → `50e2ace697afc125bb3bfdd9a705f0e383796a83`; `git merge-base --is-ancestor <SHA> refs/remotes/origin/main` → salida 0.
+- Se hizo una copia Git aislada en `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-historical-bd61f9119efd457e9072d086adef504c`, checkout detached del SHA histórico y referencia local `origin/main` fijada al objeto verificado. Ejecutar `resolver-real-git-check.ts` con el resolver actual desde el workspace produjo `{"version":"v0.3.1","commit":"50e2ace697afc125bb3bfdd9a705f0e383796a83","verification":"real Git objects, isolated historical checkout"}`. Se confirmó que `BuildVersion.tsx` no existe en el árbol histórico; esto prueba el resolver, no que el artefacto productivo histórico muestre el indicador.
+- En la copia de verificación NTFS de F13, `pnpm exec turbo run test typecheck lint build --force` → `Tasks: 10 successful, 10 total; Cached: 0 cached, 10 total`. Suites: contracts 19/19, API 95/95, web 65/65; typecheck, lint y build exitosos. `node check-build-metadata.mjs` → `bundles=2`, `expectedLocalMetadata=true`; el bundle contiene `version:"dev", commit:null`.
+- `pnpm --filter @fragments/web exec vitest run src/build/release-metadata.test.ts src/components/brand/BuildVersion.test.tsx` → 2 archivos, 10 pruebas correctas.
+- Los comandos se ejecutaron en copia temporal NTFS porque el checkout de trabajo está en D: exFAT; en ese volumen pnpm no pudo completar la creación de su virtual store. No se alteró la configuración ni el lockfile del repositorio. `git status --short` siguió mostrando únicamente el archivo preexistente `env` sin rastrear.
+
+Esta revalidación no integra ni publica F13 en `main`; la comprobación de integración queda sujeta a la revisión y procedimiento de F14.
