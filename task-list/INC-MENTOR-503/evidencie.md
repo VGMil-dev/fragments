@@ -63,3 +63,5 @@ Imágenes API/web etiquetadas con ese revision SHA y `v0.3.0`. El tag histórico
 
 ## Evidencia privada local ignorada
 `task-list/INC-MENTOR-503/evidence/` contiene 10 archivos, ignorados por `.git/info/exclude`; incluye diagnóstico redactado, comandos de verificación SQLite y scripts sintéticos de Ego Lite. No contiene `.env`, secretos ni contenido de estudiantes.
+
+- Documentación y registro del incidente: 2d35aad82785a85ba1e6bfab511b1ddd8f17b6cf.
