@@ -19,6 +19,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F11 | PLANNER | F10 | Control docente Mentor: editar y publicar una configuración temática/rúbrica; evaluación estructurada con puntaje de servidor, deduplicación y consulta histórica versionada | [x] |
 | F12 | PLANNER | F10.1,F11 | Integración local v0.3.0: migraciones unificadas, recorridos Mentor→Review→Trainer→Inspector, QA funcional y evidencia privada ≤20 archivos | [x] |
 | F13 | PLANNER | F12 | Indicador de versión web con metadata del build validada contra tag anotada, SHA exacto y `origin/main`; build candidato manual sin despliegue | [x] |
+| F14 | PLANNER | F13 | Release activado solo por push de nueva tag anotada `vMAJOR.MINOR.PATCH`; verificación de SHA/main, aprobación protegida, despliegue aislado, backup/rollback y ledger anti-repetición | [ ] (requisito de activación fijado; implementación pendiente) |
 
 ## Estado de cierre de integración — 2026-11-05
 
