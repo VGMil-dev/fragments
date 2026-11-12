@@ -1,6 +1,6 @@
 # F14 — Evidencia
 
-**Estado:** INTEGRADA Y CONFIGURADA; se prepara un último PR de endurecimiento/simulación detectado tras habilitar el agente. No se declara cerrada hasta integrar ese ajuste y volver a verificar el helper instalado. No se creó ni publicó una tag nueva y no hubo despliegue.
+**Estado:** COMPLETADA E INTEGRADA en `main` (`ddf141447ec7b982afb58a65db5b47debb7e597c`). No se creó ni publicó una tag nueva y no hubo despliegue.
 
 ## Procedencia histórica de `v0.3.1` — comprobación independiente del código F14
 
@@ -39,6 +39,8 @@ Consultas y cambios del 2026-11-12 en `VGMil-dev/fragments`:
 - `ci.yml` separado se dispara solo por pull requests, con token de solo lectura y runner hospedado. `release-build-candidate.yml` sigue siendo manual y sin publicación o despliegue; sus referencias de acciones se fijaron a SHA para cumplir la política global.
 - Agente pull dedicado (`fragments-release`) sin login, Docker, sudo o LXD; cola con archivo único; aplicador root de systemd endurecido, con acceso al socket Docker limitado al unit y Compose fijo para API/web de Fragments. Timer a cinco minutos, ledger antirrepetición, validación de SHA/tag contra GitHub, atestación, backup, healthchecks y rollback de imágenes sin restaurar SQLite.
 - PR #5 se fusionó mediante merge normal; SHA de merge en `main`: `13b99a0e7af12c2dfb4377a7de390c9ad129281c`. CI `Fragments CI`, run `43269293206`, check `verify` concluyó `success`; el workflow YAML fue aceptado por GitHub Actions.
+- PR #6 se fusionó mediante merge normal; SHA `35e5b800aff892e592dfa5d7a76ab098c946c7fe`, CI run `43270044536` `success`.
+- PR #7 se fusionó mediante merge normal; SHA `ddf141447ec7b982afb58a65db5b47debb7e597c`, CI run `43271644085` `success` (rama sincronizada con `main`); PR original también pasó run `43271483786`. El SHA final de `origin/main` es `ddf141447ec7b982afb58a65db5b47debb7e597c`.
 - Los SHAs de `actions/checkout`, `pnpm/action-setup`, `actions/setup-node`, `upload-artifact`, `download-artifact` y `attest` se cotejaron contra los refs actuales de sus repositorios upstream. La tag `v4.2.2` de checkout apuntaba a `11bd719...`; se corrigió la referencia antes de abrir el PR.
 - `install-gh-cli.sh` se ejecutó desde el SHA integrado. Verificó el checksum SHA-256 publicado del keyring y fingerprint de firma; APT instaló solo `gh` 2.103.3 (`1 nuevo, 0 actualizados, 0 eliminados`). `gh attestation verify` incluye `--deny-self-hosted-runners`.
 - El agente se instaló desde `main` SHA `35e5b800aff892e592dfa5d7a76ab098c946c7fe`. `fragments-release-poll.timer` y `fragments-release-apply.path` quedaron enabled/active. El poll inmediato terminó correctamente y no creó solicitudes.
@@ -57,14 +59,24 @@ En copia limpia NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-verify-202
 - `systemd-analyze verify` de los cuatro units en `/tmp` — salida 0; únicamente emitió avisos preexistentes de units XFS del sistema, sin errores F14.
 - `gh api repos/VGMil-dev/fragments/releases` devolvió cero releases; no hay paquete que el poller pueda desplegar. No se generó una atestación de un release nuevo ni se ejecutó Docker Compose para modificar producción porque hacerlo requeriría publicar una tag y desplegar.
 - Después de instalar el agente: Docker, timer de backups y runner compartido siguieron activos; `fragments_api=200`, `pits_dev=200`, contenedores de Pits siguieron `healthy`. No se editó ni mostró `.env`, SQLite, Pits, PostgreSQL o runner.
+- Tras integrar PR #7, el archivo `/usr/local/libexec/fragments-release-agent.py` se actualizó desde `main` SHA `ddf141447ec7b982afb58a65db5b47debb7e597c`; SHA-256 de fuente y destino coincide: `77eb46a06f2a60960a86adbed317c6e67112ea815b08279442d8ed4579dcdd95`. El poller ejecutado terminó `Result=success`, `ExecMainStatus=0`; timers/path de F14, backup timer, Docker y runner existente quedaron `active`.
+- Chequeo final de solo lectura: `fragments-web-1` healthy, `fragments-api-1` healthy, ambas imágenes conservan revision `50e2ace697afc125bb3bfdd9a705f0e383796a83` y label histórico `v0.3.0`; web local `3001` HTTP 200 y Pits dev `8081` HTTP 200; contenedores de Pits healthy. GitHub API reportó cero releases, cola vacía y no se ejecutó Compose.
+- `git diff --check` fue limpio. Tests locales frescos `node --test deploy/production/release-agent/test-release-agent-scripts.mjs` pasaron 4/4. En VPS con fixtures y mocks sintéticos: `python3 -m unittest -v test_release_agent` pasó 12/12 y `python3 -m py_compile fragments-release-agent.py test_release_agent.py` terminó sin salida/error. Los comandos no usaron Docker, red externa para releases ni datos productivos.
+- La ejecución real de un release no se probó porque requeriría crear una tag nueva/publicar un release y potencialmente desplegar, acciones expresamente prohibidas en F14. El workflow fue validado por Actions CI, y el agente recorrió la transacción en pruebas con servicios externos simulados.
 
-## Pendiente para cerrar F14
+## Procedimiento para el próximo release
 
-- Integrar por PR #7 la corrección de cierre explícito de la conexión SQLite del comprobador de backup y los tests de transacción/rollback completos con mocks.
-- Instalar esa versión exacta del helper desde `main` y verificar que los units sigan activos y que el sondeo no cree solicitudes ni modifique contenedores.
-- Actualizar la evidencia final y `TASKS.md` con el SHA de integración y salida fresca de pruebas.
-- No crear `v0.4.0`, no ejecutar release y no desplegar durante esta preparación.
+Desde un checkout actualizado de `main`, verificar la versión y el commit que se quiere publicar; crear una tag anotada y subir únicamente esa referencia:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git tag -a v0.4.0 -m "Fragments v0.4.0"
+git push origin refs/tags/v0.4.0
+```
+
+El workflow valida semver, tag anotada, SHA exacto y pertenencia a `main`; el job de publicación espera la aprobación requerida en `fragments-production`. Tras publicar el release, el agente pull verifica workflow/ejecución/atestación, digest y labels antes de preparar backup e instalar únicamente `api` y `web`. El ledger rechaza repetidos. Para detener el proceso, retirar la solicitud antes de aplicar o usar el rollback documentado; este revierte imágenes de código y no restaura automáticamente SQLite. La primera publicación real debe comprobarse con el run de GitHub y el ledger de la VPS.
 
 ## Evidencia privada
 
-Actualizar `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-12.md` al final de la integración. Mantener máximo 20 archivos, sin llaves, secretos ni contenido académico.
+Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-12.md`; máximo 20 archivos, sin llaves, secretos ni contenido académico.
