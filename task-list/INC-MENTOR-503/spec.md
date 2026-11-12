@@ -25,3 +25,4 @@
 3. Dadas dos solicitudes concurrentes idénticas, cuando se evalúan, se guarda una evaluación y ambas reciben el mismo resultado.
 4. Dado `AI_BUDGET_UNAVAILABLE`, la UI no realiza GET de recuperación.
 5. Tests dirigidos, typecheck y build pasan.
+6. Dado un HTTP 402 sintético de Gateway, la API conserva HTTP 402 y un error seguro; la UI no inicia recuperación GET ni reintenta automáticamente.
