@@ -71,7 +71,7 @@ Imágenes API/web etiquetadas con ese revision SHA y `v0.3.0`. El tag histórico
 ## Commits
 - Código: `eef7eaf15534b3a7f5161eafcc05941e5269b039`.
 - Cierre documental anterior: `2d35aad82785a85ba1e6bfab511b1ddd8f17b6cf`; hash de su evidencia: `ab1b53ebf74bf7a2cfba8a6a43a1b412f874a441`.
-- Reconciliación diagnóstica/prueba: pendiente de commit; no desplegada.
+- Prueba local de reconciliación/cierre de presupuesto: `f98a0ef5eb0cc7809a49c9d8b067b25230693185`; solo test y documentación, no desplegada.
 
 ## Evidencia privada local ignorada
 `task-list/INC-MENTOR-503/evidence/` contiene 11 archivos, ignorados por `.git/info/exclude`; incluye diagnóstico redactado, comandos de verificación SQLite y scripts sintéticos de Ego Lite. No contiene `.env`, secretos ni contenido de estudiantes.
