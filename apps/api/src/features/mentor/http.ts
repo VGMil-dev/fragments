@@ -14,15 +14,30 @@ import {
 import { createMentorRepository } from "./repository.js";
 import { createMentorControlRepository } from "./control-repository.js";
 import { proposalEvaluationResponse } from "./evaluation-response.js";
-import type { createMentorService } from "./service.js";
+import { MentorEvaluationFailure, MentorInputError, type createMentorService } from "./service.js";
 
 type MentorService = ReturnType<typeof createMentorService>;
 type RouteResult = "handled" | "unhandled";
+type MentorEvaluationDiagnostic = {
+  event: "mentor_evaluation_failed";
+  stage: string;
+  error_type: string;
+  duration_ms: number;
+  http_status: number;
+  provider_http_status: number | null;
+  provider_code: string | null;
+  retry_after_ms: number | null;
+};
 
-export function createMentorHttp(database: DatabaseSync, service: MentorService) {
+export function createMentorHttp(
+  database: DatabaseSync,
+  service: MentorService,
+  options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void } = {},
+) {
   const repository = createMentorRepository(database);
   const control = createMentorControlRepository(database);
   const pending = new Map<string, Promise<{ id: string; evaluation: Awaited<ReturnType<MentorService["evaluate"]>>; evaluatedAt: string }>>();
+  const logFailure = options.logFailure ?? ((diagnostic: MentorEvaluationDiagnostic) => console.error(JSON.stringify(diagnostic)));
 
   return async function handleMentorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
@@ -111,6 +126,7 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         return "handled";
       }
+      const startedAt = performance.now();
       try {
         const active = control.getActive();
         const inputDigest = service.proposalDigest(proposal.proposal);
@@ -133,8 +149,25 @@ export function createMentorHttp(database: DatabaseSync, service: MentorService)
         }
         const responseData = proposalEvaluationResponse(stored.id, proposal.id, proposal.version, stored.evaluation, stored.evaluatedAt);
         sendJson(response, 200, { ok: true, data: responseData });
-      } catch {
-        sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo evaluar la propuesta en este momento.");
+      } catch (error) {
+        const failure = error instanceof MentorEvaluationFailure ? error : null;
+        const errorType = failure?.errorType ?? (error instanceof MentorInputError ? error.name : error instanceof Error ? error.name : "UnknownError");
+        const diagnostic: MentorEvaluationDiagnostic = {
+          event: "mentor_evaluation_failed",
+          stage: failure?.stage ?? (error instanceof MentorInputError ? "input_validation" : "evaluation"),
+          error_type: /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(errorType) ? errorType : "UnknownError",
+          duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+          http_status: 503,
+          provider_http_status: failure?.providerHttpStatus ?? null,
+          provider_code: failure?.providerCode ?? null,
+          retry_after_ms: failure?.retryAfterMs ?? null,
+        };
+        try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
+        if (diagnostic.stage === "budget_reservation") {
+          sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.");
+        } else {
+          sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo evaluar la propuesta en este momento.");
+        }
       }
       return "handled";
     }

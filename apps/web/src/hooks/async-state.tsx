@@ -4,7 +4,7 @@ import "./async-state.css";
 export type AsyncState<T> =
   | { status: "loading" }
   | { status: "empty" }
-  | { status: "error"; retry: () => void }
+  | { status: "error"; retry: () => void; message?: string; retryLabel?: string }
   | { status: "success"; data: T };
 
 export interface AsyncStateViewProps<T> {
@@ -35,8 +35,8 @@ export function AsyncStateView<T>({ state, render, emptyAction, retryLabel = "In
       return (
         <section className="async-state async-state--error" role="alert" aria-labelledby="async-state-error-title">
           <h2 className="async-state__title" id="async-state-error-title">No pudimos cargar esta información</h2>
-          <p className="async-state__copy">Tu trabajo sigue aquí. Revisa la conexión e inténtalo de nuevo.</p>
-          <button className="button button--primary" type="button" onClick={state.retry}>{retryLabel}</button>
+          <p className="async-state__copy">{state.message ?? "Tu trabajo sigue aquí. Revisa la conexión e inténtalo de nuevo."}</p>
+          <button className="button button--primary" type="button" onClick={state.retry}>{state.retryLabel ?? retryLabel}</button>
         </section>
       );
     case "success":

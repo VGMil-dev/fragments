@@ -186,6 +186,15 @@ export function MentorScreen({
     try {
       const result = await onEvaluate(proposal.id);
       if (!result.ok) {
+        if (result.error.code === "AI_BUDGET_UNAVAILABLE") {
+          setEvaluation({
+            status: "error",
+            message: result.error.message,
+            retryLabel: "Volver a intentar",
+            retry: () => void evaluateProposal(),
+          });
+          return;
+        }
         await recoverEvaluation();
         return;
       }

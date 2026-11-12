@@ -41,6 +41,40 @@ export class MentorInputError extends Error {
   constructor(message: string) { super(message); this.name = "MentorInputError"; }
 }
 
+export type MentorEvaluationFailureStage =
+  | "configuration"
+  | "input_validation"
+  | "budget_reservation"
+  | "budget_settlement"
+  | "provider_request"
+  | "provider_response"
+  | "response_validation"
+  | "evaluation";
+
+export class MentorEvaluationFailure extends Error {
+  readonly stage: MentorEvaluationFailureStage;
+  readonly errorType: string;
+  readonly providerHttpStatus: number | null;
+  readonly providerCode: string | null;
+  readonly retryAfterMs: number | null;
+
+  constructor(input: {
+    stage: MentorEvaluationFailureStage;
+    errorType: string;
+    providerHttpStatus?: number | null;
+    providerCode?: string | null;
+    retryAfterMs?: number | null;
+  }) {
+    super("Mentor evaluation failed");
+    this.name = "MentorEvaluationFailure";
+    this.stage = input.stage;
+    this.errorType = input.errorType;
+    this.providerHttpStatus = input.providerHttpStatus ?? null;
+    this.providerCode = input.providerCode ?? null;
+    this.retryAfterMs = input.retryAfterMs ?? null;
+  }
+}
+
 const defaultMentorConfig: MentorControlConfig = {
   subject: "Proyectos estudiantiles",
   theme: "Idea de proyecto",

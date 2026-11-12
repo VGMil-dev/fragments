@@ -145,4 +145,31 @@ describe("MentorScreen", () => {
     expect(recover).toHaveBeenCalledTimes(2);
     expect(mountedContainer.textContent).toContain("72/100");
   });
+
+  it("shows budget exhaustion directly instead of replacing it with a recovery 404", async () => {
+    const evaluate = vi.fn(async () => ({
+      ok: false as const,
+      error: { code: "AI_BUDGET_UNAVAILABLE", message: "La evaluación no está disponible porque se agotó el presupuesto de IA configurado." },
+    }));
+    const recover = vi.fn(async () => ({
+      ok: false as const,
+      error: { code: "NOT_FOUND", message: "No se encontró una evaluación guardada." },
+    }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(
+        <MentorScreen {...actions} initialProposal={proposal} onEvaluate={evaluate} onRecoverEvaluation={recover} onBack={vi.fn()} />,
+      );
+    });
+
+    const evaluateButton = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
+    await act(async () => evaluateButton?.click());
+
+    expect(evaluate).toHaveBeenCalledOnce();
+    expect(recover).not.toHaveBeenCalled();
+    expect(mountedContainer.textContent).toContain("se agotó el presupuesto de IA configurado");
+    expect(mountedContainer.textContent).toContain("Volver a intentar");
+  });
 });
