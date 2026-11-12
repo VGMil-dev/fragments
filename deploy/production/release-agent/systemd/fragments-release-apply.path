@@ -1,0 +1,9 @@
+[Unit]
+Description=Detecta solicitudes de release de Fragments
+
+[Path]
+PathExistsGlob=/var/spool/fragments-release-requests/*.request
+Unit=fragments-release-apply.service
+
+[Install]
+WantedBy=multi-user.target

@@ -75,6 +75,8 @@ h1 { margin: 24px 0 22px; font-size: clamp(56px, 6.05vw, 82px); line-height: .99
 .brand--footer .brand__name { font-size: 17px; }
 .site-footer p, .site-footer > span { margin: 0; color: var(--muted); font-size: 11px; }
 .site-footer > span span { color: var(--blue); }
+.build-version { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 8px; border: 1px solid var(--border); background: var(--paper-deep); color: var(--muted); font: 600 11px/1.2 var(--font-body); letter-spacing: .02em; white-space: nowrap; }
+.route-version { display: flex; justify-content: flex-end; padding: 16px clamp(16px, 4vw, 52px); }
 
 @media (max-width: 900px) {
   .site-header { height: 76px; padding: 0 30px; }
@@ -118,6 +120,7 @@ h1 { margin: 24px 0 22px; font-size: clamp(56px, 6.05vw, 82px); line-height: .99
   .site-footer { flex-wrap: wrap; justify-content: space-between; padding: 19px 22px; }
   .site-footer p { order: 3; width: 100%; }
   .site-footer > span { font-size: 10px; }
+  .site-footer .build-version { margin-left: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
