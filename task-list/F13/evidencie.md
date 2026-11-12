@@ -55,4 +55,10 @@ Se creó una copia temporal desde los archivos rastreados y los cambios F13 en `
 
 Esta revalidación no integra ni publica F13 en `main`; la comprobación de integración queda sujeta a la revisión y procedimiento de F14.
 
+## Integración prevista con F14
+
+- El workflow candidato continúa siendo únicamente manual y de build. Sus tres acciones ahora están fijadas a SHA completos porque GitHub se configura con `sha_pinning_required=true` y una lista cerrada de acciones permitidas; no se añadió capacidad de publicación ni despliegue.
+- El workflow separado de CI valida los pull requests con permisos de solo lectura. El workflow de releases no se dispara por `workflow_dispatch` y conserva únicamente `push.tags: v*.*.*`.
+- F13 y F14 todavía están en una rama de trabajo; su integración protegida en `main` y la primera entrega del indicador a usuarios requieren completar el PR de F14 y un futuro release autorizado.
+
 - Commit de esta revalidación: `0794e0f` — `docs(f14): registra auditoria de seguridad`.

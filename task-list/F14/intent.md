@@ -11,3 +11,6 @@ No activar el runner de producción hasta auditar su aislamiento real. No desple
 
 ## Owner y criterio
 PLANNER. Seguir el prompt F14 adjunto, `AGENTS.md` y los contratos de seguridad del proyecto. Las reglas de activación de `spec.md` son obligatorias para cualquier implementación y no pueden relajarse por conveniencia del workflow.
+
+## Implementación prevista
+Usar runners hospedados ARM64 para verificar y construir desde el commit exacto de la tag. Un job del entorno `fragments-production` publica el artefacto aprobado; un agente pull local, separado del runner compartido, valida manifiesto, atestación y procedencia antes de operar solo API/web. Si no se verifica cualquiera de estas barreras, no se activa el agente ni se publica una versión.

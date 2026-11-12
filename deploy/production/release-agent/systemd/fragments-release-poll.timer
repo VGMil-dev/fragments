@@ -1,0 +1,13 @@
+[Unit]
+Description=Consulta cada dos minutos releases aprobados de Fragments
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=15s
+RandomizedDelaySec=20s
+Persistent=true
+Unit=fragments-release-poll.service
+
+[Install]
+WantedBy=timers.target

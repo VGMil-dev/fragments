@@ -1,0 +1,38 @@
+[Unit]
+Description=Busca paquetes de releases aprobados de Fragments
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fragments-release
+Group=fragments-release-request
+SupplementaryGroups=fragments-release-request
+UMask=0027
+Environment=FRAGMENTS_RELEASE_AGENT_CONFIG=/etc/fragments-release-agent.json
+ExecStart=/usr/bin/python3 /usr/local/libexec/fragments-release-agent.py --poll
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/etc/fragments-release-agent.json /var/lib/fragments-release/ledger.json
+ReadWritePaths=/var/spool/fragments-release-requests
+
+[Install]
+WantedBy=multi-user.target

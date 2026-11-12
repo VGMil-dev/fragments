@@ -1,55 +1,64 @@
-# F14 — Evidence / evidencie
+# F14 — Evidencia
 
-**Estado:** BLOQUEADA; no se declara F14 completa (2026-11-12). La regla exclusiva de tag sigue siendo obligatoria. No se creó workflow ni se cambió la configuración de GitHub porque el destino pull-based no pudo inspeccionarse ni aislarse en la VPS real.
+**Estado:** EN IMPLEMENTACIÓN; no se declara completa hasta integrar por PR, verificar el check requerido e instalar y comprobar el agente pull aislado en la VPS. No se creó ni publicó una tag nueva y no hubo despliegue.
 
-## Verificaciones de procedencia histórica — separadas del código nuevo
+## Procedencia histórica de `v0.3.1` — comprobación independiente del código F14
 
-- `git fetch origin` — salida 0; `origin/main` actual `704fe08c1932cdabed1303884eadf612625e94e7`, igual al valor esperado.
-- `git cat-file -t refs/tags/v0.3.1` — `tag` anotada; objeto tag `3cf5185fc5d05edc9f5c6dee2a67c5bd8e9acbac`; commit pelado `50e2ace697afc125bb3bfdd9a705f0e383796a83`.
+- `git fetch origin refs/heads/main:refs/remotes/origin/main refs/tags/v0.3.1:refs/tags/v0.3.1` — salida 0.
+- `git cat-file -t refs/tags/v0.3.1` — `tag` anotada.
+- Objeto tag: `3cf5185fc5d05edc9f5c6dee2a67c5bd8e9acbac`.
+- Commit pelado: `50e2ace697afc125bb3bfdd9a705f0e383796a83`.
+- `origin/main`: `704fe08c1932cdabed1303884eadf612625e94e7`, igual al valor conocido.
 - `git merge-base --is-ancestor 50e2ace697afc125bb3bfdd9a705f0e383796a83 refs/remotes/origin/main` — salida 0.
-- El commit etiquetado está contenido en `origin/main`; no se movió, recreó ni modificó ninguna tag.
-- La revalidación del resolver y del árbol histórico se documenta por separado en `task-list/F13/evidencie.md`.
+- No se modificó ni movió `v0.3.1`. La revalidación del resolver F13 con objetos Git reales está en `task-list/F13/evidencie.md`; el árbol histórico de `v0.3.1` no contiene aún el componente visual F13.
 
-## Inventario efectivo de GitHub — solo lectura
+## Auditoría de VPS y runner — solo lectura
 
-Consulta autorizada al repositorio `VGMil-dev/fragments`; resultados de `gh api` del 2026-11-12:
+- Verificada huella ED25519 conocida antes de conectar: `SHA256:zzF20RQw2amdh66Pxm89w3oUCuhieg0nToMxJlGnNlQ`. Todas las conexiones usaron `StrictHostKeyChecking=yes`; no se aceptaron hosts desconocidos.
+- VPS `gavanti`, arquitectura `aarch64`; SSH como `ubuntu`. Docker estaba activo. La API de Fragments y el sitio respondían HTTP 200; contenedores de Pits estaban saludables y su endpoint local respondía 200.
+- El runner compartido `actions.runner.GAVANTI-STARTUP.gavanti-srv-arm64.service` pertenece a `GAVANTI-STARTUP`, usa `actions-runner`, tiene el grupo `docker` y una exposición systemd auditada como `UNSAFE` (9.2). No se seleccionó, modificó ni reinició. La ruta F14 usa runners hospedados y un agente pull distinto.
+- La imagen productiva observada conservaba el revision label `50e2ace697afc125bb3bfdd9a705f0e383796a83`; sus OCI version labels indicaban `v0.3.0`, aunque el commit/tag productivo esperado es `v0.3.1`. Se registra la discrepancia para que F14 reporte metadata de releases nuevos; no se alteró la imagen actual.
+- El timer existente de backup estaba habilitado. La carpeta de backups era `root:root` modo `0700`; se hizo solo lectura de un snapshot existente, cuyo `PRAGMA integrity_check` devolvió `ok`. No se inició backup nuevo ni se leyó el contenido de `.env` o SQLite activa.
+- La llave privada no se leyó ni se copió al repositorio. Debido a que su unidad original exFAT no permite ACL restrictivas, se usó una copia temporal en NTFS con acceso solo a la cuenta local; debe borrarse al cerrar la tarea.
 
-- Repositorio público, default branch `main`.
-- `GET /actions/permissions` → Actions habilitadas; `allowed_actions=all`; `sha_pinning_required=false`.
-- `GET /actions/permissions/workflow` → token predeterminado `read`; `can_approve_pull_request_reviews=false`.
-- `GET /rules/branches/main` → `[]`; `GET /branches/main/protection` → 404 “Branch not protected”.
-- `GET /environments` → `total_count=0`.
-- `GET /actions/runners` → `total_count=0`.
-- `GET /actions/workflows` → `total_count=0` en el repositorio remoto (el workflow candidato F13 todavía no está en `main`).
-- `GET /collaborators?per_page=100` → solo `VGMil-dev`, con admin/maintain/push. No hay un segundo revisor registrado.
+## Configuración efectiva de GitHub
 
-## Bloqueo de infraestructura real
+Consultas y cambios del 2026-11-12 en `VGMil-dev/fragments`:
 
-- La documentación F08 registra una VPS anterior y describe servicios vecinos; no demuestra su estado actual ni el aislamiento actual del runner compartido.
-- `C:\Windows\System32\OpenSSH\ssh.exe -o BatchMode=yes -o ConnectTimeout=5 servidor ...` falló: `Could not resolve hostname servidor`. No hay hostname/IP alternativo configurado en este entorno y no se pudieron consultar usuario efectivo, grupos, `sudo`, socket Docker, credenciales, servicios vecinos, red, backup reciente o rollback en el host.
-- GitHub no tiene runner del repositorio; el runner existente del contexto de infraestructura es compartido con otros servicios y no puede seleccionarse ni reutilizarse con seguridad sin auditoría. No se intentó instalar, conectar ni activar otro runner.
-- Como no se puede verificar ni configurar un agente pull limitado en el VPS, tampoco se puede demostrar un recorrido end-to-end de backup consistente, integridad SQLite, despliegue aislado ARM64, healthcheck, ledger persistente y rollback de código. El acceso real a la VPS es requisito para esa configuración y simulación.
+- Actions habilitadas con `allowed_actions=selected`, `sha_pinning_required=true`; listas permitidas: `actions/checkout`, `actions/setup-node`, `actions/upload-artifact`, `actions/download-artifact`, `actions/attest` y `pnpm/action-setup`, todos referenciados por SHA completo en los workflows. No se permiten otras acciones externas.
+- Entorno `fragments-production`: revisor requerido `VGMil-dev` (ID `259344844`), `prevent_self_review=false` por ser el único revisor colaborador, `can_admins_bypass=false`, sin secretos ni variables; política de despliegue limitada al patrón de tag `v*.*.*`. Verificado con `GET /environments/fragments-production` y `GET /deployment-branch-policies` después del cambio de interfaz.
+- Ruleset activo `Fragments main via pull request` para `refs/heads/main`: PR obligatorio, merge normal, sin bypass (`current_user_can_bypass=never`), force-push y borrado prohibidos. El check `verify` se añadirá como requerido tras observarlo en el primer PR.
+- Ruleset activo `Fragments version tags immutable` para `refs/tags/v*.*.*`: actualización y borrado prohibidos, sin bypass. No se creó ni cambió tag alguna.
+- La API no permite administrar `can_admins_bypass`; se desactivó en la interfaz de GitHub y luego se verificó por REST como `false`.
+- No hay secrets de GitHub configurados para el entorno. Los permisos del job de publicación se limitan a `contents: write`; los jobs de build son `contents: read` y la atestación usa sus permisos específicos.
 
-## Código y efectos
+## Implementación local F14 — todavía sin integrar
 
-- `.github/workflows/release-build-candidate.yml` de F13 queda intacto: solo build candidato, sin credenciales ni despliegue.
-- No se creó workflow tag-triggered incompleto que hiciera creer que producción está protegida o que la siguiente tag desplegaría correctamente.
-- No se cambió configuración de Actions, protección de ramas ni entornos; no hubo push, merge, creación de tag, build publicado ni despliegue.
-- No se tocó Pits, PostgreSQL, Cloudflare Tunnel, runner compartido, SQLite ni otros datos académicos. `env` permanece sin leer ni modificar.
+- `.github/workflows/release.yml`: único disparador `push` de tags `v*.*.*`; valida repositorio, evento de creación, semver estable estricto, tag anotada, SHA exacto del checkout y ascendencia en `main`. Exige que el archivo de workflow de la tag coincida con el de `main` actual antes del entorno protegido.
+- Build/tests ARM64 en runner hospedado desde el SHA etiquetado; verifica metadata de bundle F13, labels OCI de API/web, manifiesto y SHA-256; job de atestación sin privilegios de producción; publicación de assets detrás del entorno protegido. El agente valida nuevamente la ejecución, atestación, tag y commit.
+- `ci.yml` separado se dispara solo por pull requests, con token de solo lectura y runner hospedado. `release-build-candidate.yml` sigue siendo manual y sin publicación o despliegue; sus referencias de acciones se fijaron a SHA para cumplir la política global.
+- Agente pull dedicado (`fragments-release`) sin login, Docker, sudo o LXD; cola con archivo único; aplicador root de systemd endurecido, con acceso al socket Docker limitado al unit y Compose fijo para API/web de Fragments. Timer a cinco minutos, ledger antirrepetición, validación de SHA/tag contra GitHub, atestación, backup, healthchecks y rollback de imágenes sin restaurar SQLite.
+- Instaladores y cuatro units se prepararon en `deploy/production/release-agent/`; no se instalaron todavía en la VPS. `install-gh-cli.sh` descarga desde el repositorio oficial, verifica el SHA-256 conocido del keyring y un fingerprint publicado antes de instalar `gh` desde APT firmado.
 
-## Pruebas F13 ejecutadas durante esta auditoría — no son pruebas de F14
+## Pruebas locales y simulaciones F14
 
-En la copia temporal NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f13-check-c2c524caabb7444e91568913e2fdfb77`:
+En copia limpia NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-verify-20261112` (para evitar la limitación de symlinks/virtual store del checkout exFAT):
 
-- `pnpm exec turbo run test typecheck lint build --force` → 10/10 tareas exitosas, 0 en caché; contracts 19/19, API 95/95 y web 65/65.
-- `node check-build-metadata.mjs` → `bundles=2`, `expectedLocalMetadata=true`, metadata local `dev`/SHA `null`.
-- `pnpm --filter @fragments/web exec vitest run src/build/release-metadata.test.ts src/components/brand/BuildVersion.test.tsx` → 10/10.
-- El resolver actual ejecutado en un checkout Git aislado de la tag histórica devolvió `v0.3.1` y el SHA exacto. Esto valida los objetos y el código nuevo; no demuestra que el artefacto productivo histórico incluya el indicador.
+- `node --test deploy/production/release-agent/test-release-agent-scripts.mjs` — 4/4: manifiesto y digest, rechazo de tag/objetos inválidos, metadata del bundle con tag/SHA exactos, y trigger exclusivo de tag sin rutas alternativas.
+- `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas, caché desactivada: contracts 19/19, API 95/95, web 65/65; typecheck, lint y build exitosos. Build local sin variables de release dejó metadata `dev`/`null`.
+- En la VPS, con archivos temporales en `/tmp` y repo Git sintético: `python3 -m unittest -v test_release_agent` — 10/10; casos de semver, tag ligera, SHA/main, manifiesto, ledger, cola, snapshot SQLite sintético íntegro/corrupto y rollback simulado de código. No usó Docker ni datos productivos.
+- En la VPS: `python3 -m py_compile` y `bash -n` de los dos instaladores — salida 0.
+- `systemd-analyze verify` de los cuatro units en `/tmp` — salida 0; únicamente emitió avisos preexistentes de units XFS del sistema, sin errores F14.
+- La simulación de rollback usó mocks y dejó el fixture intacto. No se simuló el flujo completo de Docker real ni se creó atestación de un release nuevo porque hacerlo requeriría publicar una nueva tag.
 
-La evidencia privada compacta de auditoría queda fuera del repositorio en `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-12.md` (1 archivo; sin secretos ni datos académicos).
+## Pendiente para cerrar F14
 
-## Commit
+- Abrir PR desde la rama de F14, esperar CI, registrar el contexto `verify` como requerido y fusionar mediante GitHub sin push directo a `main`.
+- Instalar `gh` con repositorio APT oficial firmado y el agente pull desde el contenido revisado e integrado de `main`; habilitar únicamente sus dos timers/path units.
+- Verificar usuario y grupos efectivos, unidades activas/endurecidas, polling sin secretos, ausencia de cambios en producción/Pits/runner y estado de salud después de la instalación.
+- Verificar por CI que el YAML del workflow nuevo se acepta y configurar `verify` como check requerido del ruleset.
+- No crear `v0.4.0`, no ejecutar release y no desplegar durante esta preparación.
 
-`3d0cbfe691e59a23b869d8d592fcee598e7cc7bc` y `df4e83138405c1356c2057e32262f9563de6c4a4` fijaron antes los requisitos. Esta actualización registra verificación e impedimentos; no representa implementación ni cierre de F14.
+## Evidencia privada
 
-- Actualización de evidencia y TASKS: `0794e0f` — `docs(f14): registra auditoria de seguridad`.
+Actualizar `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-12.md` al final de la integración. Mantener máximo 20 archivos, sin llaves, secretos ni contenido académico.
