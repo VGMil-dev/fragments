@@ -186,7 +186,7 @@ export function MentorScreen({
     try {
       const result = await onEvaluate(proposal.id);
       if (!result.ok) {
-        if (result.error.code === "AI_BUDGET_UNAVAILABLE") {
+        if (result.error.code === "AI_BUDGET_UNAVAILABLE" || result.error.code === "AI_GATEWAY_BUDGET_EXCEEDED") {
           setEvaluation({
             status: "error",
             message: result.error.message,

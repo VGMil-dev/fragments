@@ -84,3 +84,13 @@ Imágenes API/web etiquetadas con ese revision SHA y `v0.3.0`. El tag histórico
 `task-list/INC-MENTOR-503/evidence/` contiene 11 archivos, ignorados por `.git/info/exclude`; incluye diagnóstico redactado, comandos de verificación SQLite y scripts sintéticos de Ego Lite. No contiene `.env`, secretos ni contenido de estudiantes.
 
 - Documentación y registro del incidente: 2d35aad82785a85ba1e6bfab511b1ddd8f17b6cf.
+
+## Continuación — presupuesto Vercel y liberación F12 (2026-11-12)
+- Vercel AI Gateway muestra la API key `Fragments` con presupuesto de USD 5, `No Refresh`, y uso MTD de USD 0.03. El uso coincide redondeado con USD 0.028910 asentados en producción. No se modificó la configuración externa.
+- Antes de escribir en producción, backup `/var/backups/fragments/fragments-2026-11-12T12-24-01-437Z.sqlite`, SHA-256 `f578c29efb335b3903d9018ecf55f83fad313247569be0f8371586f480689fd8`; `PRAGMA integrity_check=ok` y las tablas de propuestas, evaluaciones, sesiones y ledger coincidieron con la base viva.
+- Se verificó el propósito de `releasef12cap20261111`: holdback pre-dispatch de QA F12. A solicitud explícita del propietario, el API ejecutó `SqliteAiBudgetLedger.releaseBeforeDispatch` sobre ese ID; conservó la fila, monto USD 0.970249 y `actual_microusd=NULL`, pasando de `reserved` a `released`.
+- Cambios de código sin ejecutar pruebas: el ledger ya no compara gasto/reservas/estados inciertos contra el tope local de USD 1; sigue guardando reservas y costos confirmados, deja como inciertos los costos no confirmados y no bloquea nuevas llamadas por ello. Si faltan tarifas, registra una estimación mínima de 1 microdólar. Se quitó también el máximo local de USD 1 al convertir costos.
+- Los errores de proveedor HTTP 402 ahora producen HTTP 402 `AI_GATEWAY_BUDGET_EXCEEDED`, conservan diagnóstico seguro y la interfaz no ejecuta GET de recuperación ni retry automático.
+- Persisten la coalescencia de POST idénticos y la unicidad de evaluaciones. Sin cambios de rúbrica, modelo, proveedor, Pits, PostgreSQL, Cloudflare, tag `v0.3.0` o llamadas al Gateway.
+- No se ejecutaron tests, typecheck ni build por instrucción posterior del usuario; tampoco se hizo evaluación real facturable ni se desplegó este parche. La evaluación real recuperable por GET, el panel docente de consumo y el despliegue siguen pendientes. El incidente no se declara resuelto.
+- Evidencia privada ignorada: 16 archivos bajo `evidence/` (límite 20). El backup y el procedimiento de reconciliación están en `verify-budget-backup.py` y `reconcile-release-cap.mjs`.

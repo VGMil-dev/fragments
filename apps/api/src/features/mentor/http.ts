@@ -157,13 +157,15 @@ export function createMentorHttp(
           stage: failure?.stage ?? (error instanceof MentorInputError ? "input_validation" : "evaluation"),
           error_type: /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(errorType) ? errorType : "UnknownError",
           duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
-          http_status: 503,
+          http_status: failure?.providerHttpStatus === 402 ? 402 : 503,
           provider_http_status: failure?.providerHttpStatus ?? null,
           provider_code: failure?.providerCode ?? null,
           retry_after_ms: failure?.retryAfterMs ?? null,
         };
         try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
-        if (diagnostic.stage === "budget_reservation") {
+        if (failure?.providerHttpStatus === 402) {
+          sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto.");
+        } else if (diagnostic.stage === "budget_reservation") {
           sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.");
         } else {
           sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo evaluar la propuesta en este momento.");

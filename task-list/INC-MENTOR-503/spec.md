@@ -8,6 +8,7 @@
 - Clasificar cada reserva por estado, propósito, antigüedad y vínculo a despachos reales; no considerar huérfana una reserva de protección deliberada solo porque no tenga llamada asociada.
 - Calcular capacidad como límite - costes `settled` - reservas `reserved`/`uncertain`; una reserva `uncertain` mantiene el bloqueo global.
 - Solo liberar reserva demostrablemente pre-dispatch mediante `releaseBeforeDispatch`; nunca borrar filas, cambiar importes a mano ni liberar automáticamente.
+- Una vez verificado el presupuesto efectivo para la API key de producción, el ledger registra costos y reservas históricas; no aplica un tope monetario local ni bloquea llamadas por costos desconocidos. La respuesta Vercel HTTP 402 se propaga como error seguro sin reintentos.
 - Probar en SQLite efímera que una reconciliación de fixture huérfana conserva cargos históricos y es idempotente.
 - No llamar AI Gateway y no escribir en SQLite productiva durante este diagnóstico.
 
