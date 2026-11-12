@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { migrate } from "../../db/migrate.js";
+import { createHttpHandler } from "../../http/app.js";
+import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
-import { createMentorHttp } from "./http.js";
+import { createMentorRepository } from "./repository.js";
 import { createMentorService, MentorEvaluationFailure, type MentorEvaluator } from "./service.js";
 
 const servers: Server[] = [];
@@ -16,11 +19,28 @@ const draft = {
 
 async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), logFailure?: (entry: Record<string, unknown>) => void) {
   const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
+  database.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, image TEXT, role TEXT DEFAULT 'user', isTeacher INTEGER DEFAULT 0, githubLogin TEXT, createdAt TEXT);
+    CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL);`);
+  for (const [id, login] of [["student-1", "student-one"], ["student-2", "student-two"], ["teacher-1", "teacher-one"]]) {
+    database.prepare("INSERT INTO user(id, email, name, image, role, isTeacher, githubLogin, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(id, `${login}@example.test`, login, null, "user", id === "teacher-1" ? 1 : 0, login, "2026-11-01T00:00:00.000Z");
+    if (id !== "teacher-1") database.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES (?, ?, 'github', ?)").run(`account-${id}`, `github-${id}`, id);
+  }
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
-  const mentorHandler = createMentorHttp(database, service, { logFailure });
-  const server = createServer(async (request, response) => {
-    if (await mentorHandler(request, response) === "unhandled") response.writeHead(404).end();
-  });
+  const auth = {
+    handle: (_request: unknown, response: { writeHead: (status: number) => { end: (body?: string) => void } }) => { response.writeHead(503).end(); },
+    async userId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-user"] ?? null; },
+    async teacherId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-role"] === "teacher" ? request.headers["x-fixture-user"] ?? null : null; },
+    async student(request: { headers: Record<string, string | undefined> }) {
+      const id = request.headers["x-fixture-user"];
+      if (!id) return null;
+      const row = database.prepare("SELECT u.id, u.githubLogin, u.image, u.createdAt, a.accountId FROM user u JOIN account a ON a.userId=u.id AND a.providerId='github' WHERE u.id=? AND u.isTeacher=0").get(id) as { id: string; githubLogin: string; image: string | null; createdAt: string; accountId: string } | undefined;
+      return row ? { id: row.id, githubAccountId: row.accountId, githubLogin: row.githubLogin, avatarUrl: row.image, registeredAt: row.createdAt } : null;
+    },
+    githubOAuthConfigured: true,
+  } as unknown as FragmentsAuthService;
+  const apiHandler = createHttpHandler(database, { auth, mentor: service, ...(logFailure ? { logFailure: logFailure as never } : {}) });
+  const server = createServer(apiHandler);
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -28,13 +48,12 @@ async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), 
   return `http://127.0.0.1:${address.port}`;
 }
 
-async function createProposal(base: string) {
-  const response = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
+async function createProposal(base: string, owner = "student-1") {
+  const response = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": owner }, body: JSON.stringify(draft) });
   const body = await response.json() as { data: { id: string; version: number } };
-  const cookie = response.headers.get("set-cookie")?.split(";")[0];
-  expect(response.headers.get("set-cookie")).toContain("HttpOnly; Secure; SameSite=Strict");
-  if (!cookie) throw new Error("Proposal owner cookie missing");
-  return { id: body.data.id, version: body.data.version, cookie };
+  expect(response.status).toBe(201);
+  expect(response.headers.get("set-cookie")).toBeNull();
+  return { id: body.data.id, version: body.data.version, owner };
 }
 
 afterEach(async () => {
@@ -43,6 +62,15 @@ afterEach(async () => {
 });
 
 describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
+  it("requires GitHub session before creating proposals and never accepts a client owner", async () => {
+    const base = await start();
+    const anonymous = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
+    expect(anonymous.status).toBe(401);
+    const forged = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "student-1" }, body: JSON.stringify({ ...draft, ownerUserId: "student-2" }) });
+    expect(forged.status).toBe(400);
+    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) AS count FROM proposals").get()!.count)).toBe(0);
+  });
+
   it("coalesces concurrent requests for the same proposal version", async () => {
     const local = createLocalMentorEvaluator();
     let evaluationCalls = 0;
@@ -61,9 +89,9 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const base = await start(evaluator);
     const proposal = await createProposal(base);
     const path = `${base}/api/proposals/${proposal.id}/review`;
-    const first = fetch(path, { method: "POST", headers: { cookie: proposal.cookie } });
+    const first = fetch(path, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
     await started;
-    const second = fetch(path, { method: "POST", headers: { cookie: proposal.cookie } });
+    const second = fetch(path, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
     await new Promise((resolve) => setTimeout(resolve, 10));
     release();
     const [firstResponse, secondResponse] = await Promise.all([first, second]);
@@ -91,7 +119,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
 
     const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
       method: "POST",
-      headers: { cookie: proposal.cookie },
+      headers: { "x-fixture-user": proposal.owner },
     });
     const body = await response.json() as { error: { code: string; message: string } };
 
@@ -127,7 +155,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
 
     const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
       method: "POST",
-      headers: { cookie: proposal.cookie },
+      headers: { "x-fixture-user": proposal.owner },
     });
     const body = await response.json() as { error: { code: string; message: string } };
 
@@ -153,72 +181,108 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const proposal = await createProposal(base);
     const post = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
       method: "POST",
-      headers: { cookie: proposal.cookie },
+      headers: { "x-fixture-user": proposal.owner },
     });
     const saved = await post.json();
 
     const recovered = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
-      headers: { cookie: proposal.cookie },
+      headers: { "x-fixture-user": proposal.owner },
     });
     const denied = await fetch(`${base}/api/proposals/${proposal.id}/review`);
 
     expect(post.status).toBe(200);
     expect(recovered.status).toBe(200);
     expect(await recovered.json()).toEqual(saved);
-    expect(denied.status).toBe(404);
+    expect(denied.status).toBe(401);
     expect(evaluationCalls).toBe(1);
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(1);
 
     await fetch(`${base}/api/proposals/${proposal.id}`, {
       method: "PUT",
-      headers: { cookie: proposal.cookie, "content-type": "application/json" },
+      headers: { "x-fixture-user": proposal.owner, "content-type": "application/json" },
       body: JSON.stringify({ ...draft, title: "Huerto revisado", expectedVersion: proposal.version }),
     });
     const stale = await fetch(`${base}/api/proposals/${proposal.id}/review`, {
-      headers: { cookie: proposal.cookie },
+      headers: { "x-fixture-user": proposal.owner },
     });
     expect(stale.status).toBe(404);
     expect(evaluationCalls).toBe(1);
   });
 
-  it("requires the owner cookie for edits, keeps history, and rejects stale versions", async () => {
+  it("requires the matching GitHub session for edits, keeps history, and rejects stale versions", async () => {
     const base = await start();
     const proposal = await createProposal(base);
-    const otherOwner = await createProposal(base);
+    const otherOwner = await createProposal(base, "student-2");
     const denied = await fetch(`${base}/api/proposals/${proposal.id}/versions`);
-    expect(denied.status).toBe(404);
+    expect(denied.status).toBe(401);
     const updateBody = { ...draft, title: "Huerto escolar", expectedVersion: 1 };
-    const wrongOwner = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { cookie: otherOwner.cookie, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
+    const wrongOwner = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { "x-fixture-user": otherOwner.owner, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
     expect(wrongOwner.status).toBe(404);
-    const saved = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { cookie: proposal.cookie, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
+    const saved = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { "x-fixture-user": proposal.owner, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
     expect(saved.status).toBe(200);
     expect((await saved.json() as { data: { version: number } }).data.version).toBe(2);
-    const stale = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { cookie: proposal.cookie, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
+    const stale = await fetch(`${base}/api/proposals/${proposal.id}`, { method: "PUT", headers: { "x-fixture-user": proposal.owner, "content-type": "application/json" }, body: JSON.stringify(updateBody) });
     expect(stale.status).toBe(409);
-    const history = await fetch(`${base}/api/proposals/${proposal.id}/versions`, { headers: { cookie: proposal.cookie } });
+    const history = await fetch(`${base}/api/proposals/${proposal.id}/versions`, { headers: { "x-fixture-user": proposal.owner } });
     expect((await history.json() as { data: Array<{ version: number }> }).data.map((item) => item.version)).toEqual([1, 2]);
   });
 
-  it("publishes by explicit consent and uses published entries in comparison", async () => {
+  it("publishes eligible evaluations automatically and keeps the latest eligible revision", async () => {
     const base = await start();
     const published = await createProposal(base);
-    expect((await fetch(`${base}/api/gallery`)).status).toBe(200);
-    const optIn = await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ optIn: true }) });
-    expect(optIn.status).toBe(200);
-    expect((await (await fetch(`${base}/api/gallery`)).json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).toContain(published.id);
+    expect((await fetch(`${base}/api/gallery`)).status).toBe(401);
+    expect((await (await fetch(`${base}/api/gallery`, { headers: { "x-fixture-user": published.owner } })).json() as { data: { items: Array<{ id: string }> } }).data.items).toEqual([]);
+    const firstReview = await fetch(`${base}/api/proposals/${published.id}/review`, { method: "POST", headers: { "x-fixture-user": published.owner } });
+    expect(firstReview.status).toBe(200);
+    const gallery = await fetch(`${base}/api/gallery`, { headers: { "x-fixture-user": published.owner } });
+    expect((await gallery.json() as { data: { items: Array<{ id: string; proposalVersion: number }> } }).data.items)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: published.id, proposalVersion: 1 })]));
+    expect(JSON.stringify(await (await fetch(`${base}/api/gallery`, { headers: { "x-fixture-user": published.owner } })).json())).not.toContain("student-one@example.test");
 
     const second = await createProposal(base);
-    const review = await fetch(`${base}/api/proposals/${second.id}/review`, { method: "POST", headers: { cookie: second.cookie } });
+    const review = await fetch(`${base}/api/proposals/${second.id}/review`, { method: "POST", headers: { "x-fixture-user": second.owner } });
     const result = await review.json() as { data: { similarityMatches: Array<{ galleryId: string; title: string; reason: string }> } };
     expect(result.data.similarityMatches[0]).toMatchObject({ galleryId: published.id, title: draft.title });
     expect(result.data.similarityMatches[0]?.reason).toContain("Comparte temas clave");
 
-    const edited = await fetch(`${base}/api/proposals/${published.id}`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ ...draft, title: "Huerto actualizado", expectedVersion: 1 }) });
+    const edited = await fetch(`${base}/api/proposals/${published.id}`, { method: "PUT", headers: { "x-fixture-user": published.owner, "content-type": "application/json" }, body: JSON.stringify({ ...draft, title: "Huerto actualizado", expectedVersion: 1 }) });
     expect(edited.status).toBe(200);
-    expect((await (await fetch(`${base}/api/gallery`)).json() as { data: Array<{ id: string }> }).data).toEqual([]);
-    await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ optIn: true }) });
-    await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { cookie: published.cookie, "content-type": "application/json" }, body: JSON.stringify({ optIn: false }) });
-    expect((await (await fetch(`${base}/api/gallery`)).json() as { data: Array<{ id: string }> }).data).toEqual([]);
+    const stillPublished = await fetch(`${base}/api/gallery`, { headers: { "x-fixture-user": published.owner } });
+    expect((await stillPublished.json() as { data: { items: Array<{ id: string; proposalVersion: number }> } }).data.items)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: published.id, proposalVersion: 1 })]));
+    const optIn = await fetch(`${base}/api/proposals/${published.id}/gallery-opt-in`, { method: "PUT", headers: { "x-fixture-user": published.owner, "content-type": "application/json" }, body: JSON.stringify({ optIn: false }) });
+    expect(optIn.status).toBe(410);
+    const evaluateSecondVersion = await fetch(`${base}/api/proposals/${published.id}/review`, { method: "POST", headers: { "x-fixture-user": published.owner } });
+    expect(evaluateSecondVersion.status).toBe(200);
+    const latest = await fetch(`${base}/api/gallery/${published.id}`, { headers: { "x-fixture-user": published.owner } });
+    expect((await latest.json() as { data: { project: { proposalVersion: number }; history: Array<{ proposalVersion: number }> } }).data).toMatchObject({ project: { proposalVersion: 2 }, history: [{ proposalVersion: 2 }, { proposalVersion: 1 }] });
+  });
+
+  it("separates teacher authorization and historical records, and claims only with the original cookie", async () => {
+    const base = await start();
+    const database = databases.at(-1)!;
+    const token = "legacy-owner-cookie-token-that-is-long-enough-0123456789";
+    const legacy = createMentorRepository(database).createProposal(draft, createHash("sha256").update(token).digest("hex"));
+    const anonymous = await fetch(`${base}/api/teacher/students`);
+    const studentDenied = await fetch(`${base}/api/teacher/students`, { headers: { "x-fixture-user": "student-1" } });
+    expect(anonymous.status).toBe(401);
+    expect(studentDenied.status).toBe(403);
+
+    const teacherHeaders = { "x-fixture-user": "teacher-1", "x-fixture-role": "teacher" };
+    const students = await fetch(`${base}/api/teacher/students`, { headers: teacherHeaders });
+    expect(students.status).toBe(200);
+    expect(JSON.stringify(await students.json())).not.toContain("student-one@example.test");
+    const projects = await fetch(`${base}/api/teacher/students/student-1/projects`, { headers: teacherHeaders });
+    expect(projects.status).toBe(200);
+    const historical = await fetch(`${base}/api/teacher/historical-projects`, { headers: teacherHeaders });
+    expect((await historical.json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).toContain(legacy.id);
+
+    const cookie = await fetch(`${base}/api/me/proposals/${legacy.id}/claim`, { method: "POST", headers: { ...teacherHeaders, cookie: `fragments_proposal_owner=${token}` } });
+    expect(cookie.status).toBe(401);
+    const claimHeaders = { "x-fixture-user": "student-1", cookie: `fragments_proposal_owner=${token}` };
+    const contenders = await Promise.all([1, 2].map(() => fetch(`${base}/api/me/proposals/${legacy.id}/claim`, { method: "POST", headers: claimHeaders })));
+    expect(contenders.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(Number(database.prepare("SELECT COUNT(*) AS count FROM mentor_academic_publications WHERE proposal_id = ?").get(legacy.id)!.count)).toBe(0);
   });
 
   it("leaves Review verification codes for the Review route", async () => {
@@ -232,6 +296,6 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
 
     const response = await fetch(`${base}/api/verify/${"c".repeat(32)}`);
     expect(response.status).toBe(404);
-    expect(await response.text()).toBe("");
+    expect(await response.json()).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
   });
 });

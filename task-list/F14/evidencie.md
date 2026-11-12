@@ -1,6 +1,6 @@
 # F14 — Evidencia
 
-**Estado:** IMPLEMENTADA E INTEGRADA; cierre de seguridad bloqueado hasta contar con un segundo colaborador autorizado para iniciar/aprobar releases. Código F14 integrado en `main` mediante PR #7, SHA `ddf141447ec7b982afb58a65db5b47debb7e597c`. No se creó ni publicó una tag nueva y no hubo despliegue.
+**Estado:** IMPLEMENTADA E INTEGRADA; autorización manual configurada para el modelo de mantenedor individual. Código F14 integrado en `main` mediante PR #7, SHA `ddf141447ec7b982afb58a65db5b47debb7e597c`. La aprobación sigue siendo obligatoria; no se creó ni publicó una tag nueva ni hubo despliegue F14.
 
 ## Procedencia histórica de `v0.3.1` — comprobación independiente del código F14
 
@@ -26,7 +26,7 @@
 Consultas y cambios del 2026-11-12 en `VGMil-dev/fragments`:
 
 - Actions habilitadas con `allowed_actions=selected`, `sha_pinning_required=true`; listas permitidas: `actions/checkout`, `actions/setup-node`, `actions/upload-artifact`, `actions/download-artifact`, `actions/attest` y `pnpm/action-setup`, todos referenciados por SHA completo en los workflows. No se permiten otras acciones externas.
-- Entorno `fragments-production`: revisor requerido `VGMil-dev` (ID `259344844`), `prevent_self_review=true`, `can_admins_bypass=false`, sin secretos ni variables; política de despliegue limitada al patrón de tag `v*.*.*`. Verificado por `GET /environments/fragments-production` después del cambio. La API de colaboradores devuelve solo `VGMil-dev`; por tanto, hoy no existe una segunda identidad autorizada que pueda publicar y recibir aprobación. El control falla cerrado y no permite una release útil hasta añadir esa identidad.
+- Entorno `fragments-production`: revisor requerido `VGMil-dev` (ID `259344844`), `prevent_self_review=false`, `can_admins_bypass=false`, sin secretos ni variables; política de despliegue limitada al patrón de tag `v*.*.*`. Verificado por `GET /environments/fragments-production`; la API de colaboradores solo devuelve `VGMil-dev`. Se permite que el mantenedor individual apruebe manualmente su propia ejecución porque no hay segundo colaborador. Se conserva el paso obligatorio de aprobación y el bypass administrativo sigue desactivado. Esto reduce la independencia de la revisión y queda registrado por autorización expresa del propietario para esta publicación.
 - Ruleset activo `Fragments main via pull request` para `refs/heads/main`: PR obligatorio, merge normal, check `verify` obligatorio desde GitHub Actions (integration ID `15368`), sin bypass (`current_user_can_bypass=never`), force-push y borrado prohibidos.
 - Ruleset activo `Fragments version tags immutable` para `refs/tags/v*.*.*`: actualización y borrado prohibidos, sin bypass. No se creó ni cambió tag alguna.
 - La API no permite administrar `can_admins_bypass`; se desactivó en la interfaz de GitHub y luego se verificó por REST como `false`.
@@ -66,7 +66,7 @@ En copia limpia NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-verify-202
 
 ## Procedimiento para el próximo release
 
-Antes del próximo release, una persona administradora debe añadir un segundo colaborador de confianza con permisos de publicación y configurar esa cuenta en el entorno protegido como aprobador independiente; `prevent_self_review` debe permanecer activado y el bypass administrativo desactivado. Después, desde un checkout actualizado de `main`, el colaborador que inicia el release verifica el commit a publicar y crea la tag anotada:
+Desde un checkout actualizado de `main`, el mantenedor verifica el commit a publicar y crea la tag anotada. El job `publish` sigue esperando que `VGMil-dev` la apruebe manualmente en `fragments-production`; la independencia es menor porque la misma identidad puede iniciar y aprobar. El bypass administrativo permanece desactivado.
 
 ```powershell
 git switch main
@@ -75,11 +75,11 @@ git tag -a v0.4.0 -m "Fragments v0.4.0"
 git push origin refs/tags/v0.4.0
 ```
 
-El workflow valida semver, tag anotada, SHA exacto y pertenencia a `main`; el job de publicación espera la aprobación de la otra identidad en `fragments-production`. Tras publicar el release, el agente pull verifica workflow/ejecución/atestación, digest y labels antes de preparar backup e instalar únicamente `api` y `web`. El ledger rechaza repetidos. Para detener el proceso, retirar la solicitud antes de aplicar o usar el rollback documentado; este revierte imágenes de código y no restaura automáticamente SQLite. La primera publicación real debe comprobarse con el run de GitHub y el ledger de la VPS.
+El workflow valida semver, tag anotada, SHA exacto y pertenencia a `main`; el job de publicación espera la aprobación manual de `VGMil-dev` en `fragments-production`. Tras publicar el release, el agente pull verifica workflow/ejecución/atestación, digest y labels antes de preparar backup e instalar únicamente `api` y `web`. El ledger rechaza repetidos. Para detener el proceso, retirar la solicitud antes de aplicar o usar el rollback documentado; este revierte imágenes de código y no restaura automáticamente SQLite. La primera publicación real debe comprobarse con el run de GitHub y el ledger de la VPS.
 
-## Bloqueo crítico de seguridad
+## Reducción de independencia autorizada
 
-GitHub tiene un solo colaborador: `VGMil-dev`. Para impedir autoaprobación se cambió y verificó `prevent_self_review=true`; así el control funciona de manera fail-closed, pero el único usuario no puede a la vez iniciar y aprobar el deployment. F14 no se marca completa hasta que se añada una segunda identidad autorizada. No se invitó ni eligió a una persona sin autorización explícita.
+El entorno requiere aprobación manual, pero `prevent_self_review=false` permite al único mantenedor `VGMil-dev` aprobar la ejecución que inició. El bypass administrativo está desactivado. El propietario autorizó expresamente este modelo individual para v0.4.0; el riesgo de menor separación entre publicación y aprobación debe revisarse si se agregan más mantenedores.
 
 ## Evidencia privada
 

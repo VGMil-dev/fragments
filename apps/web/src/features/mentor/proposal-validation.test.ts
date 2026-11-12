@@ -39,6 +39,7 @@ describe("validateProposalDraft", () => {
         solution: "Registrar observaciones por fecha.",
         goals: ["Crear un registro", "Consultar observaciones"],
         skills: ["HTML", "CSS"],
+        tags: [],
         scope: "Una bitácora personal sin cuentas.",
         constraints: ["Funciona sin conexión"],
       },

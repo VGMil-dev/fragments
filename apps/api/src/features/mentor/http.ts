@@ -1,10 +1,9 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseSync } from "node:sqlite";
 import {
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
-  GalleryOptInRequestSchema,
   GalleryResponseSchema,
   ProposalResponseSchema,
   UpdateProposalRequestSchema,
@@ -15,10 +14,11 @@ import { createMentorRepository } from "./repository.js";
 import { createMentorControlRepository } from "./control-repository.js";
 import { proposalEvaluationResponse } from "./evaluation-response.js";
 import { MentorEvaluationFailure, MentorInputError, type createMentorService } from "./service.js";
+import type { FragmentsAuthService } from "../../auth/better-auth.js";
 
 type MentorService = ReturnType<typeof createMentorService>;
 type RouteResult = "handled" | "unhandled";
-type MentorEvaluationDiagnostic = {
+export type MentorEvaluationDiagnostic = {
   event: "mentor_evaluation_failed";
   stage: string;
   error_type: string;
@@ -32,7 +32,7 @@ type MentorEvaluationDiagnostic = {
 export function createMentorHttp(
   database: DatabaseSync,
   service: MentorService,
-  options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void } = {},
+  options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void; auth?: FragmentsAuthService } = {},
 ) {
   const repository = createMentorRepository(database);
   const control = createMentorControlRepository(database);
@@ -47,6 +47,8 @@ export function createMentorHttp(
     }
 
     if (request.method === "POST" && url.pathname === "/api/proposals") {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
       const raw = await readJson(request, response);
       if (raw === undefined) return "handled";
       const proposal = CreateProposalRequestSchema.safeParse(raw);
@@ -54,24 +56,20 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta.");
         return "handled";
       }
-      const currentOwner = readOwnerToken(request);
-      const ownerToken = currentOwner ?? randomBytes(32).toString("base64url");
-      const saved = repository.createProposal(proposal.data, hashOwnerToken(ownerToken));
-      if (!currentOwner) response.setHeader("set-cookie", `fragments_proposal_owner=${ownerToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`);
+      const saved = repository.createProposal(proposal.data, null, student.id);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
       return "handled";
     }
 
     const proposalMatch = url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})$/);
-    const ownerToken = readOwnerToken(request);
-    const ownerHash = ownerToken ? hashOwnerToken(ownerToken) : null;
     if (request.method === "PUT" && proposalMatch) {
-      if (!ownerHash) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
       const raw = await readJson(request, response);
       if (raw === undefined) return "handled";
       const input = UpdateProposalRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta y la versión que editas."); return "handled"; }
-      const saved = repository.updateProposal(proposalMatch[1]!, ownerHash, input.data.expectedVersion, input.data);
+      const saved = repository.updateProposalByUser(proposalMatch[1]!, student.id, input.data.expectedVersion, input.data);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -83,7 +81,9 @@ export function createMentorHttp(
 
     const historyMatch = request.method === "GET" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/versions$/);
     if (historyMatch) {
-      const history = ownerHash ? repository.getProposalHistory(historyMatch[1]!, ownerHash) : null;
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      const history = repository.getProposalHistoryByUser(historyMatch[1]!, student.id);
       if (!history) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
       sendJson(response, 200, { ok: true, data: history.map((entry) => ProposalResponseSchema.parse(entry)) });
       return "handled";
@@ -91,21 +91,16 @@ export function createMentorHttp(
 
     const galleryOptInMatch = request.method === "PUT" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/gallery-opt-in$/);
     if (galleryOptInMatch) {
-      if (!ownerHash) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
-      const raw = await readJson(request, response);
-      if (raw === undefined) return "handled";
-      const input = GalleryOptInRequestSchema.safeParse(raw);
-      if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Indica si quieres publicar esta versión de la propuesta."); return "handled"; }
-      const result = repository.setGalleryOptIn(galleryOptInMatch[1]!, ownerHash, input.data.optIn);
-      if (result.status === "not_found") { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
-      sendJson(response, 200, { ok: true, data: GalleryOptInRequestSchema.parse(input.data) });
+      sendError(response, 410, "PUBLICATION_AUTOMATIC", "Las propuestas elegibles se publican automáticamente después de su evaluación.");
       return "handled";
     }
 
     const evaluateMatch = request.method === "POST" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/review$/);
     const recoverEvaluationMatch = request.method === "GET" && url.pathname.match(/^\/api\/proposals\/([A-Za-z0-9_-]{1,100})\/review$/);
     if (recoverEvaluationMatch) {
-      const proposal = ownerHash ? repository.getOwnedProposal(recoverEvaluationMatch[1]!, ownerHash) : null;
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      const proposal = repository.getOwnedProposalByUser(recoverEvaluationMatch[1]!, student.id);
       const latest = proposal ? repository.getLatestEvaluation(proposal.id, proposal.version) : null;
       if (!proposal || !latest) {
         sendError(response, 404, "NOT_FOUND", "No se encontró una evaluación guardada para esta versión.");
@@ -121,7 +116,9 @@ export function createMentorHttp(
     }
 
     if (evaluateMatch) {
-      const proposal = ownerHash ? repository.getOwnedProposal(evaluateMatch[1]!, ownerHash) : null;
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      const proposal = repository.getOwnedProposalByUser(evaluateMatch[1]!, student.id);
       if (!proposal) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         return "handled";
@@ -175,6 +172,8 @@ export function createMentorHttp(
     }
 
     if (request.method === "POST" && url.pathname === "/api/mentor-submissions") {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
       const raw = await readJson(request, response);
       if (raw === undefined) return "handled";
       const input = CreateMentorSubmissionRequestSchema.safeParse(raw);
@@ -182,7 +181,7 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los datos de la entrega.");
         return "handled";
       }
-      const proposal = ownerHash ? repository.getOwnedProposal(input.data.proposalId, ownerHash) : null;
+      const proposal = repository.getOwnedProposalByUser(input.data.proposalId, student.id);
       if (!proposal || proposal.version !== input.data.proposalVersion) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la versión de propuesta.");
         return "handled";
@@ -205,12 +204,14 @@ export function createMentorHttp(
 
     const artifactMatch = request.method === "GET" && url.pathname.match(/^\/api\/mentor-submissions\/([A-Za-z0-9_-]{1,100})\/(readme|pdf)$/);
     if (artifactMatch) {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
       const saved = repository.getSubmission(artifactMatch[1]!);
       if (!saved || saved.snapshot.kind !== "mentor") {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
         return "handled";
       }
-      if (!ownerHash || !repository.getOwnedProposal(saved.snapshot.sourceId, ownerHash)) {
+      if (!repository.getOwnedProposalByUser(saved.snapshot.sourceId, student.id)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
         return "handled";
       }
@@ -254,14 +255,13 @@ export function createMentorHttp(
   };
 }
 
-function readOwnerToken(request: IncomingMessage): string | null {
-  const cookie = request.headers.cookie ?? "";
-  const match = cookie.match(/(?:^|;\s*)fragments_proposal_owner=([A-Za-z0-9_-]{32,128})(?:;|$)/);
-  return match?.[1] ?? null;
-}
-
-function hashOwnerToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+async function requireStudent(request: IncomingMessage, response: ServerResponse, auth?: FragmentsAuthService): Promise<{ id: string } | null> {
+  if (!auth) { sendError(response, 503, "AUTH_DISABLED", "El acceso estudiantil no está habilitado."); return null; }
+  try {
+    const student = await auth.student(request);
+    if (!student) { sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión con GitHub para continuar."); return null; }
+    return student;
+  } catch { sendError(response, 503, "AUTH_UNAVAILABLE", "No se pudo validar la sesión."); return null; }
 }
 
 async function readJson(request: IncomingMessage, response: ServerResponse): Promise<unknown | undefined> {

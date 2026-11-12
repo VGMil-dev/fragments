@@ -38,6 +38,7 @@ export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraf
     solution: fields.solution,
     goals: parseLines(fields.goals),
     skills: parseLines(fields.skills),
+    tags: [],
     scope: fields.scope,
     constraints: parseLines(fields.constraints),
   });

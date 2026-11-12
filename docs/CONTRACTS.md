@@ -16,12 +16,23 @@
 
 Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envuelven en `ApiResult<T>` en respuestas HTTP:
 
-- `GET /api/gallery` responde `GalleryResponse`: tarjetas públicas opt-in con id, título, resumen, habilidades, etiquetas y duración estimada. No acepta identidad de alumno ni datos de repositorio.
+- `GET /api/gallery` responde páginas autenticadas `AcademicGalleryPage` de proyectos evaluados con contexto versionado; `GET /api/gallery/:projectId` responde el detalle y sus revisiones elegibles.
 - `POST /api/proposals` acepta `CreateProposalRequest`; editar usa `PUT /api/proposals/:id` con `UpdateProposalRequest` (borrador completo y `expectedVersion`) y responde `ProposalResponse` con versión incrementada. Una versión obsoleta devuelve `VERSION_CONFLICT`.
-- Publicar u ocultar un borrador en la galería usa `POST /api/proposals/:id/gallery` con `GalleryOptInRequest`. Editar, cambiar el opt-in, evaluar y generar una entrega requieren la cookie de propiedad opaca `HttpOnly` emitida al crear la propuesta; el token no aparece en DTOs públicos ni en tarjetas.
-- Evaluaciones y coincidencias usan `ProposalEvaluationResponse`: cada coincidencia apunta a un `galleryId` opt-in y explica el solapamiento sin revelar identidad o nota de otro proyecto.
+- La publicación no tiene opt-in del estudiante: una evaluación persistida y versionada publica la revisión automáticamente. La ruta antigua `/api/proposals/:id/gallery-opt-in` responde `410 PUBLICATION_AUTOMATIC`.
+- Crear, editar, evaluar, recuperar evaluación y generar entrega Mentor requieren sesión GitHub; el servidor deriva el propietario de la sesión. Evaluaciones y coincidencias usan `ProposalEvaluationResponse` y apuntan a proyectos elegibles sin revelar nota o datos privados.
 - `POST /api/reviews` acepta `ReviewRequest` con `owner`, `repo` y SHA exacto; se rechazan URLs arbitrarias. La creación devuelve `ReviewQueuedResponse`; consulta devuelve `ReviewResponse` discriminada por estado y nunca expone trazas internas.
 - Las solicitudes de entrega usan `CreateMentorSubmissionRequest` y `CreateReviewSubmissionRequest`; sus respuestas `MentorSubmissionResponse` y `ReviewSubmissionResponse` incluyen un `id` de servidor junto al `SubmissionSnapshot` inmutable. Usa el `id` para descargar artefactos; `verificationCode` solo sirve para verificación.
 - Las descargas de README y PDF devuelven respectivamente `text/markdown` y `application/pdf` sin envoltura JSON; errores y respuestas de API normales usan `ApiResult<T>`.
 - La verificación pública usa `VerifySubmissionResponse`, un resumen mínimo de integridad, rúbrica, nota y fecha; no incluye nombre ni datos privados.
-- Better Auth expone `POST /api/auth/sign-in/email`, `POST /api/auth/sign-out` y `GET /api/auth/get-session`; las cookies de sesión son HttpOnly y la identidad docente procede del usuario SQLite (`isTeacher`) o del rol `admin`. El registro público permanece deshabilitado. Las rutas `/api/inspector/*` requieren una sesión docente.
+- Better Auth expone acceso por email/contraseña docente, `POST /api/auth/sign-in/social` con GitHub estudiantil, `POST /api/auth/sign-out` y `GET /api/auth/get-session`; las sesiones usan cookies HttpOnly. La identidad docente procede del usuario SQLite (`isTeacher`) o del rol `admin`; la propiedad del estudiante usa la cuenta vinculada `providerId=github` + `accountId`. El acceso estudiantil por email no autentica rutas académicas.
+
+## DTOs y permisos F15
+
+- `POST /api/auth/sign-in/social` acepta `provider: "github"` para estudiantes. La ruta de contraseña sigue reservada al acceso docente y no hay formulario de registro estudiantil por email.
+- `/api/me` devuelve una identidad GitHub pública mínima o el estado de OAuth disponible. `GET /api/me/proposals` y las rutas Mentor requieren sesión GitHub.
+- `/api/proposals` y las rutas de edición/evaluación no aceptan propietario ni campos de publicación. El API asigna `owner_user_id` desde la sesión.
+- `GET /api/gallery?offset=&limit=` y `GET /api/gallery/:projectId` requieren sesión GitHub. Responden `AcademicGalleryPage`/`AcademicGalleryDetail`, con autoría GitHub y contexto/rúbrica originales; nunca exponen nota ni datos privados.
+- Una evaluación Mentor persistida solo crea una publicación cuando coinciden revisión, digest, evaluación y versión publicada de configuración. La publicación es automática y única por proyecto/revisión; una revisión nueva no sustituye una anterior elegible hasta completar su evaluación.
+- `POST /api/me/proposals/:id/claim` requiere sesión GitHub y la cookie anónima original. Es de una sola vez y no se ejecuta por coincidencia de correo, título o login.
+- `/api/teacher/students*`, `/api/teacher/historical-projects` y `POST /api/teacher/projects/:id/withdraw` comprueban rol docente en cada petición. La retirada conserva el proyecto y registra motivo y docente.
+- Better Auth enlaza `providerId = github` y `accountId`. Solo se solicitan `read:user` y `user:email`; `isTeacher`, rol y titularidad no son campos de entrada del cliente. La vinculación implícita por correo está deshabilitada.

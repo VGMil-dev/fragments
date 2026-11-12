@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createMentorRepository } from "./repository.js";
+import { migrate } from "../../db/migrate.js";
 
 const dbs: DatabaseSync[] = [];
 
 function repository() {
   const db = new DatabaseSync(":memory:");
   dbs.push(db);
-  db.exec(`
-    CREATE TABLE proposals (id TEXT PRIMARY KEY, version INTEGER NOT NULL, proposal_json TEXT NOT NULL, updated_at TEXT NOT NULL, owner_hash TEXT NOT NULL);
-    CREATE TABLE proposal_revisions (proposal_id TEXT NOT NULL, version INTEGER NOT NULL, proposal_json TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(proposal_id, version));
-    CREATE TABLE mentor_gallery_optins (proposal_id TEXT PRIMARY KEY, proposal_version INTEGER NOT NULL, opted_in INTEGER NOT NULL, updated_at TEXT NOT NULL);
-    CREATE TABLE mentor_evaluations (id TEXT PRIMARY KEY, proposal_id TEXT NOT NULL, proposal_version INTEGER NOT NULL, evaluation_json TEXT NOT NULL, evaluated_at TEXT NOT NULL);
-    CREATE TABLE submissions (id TEXT PRIMARY KEY, kind TEXT NOT NULL, source_id TEXT NOT NULL, score REAL NOT NULL, snapshot_json TEXT NOT NULL, content_hash TEXT NOT NULL, verification_code TEXT NOT NULL, rubric_version TEXT NOT NULL, created_at TEXT NOT NULL);
-  `);
+  migrate(db);
+  db.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, image TEXT, role TEXT, isTeacher INTEGER DEFAULT 0, githubLogin TEXT, createdAt TEXT);
+    CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL);`);
+  db.prepare("INSERT INTO user(id, email, name, image, role, isTeacher, githubLogin, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run("student-1", "student@example.test", "Student Fixture", "https://avatars.githubusercontent.com/u/123?v=4", "user", 0, "student-fixture", "2026-11-01T00:00:00.000Z");
+  db.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES (?, ?, ?, ?)").run("account-1", "github-stable-id-1", "github", "student-1");
   return createMentorRepository(db);
 }
 
@@ -31,15 +31,17 @@ describe("Mentor repository ownership and revisions", () => {
     expect(repo.getProposalHistory(first.id, "a".repeat(64))?.map((entry) => entry.version)).toEqual([1, 2]);
   });
 
-  it("publishes only an explicitly opted-in current version and removes it after edits", () => {
+  it("publishes an evaluated GitHub proposal once and keeps its published revision after an edit", () => {
     const repo = repository();
-    const first = repo.createProposal(proposal, "a".repeat(64));
+    const first = repo.createProposal(proposal, null, "student-1");
     expect(repo.listGallery()).toEqual([]);
-    expect(repo.setGalleryOptIn(first.id, "a".repeat(64), true).status).toBe("updated");
+    repo.saveEvaluation("eval-1", first.id, 1, {} as never, "a".repeat(64), 1, new Date("2026-11-01T12:00:00.000Z"));
     expect(repo.listGallery()).toHaveLength(1);
-    repo.updateProposal(first.id, "a".repeat(64), 1, { ...proposal, title: "Nuevo huerto" });
-    expect(repo.listGallery()).toEqual([]);
-    repo.setGalleryOptIn(first.id, "a".repeat(64), true);
+    expect(repo.listGallery()[0]?.title).toBe("Huerto");
+    repo.updateProposalByUser(first.id, "student-1", 1, { ...proposal, title: "Nuevo huerto", expectedVersion: 1 });
+    expect(repo.listGallery()[0]?.title).toBe("Huerto");
+    repo.saveEvaluation("eval-2", first.id, 2, {} as never, "b".repeat(64), 1, new Date("2026-11-02T12:00:00.000Z"));
     expect(repo.listGallery()[0]?.title).toBe("Nuevo huerto");
+    expect(repo.listGallery()).toHaveLength(1);
   });
 });

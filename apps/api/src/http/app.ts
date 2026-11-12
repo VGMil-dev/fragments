@@ -3,7 +3,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../auth/better-auth.js";
-import { createMentorHttp } from "../features/mentor/http.js";
+import { createMentorHttp, type MentorEvaluationDiagnostic } from "../features/mentor/http.js";
+import { createAcademicHttp } from "../features/mentor/academic-http.js";
 import { createMentorControlHttp } from "../features/mentor/control-http.js";
 import type { createMentorService } from "../features/mentor/service.js";
 import { createInspectorHttp } from "../features/inspector/http.js";
@@ -26,11 +27,16 @@ function sendError(response: ServerResponse, status: number, code: string, messa
 export function createHttpHandler(database: DatabaseSync, options: {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
+  logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
-  const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor) : undefined;
+  const academicHandler = createAcademicHttp(database, options.auth);
+  const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor, {
+    ...(options.auth ? { auth: options.auth } : {}),
+    ...(options.logFailure ? { logFailure: options.logFailure } : {}),
+  }) : undefined;
   const mentorControlHandler = options.mentor ? createMentorControlHttp(database, options.auth) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
@@ -57,6 +63,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
       }
       return;
     }
+    if (academicHandler && await academicHandler(request, response) === "handled") return;
     if (mentorHandler && await mentorHandler(request, response) === "handled") return;
     if (mentorControlHandler && await mentorControlHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
@@ -70,6 +77,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
 export function createApiServer(database: DatabaseSync, options: {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
+  logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };

@@ -1,0 +1,25 @@
+.identity-screen {
+  min-height: 100vh;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 3rem;
+  padding: clamp(1.25rem, 5vw, 4rem);
+  background: #fcf9f1;
+}
+
+.identity-screen > .brand { justify-self: start; }
+
+.identity-card {
+  width: min(100%, 34rem);
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid #afc4d9;
+  border-radius: 1.25rem;
+  background: #fffdf8;
+}
+
+.identity-card h1, .identity-card p { margin: 0; }
+.identity-card__privacy { color: #526782; font-size: 0.9rem; }
+.identity-card a { color: #315f92; }

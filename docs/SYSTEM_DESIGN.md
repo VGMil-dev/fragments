@@ -1,7 +1,7 @@
 # Fragments — System Design MVP 1.0
 
 ## Propósito y límites
-Fragments es una herramienta de evaluación formativa de proyectos, no un LMS ni un registrador de insumos. El docente administra tiempos/notas oficiales en Moodle por separado. Tres módulos: **Mentor** (propuesta viable, diferenciación, calificación formativa, README + PDF cuando estudiante decide), **Review** (análisis de commit y retroalimentación progresiva, entrega PDF) y **Inspector** (retos privados de modificación inversa y restauración, seleccionados y comprobados por docente). Catálogo de proyectos con visibilidad opt-in. Sin aprobación docente obligatoria para generar entrega de Mentor. Evaluaciones repetidas permitidas, con controles de costo y rate limit, sin número rígido de entregas escolares.
+Fragments es una herramienta de evaluación formativa de proyectos, no un LMS ni un registrador de insumos. El docente administra tiempos/notas oficiales en Moodle por separado. Tres módulos: **Mentor** (propuesta viable, diferenciación, calificación formativa, README + PDF cuando estudiante decide), **Review** (análisis de commit y retroalimentación progresiva, entrega PDF) y **Inspector** (retos privados de modificación inversa y restauración, seleccionados y comprobados por docente). La galería académica F15 comparte automáticamente versiones Mentor evaluadas y con contexto versionado entre usuarios autenticados; las propuestas anónimas antiguas permanecen privadas hasta que el titular original las reclame. Sin aprobación docente obligatoria para generar entrega de Mentor. Evaluaciones repetidas permitidas, con controles de costo y rate limit, sin número rígido de entregas escolares.
 
 ## Flujos
 ```mermaid
@@ -38,7 +38,7 @@ La ruta pública de verificación da solo microinforme no sensible. Todas las ru
 - PDF y README bajo demanda, no almacenados. Fecha/plantilla y versión de rúbrica fijadas en snapshot para reproducción semántica; PDF bytes no necesariamente idénticos si cambia renderer, registrar rendererVersion.
 - Review ata rúbrica+versión+commit SHA+versión evaluador+input digest. Nuevo commit = nuevo análisis; igual commit/criterio = caché; reintentos solo en errores transitorios.
 - Retos Inspector siempre vinculados a Review real y sus evidencias: precondición verificada, modificación inversa deliberada, pasos de demostración y restauración, ayudas privadas. Si nuevo commit: pendientes anteriores obsoletos; asignados a sesión quedan congelados; realizados conservados. No inventar archivos ni resultados de ejecución.
-- Público: consentimiento explícito de galería, sin revelar puntajes, nombres de menores, retos o repositorios privados.
+- Galería F15: sesión GitHub requerida, publicación automática solo tras evaluación persistida con contexto inmutable; no revelar puntajes, correos, nombres legales, retos ni repositorios privados. La retirada docente es auditada y conserva el historial.
 - IA es orientativa; la decisión académica es docente.
 
 ## Modelo mínimo SQLite
