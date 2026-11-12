@@ -18,7 +18,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F10.1 | PLANNER | F10 | Completar banco variado de retos desde Review verificado; reutilizarlo, admitir repaso, probar concurrencia y recorrer fixture pública sin ejecutar su código; evidencia local ≤20 archivos; commits `4133219a`/`3cda9a4` | [x] |
 | F11 | PLANNER | F10 | Control docente Mentor: editar y publicar una configuración temática/rúbrica; evaluación estructurada con puntaje de servidor, deduplicación y consulta histórica versionada | [x] |
 | F12 | PLANNER | F10.1,F11 | Integración local v0.3.0: migraciones unificadas, recorridos Mentor→Review→Trainer→Inspector, QA funcional y evidencia privada ≤20 archivos | [x] |
-| INC-MENTOR-503 | PLANNER | v0.3.0 | Desbloquear Mentor solo con presupuesto Vercel activo y aplicable; reconciliar holdback y registrar consumo | [ ] — validación local aprobada; falta verificar en panel autenticado el presupuesto vigente, desplegar y completar evaluación real recuperable por GET |
+| INC-MENTOR-503 | PLANNER | v0.3.0 | Desbloquear Mentor solo con presupuesto Vercel activo y aplicable; reconciliar holdback y registrar consumo | [x] — presupuesto Fragments USD 5/No Refresh verificado; backup íntegro; desplegado `50e2ace`; evaluación real liquidada USD 0.000112 y recuperada por GET sin duplicación; evidencia en `task-list/INC-MENTOR-503/evidencie.md` |
 
 ## Estado de cierre de integración — 2026-11-05
 
