@@ -41,3 +41,9 @@
 - Dado un usuario sin rol docente, cada endpoint docente responde 401/403 y no filtra datos.
 - Dados datos de rúbrica histórica, se representa su configuración original; los registros sin contexto se marcan como no acreditados.
 - La sesión de email/contraseña docente sigue activa y el usuario OAuth no puede elevar su rol.
+
+## Actualización de alcance autorizada — 2026-11-12
+
+- Se integra F15 con F13/F14 mediante merge normal y PR.
+- El propietario autoriza aprobación manual por el mantenedor único, aun cuando publique la tag. Se registra la menor independencia; el bypass administrativo debe seguir desactivado.
+- `v0.4.0` se publica solo si las credenciales OAuth están instaladas en configuración persistente privada y la API las consume tras el despliegue; el login real y la galería se verifican después. Si algún control falla, no crear la tag ni desplegar.
