@@ -51,3 +51,5 @@ La evidencia privada compacta de auditoría queda fuera del repositorio en `C:\U
 ## Commit
 
 `3d0cbfe691e59a23b869d8d592fcee598e7cc7bc` y `df4e83138405c1356c2057e32262f9563de6c4a4` fijaron antes los requisitos. Esta actualización registra verificación e impedimentos; no representa implementación ni cierre de F14.
+
+- Actualización de evidencia y TASKS: `0794e0f` — `docs(f14): registra auditoria de seguridad`.

@@ -54,3 +54,5 @@ Se creó una copia temporal desde los archivos rastreados y los cambios F13 en `
 - Los comandos se ejecutaron en copia temporal NTFS porque el checkout de trabajo está en D: exFAT; en ese volumen pnpm no pudo completar la creación de su virtual store. No se alteró la configuración ni el lockfile del repositorio. `git status --short` siguió mostrando únicamente el archivo preexistente `env` sin rastrear.
 
 Esta revalidación no integra ni publica F13 en `main`; la comprobación de integración queda sujeta a la revisión y procedimiento de F14.
+
+- Commit de esta revalidación: `0794e0f` — `docs(f14): registra auditoria de seguridad`.
