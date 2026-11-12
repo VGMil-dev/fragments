@@ -10,6 +10,8 @@ Usa `.env.example` como plantilla y guarda los valores reales solo en `.env`, qu
 | `AI_GATEWAY_MAX_INPUT_USD_PER_MILLION` | Solo IA real; opcional para fakes | Tarifa verificada de entrada por millón de tokens del proveedor fijado. En la configuración local del 2026-11-04: Qwen 3.7 Flash vía Alibaba Cloud, USD 0.03/M. | Estimar y reservar el coste antes de una llamada. |
 | `AI_GATEWAY_MAX_OUTPUT_USD_PER_MILLION` | Solo IA real; opcional para fakes | Tarifa verificada de salida por millón de tokens del proveedor fijado. En la configuración local del 2026-11-04: Qwen 3.7 Flash vía Alibaba Cloud, USD 0.13/M. | Estimar y reservar el coste antes de una llamada. |
 | `GITHUB_TOKEN` | Optativa para repositorios públicos; requerida para operaciones autorizadas sobre repos privados | Crear un token de mínimo alcance en GitHub Settings → Developer settings → Personal access tokens. No conceder acceso a repos privados salvo que esa integración se autorice expresamente. | Aumentar cuota de API y, si se autoriza aparte, acceder a repos privados. |
+| `GITHUB_CLIENT_ID` | Solo OAuth estudiantil, requerida junto con el secreto | Client ID de una GitHub OAuth App creada para Fragments. | Inicia el flujo GitHub de Better Auth. No es un token de API de repositorios. |
+| `GITHUB_CLIENT_SECRET` | Solo OAuth estudiantil, requerida junto con el ID | Secreto de la misma GitHub OAuth App. Guardarlo solo en el backend runtime; no usar `VITE_*`. | Intercambio del código OAuth en el servidor Better Auth. |
 | `BETTER_AUTH_SECRET` | Requerida antes de habilitar autenticación docente | Generar localmente al menos 32 bytes aleatorios. No reutilizar claves de otros sistemas. | Cifra y firma sesiones Better Auth en el backend. |
 | `BETTER_AUTH_URL` | Solo autenticación local/producción | URL base del backend, por ejemplo `http://localhost:3000`. | Base URL de rutas `/api/auth/*`. |
 | `TEACHER_TEST_EMAIL` | Solo provisioning local de pruebas | Correo de una cuenta docente local de prueba. | Identifica la cuenta que crea el comando `pnpm --filter @fragments/api provision:teacher`. |
@@ -27,6 +29,14 @@ Las tarifas deben volver a verificarse antes de cambiar el modelo o proveedor. P
 ### Acceso docente local
 
 Better Auth almacena usuarios y sesiones en SQLite. `BETTER_AUTH_SECRET` debe tener al menos 32 caracteres, y `BETTER_AUTH_URL` y `PUBLIC_APP_URL` definen los dos orígenes confiables. El registro público está deshabilitado en la aplicación. Para el bootstrap local de pruebas, configura `TEACHER_TEST_EMAIL` y `TEACHER_TEST_PASSWORD` (al menos 12 caracteres) en `.env` y ejecuta `pnpm --filter @fragments/api provision:teacher`; el comando es explícito, idempotente y no imprime credenciales. Habilita `AUTH_ENABLED=true` únicamente en el entorno local que tenga el secreto y la cuenta provisionada.
+
+### OAuth estudiantil GitHub
+
+`GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET` deben pertenecer a la misma OAuth App y estar presentes juntos. El ID no es secreto, pero ambas variables se mantienen en la configuración runtime del backend. Better Auth solicita únicamente `read:user` y `user:email`; no se solicita `repo`, `admin:repo_hook`, `workflow` ni repositorios privados. Cambiar el login de GitHub no cambia el ID de propiedad almacenado.
+
+La configuración de producción documenta `https://fragments.gavanti.org` como hostname público. `deploy/production/nginx.conf` reenvía `/api/*` al API sin reescritura, y Better Auth usa su ruta base `/api/auth`; por ello la URL de callback para registrar en GitHub es `https://fragments.gavanti.org/api/auth/callback/github`. El proxy TLS y el hostname están descritos en `deploy/production/README.md`; OAuth real no se valida hasta que la OAuth App exista y las credenciales estén configuradas.
+
+En producción, configura `BETTER_AUTH_URL=https://fragments.gavanti.org` y `PUBLIC_APP_URL=https://fragments.gavanti.org`. En desarrollo local, usa `BETTER_AUTH_URL=http://localhost:3000` y `PUBLIC_APP_URL=http://localhost:5173`; el callback local es `http://localhost:3000/api/auth/callback/github`. Better Auth confía solo en esos orígenes normalizados. La interfaz solo manda destinos de callback relativos y fijos.
 
 ### Límite local de IA
 

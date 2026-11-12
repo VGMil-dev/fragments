@@ -12,12 +12,12 @@ import type { MentorEvaluation } from "./service.js";
 
 export function createMentorRepository(database: DatabaseSync) {
   return {
-    createProposal(proposal: ProposalResponse["proposal"], ownerHash: string, now = new Date()): ProposalResponse {
+    createProposal(proposal: ProposalResponse["proposal"], ownerHash: string | null, ownerUserId?: string, now = new Date()): ProposalResponse {
       const response = ProposalResponseSchema.parse({ id: randomUUID(), version: 1, proposal, updatedAt: now.toISOString() });
       database.exec("BEGIN IMMEDIATE");
       try {
-        database.prepare("INSERT INTO proposals(id, version, proposal_json, updated_at, owner_hash) VALUES (?, ?, ?, ?, ?)")
-          .run(response.id, response.version, JSON.stringify(response.proposal), response.updatedAt, ownerHash);
+        database.prepare("INSERT INTO proposals(id, version, proposal_json, updated_at, owner_hash, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)")
+          .run(response.id, response.version, JSON.stringify(response.proposal), response.updatedAt, ownerHash, ownerUserId ?? null);
         database.prepare("INSERT INTO proposal_revisions(proposal_id, version, proposal_json, updated_at) VALUES (?, ?, ?, ?)")
           .run(response.id, response.version, JSON.stringify(response.proposal), response.updatedAt);
         database.exec("COMMIT");
@@ -47,6 +47,12 @@ export function createMentorRepository(database: DatabaseSync) {
       return row ? ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }) : null;
     },
 
+    getOwnedProposalByUser(id: string, ownerUserId: string): ProposalResponse | null {
+      const row = database.prepare("SELECT id, version, proposal_json, updated_at FROM proposals WHERE id = ? AND owner_user_id = ?")
+        .get(id, ownerUserId) as { id: string; version: number; proposal_json: string; updated_at: string } | undefined;
+      return row ? ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }) : null;
+    },
+
     updateProposal(id: string, ownerHash: string, expectedVersion: number, proposal: UpdateProposalRequest, now = new Date()):
       { status: "updated"; proposal: ProposalResponse } | { status: "conflict" | "not_found" } {
       const nextVersion = expectedVersion + 1;
@@ -72,8 +78,36 @@ export function createMentorRepository(database: DatabaseSync) {
       }
     },
 
+    updateProposalByUser(id: string, ownerUserId: string, expectedVersion: number, proposal: UpdateProposalRequest, now = new Date()):
+      { status: "updated"; proposal: ProposalResponse } | { status: "conflict" | "not_found" } {
+      const nextVersion = expectedVersion + 1;
+      const updatedAt = now.toISOString();
+      const next = ProposalResponseSchema.parse({ id, version: nextVersion, proposal: withoutExpectedVersion(proposal), updatedAt });
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const result = database.prepare(`UPDATE proposals SET version = ?, proposal_json = ?, updated_at = ?
+          WHERE id = ? AND owner_user_id = ? AND version = ?`).run(nextVersion, JSON.stringify(next.proposal), updatedAt, id, ownerUserId, expectedVersion);
+        if (Number(result.changes) !== 1) {
+          const owned = database.prepare("SELECT version FROM proposals WHERE id = ? AND owner_user_id = ?").get(id, ownerUserId);
+          database.exec("ROLLBACK");
+          return owned ? { status: "conflict" } : { status: "not_found" };
+        }
+        database.prepare("INSERT INTO proposal_revisions(proposal_id, version, proposal_json, updated_at) VALUES (?, ?, ?, ?)")
+          .run(id, nextVersion, JSON.stringify(next.proposal), updatedAt);
+        database.exec("COMMIT");
+        return { status: "updated", proposal: next };
+      } catch (error) { database.exec("ROLLBACK"); throw error; }
+    },
+
     getProposalHistory(id: string, ownerHash: string): ProposalResponse[] | null {
       if (!this.getOwnedProposal(id, ownerHash)) return null;
+      const rows = database.prepare(`SELECT proposal_id, version, proposal_json, updated_at FROM proposal_revisions
+        WHERE proposal_id = ? ORDER BY version ASC`).all(id) as Array<{ proposal_id: string; version: number; proposal_json: string; updated_at: string }>;
+      return rows.map((row) => ProposalResponseSchema.parse({ id: row.proposal_id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }));
+    },
+
+    getProposalHistoryByUser(id: string, ownerUserId: string): ProposalResponse[] | null {
+      if (!this.getOwnedProposalByUser(id, ownerUserId)) return null;
       const rows = database.prepare(`SELECT proposal_id, version, proposal_json, updated_at FROM proposal_revisions
         WHERE proposal_id = ? ORDER BY version ASC`).all(id) as Array<{ proposal_id: string; version: number; proposal_json: string; updated_at: string }>;
       return rows.map((row) => ProposalResponseSchema.parse({ id: row.proposal_id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }));
@@ -98,18 +132,46 @@ export function createMentorRepository(database: DatabaseSync) {
     },
 
     listGallery(): GalleryEntry[] {
-      const rows = database.prepare(`SELECT p.id, p.version, p.proposal_json, p.updated_at
-        FROM proposals p JOIN mentor_gallery_optins g ON g.proposal_id = p.id AND g.proposal_version = p.version
-        WHERE g.opted_in = 1 ORDER BY g.updated_at DESC`).all() as Array<{ id: string; version: number; proposal_json: string; updated_at: string }>;
+      const rows = database.prepare(`SELECT id, proposal_json FROM (
+          SELECT p.id, r.proposal_json, ap.published_at,
+            ROW_NUMBER() OVER (PARTITION BY p.id ORDER BY r.version DESC) AS position
+          FROM mentor_academic_publications ap
+          JOIN proposals p ON p.id = ap.proposal_id AND p.owner_user_id IS NOT NULL
+          JOIN proposal_revisions r ON r.proposal_id = ap.proposal_id AND r.version = ap.proposal_version
+          JOIN mentor_evaluations e ON e.id = ap.evaluation_id AND e.proposal_id = ap.proposal_id
+            AND e.proposal_version = ap.proposal_version AND e.context_version = ap.context_version
+          JOIN mentor_control_versions v ON v.version = ap.context_version
+          JOIN user u ON u.id = p.owner_user_id
+          JOIN account a ON a.userId = u.id AND a.providerId = 'github'
+          WHERE NOT EXISTS (SELECT 1 FROM mentor_academic_project_moderation m WHERE m.proposal_id = p.id)
+        ) WHERE position = 1 ORDER BY published_at DESC, id ASC LIMIT 500`).all() as Array<{ id: string; proposal_json: string }>;
       return rows.map((row) => {
-        const saved = ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at });
-        return { id: saved.id, title: saved.proposal.title, summary: saved.proposal.solution.slice(0, 500), skills: saved.proposal.skills, tags: saved.proposal.goals.slice(0, 20).map((goal) => goal.slice(0, 50)) };
+        const proposal = JSON.parse(row.proposal_json) as { title: string; solution: string; skills: string[]; tags?: string[] };
+        return { id: row.id, title: proposal.title, summary: proposal.solution.slice(0, 500), skills: proposal.skills, tags: proposal.tags ?? [] };
       });
     },
 
     saveEvaluation(id: string, proposalId: string, proposalVersion: number, evaluation: MentorEvaluation, inputDigest?: string, contextVersion?: number, evaluatedAt = new Date()): void {
-      database.prepare("INSERT OR IGNORE INTO mentor_evaluations(id, proposal_id, proposal_version, evaluation_json, evaluated_at, input_digest, context_version) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .run(id, proposalId, proposalVersion, JSON.stringify(evaluation), evaluatedAt.toISOString(), inputDigest ?? null, contextVersion ?? null);
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.prepare("INSERT OR IGNORE INTO mentor_evaluations(id, proposal_id, proposal_version, evaluation_json, evaluated_at, input_digest, context_version) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .run(id, proposalId, proposalVersion, JSON.stringify(evaluation), evaluatedAt.toISOString(), inputDigest ?? null, contextVersion ?? null);
+        if (inputDigest && contextVersion) {
+          const persisted = database.prepare(`SELECT e.id FROM mentor_evaluations e
+            JOIN proposal_revisions r ON r.proposal_id = e.proposal_id AND r.version = e.proposal_version
+            JOIN mentor_control_versions v ON v.version = e.context_version
+            JOIN proposals p ON p.id = e.proposal_id AND p.owner_user_id IS NOT NULL
+            JOIN user u ON u.id = p.owner_user_id AND u.githubLogin IS NOT NULL
+            JOIN account a ON a.userId = u.id AND a.providerId = 'github'
+            WHERE e.proposal_id = ? AND e.proposal_version = ? AND e.input_digest = ? AND e.context_version = ?
+            ORDER BY e.evaluated_at, e.rowid LIMIT 1`).get(proposalId, proposalVersion, inputDigest, contextVersion) as { id: string } | undefined;
+          if (persisted) database.prepare(`INSERT OR IGNORE INTO mentor_academic_publications
+            (proposal_id, proposal_version, evaluation_id, context_version, rubric_version, published_at)
+            VALUES (?, ?, ?, ?, ?, ?)`)
+            .run(proposalId, proposalVersion, persisted.id, contextVersion, `mentor-rubric-v${contextVersion}`, evaluatedAt.toISOString());
+        }
+        database.exec("COMMIT");
+      } catch (error) { database.exec("ROLLBACK"); throw error; }
     },
 
     getCachedEvaluation(proposalId: string, proposalVersion: number, inputDigest: string, contextVersion: number): { id: string; evaluation: MentorEvaluation; evaluatedAt: string } | null {

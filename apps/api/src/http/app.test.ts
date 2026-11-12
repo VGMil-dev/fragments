@@ -91,13 +91,26 @@ describe("HTTP API", () => {
   it("runs the Mentor proposal-to-delivery and public verification flow", async () => {
     const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
     const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
-    const server = createServer(createHttpHandler(db, { mentor })); servers.push(server);
+    const authInstance = await createMigratedFragmentsAuth(db, {
+      secret: "http-test-student-session-secret-0123456789",
+      baseURL: "http://localhost:3000",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+    });
+    const account = await authInstance.api.signUpEmail({ body: { name: "Estudiante fixture", email: "student-api@example.test", password: "fixture-password-2026" } });
+    db.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-api-fixture", account.user.id);
+    db.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
+      .run("github-fixture-link", "github-stable-fixture-id", account.user.id, Date.now(), Date.now());
+    const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "student-api@example.test", password: "fixture-password-2026" } });
+    const sessionCookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const auth = createFragmentsAuthService(authInstance);
+    const server = createServer(createHttpHandler(db, { mentor, auth })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
     const base = `http://127.0.0.1:${address.port}`;
     const proposalResponse = await fetch(`${base}/api/proposals`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+      method: "POST", headers: { "content-type": "application/json", cookie: sessionCookie }, body: JSON.stringify({
         title: "Huerto escolar interactivo",
         problem: "El curso no tiene una forma sencilla de registrar el crecimiento de sus plantas.",
         solution: "Una aplicación local permite registrar medidas y ver su evolución semanal.",
@@ -108,12 +121,11 @@ describe("HTTP API", () => {
       }),
     });
     expect(proposalResponse.status).toBe(201);
-    const ownerCookie = proposalResponse.headers.get("set-cookie")?.split(";")[0];
-    expect(ownerCookie).toMatch(/^fragments_proposal_owner=.+$/);
+    expect(proposalResponse.headers.get("set-cookie")).toBeNull();
     const proposalBody = await proposalResponse.json() as { data: { id: string; version: number; proposal: { title: string } } };
     expect(proposalBody.data.proposal.title).toBe("Huerto escolar interactivo");
 
-    const evaluationResponse = await fetch(`${base}/api/proposals/${proposalBody.data.id}/review`, { method: "POST", headers: { cookie: ownerCookie! } });
+    const evaluationResponse = await fetch(`${base}/api/proposals/${proposalBody.data.id}/review`, { method: "POST", headers: { cookie: sessionCookie } });
     expect(evaluationResponse.status).toBe(200);
     const evaluationBody = await evaluationResponse.json() as { data: { evaluationId: string; proposalVersion: number; analysis: { modelId: string }; guidance: string[] } };
     expect(evaluationBody.data.proposalVersion).toBe(1);
@@ -121,7 +133,7 @@ describe("HTTP API", () => {
     expect(evaluationBody.data.guidance.length).toBeGreaterThan(0);
 
     const submissionResponse = await fetch(`${base}/api/mentor-submissions`, {
-      method: "POST", headers: { "content-type": "application/json", cookie: ownerCookie! }, body: JSON.stringify({
+      method: "POST", headers: { "content-type": "application/json", cookie: sessionCookie }, body: JSON.stringify({
         proposalId: proposalBody.data.id,
         proposalVersion: proposalBody.data.version,
         evaluationId: evaluationBody.data.evaluationId,
@@ -131,13 +143,13 @@ describe("HTTP API", () => {
     const submissionBody = await submissionResponse.json() as { data: { id: string; verificationCode: string } };
     expect(submissionBody.data.id).toBeTruthy();
 
-    const readme = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/readme`, { headers: { cookie: ownerCookie! } });
+    const readme = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/readme`, { headers: { cookie: sessionCookie } });
     expect(readme.headers.get("content-type")).toContain("text/markdown");
     const readmeText = await readme.text();
     expect(readmeText).toContain("# Huerto escolar interactivo");
     expect(readmeText).not.toContain("puntaje");
 
-    const pdf = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/pdf`, { headers: { cookie: ownerCookie! } });
+    const pdf = await fetch(`${base}/api/mentor-submissions/${submissionBody.data.id}/pdf`, { headers: { cookie: sessionCookie } });
     expect(pdf.headers.get("content-type")).toBe("application/pdf");
     expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(100);
 

@@ -200,6 +200,7 @@ const ProposalDraftSchema = z.object({
   solution: nonEmptyText.max(3000),
   goals: z.array(nonEmptyText.max(240)).min(1).max(12),
   skills: z.array(nonEmptyText.max(80)).max(20),
+  tags: z.array(nonEmptyText.max(50)).max(20).default([]),
   scope: nonEmptyText.max(3000),
   constraints: z.array(nonEmptyText.max(500)).max(20),
 }).strict();
@@ -214,6 +215,84 @@ export const GalleryEntrySchema = z.object({
 }).strict();
 export const GalleryResponseSchema = z.array(GalleryEntrySchema).max(500);
 
+const githubLogin = z.string().regex(/^[A-Za-z0-9-]{1,39}$/);
+export const StudentMeSchema = z.object({
+  authenticated: z.literal(true),
+  id: identifier,
+  githubLogin,
+  avatarUrl: z.url().nullable(),
+  profileUrl: z.url(),
+  registeredAt: z.iso.datetime(),
+}).strict();
+export const MeResponseSchema = z.discriminatedUnion("authenticated", [
+  StudentMeSchema,
+  z.object({ authenticated: z.literal(false), githubOAuthConfigured: z.boolean() }).strict(),
+]);
+export const AcademicGalleryEntrySchema = z.object({
+  id: identifier,
+  title: nonEmptyText.max(160),
+  summary: nonEmptyText.max(500),
+  problem: nonEmptyText.max(3000),
+  solution: nonEmptyText.max(3000),
+  goals: z.array(nonEmptyText.max(240)).min(1).max(12),
+  skills: z.array(nonEmptyText.max(80)).max(20),
+  tags: z.array(nonEmptyText.max(50)).max(20),
+  scope: nonEmptyText.max(3000),
+  constraints: z.array(nonEmptyText.max(500)).max(20),
+  author: z.object({ login: githubLogin, profileUrl: z.url(), avatarUrl: z.url().nullable() }).strict(),
+  subject: nonEmptyText.max(120),
+  theme: nonEmptyText.max(160),
+  assignment: nonEmptyText.max(3000),
+  proposalVersion: z.number().int().positive(),
+  rubricVersion: z.number().int().positive(),
+  rubricTitle: nonEmptyText.max(120),
+  publishedAt: z.iso.datetime(),
+  academicStatus: z.literal("Evaluada"),
+}).strict();
+export const AcademicGalleryPageSchema = z.object({
+  items: z.array(AcademicGalleryEntrySchema).max(50),
+  nextOffset: z.number().int().min(0).nullable(),
+}).strict();
+export const AcademicGalleryDetailSchema = z.object({
+  project: AcademicGalleryEntrySchema,
+  history: z.array(AcademicGalleryEntrySchema).max(200),
+}).strict();
+export const TeacherStudentEntrySchema = z.object({
+  id: identifier,
+  githubLogin,
+  avatarUrl: z.url().nullable(),
+  profileUrl: z.url(),
+  registeredAt: z.iso.datetime(),
+  projectCount: z.number().int().min(0),
+}).strict();
+export const TeacherStudentsPageSchema = z.object({
+  items: z.array(TeacherStudentEntrySchema).max(50),
+  nextOffset: z.number().int().min(0).nullable(),
+}).strict();
+export const TeacherProjectSchema = z.object({
+  id: identifier,
+  title: nonEmptyText.max(160),
+  ownerGithubLogin: githubLogin.nullable(),
+  currentVersion: z.number().int().positive(),
+  withdrawn: z.boolean(),
+  withdrawalReason: nonEmptyText.max(1000).nullable(),
+  withdrawnAt: z.iso.datetime().nullable(),
+  history: z.array(z.object({
+    version: z.number().int().positive(),
+    updatedAt: z.iso.datetime(),
+    proposal: ProposalDraftSchema,
+    published: z.boolean(),
+    contextVersion: z.number().int().positive().nullable(),
+    subject: nonEmptyText.max(120).nullable(),
+    theme: nonEmptyText.max(160).nullable(),
+    rubricTitle: nonEmptyText.max(120).nullable(),
+  }).strict()).max(200),
+}).strict();
+export const TeacherProjectsResponseSchema = z.array(TeacherProjectSchema).max(200);
+export const HistoricalProjectsResponseSchema = z.array(z.object({ id: identifier, title: nonEmptyText.max(160), currentVersion: z.number().int().positive(), updatedAt: z.iso.datetime() }).strict()).max(200);
+export const GalleryWithdrawalRequestSchema = z.object({ reason: nonEmptyText.max(1000) }).strict();
+export const GalleryWithdrawalResponseSchema = z.object({ withdrawn: z.literal(true) }).strict();
+
 export const CreateProposalRequestSchema = ProposalDraftSchema;
 export const UpdateProposalRequestSchema = ProposalDraftSchema.extend({
   expectedVersion: z.number().int().min(1),
@@ -225,6 +304,7 @@ export const ProposalResponseSchema = z.object({
   proposal: ProposalDraftSchema,
   updatedAt: z.iso.datetime(),
 }).strict();
+export const OwnedProposalsResponseSchema = z.array(ProposalResponseSchema).max(200);
 export const ProposalEvaluationResponseSchema = z.object({
   evaluationId: identifier,
   proposalId: identifier,
@@ -324,6 +404,15 @@ export type InspectorChallengeRecordResponse = z.infer<typeof InspectorChallenge
 export type InspectorStudentChallengeResponse = z.infer<typeof InspectorStudentChallengeResponseSchema>;
 export type SubmissionSnapshot = z.infer<typeof SubmissionSnapshotSchema>;
 export type GalleryEntry = z.infer<typeof GalleryEntrySchema>;
+export type StudentMe = z.infer<typeof StudentMeSchema>;
+export type MeResponse = z.infer<typeof MeResponseSchema>;
+export type AcademicGalleryEntry = z.infer<typeof AcademicGalleryEntrySchema>;
+export type AcademicGalleryPage = z.infer<typeof AcademicGalleryPageSchema>;
+export type AcademicGalleryDetail = z.infer<typeof AcademicGalleryDetailSchema>;
+export type TeacherStudentEntry = z.infer<typeof TeacherStudentEntrySchema>;
+export type TeacherStudentsPage = z.infer<typeof TeacherStudentsPageSchema>;
+export type TeacherProject = z.infer<typeof TeacherProjectSchema>;
+export type TeacherProjectsResponse = z.infer<typeof TeacherProjectsResponseSchema>;
 export type CreateProposalRequest = z.infer<typeof CreateProposalRequestSchema>;
 export type UpdateProposalRequest = z.infer<typeof UpdateProposalRequestSchema>;
 export type GalleryOptInRequest = z.infer<typeof GalleryOptInRequestSchema>;

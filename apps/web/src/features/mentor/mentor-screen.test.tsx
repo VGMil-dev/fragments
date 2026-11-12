@@ -16,6 +16,7 @@ const proposal = {
     solution: "Anotar observaciones por fecha.",
     goals: ["Guardar una observación"],
     skills: ["HTML"],
+    tags: [],
     scope: "Una bitácora personal.",
     constraints: ["Sin cuentas de usuario"],
   },

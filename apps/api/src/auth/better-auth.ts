@@ -13,6 +13,8 @@ export interface FragmentsAuthOptions {
   allowSignUp?: boolean;
   validateSchema?: boolean;
   passwordResetEmailSender?: PasswordResetEmailSender;
+  githubClientId?: string;
+  githubClientSecret?: string;
 }
 
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
@@ -28,6 +30,11 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
       return url.origin;
     }))];
   const passwordResetEmailSender = options.passwordResetEmailSender ?? createResendPasswordResetEmailSender();
+  const githubClientId = options.githubClientId ?? process.env.GITHUB_CLIENT_ID;
+  const githubClientSecret = options.githubClientSecret ?? process.env.GITHUB_CLIENT_SECRET;
+  if (Boolean(githubClientId) !== Boolean(githubClientSecret)) {
+    throw new Error("GITHUB_CLIENT_ID y GITHUB_CLIENT_SECRET deben configurarse juntos.");
+  }
   return betterAuth({
     database,
     secret: options.secret,
@@ -61,8 +68,20 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     user: {
       additionalFields: {
         isTeacher: { type: "boolean", required: false, defaultValue: false, input: false },
+        githubLogin: { type: "string", required: false, input: false },
       },
     },
+    ...(githubClientId && githubClientSecret ? {
+      socialProviders: {
+        github: {
+          clientId: githubClientId,
+          clientSecret: githubClientSecret,
+          scope: ["read:user", "user:email"],
+          mapProfileToUser: (profile) => ({ githubLogin: profile.login }),
+        },
+      },
+    } : {}),
+    account: { accountLinking: { disableImplicitLinking: true } },
     plugins: [admin()],
   });
 }
@@ -97,6 +116,26 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
       const roles = typeof user.role === "string" ? user.role.split(",") : [];
       return user.isTeacher === true || roles.includes("admin") ? user.id : null;
     },
+    async userId(request: IncomingMessage): Promise<string | null> {
+      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+      const id = (session?.user as { id?: unknown } | undefined)?.id;
+      return typeof id === "string" ? id : null;
+    },
+    async student(request: IncomingMessage): Promise<{ id: string; githubAccountId: string; githubLogin: string | null; avatarUrl: string | null; registeredAt: string } | null> {
+      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+      const user = session?.user as { id?: unknown; role?: unknown; isTeacher?: unknown; githubLogin?: unknown; image?: unknown; createdAt?: unknown } | undefined;
+      if (!user || typeof user.id !== "string" || user.isTeacher === true || (typeof user.role === "string" && user.role.split(",").includes("admin"))) return null;
+      const account = auth.options.database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(user.id) as { accountId: string } | undefined;
+      if (!account) return null;
+      return {
+        id: user.id,
+        githubAccountId: account.accountId,
+        githubLogin: typeof user.githubLogin === "string" ? user.githubLogin : null,
+        avatarUrl: typeof user.image === "string" ? user.image : null,
+        registeredAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : typeof user.createdAt === "string" ? user.createdAt : new Date(0).toISOString(),
+      };
+    },
+    get githubOAuthConfigured(): boolean { return Boolean(auth.options.socialProviders?.github); },
   };
 }
 

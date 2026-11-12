@@ -48,6 +48,34 @@ describe("Better Auth integration", () => {
       .rejects.toThrow();
   });
 
+  it("configures GitHub as the only student OAuth provider without implicit email linking", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      publicAppURL: "http://localhost:5173",
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const login = await auth.api.signInSocial({ body: { provider: "github", callbackURL: "http://localhost:5173/student/gallery" } });
+    const authorize = new URL(login.url!);
+    const additional = auth.options.user?.additionalFields as Record<string, { input?: boolean }>;
+
+    expect(authorize.origin).toBe("https://github.com");
+    expect(authorize.pathname).toBe("/login/oauth/authorize");
+    expect(authorize.searchParams.get("scope")).toContain("read:user");
+    expect(authorize.searchParams.get("scope")).toContain("user:email");
+    expect(authorize.searchParams.get("scope")).not.toMatch(/repo|workflow|admin:repo_hook/);
+    expect(auth.options.account?.accountLinking?.disableImplicitLinking).toBe(true);
+    expect(auth.options.emailAndPassword?.disableSignUp).toBe(true);
+    expect(additional.isTeacher?.input).toBe(false);
+    expect(additional.githubLogin?.input).toBe(false);
+    expect(login.url).not.toContain("fake-github-client-secret");
+    expect(await database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 0 });
+    const untrusted = await auth.api.signInSocial({ body: { provider: "github", callbackURL: "https://untrusted.example.test/" } });
+    expect(untrusted.url).toContain("https://github.com/login/oauth/authorize");
+    expect(untrusted.url).not.toContain("untrusted.example.test");
+  });
+
   it("authorizes only teacher-marked or admin-role Better Auth sessions", async () => {
     const { database, auth, service } = await fixture();
     const teacher = await createAccount(database, auth, "teacher@example.test", true);
@@ -59,6 +87,21 @@ describe("Better Auth integration", () => {
 
     database.prepare("UPDATE user SET role = 'admin' WHERE id = ?").run(student.id);
     await expect(service.teacherId(student.request)).resolves.toBe(student.id);
+  });
+
+  it("resolves student ownership through the stable linked GitHub account id", async () => {
+    const { database, auth, service } = await fixture();
+    const signedUp = await auth.api.signUpEmail({ body: { name: "Fixture estudiante", email: "student-identity@example.test", password: "fixture-password-2026" } });
+    database.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-before", signedUp.user.id);
+    database.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
+      .run("github-account-link", "github-stable-account-123", signedUp.user.id, Date.now(), Date.now());
+    const signedIn = await auth.api.signInEmail({ returnHeaders: true, body: { email: "student-identity@example.test", password: "fixture-password-2026" } });
+    const cookie = signedIn.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const request = { headers: { cookie } } as IncomingMessage;
+
+    await expect(service.student(request)).resolves.toMatchObject({ id: signedUp.user.id, githubAccountId: "github-stable-account-123", githubLogin: "student-before" });
+    database.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-after", signedUp.user.id);
+    await expect(service.student(request)).resolves.toMatchObject({ id: signedUp.user.id, githubAccountId: "github-stable-account-123", githubLogin: "student-after" });
   });
 
   it("sends a single-use reset token, accepts it once, and revokes old sessions", async () => {

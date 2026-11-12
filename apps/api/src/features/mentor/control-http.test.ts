@@ -11,19 +11,24 @@ const servers: Server[] = [];
 const databases: DatabaseSync[] = [];
 const proposalDraft = {
   title: "Mapa de plantas", problem: "El grupo no recuerda dónde sembró cada planta.",
-  solution: "Un mapa local registra cada siembra.", goals: ["Ubicar las plantas"], skills: ["TypeScript"],
+  solution: "Un mapa local registra cada siembra.", goals: ["Ubicar las plantas"], skills: ["TypeScript"], tags: [],
   scope: "Registrar y consultar plantas en un aula.", constraints: ["Funciona sin conexión"],
 };
 
 async function start(evaluator: MentorEvaluator) {
   const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
+  database.exec("CREATE TABLE user (id TEXT PRIMARY KEY, githubLogin TEXT, image TEXT, createdAt TEXT, role TEXT DEFAULT 'user', isTeacher INTEGER DEFAULT 0); CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT, providerId TEXT, userId TEXT);");
+  database.prepare("INSERT INTO user(id, githubLogin, createdAt) VALUES ('student-fixture', 'student-fixture', '2026-11-01T00:00:00.000Z')").run();
+  database.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES ('account-fixture', 'github-stable-fixture', 'github', 'student-fixture')").run();
   const auth = {
     async teacherId(request: { headers: { cookie?: string } }) { return request.headers.cookie === "teacher_session=fake" ? "teacher-fixture" : null; },
     handle() {},
+    async userId(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] ?? null; },
+    async student(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] === "student-fixture" ? { id: "student-fixture", githubAccountId: "github-stable-fixture", githubLogin: "student-fixture", avatarUrl: null, registeredAt: "2026-11-01T00:00:00.000Z" } : null; },
   } as never;
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
   const control = createMentorControlHttp(database, auth);
-  const mentor = createMentorHttp(database, service);
+  const mentor = createMentorHttp(database, service, { auth });
   const server = createServer(async (request, response) => {
     if (await control(request, response) === "handled") return;
     if (await mentor(request, response) === "unhandled") response.writeHead(404).end();
@@ -78,13 +83,14 @@ describe("control docente de Mentor", () => {
     expect(published.status).toBe(201);
     expect((await published.json() as { data: { version: number } }).data.version).toBe(2);
 
-    const create = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(proposalDraft) });
+    const create = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "student-fixture" }, body: JSON.stringify(proposalDraft) });
+    expect(create.status).toBe(201);
     const proposal = await create.json() as { data: { id: string; version: number } };
-    const ownerCookie = create.headers.get("set-cookie")?.split(";")[0];
     const evaluationUrl = `${base}/api/proposals/${proposal.data.id}/review`;
-    const first = await fetch(evaluationUrl, { method: "POST", headers: { cookie: ownerCookie! } });
+    const student = { "x-fixture-user": "student-fixture" };
+    const first = await fetch(evaluationUrl, { method: "POST", headers: student });
     const firstBody = await first.json() as { data: { evaluationId: string; analysis: { score: number; rubricVersion: string }; mentorContextVersion?: number; criterionBreakdown?: Array<{ weight: number; points: number }> } };
-    const repeated = await fetch(evaluationUrl, { method: "POST", headers: { cookie: ownerCookie! } });
+    const repeated = await fetch(evaluationUrl, { method: "POST", headers: student });
     const repeatedBody = await repeated.json() as typeof firstBody;
     expect(first.status).toBe(200);
     expect(firstBody.data.analysis.score).toBe(50);
@@ -96,7 +102,7 @@ describe("control docente de Mentor", () => {
     const secondConfig = { ...config, assignment: "Añade una prueba de consulta." };
     expect((await fetch(`${base}/api/teacher/mentor-control/draft`, { method: "PUT", headers: teacher, body: JSON.stringify(secondConfig) })).status).toBe(200);
     expect((await fetch(`${base}/api/teacher/mentor-control/publish`, { method: "POST", headers: teacher, body: "{}" })).status).toBe(201);
-    const second = await fetch(evaluationUrl, { method: "POST", headers: { cookie: ownerCookie! } });
+    const second = await fetch(evaluationUrl, { method: "POST", headers: student });
     expect((await second.json() as { data: { analysis: { score: number }; mentorContextVersion: number } }).data).toMatchObject({ analysis: { score: 100 }, mentorContextVersion: 3 });
     expect(calls).toBe(2);
 

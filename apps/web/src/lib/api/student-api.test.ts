@@ -4,14 +4,14 @@ import { createStudentApi } from "./student-api";
 
 describe("createStudentApi", () => {
   it("loads the gallery through the shared response schema", async () => {
-    const entries = [{ id: "garden-notes", title: "Diario", summary: "Una bitácora.", skills: ["HTML"], tags: ["Jardín"] }];
+    const page = { items: [], nextOffset: null };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, data: entries }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, data: page }), { status: 200 }),
     );
     const api = createStudentApi(createApiClient({ fetcher }));
 
-    await expect(api.getGallery()).resolves.toEqual({ ok: true, data: entries });
-    expect(fetcher).toHaveBeenCalledWith("/api/gallery", expect.any(Object));
+    await expect(api.getGallery()).resolves.toEqual({ ok: true, data: page });
+    expect(fetcher).toHaveBeenCalledWith("/api/gallery?offset=0&limit=20", expect.any(Object));
   });
 
   it("recovers a persisted Mentor evaluation with a read-only request", async () => {
@@ -52,7 +52,7 @@ describe("createStudentApi", () => {
     const fetcher = vi.fn<typeof fetch>();
     const api = createStudentApi(createApiClient({ fetcher }));
 
-    const result = await api.saveProposal({ title: "", problem: "", solution: "", goals: [], skills: [], scope: "", constraints: [] });
+    const result = await api.saveProposal({ title: "", problem: "", solution: "", goals: [], skills: [], tags: [], scope: "", constraints: [] });
 
     expect(result).toEqual({
       ok: false,

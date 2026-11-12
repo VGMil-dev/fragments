@@ -2,7 +2,9 @@ import {
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
   CreateReviewSubmissionRequestSchema,
-  GalleryResponseSchema,
+  AcademicGalleryPageSchema,
+  AcademicGalleryDetailSchema,
+  MeResponseSchema,
   MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
@@ -15,7 +17,9 @@ import {
   type CreateMentorSubmissionRequest,
   type CreateProposalRequest,
   type CreateReviewSubmissionRequest,
-  type GalleryEntry,
+  type AcademicGalleryPage,
+  type AcademicGalleryDetail,
+  type MeResponse,
   type MentorSubmissionResponse,
   type MentorPublishedConfig,
   type ProposalEvaluationResponse,
@@ -55,11 +59,20 @@ function encodeId(id: string): string | null {
 
 export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiClient = client) {
   return {
+    getMe(signal?: AbortSignal): Promise<ApiResult<MeResponse>> {
+      return client.request("/api/me", MeResponseSchema, withSignal(signal));
+    },
     getMentorContext(signal?: AbortSignal): Promise<ApiResult<MentorPublishedConfig>> {
       return client.request("/api/mentor/context", MentorPublishedConfigSchema, withSignal(signal));
     },
-    getGallery(signal?: AbortSignal): Promise<ApiResult<GalleryEntry[]>> {
-      return client.request("/api/gallery", GalleryResponseSchema, withSignal(signal));
+    getGallery(offset = 0, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryPage>> {
+      return client.request(`/api/gallery?offset=${Math.max(0, Math.trunc(offset))}&limit=20`, AcademicGalleryPageSchema, withSignal(signal));
+    },
+
+    getGalleryDetail(projectId: string, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryDetail>> {
+      const id = encodeId(projectId);
+      if (!id) return Promise.resolve(invalid<AcademicGalleryDetail>());
+      return client.request(`/api/gallery/${id}`, AcademicGalleryDetailSchema, withSignal(signal));
     },
 
     saveProposal(input: CreateProposalRequest, signal?: AbortSignal): Promise<ApiResult<ProposalResponse>> {

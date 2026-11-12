@@ -1,6 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
-import { useEffect, useState } from "react";
-import type { GalleryEntry, MentorPublishedConfig } from "@fragments/contracts";
+import { useCallback, useEffect, useState } from "react";
+import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, StudentMe } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -12,6 +12,8 @@ import { createInspectorApi } from "./lib/api/inspector-api";
 import { createTrainerApi } from "./lib/api/trainer-api";
 import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
+import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
+import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 
@@ -20,29 +22,64 @@ const inspectorApi = createInspectorApi(createApiClient());
 const trainerApi = createTrainerApi();
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
-  const [gallery, setGallery] = useState<AsyncState<GalleryEntry[]>>({ status: "loading" });
+  const [gallery, setGallery] = useState<AsyncState<AcademicGalleryEntry[]>>({ status: "loading" });
   const [reload, setReload] = useState(0);
-  const [inspiration, setInspiration] = useState<GalleryEntry | undefined>();
+  const [inspiration, setInspiration] = useState<AcademicGalleryEntry | undefined>();
   const [mentorContext, setMentorContext] = useState<MentorPublishedConfig | undefined>();
+  const [student, setStudent] = useState<StudentMe | null>(null);
+  const [galleryOffset, setGalleryOffset] = useState(0);
+  const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<AcademicGalleryDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    if (path !== "/student/gallery") return;
+    if (path !== "/student/gallery" && path !== "/student/mentor") return;
     let active = true;
-    void studentApi.getGallery().then((result) => {
+    void studentApi.getMe().then((result) => {
       if (!active) return;
-      setGallery(result.ok
-        ? { status: "success", data: result.data }
-        : { status: "error", retry: () => setReload((value) => value + 1) });
+      if (!result.ok || !result.data.authenticated) { navigate("/student/login"); return; }
+      setStudent(result.data);
     });
     return () => { active = false; };
-  }, [path, reload]);
+  }, [path, navigate]);
 
   useEffect(() => {
-    if (path !== "/student/mentor") return;
+    if (path !== "/student/gallery" || !student) return;
+    let active = true;
+    void studentApi.getGallery(galleryOffset).then((result) => {
+      if (!active) return;
+      if (!result.ok) {
+        if (result.error.code === "AUTH_REQUIRED") { navigate("/student/login"); return; }
+        setGallery({ status: "error", retry: () => { setGalleryOffset(0); setReload((value) => value + 1); } });
+        return;
+      }
+      setGallery((current) => ({ status: "success", data: galleryOffset === 0 || current.status !== "success" ? result.data.items : [...current.data, ...result.data.items] }));
+      setGalleryNextOffset(result.data.nextOffset);
+    });
+    return () => { active = false; };
+  }, [path, reload, galleryOffset, student, navigate]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    let active = true;
+    setDetailLoading(true);
+    void studentApi.getGalleryDetail(selectedId).then((result) => {
+      if (!active) return;
+      if (result.ok) setSelectedDetail(result.data);
+      setDetailLoading(false);
+    });
+    return () => { active = false; };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (path !== "/student/mentor" || !student) return;
     let active = true;
     void studentApi.getMentorContext().then((result) => { if (active && result.ok) setMentorContext(result.data); });
     return () => { active = false; };
   }, [path]);
+
+  if ((path === "/student/gallery" || path === "/student/mentor") && !student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
   return (
     <div className="student-workspace">
@@ -58,19 +95,26 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
           <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
         </nav>
-        <a className="student-workspace__home" href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>Inicio</a>
+        <div className="student-workspace__account">{student ? <><a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a><button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
       </header>
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
         {path === "/student/gallery" ? (
           <GalleryScreen
             state={gallery}
-            onChoose={(entry) => { setInspiration(entry); navigate("/student/mentor"); }}
+            selected={selectedDetail}
+            detailLoading={detailLoading}
+            onCloseDetail={() => { setSelectedId(null); setSelectedDetail(null); }}
+            onChoose={(entry) => { setSelectedId(entry.id); setSelectedDetail({ project: entry, history: [entry] }); }}
+            onUseProject={(entry) => { setInspiration(entry); setSelectedId(null); setSelectedDetail(null); navigate("/student/mentor"); }}
+            hasMore={galleryNextOffset !== null}
+            onLoadMore={() => { if (galleryNextOffset !== null) setGalleryOffset(galleryNextOffset); }}
             onCreateProposal={() => { setInspiration(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
         {path === "/student/mentor" ? (
           <>
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
+            <p className="student-workspace__sharing" role="note"><strong>Antes de enviar:</strong> al guardar y evaluar tu propuesta, la revisión evaluada con su materia, consigna y rúbrica se compartirá automáticamente con estudiantes que iniciaron sesión y docentes. La galería no muestra notas ni comentarios privados.</p>
             <MentorScreen
               mentorContext={mentorContext}
               onSave={(draft) => studentApi.saveProposal(draft)}
@@ -115,11 +159,13 @@ export function App() {
     }
   }, [path]);
 
-  function navigate(nextPath: string) {
+  const navigate = useCallback((nextPath: string) => {
     window.history.pushState({}, "", nextPath);
     setPath(nextPath);
-  }
+  }, []);
 
+  if (path === "/student/login") return <StudentLoginScreen navigate={navigate} />;
+  if (path === "/teacher/students") return <TeacherStudentsWorkspace navigate={navigate} />;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/inspector") {
     return <div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div>;
@@ -192,6 +238,7 @@ export function App() {
         <p>Imagina. Construye. Demuestra.</p>
         <a href="/teacher/inspector" onClick={(event) => { event.preventDefault(); navigate("/teacher/inspector"); }}>Área docente</a>
         <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>Control de Mentor</a>
+        <a href="/teacher/students" onClick={(event) => { event.preventDefault(); navigate("/teacher/students"); }}>Estudiantes y proyectos</a>
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
       </footer>
     </>
