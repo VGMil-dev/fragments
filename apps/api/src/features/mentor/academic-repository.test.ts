@@ -24,7 +24,7 @@ const ownerHash = (token: string) => createHash("sha256").update(token).digest("
 
 describe("F15 academic publication and historical ownership", () => {
   it("publishes only the evaluated revision and preserves historic context", () => {
-    const { mentor, academic } = fixture();
+    const { db, mentor, academic } = fixture();
     const created = mentor.createProposal(draft, null, "student-1", new Date("2026-11-01T01:00:00.000Z"));
     expect(academic.listGallery().items).toEqual([]);
 
@@ -33,12 +33,30 @@ describe("F15 academic publication and historical ownership", () => {
     expect(page.nextOffset).toBeNull();
     expect(page.items).toHaveLength(1);
     expect(page.items[0]).toMatchObject({ id: created.id, proposalVersion: 1, rubricVersion: 1, subject: "Proyectos estudiantiles", rubricTitle: "Propuesta inicial", author: { login: "student-fixture" } });
+    expect(db.prepare(`SELECT ap.proposal_version, ap.evaluation_id, e.proposal_version AS evaluation_version,
+        ap.context_version, e.context_version AS evaluation_context_version, ap.rubric_version, v.version AS rubric_version
+      FROM mentor_academic_publications ap
+      JOIN mentor_evaluations e ON e.id = ap.evaluation_id
+      JOIN mentor_control_versions v ON v.version = ap.context_version
+      WHERE ap.proposal_id = ?`).all(created.id)).toEqual([{
+      proposal_version: 1, evaluation_id: "evaluation-1", evaluation_version: 1,
+      context_version: 1, evaluation_context_version: 1, rubric_version: "mentor-rubric-v1", rubric_version: 1,
+    }]);
 
     mentor.updateProposalByUser(created.id, "student-1", 1, { ...draft, title: "Bitácora nueva", expectedVersion: 1 });
     expect(academic.getGalleryDetail(created.id)?.project.proposalVersion).toBe(1);
     mentor.saveEvaluation("evaluation-2", created.id, 2, {} as never, "b".repeat(64), 1, new Date("2026-11-03T01:00:00.000Z"));
     expect(academic.listGallery().items).toHaveLength(1);
     expect(academic.getGalleryDetail(created.id)?.history.map((revision) => revision.proposalVersion)).toEqual([2, 1]);
+    expect(db.prepare(`SELECT ap.proposal_version, ap.evaluation_id, e.proposal_version AS evaluation_version,
+        ap.context_version, e.context_version AS evaluation_context_version, ap.rubric_version, v.version AS rubric_version
+      FROM mentor_academic_publications ap
+      JOIN mentor_evaluations e ON e.id = ap.evaluation_id
+      JOIN mentor_control_versions v ON v.version = ap.context_version
+      WHERE ap.proposal_id = ? ORDER BY ap.proposal_version`).all(created.id)).toEqual([
+      { proposal_version: 1, evaluation_id: "evaluation-1", evaluation_version: 1, context_version: 1, evaluation_context_version: 1, rubric_version: "mentor-rubric-v1", rubric_version: 1 },
+      { proposal_version: 2, evaluation_id: "evaluation-2", evaluation_version: 2, context_version: 1, evaluation_context_version: 1, rubric_version: "mentor-rubric-v1", rubric_version: 1 },
+    ]);
   });
 
   it("leaves old cookie-owned proposals unclaimed and makes claim one-time", () => {

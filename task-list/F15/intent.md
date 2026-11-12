@@ -8,10 +8,17 @@ Mentor hoy crea propuestas asociadas únicamente a una cookie anónima y la gale
 
 Ampliar Better Auth con GitHub para estudiantes y mantener el acceso actual de docentes. Vincular propuestas nuevas con el usuario autenticado en el servidor; publicar automáticamente versiones evaluadas con contexto inmutable; exponer una galería para estudiantes autenticados y un panel docente protegido. Conservar los proyectos anónimos históricos y permitir reclamarlos solo con su cookie original y una sesión GitHub.
 
+## Alcance de validación final
+
+- Verificar credenciales OAuth únicamente con un canal privado ya configurado o proporcionado fuera de logs; no escribir secretos en el repositorio, CI ni evidencia.
+- Inspeccionar la configuración persistente del VPS sin reiniciar, recrear o desplegar servicios. La activación de credenciales o prueba OAuth real queda pendiente si no hay una vía segura de instalación.
+- Recorrer la superficie docente con Ego Lite en escritorio y móvil usando cuentas y datos sintéticos, y validar migraciones sobre SQLite temporal.
+- Revisar compatibilidad con F13/F14 sin merge, push, tag ni despliegue.
+
 ## Fuera de alcance
 
 - Cambios a F14, tags, workflows, despliegue o infraestructura.
-- OAuth real, creación de una GitHub OAuth App o uso de credenciales externas.
+- Cambios de producción, reinicios, recreación de contenedores, despliegue o pruebas con datos reales.
 - Recalcular evaluaciones, exponer notas privadas, habilitar acceso a repositorios o cambiar Review, Trainer e Inspector.
 - Asociar proyectos anónimos por correo, título, username o semejanza textual.
 

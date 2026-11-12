@@ -76,6 +76,21 @@ describe("Better Auth integration", () => {
     expect(untrusted.url).not.toContain("untrusted.example.test");
   });
 
+  it("builds the production GitHub callback from the configured public origin", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      baseURL: "https://fragments.gavanti.org",
+      publicAppURL: "https://fragments.gavanti.org",
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const login = await auth.api.signInSocial({ body: { provider: "github", callbackURL: "/student/gallery" } });
+    const authorize = new URL(login.url!);
+
+    expect(authorize.searchParams.get("redirect_uri")).toBe("https://fragments.gavanti.org/api/auth/callback/github");
+  });
+
   it("authorizes only teacher-marked or admin-role Better Auth sessions", async () => {
     const { database, auth, service } = await fixture();
     const teacher = await createAccount(database, auth, "teacher@example.test", true);

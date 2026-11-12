@@ -19,10 +19,14 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F11 | PLANNER | F10 | Control docente Mentor: editar y publicar una configuración temática/rúbrica; evaluación estructurada con puntaje de servidor, deduplicación y consulta histórica versionada | [x] |
 | F12 | PLANNER | F10.1,F11 | Integración local v0.3.0: migraciones unificadas, recorridos Mentor→Review→Trainer→Inspector, QA funcional y evidencia privada ≤20 archivos | [x] |
 | INC-MENTOR-503 | PLANNER | v0.3.0 | Desbloquear Mentor solo con presupuesto Vercel activo y aplicable; reconciliar holdback y registrar consumo | [x] — presupuesto Fragments USD 5/No Refresh verificado; backup íntegro; desplegado `50e2ace`; evaluación real liquidada USD 0.000112 y recuperada por GET sin duplicación; evidencia en `task-list/INC-MENTOR-503/evidencie.md` |
-| F15 | PLANNER | F14 (rama independiente desde `origin/main`) | GitHub OAuth estudiantil, propiedad académica de propuestas, galería automática versionada y panel docente protegido | [x] — implementación local `c43aacb`; activación/validación OAuth real pendiente de una GitHub OAuth App y credenciales |
+| F15 | PLANNER | F14 (rama independiente desde `origin/main`) | GitHub OAuth estudiantil, propiedad académica de propuestas, galería automática versionada y panel docente protegido | [x] — implementación local y QA sintético verificados; OAuth real/configuración persistente bloqueados por falta de canal seguro de credenciales; no lista para producción |
 
 ## Estado de cierre de integración — 2026-11-05
 
 El commit Planner `ab3aa60` integra Better Auth, adaptadores corregidos y configuración local. F04–F06 quedan cerradas con pruebas Gateway, recibos, Promptfoo, sesión docente y defensa persistida. F07 se completó el 2026-11-05: Ego Lite verificó 390×844 y 1440×900; regresión sin caché, Promptfoo local y persistencia tras reiniciar API quedaron documentados en `task-list/F07/evidencie.md`. Un fixture de prueba Better Auth se aisló para eliminar un warning espurio; el registro público permanece bloqueado. No se desplegó. Commits F07: `c630d6f` (prueba Better Auth), `0d2c6d9` (cierre documental y capturas).
 
 Dependencias F03/F05 son de integración, no bloquean trabajo paralelo con fake drivers y contratos congelados. Cada worker debe producir código compilable de su zona o informe de bloqueo claro. Cada tarea tiene `intent.md`, `spec.md`, `evidencie.md`.
+
+## Validación F15 — 2026-11-12
+
+API 109/109, web 57/57, contracts 19/19; typecheck/build y lint de contracts pasan. QA docente Ego Lite en escritorio y móvil y migración SQLite temporal registrados en `task-list/F15/evidencie.md`. El callback generado por fake provider coincide con `https://fragments.gavanti.org/api/auth/callback/github`; eso no verifica OAuth externo. El VPS mantiene `.env` en modo `0600`, pero aún carece de `GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET`; OAuth real sigue bloqueado y F15 no se declara lista para producción. No hubo cambios a producción.
