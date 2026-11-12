@@ -1,5 +1,14 @@
 # Especificación — INC-MENTOR-503
 
+## Recuperación del presupuesto
+
+- Consultar en modo solo lectura el ledger y el historial privado del release.
+- Clasificar cada reserva por estado, propósito, antigüedad y vínculo a despachos reales; no considerar huérfana una reserva de protección deliberada solo porque no tenga llamada asociada.
+- Calcular capacidad como límite - costes `settled` - reservas `reserved`/`uncertain`; una reserva `uncertain` mantiene el bloqueo global.
+- Solo liberar reserva demostrablemente pre-dispatch mediante `releaseBeforeDispatch`; nunca borrar filas, cambiar importes a mano ni liberar automáticamente.
+- Probar en SQLite efímera que una reconciliación de fixture huérfana conserva cargos históricos y es idempotente.
+- No llamar AI Gateway y no escribir en SQLite productiva durante este diagnóstico.
+
 - Entrada: evaluación Mentor existente y fallos del adaptador/ledger.
 - Diagnóstico interno: evento JSON con etapa, tipo de error, duración, HTTP resultante y status/código/Retry-After del proveedor cuando estén disponibles. Excluye prompt, propuesta, identidad, mensajes libres del proveedor y secretos.
 - Reserva insuficiente: API devuelve `AI_BUDGET_UNAVAILABLE`; no se invoca el adaptador del proveedor; la UI presenta el motivo seguro y no hace recuperación de una evaluación inexistente.

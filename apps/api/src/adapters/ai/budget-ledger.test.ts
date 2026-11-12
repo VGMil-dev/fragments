@@ -29,6 +29,21 @@ describe("SqliteAiBudgetLedger", () => {
     expect(budget.summary().availableMicroUsd).toBe(1_000_000);
   });
 
+  it("reconciles a known orphaned pre-dispatch cap without changing settled history", () => {
+    const budget = ledger(1_000_000);
+    const historicalId = budget.reserve({ requestKind: "mentor", estimateMicroUsd: 870, id: "mentor-history" });
+    budget.settle(historicalId, 0.000127, 10);
+    const orphanId = budget.reserve({ requestKind: "release_cap", estimateMicroUsd: 970_249, id: "orphan-release-cap", now: 20 });
+
+    expect(budget.releaseBeforeDispatch(orphanId, 30)).toBe(true);
+    expect(budget.releaseBeforeDispatch(orphanId, 40)).toBe(false);
+    expect(budget.summary()).toMatchObject({ settledMicroUsd: 127, reservedMicroUsd: 0, availableMicroUsd: 999_873, blocked: false });
+    expect(databases.at(-1)!.prepare("SELECT id, request_kind, reserved_microusd, actual_microusd, status, updated_at FROM ai_budget_reservations ORDER BY id").all()).toEqual([
+      { id: "mentor-history", request_kind: "mentor", reserved_microusd: 870, actual_microusd: 127, status: "settled", updated_at: 10 },
+      { id: "orphan-release-cap", request_kind: "release_cap", reserved_microusd: 970_249, actual_microusd: null, status: "released", updated_at: 30 },
+    ]);
+  });
+
   it("accounts provider cost and blocks future calls when the receipt is absent or overruns its reservation", async () => {
     const budget = ledger(1_000_000);
     const rates = { inputUsdPerMillion: 100, outputUsdPerMillion: 100 };
