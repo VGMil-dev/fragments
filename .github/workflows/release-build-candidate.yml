@@ -1,0 +1,78 @@
+name: Build release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Annotated release tag to build, for example v0.4.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fragments-release-build
+  cancel-in-progress: false
+
+jobs:
+  build-web:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted workflow branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify release tag and source commit
+        id: release
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable vX.Y.Z tag." >&2
+            exit 1
+          fi
+          tag_ref="refs/tags/$RELEASE_TAG"
+          if [[ "$(git cat-file -t "$tag_ref")" != "tag" ]]; then
+            echo "Release tag must be annotated." >&2
+            exit 1
+          fi
+          release_sha="$(git rev-parse "$tag_ref^{commit}")"
+          git merge-base --is-ancestor "$release_sha" origin/main
+          echo "sha=$release_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out exact tagged commit
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: git checkout --detach "$RELEASE_SHA"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the exact release source
+        env:
+          FRAGMENTS_RELEASE_TAG: ${{ inputs.tag }}
+          FRAGMENTS_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: pnpm build
+
+      - name: Preserve release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fragments-web-${{ inputs.tag }}-${{ steps.release.outputs.sha }}
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 30
