@@ -6,6 +6,8 @@ deploy/production/.env.bootstrap
 node_modules
 **/node_modules
 **/dist
+!apps/web/dist
+!apps/web/dist/**
 .turbo
 **/.turbo
 coverage

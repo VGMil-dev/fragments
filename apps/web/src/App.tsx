@@ -1,4 +1,5 @@
 import { BrandMark } from "./components/brand/BrandMark";
+import { BuildVersion } from "./components/brand/BuildVersion";
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, StudentMe } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
@@ -138,6 +139,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         ) : null}
         {path === "/student/trainer" ? <TrainerScreen api={trainerApi} /> : null}
       </div>
+      <footer className="student-workspace__footer"><BuildVersion /></footer>
     </div>
   );
 }
@@ -164,14 +166,14 @@ export function App() {
     setPath(nextPath);
   }, []);
 
-  if (path === "/student/login") return <StudentLoginScreen navigate={navigate} />;
-  if (path === "/teacher/students") return <TeacherStudentsWorkspace navigate={navigate} />;
+  if (path === "/student/login") return <><StudentLoginScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/teacher/students") return <><TeacherStudentsWorkspace navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/inspector") {
-    return <div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div>;
+    return <><div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
   }
-  if (path === "/teacher/mentor-control") return <div id="route-content" tabIndex={-1}><MentorControlWorkspace navigate={navigate} /></div>;
-  if (path === "/teacher/reset-password") return <div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div>;
+  if (path === "/teacher/mentor-control") return <><div id="route-content" tabIndex={-1}><MentorControlWorkspace navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
 
   return (
     <>
@@ -240,6 +242,7 @@ export function App() {
         <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>Control de Mentor</a>
         <a href="/teacher/students" onClick={(event) => { event.preventDefault(); navigate("/teacher/students"); }}>Estudiantes y proyectos</a>
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
+        <BuildVersion />
       </footer>
     </>
   );
