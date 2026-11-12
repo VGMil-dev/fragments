@@ -2,6 +2,8 @@
 
 ## Recuperación del presupuesto
 
+- Gate obligatorio: confirmar presupuesto activo para la API key o equipo que autentica AI Gateway; un presupuesto de proyecto no se considera aplicable a una API key sin evidencia.
+- Si falta presupuesto externo verificable, conservar el bloqueo monetario local y no liberar `release_cap`, desplegar gasto sin protección ni ejecutar llamada facturable.
 - Consultar en modo solo lectura el ledger y el historial privado del release.
 - Clasificar cada reserva por estado, propósito, antigüedad y vínculo a despachos reales; no considerar huérfana una reserva de protección deliberada solo porque no tenga llamada asociada.
 - Calcular capacidad como límite - costes `settled` - reservas `reserved`/`uncertain`; una reserva `uncertain` mantiene el bloqueo global.

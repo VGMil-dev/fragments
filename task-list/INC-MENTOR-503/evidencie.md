@@ -14,6 +14,13 @@ Prueba local añadida: `pnpm --filter @fragments/api exec vitest run src/adapter
 
 Acción pendiente del propietario: decidir si mantiene este límite efectivo o autoriza un cambio de capacidad. Para una reserva Mentor máxima basta +USD 0.000029 de capacidad global; una liberación completa del holdback expondría USD 0.970249. Ninguna de esas opciones se ejecutó ni se desplegó.
 
+## Presupuesto externo Vercel — 2026-11-12
+Verificado en Ego Lite: team `vgmil-dev's projects` (plan Hobby) > AI Gateway > Budgets & Spend, dimensión API Keys. Vercel muestra “No team budget”; la fila de API key `Fragments` indica `Budget: Unlimited`, gasto MTD `$0.03`, y el Default de API Keys está `Not Set`. El gasto local confirmado de producción USD 0.028910 coincide con los $0.03 redondeados atribuidos a la clave `Fragments`; no se inspeccionó ningún valor secreto. Esto confirma que no hay un control monetario externo activo aplicable a la autenticación API-key. El presupuesto de proyecto no se asumió aplicable.
+
+Gate no superado: se mantiene `AI_BUDGET_UNAVAILABLE`, no se libera `releasef12cap20261111`, no se modifica SQLite y no se despliega una versión que quite el bloqueo. Falta configurar un presupuesto no ilimitado y activo directamente para la key `Fragments` (preferido) o demostrar que un presupuesto de equipo aplica a esa autenticación. El monto y periodo deben ser decididos por el propietario. No hubo llamadas AI Gateway; gasto adicional USD 0. No se creó backup de intervención porque la etapa de configuración de presupuesto externo aún no se completó.
+
+Evidencia privada del panel: `task-list/INC-MENTOR-503/evidence/vercel-budget.txt`; Ego Lite utilizó 20/20 archivos privados, todos ignorados por `.git/info/exclude`. No quedaron cambios de UI/source ni se desplegó.
+
 ## Causa raíz demostrada
 En la revisión productiva de Fragments v0.3.0, 50 POST de evaluación finalizaron HTTP 503 y generaron 151 intentos de recuperación GET que respondieron 404. Las propuestas existían y validaban; ninguna excedía 24 KiB. No se persistieron evaluaciones nuevas para esa ráfaga. El ledger presentaba una reserva `release_cap`; el máximo de reserva Mentor no cabía con ella. El flujo del adaptador reserva antes de ejecutar `generateText`, y el rechazo de reserva ocurre antes del despacho. Por eso estos POST no llegaron a AI Gateway y no hay status 429/503 ni `Retry-After` del proveedor para ellos. No se observó evidencia de rate limiting, cuotas del Gateway, alta concurrencia o validación de entrada como causa.
 

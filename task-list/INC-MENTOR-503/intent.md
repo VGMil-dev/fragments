@@ -4,10 +4,10 @@
 Las solicitudes POST de evaluación Mentor en producción devolvían 503 y la interfaz las seguía con una recuperación 404, ocultando la causa interna. Se requiere distinguir de forma segura una falla del Gateway de una reserva local de presupuesto insuficiente.
 
 ## Objetivo
-Demostrar la etapa causante con evidencia existente, distinguir un holdback de protección de una reserva huérfana y restaurar margen solo con reconciliación contable segura y autorización explícita.
+Migrar el control monetario a AI Gateway solo después de comprobar un presupuesto activo aplicable a la credencial real; conservar el ledger local como registro de consumo y restaurar margen con reconciliación contable segura.
 
 ## No objetivos
-No liberar el holdback activo ni cambiar presupuesto, tarifas, modelo, proveedor, rúbrica, criterios o cálculo académico sin autorización explícita. No reintentar solicitudes automáticamente sin evidencia de rate limiting seguro. No restaurar datos ni modificar reservas productivas.
+No habilitar gasto si el presupuesto externo no está verificado. No liberar el holdback activo ni cambiar límites, tarifas, modelo, proveedor, rúbrica, criterios o cálculo académico sin las precondiciones/autorización correspondientes. No reintentar automáticamente errores de presupuesto. No restaurar datos ni modificar reservas productivas antes de backup consistente.
 
 ## Owner
 Planner — incidente autorizado por el usuario.
