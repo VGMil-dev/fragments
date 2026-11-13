@@ -37,6 +37,9 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
           if (result.data.reason === "github_account_not_linked") {
             setMessage("Esta sesión de Fragments no tiene GitHub vinculado. Usa la cuenta GitHub personal correcta. No unimos cuentas solo por coincidencia de correo.");
           }
+          if (result.data.reason === "invalid_github_identity") {
+            setMessage("No pudimos validar la identidad estable de GitHub. Intenta de nuevo; si persiste, solicita ayuda.");
+          }
         }
       }
       setLoading(false);

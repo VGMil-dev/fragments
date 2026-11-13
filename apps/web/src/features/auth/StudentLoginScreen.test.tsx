@@ -54,4 +54,17 @@ describe("StudentLoginScreen", () => {
 
     expect(navigate).toHaveBeenCalledExactlyOnceWith("/teacher/mentor-control");
   });
+
+  it("explains an invalid GitHub identity without suggesting an institutional email", async () => {
+    getMe.mockResolvedValueOnce({ ok: true, data: { authenticated: false, githubOAuthConfigured: true, reason: "invalid_github_identity" } });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const navigate = vi.fn();
+    await act(async () => root?.render(<StudentLoginScreen navigate={navigate} />));
+
+    expect(container.textContent).toContain("No pudimos validar la identidad estable de GitHub");
+    expect(container.textContent).not.toContain("institucional");
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });
