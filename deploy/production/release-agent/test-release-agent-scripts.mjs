@@ -81,3 +81,30 @@ test("release workflow has only a tag-push trigger and no alternate activation p
   assert.match(source, /--deny-self-hosted-runners/);
   assert.match(source, /fragments-release-attestation-\$\{\{ github\.run_id \}\}/);
 });
+
+test("release workflow pins each GitHub Action to a commit from its own official repository", async () => {
+  const source = await readFile(releaseWorkflow, "utf8");
+  const expectedPins = new Map([
+    ["actions/checkout", "11bd71901bbe5b1630ceea73d27597364c9af683"],
+    ["pnpm/action-setup", "b906affcce14559ad1aafd4ab0e942779e9f58b1"],
+    ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
+    ["actions/upload-artifact", "ea165f8d65b6e75b540449e92b4886f43607fa02"],
+    ["actions/download-artifact", "d3f86a106a0bac45b974a628896c90dbdf5c8093"],
+    ["actions/attest", "1e69f48acb82d1966a394da916b4c1698aa569d6"],
+  ]);
+  const references = [...source.matchAll(/^\s*uses:\s*([^\s#]+)(?:\s+#.*)?$/gm)].map((match) => match[1]);
+  assert.ok(references.length > 0, "release workflow must use pinned actions");
+
+  for (const reference of references) {
+    const separator = reference.lastIndexOf("@");
+    assert.notEqual(separator, -1, `action must be pinned: ${reference}`);
+    const repository = reference.slice(0, separator);
+    const sha = reference.slice(separator + 1);
+    assert.match(sha, /^[0-9a-f]{40}$/, `action must use a full commit SHA: ${reference}`);
+    assert.equal(expectedPins.get(repository), sha, `pin must belong to ${repository}'s approved official commit`);
+  }
+
+  assert.ok(references.includes("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"));
+  assert.ok(references.includes("actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"));
+  assert.ok(!references.includes("actions/upload-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"));
+});
