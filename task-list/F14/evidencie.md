@@ -66,16 +66,28 @@ En copia limpia NTFS `C:\Users\vgmil\AppData\Local\Temp\fragments-f14-verify-202
 
 ## Procedimiento para el próximo release
 
-Desde un checkout actualizado de `main`, el mantenedor verifica el commit a publicar y crea la tag anotada. El job `publish` sigue esperando que `VGMil-dev` la apruebe manualmente en `fragments-production`; la independencia es menor porque la misma identidad puede iniciar y aprobar. El bypass administrativo permanece desactivado.
+La tag `v0.4.0` es un intento fallido e inmutable; no volver a crearla ni moverla. La candidata siguiente es `v0.4.1`, y **no debe publicarse hasta una autorización específica del propietario**. Desde un checkout actualizado de `main`, el mantenedor verifica el commit a publicar y crea la tag anotada. El job `publish` sigue esperando que `VGMil-dev` la apruebe manualmente en `fragments-production`; la independencia es menor porque la misma identidad puede iniciar y aprobar. El bypass administrativo permanece desactivado.
 
 ```powershell
 git switch main
 git pull --ff-only origin main
-git tag -a v0.4.0 -m "Fragments v0.4.0"
-git push origin refs/tags/v0.4.0
+git tag -a v0.4.1 -m "Fragments v0.4.1"
+git push origin refs/tags/v0.4.1
 ```
 
 El workflow valida semver, tag anotada, SHA exacto y pertenencia a `main`; el job de publicación espera la aprobación manual de `VGMil-dev` en `fragments-production`. Tras publicar el release, el agente pull verifica workflow/ejecución/atestación, digest y labels antes de preparar backup e instalar únicamente `api` y `web`. El ledger rechaza repetidos. Para detener el proceso, retirar la solicitud antes de aplicar o usar el rollback documentado; este revierte imágenes de código y no restaura automáticamente SQLite. La primera publicación real debe comprobarse con el run de GitHub y el ledger de la VPS.
+
+## Intento v0.4.0 y hotfix de metadata Turbo — 2026-11-13
+
+- Tag anotada `v0.4.0`: objeto `4b175b80a0b3159ff922bad491f8ef36efe4d0ee`, destino exacto `e73d25fe3e07e4125bc1f76cd45136e9c479cd00`. No se ha movido ni recreado.
+- GitHub Actions run `43335099608`: verificación de tag/SHA y `Test, typecheck, lint, and build exact release source` pasaron. `Verify build bundle metadata` falló con `El bundle no contiene la versión y el SHA exactos verificados.` La atestación y `publish-approved-release` quedaron omitidos; no hubo aprobación ni despliegue.
+- Causa: Turbo usa strict mode por defecto y filtraba las dos variables no declaradas. El fix agrega `FRAGMENTS_RELEASE_TAG` y `FRAGMENTS_RELEASE_SHA` a `tasks.build.env`, lo que también las incluye en el hash de caché. El verificador mantiene la comparación exacta de tag/SHA y ahora admite la serialización literal con backticks emitida por esbuild, además de comillas simples/dobles.
+- Regresión nueva `deploy/production/release-agent/test-turbo-release-metadata.mjs`, integrada en el check obligatorio `verify`: clona una copia aislada, crea un commit, una ref `origin/main` y una tag anotada SemVer solo locales; ejecuta build `dev` sin variables y build de release mediante Turbo con variables, `--force`, y verifica el bundle con el verificador de producción. Limpia la copia al finalizar.
+- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs` — 1/1; metadata de prueba `v99.98.97`, SHA `9de68d2761ff1b918e4280be75cdcad43f8e24e3`, 2 bundles JavaScript. El build sin variables conserva `dev`.
+- `node --test deploy/production/release-agent/test-release-agent-scripts.mjs` — 4/4. `node --check` de ambos scripts y `git diff --check` — salida 0.
+- En copia NTFS limpia: `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas exitosas, 0 en caché; contracts 19/19, API 109/109 y web 67/67. Typecheck, lint y builds exitosos.
+- Commit de hotfix en rama `codex/f14-turbo-release-env`: `9de68d2761ff1b918e4280be75cdcad43f8e24e3`. PR y check remoto pendientes al registrar esta evidencia.
+- Producción no se modificó para este hotfix: API y web siguen healthy con `fragments-api:50e2ace-arm64` y `fragments-web:50e2ace-arm64`; el `.env` productivo mantiene las credenciales OAuth privadas instaladas antes. SQLite, Pits y PostgreSQL permanecen intactos. No se creó la tag `v0.4.1`.
 
 ## Reducción de independencia autorizada
 
