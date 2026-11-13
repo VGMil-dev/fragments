@@ -28,7 +28,7 @@
 
 ## Git y limitaciones
 
-- SHA de commit de implementación: pendiente.
+- SHA de commit de implementación: `510b157`; `git show --stat --oneline 510b157` confirma 15 archivos de código y documentación, y `git diff --check` antes del commit no reportó whitespace conflictivo.
 - PR y check GitHub `verify`: pendientes de publicación de la rama. `AGENTS.md` prohíbe hacer push; no se publicará desde Git ni se intentará eludir esa regla.
 - `main` no se modifica; no se creó tag ni se desplegó. Producción continúa en `v0.4.1`; F15 sigue abierta hasta integrar, publicar una versión con aprobación y verificar una sesión real docente/estudiante.
 - No hubo cambios a SQLite, Pits, PostgreSQL, Cloudflare ni a `env`.
