@@ -35,6 +35,9 @@ REPO_URL = f"https://github.com/{OWNER}/{REPOSITORY}.git"
 USER_AGENT = "fragments-release-agent/1"
 MAX_ARCHIVE_SIZE = 2_000_000_000
 MAX_MANIFEST_SIZE = 1_000_000
+MAX_ATTESTATION_BUNDLE_SIZE = 1_000_000
+MAX_TRUSTED_ROOT_SIZE = 512_000
+ATTESTATION_ASSET_NAME = "fragments-images.attestation.jsonl"
 
 
 class AgentError(RuntimeError):
@@ -186,23 +189,30 @@ def download_asset(asset: dict, destination: Path, maximum_size: int = MAX_ARCHI
     if parsed.scheme != "https" or parsed.hostname != "github.com" or not parsed.path.startswith(f"/{OWNER}/{REPOSITORY}/releases/download/") or not isinstance(asset.get("size"), int) or not 0 < asset["size"] <= maximum_size:
         raise AgentError("La URL o el tamaño del asset no está permitido.")
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/octet-stream"})
-    digest = hashlib.sha256()
+    if destination.is_symlink():
+        raise AgentError("El destino del asset no puede ser un enlace simbólico.")
+    partial = destination.with_name(destination.name + ".partial")
+    partial.unlink(missing_ok=True)
     total = 0
     opener = _github_asset_opener()
     try:
-        with opener.open(request, timeout=60) as response, destination.open("xb") as output:
+        with opener.open(request, timeout=60) as response, partial.open("xb") as output:
             while chunk := response.read(1024 * 1024):
                 total += len(chunk)
                 if total > maximum_size:
                     raise AgentError("El asset excedió el tamaño máximo.")
-                digest.update(chunk)
                 output.write(chunk)
     except (urllib.error.URLError, TimeoutError, OSError) as error:
-        destination.unlink(missing_ok=True)
+        partial.unlink(missing_ok=True)
         raise AgentError("No se pudo descargar el asset público de GitHub.") from error
+    except AgentError:
+        partial.unlink(missing_ok=True)
+        raise
     if total != asset.get("size"):
-        destination.unlink(missing_ok=True)
+        partial.unlink(missing_ok=True)
         raise AgentError("El tamaño descargado no coincide con la API de GitHub.")
+    os.chmod(partial, 0o600)
+    os.replace(partial, destination)
 
 
 def find_asset(release: dict, name: str) -> dict:
@@ -210,6 +220,80 @@ def find_asset(release: dict, name: str) -> dict:
     if len(matches) != 1:
         raise AgentError(f"El release debe tener exactamente un asset {name}.")
     return matches[0]
+
+
+def find_optional_asset(release: dict, name: str) -> dict | None:
+    matches = [asset for asset in release.get("assets", []) if asset.get("name") == name and asset.get("state") == "uploaded"]
+    if len(matches) > 1:
+        raise AgentError(f"El release no puede repetir el asset {name}.")
+    return matches[0] if matches else None
+
+
+def validate_bundle_file(path: Path, *, require_root_owned: bool = False) -> None:
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise AgentError("Falta el bundle de atestación Sigstore requerido.") from error
+    if not stat.S_ISREG(info.st_mode) or info.st_size <= 0 or info.st_size > MAX_ATTESTATION_BUNDLE_SIZE:
+        raise AgentError("El bundle de atestación no es un archivo regular de tamaño permitido.")
+    if os.name == "posix" and (info.st_mode & 0o077 or (require_root_owned and info.st_uid != 0)):
+        raise AgentError("El bundle local debe ser privado y estar bajo control de root.")
+    try:
+        contents = path.read_text(encoding="utf-8")
+        try:
+            parsed = json.loads(contents)
+            if isinstance(parsed, dict):
+                parsed = [parsed]
+        except json.JSONDecodeError:
+            parsed = [json.loads(line) for line in contents.splitlines() if line.strip()]
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise AgentError("El bundle de atestación no contiene JSON válido.") from error
+    if not parsed or any(not isinstance(item, dict) for item in parsed):
+        raise AgentError("El bundle de atestación está vacío o tiene una estructura inválida.")
+
+
+def ensure_archive_available(asset: dict, destination: Path, expected_digest: str) -> None:
+    size = asset.get("size")
+    if type(size) is not int or not 0 < size <= MAX_ARCHIVE_SIZE:
+        raise AgentError("El tamaño del paquete de imágenes no está permitido.")
+    if destination.is_symlink():
+        raise AgentError("El paquete en caché no puede ser un enlace simbólico.")
+    if destination.exists():
+        info = destination.stat()
+        if not stat.S_ISREG(info.st_mode):
+            raise AgentError("El paquete en caché no es un archivo regular.")
+        if info.st_size == asset.get("size") and sha256_file(destination) == expected_digest:
+            return
+        destination.unlink()
+    download_asset(asset, destination)
+    if sha256_file(destination) != expected_digest:
+        destination.unlink(missing_ok=True)
+        raise AgentError("El paquete descargado no coincide con el digest del manifiesto aprobado.")
+
+
+def refresh_trusted_root(state_dir: Path) -> Path:
+    output = run_checked(["gh", "attestation", "trusted-root"], timeout=300)
+    encoded = (output + "\n").encode("utf-8")
+    if not output or len(encoded) > MAX_TRUSTED_ROOT_SIZE:
+        raise AgentError("GitHub CLI no devolvió un trust root Sigstore acotado.")
+    try:
+        roots = [json.loads(line) for line in output.splitlines() if line.strip()]
+    except json.JSONDecodeError as error:
+        raise AgentError("El trust root Sigstore devuelto por GitHub CLI no es JSONL válido.") from error
+    if not roots or any(not isinstance(root, dict) or root.get("mediaType") != "application/vnd.dev.sigstore.trustedroot+json;version=0.1" for root in roots):
+        raise AgentError("El trust root Sigstore tiene un formato no esperado.")
+    path = state_dir / "trusted_root.jsonl"
+    if path.is_symlink():
+        raise AgentError("El trust root persistente no puede ser un enlace simbólico.")
+    temporary = state_dir / f"trusted_root-{os.getpid()}.tmp"
+    try:
+        with temporary.open("x", encoding="utf-8") as output_file:
+            output_file.write(output + "\n")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
 
 
 def read_ledger(path: Path) -> dict:
@@ -376,7 +460,7 @@ def integrity_check_backup(config: dict, existing: set[str]) -> dict:
     return {"file": backup.name, "bytes": info.st_size, "sha256": digest, "integrity": "ok"}
 
 
-def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[dict, dict, Path]:
+def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[dict, dict, dict, Path, Path]:
     release = request_json(f"{API_ROOT}/releases/{release_id}")
     if release.get("id") != release_id or release.get("draft") or release.get("prerelease"):
         raise AgentError("El release solicitado no es una publicación estable.")
@@ -385,26 +469,31 @@ def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[
     tag = require_tag(release.get("tag_name"))
     manifest_asset = find_asset(release, "release-manifest.json")
     archive_asset = find_asset(release, "fragments-images.tar.gz")
+    attestation_asset = find_optional_asset(release, ATTESTATION_ASSET_NAME)
     if archive_asset.get("size", MAX_ARCHIVE_SIZE + 1) > MAX_ARCHIVE_SIZE:
         raise AgentError("El paquete ARM64 excede el tamaño permitido.")
     state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     manifest_path = state_dir / f"incoming-{release_id}-manifest.json"
     archive_path = state_dir / f"incoming-{release_id}-images.tar.gz"
-    for path in (manifest_path, archive_path):
-        path.unlink(missing_ok=True)
     download_asset(manifest_asset, manifest_path, MAX_MANIFEST_SIZE)
-    download_asset(archive_asset, archive_path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     expected_tag, tag_object, commit, expected_digest = validate_manifest(manifest, release)
-    if expected_tag != tag or sha256_file(archive_path) != expected_digest:
-        raise AgentError("El asset de imágenes no coincide con el SHA-256 aprobado.")
+    if expected_tag != tag or archive_asset.get("size", MAX_ARCHIVE_SIZE + 1) > MAX_ARCHIVE_SIZE:
+        raise AgentError("El asset de imágenes no coincide con la tag o el límite aprobado.")
     if manifest.get("runId") != str(manifest.get("runId", "")) or not str(manifest.get("runId", "")).isdigit():
         raise AgentError("El manifiesto no tiene un ID numérico de workflow.")
     run_id = int(manifest["runId"])
     run = request_json(f"{API_ROOT}/actions/runs/{run_id}")
     jobs = request_json(f"{API_ROOT}/actions/runs/{run_id}/jobs?per_page=100")
     validate_release_run(run, jobs, manifest, tag)
-    return manifest, release, archive_path
+    if attestation_asset is not None:
+        attestation_path = state_dir / f"incoming-{release_id}-attestation.jsonl"
+        download_asset(attestation_asset, attestation_path, MAX_ATTESTATION_BUNDLE_SIZE)
+        validate_bundle_file(attestation_path)
+    else:
+        attestation_path = state_dir / "attestations" / f"{release_id}.jsonl"
+        validate_bundle_file(attestation_path, require_root_owned=True)
+    return manifest, release, archive_asset, archive_path, attestation_path
 
 
 def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> None:
@@ -427,13 +516,21 @@ def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: s
             raise AgentError("Labels o arquitectura de imagen no coinciden con la metadata aprobada.")
 
 
-def verify_attestation(archive_path: Path, tag: str) -> None:
+def verify_attestation(archive_path: Path, tag: str, commit: str, run_id: int, expected_digest: str, bundle_path: Path, state_dir: Path) -> None:
+    if sha256_file(archive_path) != expected_digest:
+        raise AgentError("El digest del archivo no coincide con el manifiesto aprobado.")
+    validate_bundle_file(bundle_path, require_root_owned=bundle_path.parent.name == "attestations")
+    trusted_root_path = refresh_trusted_root(state_dir)
     signer = f"{OWNER}/{REPOSITORY}/{WORKFLOW_PATH}"
     output = run_checked([
         "gh", "attestation", "verify", str(archive_path),
         "--repo", f"{OWNER}/{REPOSITORY}",
         "--signer-workflow", signer,
+        "--signer-digest", commit,
         "--source-ref", f"refs/tags/{tag}",
+        "--source-digest", commit,
+        "--bundle", str(bundle_path),
+        "--custom-trusted-root", str(trusted_root_path),
         "--deny-self-hosted-runners",
         "--format", "json",
     ], timeout=300)
@@ -443,6 +540,50 @@ def verify_attestation(archive_path: Path, tag: str) -> None:
         raise AgentError("GitHub CLI no devolvió una atestación verificable en JSON.") from error
     if not isinstance(verified, list) or not verified:
         raise AgentError("El archivo no tiene una atestación GitHub válida.")
+    invocation_prefix = f"https://github.com/{OWNER}/{REPOSITORY}/actions/runs/{run_id}/attempts/"
+    def matches_expected_policy(item: object) -> bool:
+        if not isinstance(item, dict):
+            return False
+        result = item.get("verificationResult", {})
+        if not isinstance(result, dict):
+            return False
+        signature = result.get("signature")
+        if not isinstance(signature, dict):
+            return False
+        certificate = signature.get("certificate")
+        timestamps = result.get("verifiedTimestamps")
+        statement = result.get("statement")
+        identity = result.get("verifiedIdentity")
+        if not isinstance(certificate, dict) or not isinstance(timestamps, list) or not timestamps or not isinstance(statement, dict):
+            return False
+        if not isinstance(identity, dict) or not isinstance(statement.get("subject"), list):
+            return False
+        subjects = statement["subject"]
+        required_certificate = {
+            "issuer": "https://token.actions.githubusercontent.com",
+            "sourceRepositoryURI": f"https://github.com/{OWNER}/{REPOSITORY}",
+            "buildSignerURI": f"https://github.com/{OWNER}/{REPOSITORY}/{WORKFLOW_PATH}@refs/tags/{tag}",
+            "githubWorkflowRepository": f"{OWNER}/{REPOSITORY}",
+            "githubWorkflowTrigger": "push",
+            "githubWorkflowRef": f"refs/tags/{tag}",
+            "githubWorkflowSHA": commit,
+            "sourceRepositoryIdentifier": str(REPOSITORY_ID),
+            "sourceRepositoryDigest": commit,
+            "sourceRepositoryRef": f"refs/tags/{tag}",
+            "runnerEnvironment": "github-hosted",
+        }
+        if any(certificate.get(key) != value for key, value in required_certificate.items()) or identity.get("runnerEnvironment") != "github-hosted":
+            return False
+        invocation = certificate.get("runInvocationURI", "")
+        if not isinstance(invocation, str) or not re.fullmatch(re.escape(invocation_prefix) + r"[1-9][0-9]*", invocation):
+            return False
+        return statement.get("predicateType") == "https://slsa.dev/provenance/v1" and any(
+            subject.get("name") == "fragments-images.tar.gz"
+            and subject.get("digest", {}).get("sha256") == expected_digest
+            for subject in subjects if isinstance(subject, dict)
+        )
+    if not any(matches_expected_policy(item) for item in verified):
+        raise AgentError("La atestación válida no enlaza archivo, workflow, tag, commit, runner y ejecución aprobados.")
 
 
 def image_refs_for_running() -> dict[str, str]:
@@ -458,8 +599,8 @@ def process_release(release_id: int, config: dict) -> None:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         ledger_path = Path(config["ledgerPath"])
         ledger = read_ledger(ledger_path)
-        manifest, release, archive_path = get_release_assets(release_id, config, state_dir)
-        tag, tag_object, commit, _ = validate_manifest(manifest, release)
+        manifest, release, archive_asset, archive_path, attestation_path = get_release_assets(release_id, config, state_dir)
+        tag, tag_object, commit, archive_digest = validate_manifest(manifest, release)
         if ledger_contains(ledger, tag, commit, release_id):
             raise AgentError("Tag, SHA o releaseId ya aparece en el ledger; se rechaza la repetición.")
 
@@ -468,7 +609,8 @@ def process_release(release_id: int, config: dict) -> None:
         jobs = request_json(f"{API_ROOT}/actions/runs/{run_id}/jobs?per_page=100")
         validate_release_run(run, jobs, manifest, tag)
         verify_git_source(Path(config["gitDirectory"]), tag, tag_object, commit)
-        verify_attestation(archive_path, tag)
+        ensure_archive_available(archive_asset, archive_path, archive_digest)
+        verify_attestation(archive_path, tag, commit, run_id, archive_digest, attestation_path, state_dir)
         load_archive(archive_path, manifest["images"], tag, commit)
 
         images = manifest["images"]
@@ -543,6 +685,8 @@ def process_release(release_id: int, config: dict) -> None:
         finally:
             archive_path.unlink(missing_ok=True)
             (state_dir / f"incoming-{release_id}-manifest.json").unlink(missing_ok=True)
+            if attestation_path.parent == state_dir and attestation_path.name == f"incoming-{release_id}-attestation.jsonl":
+                attestation_path.unlink(missing_ok=True)
 
 
 def rollback_latest(config: dict) -> None:

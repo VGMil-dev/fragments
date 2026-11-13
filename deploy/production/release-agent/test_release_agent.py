@@ -88,6 +88,91 @@ class ReleaseValidationTests(unittest.TestCase):
         self.assertTrue(agent.ledger_contains(ledger, "v0.4.1", "4" * 40, 9))
         self.assertFalse(agent.ledger_contains(ledger, "v0.4.1", "4" * 40, 11))
 
+    def test_offline_attestation_binds_artifact_repository_workflow_tag_commit_run_and_hosted_runner(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / "state"
+            state.mkdir()
+            archive = root / "fragments-images.tar.gz"
+            archive.write_bytes(b"signed test artifact")
+            digest = agent.sha256_file(archive)
+            bundle = root / "attestation.jsonl"
+            bundle.write_text(json.dumps({"mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json"}) + "\n", encoding="utf-8")
+            bundle.chmod(0o600)
+
+            def verified_record(**overrides):
+                certificate = {
+                    "issuer": "https://token.actions.githubusercontent.com",
+                    "sourceRepositoryURI": "https://github.com/VGMil-dev/fragments",
+                    "buildSignerURI": "https://github.com/VGMil-dev/fragments/.github/workflows/release.yml@refs/tags/v0.4.0",
+                    "githubWorkflowRepository": "VGMil-dev/fragments",
+                    "githubWorkflowTrigger": "push",
+                    "githubWorkflowRef": "refs/tags/v0.4.0",
+                    "githubWorkflowSHA": RELEASE_SHA,
+                    "sourceRepositoryIdentifier": str(agent.REPOSITORY_ID),
+                    "sourceRepositoryDigest": RELEASE_SHA,
+                    "sourceRepositoryRef": "refs/tags/v0.4.0",
+                    "runnerEnvironment": "github-hosted",
+                    "runInvocationURI": "https://github.com/VGMil-dev/fragments/actions/runs/123456789/attempts/1",
+                }
+                certificate.update(overrides)
+                return {
+                    "verificationResult": {
+                        "signature": {"certificate": certificate},
+                        "verifiedTimestamps": [{"type": "Tlog", "timestamp": "2026-11-13T00:00:00Z"}],
+                        "verifiedIdentity": {"runnerEnvironment": "github-hosted"},
+                        "statement": {
+                            "predicateType": "https://slsa.dev/provenance/v1",
+                            "subject": [{"name": "fragments-images.tar.gz", "digest": {"sha256": digest}}],
+                        },
+                    }
+                }
+
+            result = json.dumps([verified_record()])
+            with patch.object(agent, "run_checked", side_effect=["{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}", result]) as checked:
+                agent.verify_attestation(archive, "v0.4.0", RELEASE_SHA, 123456789, digest, bundle, state)
+            verify_args = checked.call_args.args[0]
+            for expected in ("--bundle", str(bundle), "--custom-trusted-root", str(state / "trusted_root.jsonl"), "--signer-workflow", "--signer-digest", RELEASE_SHA, "--source-ref", "refs/tags/v0.4.0", "--source-digest", "--deny-self-hosted-runners"):
+                self.assertIn(expected, verify_args)
+
+            invalid_records = (
+                verified_record(githubWorkflowRepository="attacker/repo"),
+                verified_record(buildSignerURI="https://github.com/VGMil-dev/fragments/.github/workflows/untrusted.yml@refs/tags/v0.4.0"),
+                verified_record(githubWorkflowRef="refs/tags/v0.4.1", sourceRepositoryRef="refs/tags/v0.4.1"),
+                verified_record(githubWorkflowSHA="3" * 40, sourceRepositoryDigest="3" * 40),
+                verified_record(runnerEnvironment="self-hosted"),
+                verified_record(runInvocationURI="https://github.com/VGMil-dev/fragments/actions/runs/999/attempts/1"),
+            )
+            for invalid in invalid_records:
+                with self.subTest(certificate=invalid["verificationResult"]["signature"]["certificate"]), patch.object(
+                    agent, "run_checked", side_effect=["{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}", json.dumps([invalid])]
+                ), self.assertRaises(agent.AgentError):
+                    agent.verify_attestation(archive, "v0.4.0", RELEASE_SHA, 123456789, digest, bundle, state)
+
+            with patch.object(agent, "run_checked") as checked, self.assertRaises(agent.AgentError):
+                agent.verify_attestation(archive, "v0.4.0", RELEASE_SHA, 123456789, "0" * 64, bundle, state)
+            checked.assert_not_called()
+
+            bundle.write_text("\n", encoding="utf-8")
+            with patch.object(agent, "run_checked") as checked, self.assertRaises(agent.AgentError):
+                agent.verify_attestation(archive, "v0.4.0", RELEASE_SHA, 123456789, digest, bundle, state)
+            checked.assert_not_called()
+
+    def test_archive_cache_reuses_only_exact_size_and_manifest_digest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "images.tar.gz"
+            payload = b"approved test archive"
+            path.write_bytes(payload)
+            asset = {"size": len(payload)}
+            digest = agent.sha256_file(path)
+            with patch.object(agent, "download_asset") as download:
+                agent.ensure_archive_available(asset, path, digest)
+            download.assert_not_called()
+            path.write_bytes(b"corrupt")
+            with patch.object(agent, "download_asset", side_effect=lambda _asset, destination: destination.write_bytes(payload)) as download:
+                agent.ensure_archive_available(asset, path, digest)
+            download.assert_called_once_with(asset, path)
+
     def test_deployment_override_accepts_only_fixed_fragments_image_names(self):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
@@ -191,6 +276,8 @@ class ReleaseValidationTests(unittest.TestCase):
         ledger_path.write_text(json.dumps({"schemaVersion": 1, "releases": []}), encoding="utf-8")
         archive = root / "fragments-images.tar.gz"
         archive.write_bytes(b"synthetic-only archive")
+        archive_asset = {"size": archive.stat().st_size}
+        attestation = root / "attestation.jsonl"
         config = {
             "stateDirectory": str(state),
             "ledgerPath": str(ledger_path),
@@ -225,11 +312,12 @@ class ReleaseValidationTests(unittest.TestCase):
                 raise health_error.pop(0)
 
         with (
-            patch.object(agent, "get_release_assets", return_value=(manifest, release, archive)),
+            patch.object(agent, "get_release_assets", return_value=(manifest, release, archive_asset, archive, attestation)),
             patch.object(agent, "request_json", side_effect=lambda url: jobs if "/jobs?" in url else run),
             patch.object(agent, "validate_release_run"),
             patch.object(agent, "verify_git_source"),
             patch.object(agent, "verify_attestation"),
+            patch.object(agent, "ensure_archive_available"),
             patch.object(agent, "load_archive"),
             patch.object(agent, "container_snapshot", return_value=neighbors),
             patch.object(agent, "image_refs_for_running", return_value=previous_images),
