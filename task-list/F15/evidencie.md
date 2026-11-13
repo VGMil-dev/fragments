@@ -132,3 +132,13 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - F15, F15.1 y F15.2 permanecen incompletas hasta verificar el consentimiento/vinculación docente y el OAuth real de estudiante, además de reingreso docente con el mismo usuario/rol y permisos de galería/propiedad. La observación de cuenta docente se actualizará tras recuperar el control de Ego Lite.
 - Después del release, requests anónimos sin cookies a `/api/me/proposals`, `/api/gallery`, `/api/teacher/mentor-control` y `/api/teacher/account` respondieron HTTP 401; `/api/me` respondió 200 con `authenticated=false`, `session_required`. No se consultaron datos de cuentas o proyectos.
 - Revisiones independientes post-release: PASS acotado para tag/run, bundle público y controles anónimos; INCONCLUSIVE para OAuth real, permisos con sesión autenticada y verificación independiente de SQLite. Sin PASS final; quedan las interacciones reales de estudiante y docente.
+
+### Reingreso docente OAuth real — 2026-11-13, producción `v0.4.4`
+
+- Ego Lite devolvió desde el consentimiento del propietario a `/teacher/mentor-control?githubLink=success`. La página mostró «GitHub quedó vinculado a esta cuenta docente.»; `GET /api/teacher/account` HTTP 200 informó `credentialConnected=true` y `githubConnected=true` (solo se registran booleanos).
+- `GET /api/teacher/mentor-control` HTTP 200 y la UI mostró «Cuenta y acceso» y «Control de Mentor».
+- La sesión Better Auth anterior tenía `isTeacher=true`. Se cerró con `POST /api/auth/sign-out` HTTP 200 y la sesión quedó ausente. Luego se inició el flujo desde el botón normal «Iniciar sesión con GitHub» de `/student/login`; no se invocó directamente el callback ni se reutilizó `state`.
+- Tras la redirección OAuth, `GET /api/auth/get-session` HTTP 200 confirmó sesión autenticada y docente. Se comparó de forma privada el fingerprint efímero de `user.id` anterior y posterior: coincidió. No se guardó el ID ni su fingerprint en Git o en evidencia.
+- `GET /api/me` HTTP 200 respondió `authenticated=false`, `reason=role_not_student`, resultado esperado para esta identidad docente; el rol permitió de nuevo el control de Mentor. La UI mostraba `v0.4.4` y el SHA de release `5cb799c`.
+- No se cambió la contraseña, rol, proveedor, SQLite ni datos académicos durante esta verificación. No se mostró ni conservó correo, ID GitHub, token o cookie.
+- F15.1 queda validada en producción para vinculación explícita y reingreso docente. F15/F15.2 siguen abiertas hasta completar OAuth de un estudiante autorizado con su cuenta GitHub personal y revisar sus permisos; no se creó ninguna propuesta de prueba.
