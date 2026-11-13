@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFragmentsAuth, createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
 
 const databases: DatabaseSync[] = [];
@@ -8,6 +8,7 @@ const servers: Server[] = [];
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))));
   for (const database of databases.splice(0)) database.close();
+  vi.unstubAllGlobals();
 });
 
 async function fixture(allowSignUp = true) {
@@ -29,6 +30,67 @@ async function createAccount(database: DatabaseSync, auth: Awaited<ReturnType<ty
 }
 
 describe("Better Auth integration", () => {
+  it("creates and reuses a student through the GitHub OAuth callback with a personal email", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-github-callback-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173",
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const githubConfig = auth.options.socialProviders?.github as { mapProfileToUser?: (profile: { login: string }) => { githubLogin: string } } | undefined;
+    expect(githubConfig?.mapProfileToUser?.({ login: "fixture-profile" })).toEqual({ githubLogin: "fixture-profile" });
+    let profile = { id: 991337, login: "personal-student", name: "Fixture Student", avatar_url: "https://avatars.githubusercontent.com/u/991337?v=4", email: null };
+    const email = "student.personal@users.example.test";
+    const fakeFetch = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "https://github.com/login/oauth/access_token") {
+        return new Response(JSON.stringify({ access_token: "fixture-access-token", token_type: "bearer", scope: "read:user,user:email" }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (url === "https://api.github.com/user") {
+        return new Response(JSON.stringify(profile), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (url === "https://api.github.com/user/emails") {
+        return new Response(JSON.stringify([{ email, primary: true, verified: true }]), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch in fake OAuth provider: ${new URL(url).origin}`);
+    });
+    vi.stubGlobal("fetch", fakeFetch);
+
+    async function completeOAuth() {
+      const login = await auth.api.signInSocial({
+        returnHeaders: true,
+        body: { provider: "github", callbackURL: "http://localhost:5173/auth/complete", errorCallbackURL: "http://localhost:5173/student/login" },
+      });
+      const authorizeUrl = new URL(login.response.url);
+      const cookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+      const callback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(authorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie } }));
+      expect(callback.status).toBe(302);
+      expect(callback.headers.get("location")).toBe("http://localhost:5173/auth/complete");
+      const sessionCookie = callback.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+      const session = await auth.api.getSession({ headers: new Headers({ cookie: sessionCookie }), query: { disableCookieCache: true } });
+      return { session, sessionCookie };
+    }
+
+    const first = await completeOAuth();
+    expect(first.session?.user.email).toBe(email);
+    // Provider identity is the stable accountId; githubLogin is optional profile data.
+    expect(database.prepare("SELECT githubLogin FROM user").get()).toEqual({ githubLogin: null });
+    expect(first.session?.user.githubLogin).toBeNull();
+    const firstAccount = database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").get() as { accountId: string; userId: string };
+    expect(firstAccount.accountId).toBe("991337");
+    expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: first.sessionCookie } } as IncomingMessage))
+      .toMatchObject({ kind: "student", student: { id: firstAccount.userId, githubAccountId: "991337", githubLogin: null } });
+
+    profile = { ...profile, login: "personal-student-renamed", name: "Fixture Student Renamed" };
+    const second = await completeOAuth();
+    expect(second.session?.user.id).toBe(firstAccount.userId);
+    expect(database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").all())
+      .toEqual([{ accountId: "991337", userId: firstAccount.userId }]);
+    expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
+  });
+
   it("trusts only the normalized API and configured public app origins", async () => {
     const database = new DatabaseSync(":memory:");
     databases.push(database);
