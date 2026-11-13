@@ -54,9 +54,10 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 
 ## Pendiente
 
-- QA Ego Lite desktop/390 px contra los estados locales. La ronda desktop quedó sin ejecutar: la API de cambio de viewport usada no existe en Ego Lite 0.6.2.7. El CLI notificó una actualización disponible; la guía exige aprobación antes de actualizar, por lo que no se modificó la instalación. La ronda mobile anterior verificó ausencia de overflow y el estado recuperable local; requiere repetición final.
-- Auditar el diff completo y correr `git diff --check` final.
-- Integrar mediante PR `verify` y merge normal.
+- QA Ego Lite desktop/390 px contra los estados locales. La ronda desktop quedó sin ejecutar: la API de cambio de viewport usada no existe en Ego Lite 0.6.2.7. El CLI notificó una actualización disponible; la guía exige aprobación antes de actualizar, por lo que no se modificó la instalación. La ronda mobile anterior verificó ausencia de overflow y el estado recuperable local; requiere repetición final. No se usó Playwright ni otro navegador.
+- PR #25 [fix(F15.2): identidad GitHub personal y rutas docentes](https://github.com/VGMil-dev/fragments/pull/25), draft, hacia `main`. El check obligatorio `verify` pasó en run `43475532081` para el head `e952f6e991b59b69dcbec5a06bd15d6f22915232`; incluyó metadata Turbo, pruebas, typecheck, lint y build. El PR sigue en borrador mientras falta QA visual final.
+- Diff de PR consultado en GitHub: 20 archivos; sin `.env`, bases de datos, capturas privadas ni artefactos generados. La revisión de código y los revisores independientes dieron PASS acotado para identidad/rutas; OAuth real queda inconcluso.
+- Merge normal a `main` pendiente hasta completar QA visual y los checks del head vigente. No se creó tag ni se ejecutó release; producción no se modificó.
 - Revalidar backup, bundle F14 y checks; publicar nueva tag SemVer solo bajo autorización F15/addendum y aprobación protegida obligatoria.
 - Después del despliegue, pedir al alumno una acción real en Ego Lite para comprobar OAuth personal, `/api/me`, galería y propiedad sin crear proyectos. Pedir al propietario su intervención para contraseña/consentimiento de enlace docente y reingreso.
 - Verificación independiente PASS final aún no emitida.
