@@ -35,9 +35,12 @@
 - 390 × 844: el panel y el formulario de contraseña se mantienen dentro del ancho. Capturas privadas: `task-list/F15.1/screenshots/mobile-390.png`, `task-list/F15.1/screenshots/mobile-link-form-390.png`.
 - No se realizó OAuth real, no se pidió contraseña/consentimiento a una persona y no se usó producción.
 
-## Git y limitaciones
+## Sincronización e integración — 2026-11-13
 
-- SHA de commit de implementación: `510b157a49e4a1093b5bbfc64ace7e489a9bf587`; `git show --stat --oneline 510b157` confirma 15 archivos de código y documentación. Los resultados NTFS están registrados en un commit documental separado.
-- PR y check GitHub `verify`: pendientes de publicación de la rama. `AGENTS.md` prohíbe hacer push; no se publicará desde Git ni se intentará eludir esa regla.
-- `main` no se modifica; no se creó tag ni se desplegó. Producción continúa en `v0.4.1`; F15 sigue abierta hasta integrar, publicar una versión con aprobación y verificar una sesión real docente/estudiante.
-- No hubo cambios a SQLite, Pits, PostgreSQL, Cloudflare ni a `env`.
+- PR #20 integró la política actual de Git en `main` mediante merge normal. `origin/main` verificado: `07d94b905fc01c6c18d37f1c8d653e27c568da1f`.
+- Se integró ese `origin/main` en `codex/f15-teacher-github-link` mediante merge normal, sin reescritura: `c6bd80927ce29333e39ef648aaaedc9368fdd20f`.
+- La rama contiene los commits `510b157a49e4a1093b5bbfc64ace7e489a9bf587`, `6cb0a80cecf3660559270cce3dc3d1ea6b189a8c`, `0560cdbafd9e5b515561b192d922193371e88471` y el merge anterior. Su diff contra `origin/main` está limitado a los archivos F15.1 listados arriba y a `task-list/TASKS.md`; no incluye `env`, bases de datos, capturas ni artefactos generados. `git diff --check` pasó.
+- Verificación Turbo fresca en NTFS sobre el árbol de código integrado: tests 4/4 tareas (API 114, web 74, contratos 19); typecheck 4/4; lint 1/1 disponible; build 3/3. El build mantiene el warning conocido del bundle web de 520.11 kB. Instalación offline/frozen: 308 paquetes de caché, cero descargas.
+- `.github/workflows/release.yml` tiene el mismo blob SHA (`75a7c86bb008940730a61d2ac5492577d52f528f`) en `origin/main` y en la rama. La tag local/remota `v0.4.2` no existe en esta comprobación.
+- Siguiente paso de integración: publicar la rama mediante push normal, abrir PR a `main`, revisar el diff remoto y esperar el check obligatorio `verify`. No se ha hecho push todavía; PR y CI están pendientes.
+- No se realizó OAuth real ni se tocó producción. Producción continúa en `v0.4.1`; no se creó tag ni se desplegó. F15.1 no se declara completada hasta integrar y validar una sesión OAuth real con intervención del propietario. No hubo cambios a SQLite, Pits, PostgreSQL, Cloudflare ni a `env`.
