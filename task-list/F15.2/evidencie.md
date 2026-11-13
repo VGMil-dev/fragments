@@ -4,6 +4,8 @@
 
 Implementación local en rama `codex/f15-2-oauth-roles`, basada en `origin/main` `b7810f9bfb41c00a7db1f998badb3770fe710185`. No declarar F15 completa hasta pasar la verificación OAuth real estudiantil y docente en producción.
 
+Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permisos OAuth`) y `003028a` (`fix(auth): informa identidad GitHub inválida`). Autoría local usa el mismo noreply verificado en el historial del repositorio.
+
 ## Diagnóstico con evidencia
 
 - En `apps/api/src/http/app.ts`, `academicHandler` se ejecuta antes de `mentorControlHandler`.
@@ -26,12 +28,12 @@ Implementación local en rama `codex/f15-2-oauth-roles`, basada en `origin/main`
 - `pnpm install --offline --frozen-lockfile --ignore-scripts`: 308 paquetes reutilizados, 0 descargados; sin scripts.
 - Pruebas rojas previas al arreglo: rutas docente 404 en vez de 200; perfil con cuenta estable y login ausente devuelto como no autenticado; UI no distinguía 503.
 - `pnpm --filter @fragments/contracts build`: exitoso.
-- `pnpm test`: Turbo 4/4 tareas exitosas: API 29 archivos/118 pruebas, web 20 archivos/77 pruebas y contratos 1 archivo/19 pruebas.
+- `pnpm test`: Turbo 4/4 tareas exitosas: API 29 archivos/118 pruebas, web 20 archivos/78 pruebas y contratos 1 archivo/19 pruebas.
 - Nuevas regresiones: sesión Better Auth expirada y conservación de propuesta/publicación cuando cambian email y login. Prueba dirigida (`pnpm --filter @fragments/api exec vitest run src/auth/better-auth.test.ts src/features/mentor/academic-repository.test.ts`): 2 archivos, 14 pruebas pasan. La primera ejecución roja mostró que el fixture de expiración debía usar el formato de fecha ISO de SQLite; el caso corregido pasa.
 - Al añadir estas regresiones también se exige lectura de sesión sin cookie cache para `studentAccess`, `teacherId` y `userId`, evitando que estado de sesión cacheado desplace la expiración/revocación vigente en base de datos.
 - `pnpm typecheck`: Turbo 4/4 exitosas.
 - `pnpm lint`: Turbo 1/1 tarea disponible (contratos) exit 0; API/web no tienen script lint.
-- `pnpm build`: Turbo 3/3 exitosas; Vite advierte chunk principal 522.53 kB sobre umbral 500 kB.
+- `pnpm build`: Turbo 3/3 exitosas; Vite advierte chunk principal 522.68 kB sobre umbral 500 kB.
 - `git diff --check`: exit 0.
 
 ## Contraste con el plan adjunto F15.2
@@ -58,3 +60,4 @@ Implementación local en rama `codex/f15-2-oauth-roles`, basada en `origin/main`
 - Revalidar backup, bundle F14 y checks; publicar nueva tag SemVer solo bajo autorización F15/addendum y aprobación protegida obligatoria.
 - Después del despliegue, pedir al alumno una acción real en Ego Lite para comprobar OAuth personal, `/api/me`, galería y propiedad sin crear proyectos. Pedir al propietario su intervención para contraseña/consentimiento de enlace docente y reingreso.
 - Verificación independiente PASS final aún no emitida.
+- Verificación independiente nueva: Seguridad, PASS acotado para identidad/rutas/sesiones; Detective OAuth, PASS acotado local y BLOCKED productivo; Pez Dorado, INCONCLUSIVE global por falta de PR/despliegue y OAuth real. Revisaron el mismo diff antes de los dos commits `6179b79` y `003028a`; el follow-up de identidad inválida se cubre con test local, y falta nueva revisión de la rama en PR y CI.
