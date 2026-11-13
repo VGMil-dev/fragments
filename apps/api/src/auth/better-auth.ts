@@ -101,7 +101,13 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
         },
         update: {
           before: async (user, context) => {
-            if (context?.path === "/callback/:id") return;
+            if (context?.path === "/callback/:id") {
+              // On a verified provider callback, sync only the GitHub login. Better Auth's
+              // override option also proposes name/image/email, which must stay user-owned.
+              return typeof user.githubLogin === "string" && /^[A-Za-z0-9-]{1,39}$/.test(user.githubLogin)
+                ? { data: { githubLogin: user.githubLogin, name: undefined, image: undefined, email: undefined, emailVerified: undefined } }
+                : { data: { name: undefined, image: undefined, email: undefined, emailVerified: undefined, githubLogin: undefined } };
+            }
             return Object.hasOwn(user, "githubLogin") ? false : undefined;
           },
         },
@@ -113,12 +119,14 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
           clientId: githubClientId,
           clientSecret: githubClientSecret,
           scope: ["read:user", "user:email"],
+          overrideUserInfoOnSignIn: true,
           mapProfileToUser: (profile) => ({ githubLogin: profile.login }),
         },
       },
     } : {}),
     // Different emails are allowed only on the explicit linkSocial flow; implicit linking stays disabled.
-    account: { accountLinking: { disableImplicitLinking: true, allowDifferentEmails: true } },
+    // Profile updates on callback are narrowed to githubLogin by the user database hook above.
+    account: { accountLinking: { disableImplicitLinking: true, allowDifferentEmails: true, updateUserInfoOnLink: true } },
     disabledPaths: ["/link-social"],
     plugins: [admin()],
   });

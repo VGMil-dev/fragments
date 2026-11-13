@@ -41,7 +41,7 @@ describe("Better Auth integration", () => {
       githubClientSecret: "fake-github-client-secret",
     });
     let profile = { id: 991337, login: "personal-student", name: "Fixture Student", avatar_url: "https://avatars.githubusercontent.com/u/991337?v=4", email: null };
-    const email = "student.personal@users.example.test";
+    let email = "student.personal@users.example.test";
     const fakeFetch = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url === "https://github.com/login/oauth/access_token") {
@@ -82,10 +82,16 @@ describe("Better Auth integration", () => {
       .toMatchObject({ kind: "student", student: { id: firstAccount.userId, githubAccountId: "991337", githubLogin: "personal-student" } });
     expect(createAcademicRepository(database).isGitHubStudent(firstAccount.userId)).toBe(true);
 
+    // Model the legacy release row whose OAuth callback created the account but whose
+    // filtered additional field left the public GitHub login empty.
+    database.prepare("UPDATE user SET githubLogin = NULL WHERE id = ?").run(firstAccount.userId);
     profile = { ...profile, login: "personal-student-renamed", name: "Fixture Student Renamed" };
+    email = "student.renamed@users.example.test";
     const second = await completeOAuth();
     expect(second.session?.user.id).toBe(firstAccount.userId);
-    expect(database.prepare("SELECT githubLogin FROM user WHERE id = ?").get(firstAccount.userId)).toEqual({ githubLogin: "personal-student" });
+    expect(database.prepare("SELECT githubLogin, email FROM user WHERE id = ?").get(firstAccount.userId)).toEqual({ githubLogin: "personal-student-renamed", email: "student.personal@users.example.test" });
+    expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: second.sessionCookie } } as IncomingMessage))
+      .toMatchObject({ kind: "student", student: { id: firstAccount.userId, githubAccountId: "991337", githubLogin: "personal-student-renamed" } });
     expect(database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").all())
       .toEqual([{ accountId: "991337", userId: firstAccount.userId }]);
     expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
@@ -163,6 +169,7 @@ describe("Better Auth integration", () => {
     expect(providers).toEqual([{ providerId: "credential" }, { providerId: "github" }]);
     expect(database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.user.id)).toEqual({ accountId: "991338" });
     expect(database.prepare("SELECT isTeacher FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ isTeacher: 1 });
+    expect(database.prepare("SELECT githubLogin, email, name FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ githubLogin: "teacher-personal", email: "teacher@institution.example.test", name: "Teacher Fixture" });
     expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: sessionCookie } } as IncomingMessage)).toBe(teacher.user.id);
     expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: sessionCookie } } as IncomingMessage)).toEqual({ kind: "role_not_student" });
 
@@ -179,6 +186,25 @@ describe("Better Auth integration", () => {
     expect(loggedInSession?.user.id).toBe(teacher.user.id);
     expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: githubLoginCookie } } as IncomingMessage)).toBe(teacher.user.id);
     expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
+
+    const otherTeacher = await auth.api.signUpEmail({ body: { name: "Other Teacher", email: "other-teacher@institution.example.test", password: "fixture-password-2026" } });
+    database.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(otherTeacher.user.id);
+    const otherSignIn = await auth.api.signInEmail({ returnHeaders: true, body: { email: "other-teacher@institution.example.test", password: "fixture-password-2026" } });
+    const otherCookie = otherSignIn.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const otherLinkStart = await auth.api.linkSocialAccount({
+      returnHeaders: true,
+      headers: new Headers({ cookie: otherCookie }),
+      body: { provider: "github", callbackURL: "http://localhost:5173/teacher/mentor-control", errorCallbackURL: "http://localhost:5173/teacher/mentor-control" },
+    });
+    const otherAuthorizeUrl = new URL(otherLinkStart.response.url);
+    const otherStateCookie = otherLinkStart.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const otherLinkCallback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(otherAuthorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie: otherStateCookie } }));
+    expect(otherLinkCallback.headers.get("location")).toContain("error=account_already_linked_to_different_user");
+    expect(database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").all()).toEqual([{ accountId: "991338", userId: teacher.user.id }]);
+    expect(database.prepare("SELECT id, isTeacher FROM user").all()).toEqual(expect.arrayContaining([
+      { id: teacher.user.id, isTeacher: 1 },
+      { id: otherTeacher.user.id, isTeacher: 1 },
+    ]));
   });
 
   it("does not link by email coincidence during student sign-in", async () => {
