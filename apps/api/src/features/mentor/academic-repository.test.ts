@@ -23,6 +23,21 @@ const draft = { title: "Bitácora de huerto", problem: "El curso no registra rie
 const ownerHash = (token: string) => createHash("sha256").update(token).digest("hex");
 
 describe("F15 academic publication and historical ownership", () => {
+  it("preserves proposal and gallery ownership when a student's email and GitHub login change", () => {
+    const { db, mentor, academic } = fixture();
+    const created = mentor.createProposal(draft, null, "student-1");
+    mentor.saveEvaluation("identity-evaluation", created.id, 1, {} as never, "c".repeat(64), 1);
+
+    db.prepare("UPDATE user SET email = ?, githubLogin = ? WHERE id = ?")
+      .run("new-personal-address@example.test", "student-renamed", "student-1");
+
+    expect(academic.listOwnedProposals("student-1").map((proposal) => proposal.id)).toContain(created.id);
+    expect(academic.listOwnedProposals("student-2")).toEqual([]);
+    expect(mentor.getProposalHistoryByUser(created.id, "student-1")).toHaveLength(1);
+    expect(academic.listGallery().items).toMatchObject([{ id: created.id, author: { login: "student-renamed" } }]);
+    expect(db.prepare("SELECT owner_user_id FROM proposals WHERE id = ?").get(created.id)).toEqual({ owner_user_id: "student-1" });
+  });
+
   it("publishes only the evaluated revision and preserves historic context", () => {
     const { db, mentor, academic } = fixture();
     const created = mentor.createProposal(draft, null, "student-1", new Date("2026-11-01T01:00:00.000Z"));

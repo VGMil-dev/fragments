@@ -28,17 +28,18 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
     if (request.method === "GET" && url.pathname === "/api/me") {
       if (!auth) { sendError(response, 503, "AUTH_DISABLED", "El acceso por GitHub no está habilitado."); return "handled"; }
       try {
-        const student = await auth.student(request);
-        if (!student?.githubLogin) {
-          sendJson(response, 200, { ok: true, data: MeResponseSchema.parse({ authenticated: false, githubOAuthConfigured: auth.githubOAuthConfigured }) });
+        const result = await auth.studentAccess(request);
+        if (result.kind !== "student") {
+          sendJson(response, 200, { ok: true, data: MeResponseSchema.parse({ authenticated: false, githubOAuthConfigured: auth.githubOAuthConfigured, reason: result.kind }) });
           return "handled";
         }
+        const student = result.student;
         sendJson(response, 200, { ok: true, data: MeResponseSchema.parse({
           authenticated: true,
           id: student.id,
           githubLogin: student.githubLogin,
           avatarUrl: safeAvatar(student.avatarUrl),
-          profileUrl: `https://github.com/${student.githubLogin}`,
+          profileUrl: student.githubLogin ? `https://github.com/${student.githubLogin}` : null,
           registeredAt: student.registeredAt,
         }) });
       } catch { sendError(response, 503, "AUTH_UNAVAILABLE", "No se pudo validar la sesión."); }
@@ -83,6 +84,8 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
       else sendJson(response, 200, { ok: true, data: AcademicGalleryDetailSchema.parse(value) });
       return "handled";
     }
+
+    if (url.pathname === "/api/teacher/mentor-control" || url.pathname.startsWith("/api/teacher/mentor-control/")) return "unhandled";
 
     if (url.pathname.startsWith("/api/teacher/")) {
       const teacherId = await requireTeacher(request, response, auth);

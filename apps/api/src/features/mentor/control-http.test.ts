@@ -23,7 +23,7 @@ async function start(evaluator: MentorEvaluator) {
   const auth = {
     async teacherId(request: { headers: { cookie?: string } }) { return request.headers.cookie === "teacher_session=fake" ? "teacher-fixture" : null; },
     handle() {},
-    async userId(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] ?? null; },
+    async userId(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] ?? (request.headers.cookie === "teacher_session=fake" ? "teacher-fixture" : null); },
     async student(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] === "student-fixture" ? { id: "student-fixture", githubAccountId: "github-stable-fixture", githubLogin: "student-fixture", avatarUrl: null, registeredAt: "2026-11-01T00:00:00.000Z" } : null; },
   } as never;
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });

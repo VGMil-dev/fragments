@@ -219,14 +219,18 @@ const githubLogin = z.string().regex(/^[A-Za-z0-9-]{1,39}$/);
 export const StudentMeSchema = z.object({
   authenticated: z.literal(true),
   id: identifier,
-  githubLogin,
+  githubLogin: githubLogin.nullable(),
   avatarUrl: z.url().nullable(),
-  profileUrl: z.url(),
+  profileUrl: z.url().nullable(),
   registeredAt: z.iso.datetime(),
 }).strict();
 export const MeResponseSchema = z.discriminatedUnion("authenticated", [
   StudentMeSchema,
-  z.object({ authenticated: z.literal(false), githubOAuthConfigured: z.boolean() }).strict(),
+  z.object({
+    authenticated: z.literal(false),
+    githubOAuthConfigured: z.boolean(),
+    reason: z.enum(["session_required", "role_not_student", "github_account_not_linked", "invalid_github_identity"]),
+  }).strict(),
 ]);
 export const AcademicGalleryEntrySchema = z.object({
   id: identifier,

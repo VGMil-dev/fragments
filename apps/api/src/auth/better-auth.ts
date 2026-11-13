@@ -31,6 +31,10 @@ export type TeacherGitHubLinkResult =
   | { kind: "unavailable" }
   | { kind: "started"; authorizationUrl: string; setCookies: string[] };
 
+type StudentIdentity = { id: string; githubAccountId: string; githubLogin: string | null; avatarUrl: string | null; registeredAt: string };
+type StudentAccessResult = { kind: "student"; student: StudentIdentity }
+  | { kind: "session_required" | "role_not_student" | "github_account_not_linked" | "invalid_github_identity" };
+
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
   if (options.secret.length < 32) throw new Error("BETTER_AUTH_SECRET debe tener al menos 32 caracteres.");
   const baseURL = options.baseURL ?? "http://localhost:3000";
@@ -82,7 +86,33 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     user: {
       additionalFields: {
         isTeacher: { type: "boolean", required: false, defaultValue: false, input: false },
-        githubLogin: { type: "string", required: false, input: false },
+        // Better Auth filters input:false fields out of provider profiles too.
+        // The hooks below accept this metadata only from its validated OAuth callback.
+        githubLogin: { type: "string", required: false, input: true },
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user, context) => {
+            if (context?.path === "/callback/:id") return;
+            return Object.hasOwn(user, "githubLogin") ? false : undefined;
+          },
+        },
+        update: {
+          before: async (user, context) => {
+            if (context?.path === "/callback/:id") {
+              // Treat callback updates as an allow-list. Better Auth merges `data` over
+              // its profile update, so explicitly remove every proposed field first.
+              const safeUpdate = Object.fromEntries(Object.keys(user).map((field) => [field, undefined])) as typeof user;
+              if (typeof user.githubLogin === "string" && /^[A-Za-z0-9-]{1,39}$/.test(user.githubLogin)) {
+                safeUpdate.githubLogin = user.githubLogin;
+              }
+              return { data: safeUpdate };
+            }
+            return Object.hasOwn(user, "githubLogin") ? false : undefined;
+          },
+        },
       },
     },
     ...(githubClientId && githubClientSecret ? {
@@ -91,11 +121,14 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
           clientId: githubClientId,
           clientSecret: githubClientSecret,
           scope: ["read:user", "user:email"],
+          overrideUserInfoOnSignIn: true,
           mapProfileToUser: (profile) => ({ githubLogin: profile.login }),
         },
       },
     } : {}),
-    account: { accountLinking: { disableImplicitLinking: true } },
+    // Different emails are allowed only on the explicit linkSocial flow; implicit linking stays disabled.
+    // Profile updates on callback are narrowed to githubLogin by the user database hook above.
+    account: { accountLinking: { disableImplicitLinking: true, allowDifferentEmails: true, updateUserInfoOnLink: true } },
     disabledPaths: ["/link-social"],
     plugins: [admin()],
   });
@@ -121,19 +154,38 @@ export async function createMigratedFragmentsAuth(database: DatabaseSync, option
 export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
   const handle = toNodeHandler(auth);
   const passwordConfirmations = new Map<string, { attempts: number; resetAt: number }>();
+  async function resolveStudent(request: IncomingMessage): Promise<StudentAccessResult> {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers), query: { disableCookieCache: true } });
+    const user = session?.user as { id?: unknown; role?: unknown; isTeacher?: unknown; githubLogin?: unknown; image?: unknown; createdAt?: unknown } | undefined;
+    if (!user || typeof user.id !== "string") return { kind: "session_required" };
+    if (user.isTeacher === true || (typeof user.role === "string" && user.role.split(",").includes("admin"))) return { kind: "role_not_student" };
+    const account = auth.options.database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(user.id) as { accountId: string } | undefined;
+    if (!account) return { kind: "github_account_not_linked" };
+    if (typeof account.accountId !== "string" || !account.accountId.trim()) return { kind: "invalid_github_identity" };
+    return {
+      kind: "student",
+      student: {
+        id: user.id,
+        githubAccountId: account.accountId,
+        githubLogin: typeof user.githubLogin === "string" ? user.githubLogin : null,
+        avatarUrl: typeof user.image === "string" ? user.image : null,
+        registeredAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : typeof user.createdAt === "string" ? user.createdAt : new Date(0).toISOString(),
+      },
+    };
+  }
   return {
     handle(request: IncomingMessage, response: ServerResponse): void {
       void handle(request, response);
     },
     async teacherId(request: IncomingMessage): Promise<string | null> {
-      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers), query: { disableCookieCache: true } });
       const user = session?.user as { id?: unknown; role?: unknown; isTeacher?: unknown } | undefined;
       if (!user || typeof user.id !== "string") return null;
       const roles = typeof user.role === "string" ? user.role.split(",") : [];
       return user.isTeacher === true || roles.includes("admin") ? user.id : null;
     },
     async userId(request: IncomingMessage): Promise<string | null> {
-      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers), query: { disableCookieCache: true } });
       const id = (session?.user as { id?: unknown } | undefined)?.id;
       return typeof id === "string" ? id : null;
     },
@@ -204,19 +256,10 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
       }
     },
     async student(request: IncomingMessage): Promise<{ id: string; githubAccountId: string; githubLogin: string | null; avatarUrl: string | null; registeredAt: string } | null> {
-      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
-      const user = session?.user as { id?: unknown; role?: unknown; isTeacher?: unknown; githubLogin?: unknown; image?: unknown; createdAt?: unknown } | undefined;
-      if (!user || typeof user.id !== "string" || user.isTeacher === true || (typeof user.role === "string" && user.role.split(",").includes("admin"))) return null;
-      const account = auth.options.database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(user.id) as { accountId: string } | undefined;
-      if (!account) return null;
-      return {
-        id: user.id,
-        githubAccountId: account.accountId,
-        githubLogin: typeof user.githubLogin === "string" ? user.githubLogin : null,
-        avatarUrl: typeof user.image === "string" ? user.image : null,
-        registeredAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : typeof user.createdAt === "string" ? user.createdAt : new Date(0).toISOString(),
-      };
+      const result = await resolveStudent(request);
+      return result.kind === "student" ? result.student : null;
     },
+    studentAccess(request: IncomingMessage): Promise<StudentAccessResult> { return resolveStudent(request); },
     get githubOAuthConfigured(): boolean { return Boolean(auth.options.socialProviders?.github); },
   };
 }
