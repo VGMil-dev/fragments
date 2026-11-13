@@ -142,3 +142,13 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - `GET /api/me` HTTP 200 respondió `authenticated=false`, `reason=role_not_student`, resultado esperado para esta identidad docente; el rol permitió de nuevo el control de Mentor. La UI mostraba `v0.4.4` y el SHA de release `5cb799c`.
 - No se cambió la contraseña, rol, proveedor, SQLite ni datos académicos durante esta verificación. No se mostró ni conservó correo, ID GitHub, token o cookie.
 - F15.1 queda validada en producción para vinculación explícita y reingreso docente. F15/F15.2 siguen abiertas hasta completar OAuth de un estudiante autorizado con su cuenta GitHub personal y revisar sus permisos; no se creó ninguna propuesta de prueba.
+
+### OAuth estudiantil real — 2026-11-13, producción `v0.4.4`
+
+- Un estudiante autorizado inició sesión desde el botón normal «Iniciar sesión con GitHub» en `/student/login` y regresó a `/student/gallery` en Ego Lite. No se usó una URL callback directa ni se compartieron credenciales.
+- `GET /api/auth/get-session`: HTTP 200 con sesión autenticada. `GET /api/me`: HTTP 200, `authenticated=true`; el servidor aceptó la identidad GitHub asociada como estudiante. La interfaz mostró la galería, sin mensajes de error.
+- `GET /api/me/proposals`: HTTP 200, cero propuestas propias. `GET /api/gallery`: HTTP 200, cero publicaciones visibles. No se abrió contenido de registros ni se creó una propuesta de prueba.
+- Con esa misma sesión, `GET /api/teacher/mentor-control` y `GET /api/teacher/account` respondieron HTTP 403. La sesión estudiantil no obtuvo acceso docente.
+- La cuenta GitHub quedó bajo control del estudiante; en evidencia no se conserva nombre, correo, ID de proveedor, token ni cookie. No hubo cambios en datos académicos.
+- F15.2 queda verificada en producción para inicio GitHub estudiantil, sesión reconocida y separación de permisos. La galería está vacía y no hay propuesta propia: la persistencia de ownership, evaluación y publicación automática no se pudo recorrer en producción sin crear datos sintéticos ni provocar evaluación facturable.
+- F15 sigue abierta hasta que exista un flujo académico auténtico autorizado para validar la creación, propiedad y publicación en galería. No se declara el recorrido completo ni un PASS independiente global con la galería vacía.
