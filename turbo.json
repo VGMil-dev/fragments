@@ -1,7 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["FRAGMENTS_RELEASE_TAG", "FRAGMENTS_RELEASE_SHA"],
+      "outputs": ["dist/**"]
+    },
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^lint"] },
     "test": { "dependsOn": ["^build"], "outputs": [] },
