@@ -75,4 +75,9 @@ test("release workflow has only a tag-push trigger and no alternate activation p
   assert.doesNotMatch(trigger, /pull_request|workflow_dispatch|schedule|release:/);
   assert.doesNotMatch(source, /^\s{2}(?:workflow_dispatch|schedule|release):/m);
   assert.match(source, /environment:\s*\r?\n\s+name: fragments-production/);
+  assert.match(source, /steps\.attest\.outputs\.bundle-path/);
+  assert.match(source, /fragments-images\.attestation\.jsonl/);
+  assert.match(source, /gh attestation verify/);
+  assert.match(source, /--deny-self-hosted-runners/);
+  assert.match(source, /fragments-release-attestation-\$\{\{ github\.run_id \}\}/);
 });
