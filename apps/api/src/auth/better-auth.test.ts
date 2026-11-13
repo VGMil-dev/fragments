@@ -148,7 +148,7 @@ describe("Better Auth integration", () => {
     });
     const teacher = await auth.api.signUpEmail({ body: { name: "Teacher Fixture", email: "teacher@institution.example.test", password: "fixture-password-2026" } });
     database.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(teacher.user.id);
-    const teacherProfileBeforeLink = database.prepare("SELECT email, emailVerified, image, name FROM user WHERE id = ?").get(teacher.user.id);
+    const teacherProfileBeforeLink = database.prepare("SELECT email, emailVerified, image, isTeacher, name, role FROM user WHERE id = ?").get(teacher.user.id);
     const signIn = await auth.api.signInEmail({
       returnHeaders: true,
       body: { email: "teacher@institution.example.test", password: "fixture-password-2026" },
@@ -179,7 +179,7 @@ describe("Better Auth integration", () => {
     expect(providers).toEqual([{ providerId: "credential" }, { providerId: "github" }]);
     expect(database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.user.id)).toEqual({ accountId: "991338" });
     expect(database.prepare("SELECT isTeacher FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ isTeacher: 1 });
-    expect(database.prepare("SELECT githubLogin, email, emailVerified, image, name FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ githubLogin: "teacher-personal", ...teacherProfileBeforeLink });
+    expect(database.prepare("SELECT githubLogin, email, emailVerified, image, isTeacher, name, role FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ githubLogin: "teacher-personal", ...teacherProfileBeforeLink });
     expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: sessionCookie } } as IncomingMessage)).toBe(teacher.user.id);
     expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: sessionCookie } } as IncomingMessage)).toEqual({ kind: "role_not_student" });
 
