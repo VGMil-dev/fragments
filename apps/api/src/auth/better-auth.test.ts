@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFragmentsAuth, createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
+import { createAcademicRepository } from "../features/mentor/academic-repository.js";
 
 const databases: DatabaseSync[] = [];
 const servers: Server[] = [];
@@ -39,8 +40,6 @@ describe("Better Auth integration", () => {
       githubClientId: "fake-github-client-id",
       githubClientSecret: "fake-github-client-secret",
     });
-    const githubConfig = auth.options.socialProviders?.github as { mapProfileToUser?: (profile: { login: string }) => { githubLogin: string } } | undefined;
-    expect(githubConfig?.mapProfileToUser?.({ login: "fixture-profile" })).toEqual({ githubLogin: "fixture-profile" });
     let profile = { id: 991337, login: "personal-student", name: "Fixture Student", avatar_url: "https://avatars.githubusercontent.com/u/991337?v=4", email: null };
     const email = "student.personal@users.example.test";
     const fakeFetch = vi.fn(async (input: string | URL | Request) => {
@@ -75,20 +74,51 @@ describe("Better Auth integration", () => {
 
     const first = await completeOAuth();
     expect(first.session?.user.email).toBe(email);
-    // Provider identity is the stable accountId; githubLogin is optional profile data.
-    expect(database.prepare("SELECT githubLogin FROM user").get()).toEqual({ githubLogin: null });
-    expect(first.session?.user.githubLogin).toBeNull();
+    expect(database.prepare("SELECT githubLogin FROM user").get()).toEqual({ githubLogin: "personal-student" });
+    expect(first.session?.user.githubLogin).toBe("personal-student");
     const firstAccount = database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").get() as { accountId: string; userId: string };
     expect(firstAccount.accountId).toBe("991337");
     expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: first.sessionCookie } } as IncomingMessage))
-      .toMatchObject({ kind: "student", student: { id: firstAccount.userId, githubAccountId: "991337", githubLogin: null } });
+      .toMatchObject({ kind: "student", student: { id: firstAccount.userId, githubAccountId: "991337", githubLogin: "personal-student" } });
+    expect(createAcademicRepository(database).isGitHubStudent(firstAccount.userId)).toBe(true);
 
     profile = { ...profile, login: "personal-student-renamed", name: "Fixture Student Renamed" };
     const second = await completeOAuth();
     expect(second.session?.user.id).toBe(firstAccount.userId);
+    expect(database.prepare("SELECT githubLogin FROM user WHERE id = ?").get(firstAccount.userId)).toEqual({ githubLogin: "personal-student" });
     expect(database.prepare("SELECT accountId, userId FROM account WHERE providerId = 'github'").all())
       .toEqual([{ accountId: "991337", userId: firstAccount.userId }]);
     expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
+  });
+
+  it("does not let password-authenticated clients set a GitHub profile login", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-github-callback-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    await expect(auth.api.signUpEmail({
+      body: { name: "Fixture", email: "spoofed@example.test", password: "fixture-password-2026", githubLogin: "spoofed-login" },
+    })).rejects.toThrow();
+    const signup = await auth.api.signUpEmail({
+      body: { name: "Fixture", email: "fixture@example.test", password: "fixture-password-2026" },
+    });
+    const signedIn = await auth.api.signInEmail({
+      returnHeaders: true,
+      body: { email: "fixture@example.test", password: "fixture-password-2026" },
+    });
+    const cookie = signedIn.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    expect(database.prepare("SELECT githubLogin FROM user WHERE id = ?").get(signup.user.id)).toEqual({ githubLogin: null });
+
+    await auth.api.updateUser({
+      headers: new Headers({ cookie }),
+      body: { githubLogin: "spoofed-login" },
+    });
+    expect(database.prepare("SELECT githubLogin FROM user WHERE id = ?").get(signup.user.id)).toEqual({ githubLogin: null });
   });
 
   it("trusts only the normalized API and configured public app origins", async () => {
@@ -130,7 +160,7 @@ describe("Better Auth integration", () => {
     expect(auth.options.account?.accountLinking?.disableImplicitLinking).toBe(true);
     expect(auth.options.emailAndPassword?.disableSignUp).toBe(true);
     expect(additional.isTeacher?.input).toBe(false);
-    expect(additional.githubLogin?.input).toBe(false);
+    expect(additional.githubLogin?.input).toBe(true);
     expect(login.url).not.toContain("fake-github-client-secret");
     expect(await database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 0 });
     const untrusted = await auth.api.signInSocial({ body: { provider: "github", callbackURL: "https://untrusted.example.test/" } });

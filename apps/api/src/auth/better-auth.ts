@@ -86,7 +86,25 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     user: {
       additionalFields: {
         isTeacher: { type: "boolean", required: false, defaultValue: false, input: false },
-        githubLogin: { type: "string", required: false, input: false },
+        // Better Auth filters input:false fields out of provider profiles too.
+        // The hooks below accept this metadata only from its validated OAuth callback.
+        githubLogin: { type: "string", required: false, input: true },
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user, context) => {
+            if (context?.path === "/callback/:id") return;
+            return Object.hasOwn(user, "githubLogin") ? false : undefined;
+          },
+        },
+        update: {
+          before: async (user, context) => {
+            if (context?.path === "/callback/:id") return;
+            return Object.hasOwn(user, "githubLogin") ? false : undefined;
+          },
+        },
       },
     },
     ...(githubClientId && githubClientSecret ? {
