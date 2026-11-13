@@ -66,7 +66,7 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
       const response = await fetch("/api/auth/sign-in/email", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: form.get("email"), password: form.get("password") }) });
       if (!response.ok) { setMessage("No se pudo iniciar sesión. Revisa tus datos."); return; }
       const state = await checkSession(); setAuth(state);
-      if (state === "teacher") await load(); else setMessage("Esta cuenta no tiene acceso docente.");
+      if (state === "teacher") await Promise.all([load(), loadAccountStatus()]); else setMessage("Esta cuenta no tiene acceso docente.");
     } catch { setMessage("No pudimos conectar con el servicio."); }
     finally { setBusy(false); }
   }

@@ -18,6 +18,42 @@ afterEach(() => {
 });
 
 describe("Cuenta y acceso docente", () => {
+  it("carga el estado de cuenta al iniciar sesión desde el formulario", async () => {
+    const config = {
+      subject: "Ciencias", theme: "Huerto escolar", assignment: "Registra el crecimiento.", requirements: ["Incluye evidencia"],
+      expectedLevel: "Secundaria", rubricTitle: "Proceso", criteria: [{ id: "evidence", title: "Evidencia", description: "Observaciones", weight: 100 }],
+    };
+    const workspace = {
+      draft: { config, updatedAt: "2026-11-13T12:00:00.000Z" },
+      active: { version: 1, config, publishedAt: "2026-11-13T12:00:00.000Z" }, evaluations: [],
+    };
+    let authenticated = false;
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/auth/get-session") return new Response(JSON.stringify(authenticated ? { user: { id: "fixture-teacher", isTeacher: true } } : {}));
+      if (url === "/api/auth/sign-in/email") { authenticated = true; return new Response(JSON.stringify({ ok: true })); }
+      if (url === "/api/teacher/mentor-control") return new Response(JSON.stringify({ ok: true, data: workspace }));
+      if (url === "/api/teacher/account") return new Response(JSON.stringify({ ok: true, data: { credentialConnected: true, githubConnected: false } }));
+      throw new Error(`Ruta de fixture no prevista: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root?.render(<MentorControlWorkspace navigate={vi.fn()} />));
+
+    const email = container.querySelector<HTMLInputElement>('input[name="email"]');
+    const password = container.querySelector<HTMLInputElement>('input[name="password"]');
+    const form = container.querySelector("form");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(email, "teacher.fixture@example.test");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(password, "fixture-only-password");
+    await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
+    expect(fetcher).toHaveBeenCalledWith("/api/teacher/account", expect.any(Object));
+    expect(container.textContent).toContain("Cuenta y acceso");
+    expect(container.textContent).toContain("GitHub: no conectado");
+  });
+
   it("pide confirmación de contraseña y no presenta una vinculación fallida como exitosa", async () => {
     const config = {
       subject: "Ciencias", theme: "Huerto escolar", assignment: "Registra el crecimiento.", requirements: ["Incluye evidencia"],
