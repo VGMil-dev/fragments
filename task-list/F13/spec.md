@@ -8,12 +8,13 @@
 ## Salidas
 - Metadata pública embebida en el bundle: versión y SHA completo, obtenidos de la verificación del checkout.
 - Workflow manual disparado desde `main` que valida tag anotada, ascendencia y SHA antes de compilar el workspace y guardar `apps/web/dist`; no despliega ni recibe secretos de producción.
-- Indicador compacto y legible en escritorio y móvil; SHA completo disponible como `title`/nombre accesible.
+- Indicador compacto y legible en escritorio y móvil; muestra junto a la versión los primeros 7 caracteres del SHA y conserva el SHA completo como `title`/nombre accesible.
 - Un build de release falla si sus entradas o verificaciones no son válidas. No se usa `git describe`.
 
 ## Aceptación
 - GIVEN un build de `v0.3.1` desde el SHA etiquetado WHEN el pipeline construye THEN el indicador muestra `v0.3.1` y el SHA del checkout exacto.
 - GIVEN un build local sin variables WHEN se compila THEN la versión mostrada es `dev` y no se inventa un SHA.
+- GIVEN metadata de release válida WHEN se muestra el indicador THEN aparecen la versión y el SHA corto; el SHA completo sigue accesible y un build `dev` no muestra un SHA.
 - GIVEN una tag ligera, mal formada, fuera de `origin/main`, discrepante con HEAD o un árbol modificado WHEN se solicita un build de release THEN el build falla.
 - GIVEN escritorio o móvil WHEN se visita una pantalla web THEN el indicador se lee sin cubrir navegación ni contenido.
 - GIVEN ausencia del workflow confiable de releases WHEN se integra F13 THEN no se añade automatización de despliegue ni se despliega.
