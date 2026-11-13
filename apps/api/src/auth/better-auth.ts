@@ -17,6 +17,20 @@ export interface FragmentsAuthOptions {
   githubClientSecret?: string;
 }
 
+export type TeacherAccountStatus = {
+  credentialConnected: boolean;
+  githubConnected: boolean;
+};
+
+export type TeacherGitHubLinkResult =
+  | { kind: "unauthenticated" }
+  | { kind: "forbidden" }
+  | { kind: "rate_limited" }
+  | { kind: "invalid_password" }
+  | { kind: "already_linked" }
+  | { kind: "unavailable" }
+  | { kind: "started"; authorizationUrl: string; setCookies: string[] };
+
 export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
   if (options.secret.length < 32) throw new Error("BETTER_AUTH_SECRET debe tener al menos 32 caracteres.");
   const baseURL = options.baseURL ?? "http://localhost:3000";
@@ -82,6 +96,7 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
       },
     } : {}),
     account: { accountLinking: { disableImplicitLinking: true } },
+    disabledPaths: ["/link-social"],
     plugins: [admin()],
   });
 }
@@ -105,6 +120,7 @@ export async function createMigratedFragmentsAuth(database: DatabaseSync, option
 
 export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
   const handle = toNodeHandler(auth);
+  const passwordConfirmations = new Map<string, { attempts: number; resetAt: number }>();
   return {
     handle(request: IncomingMessage, response: ServerResponse): void {
       void handle(request, response);
@@ -120,6 +136,72 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
       const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
       const id = (session?.user as { id?: unknown } | undefined)?.id;
       return typeof id === "string" ? id : null;
+    },
+    isTrustedOrigin(origin: string): boolean {
+      const origins = auth.options.trustedOrigins;
+      return Array.isArray(origins) && origins.includes(origin);
+    },
+    async teacherAccount(request: IncomingMessage): Promise<{ kind: "unauthenticated" } | { kind: "forbidden" } | { kind: "ok"; status: TeacherAccountStatus }> {
+      const headers = fromNodeHeaders(request.headers);
+      const current = await auth.api.getSession({ headers, query: { disableCookieCache: true } });
+      if (!current?.user) return { kind: "unauthenticated" };
+      const roles = typeof current.user.role === "string" ? current.user.role.split(",") : [];
+      if (current.user.isTeacher !== true && !roles.includes("admin")) return { kind: "forbidden" };
+      const accounts = auth.options.database.prepare("SELECT providerId FROM account WHERE userId = ?").all(current.user.id) as Array<{ providerId: string }>;
+      return {
+        kind: "ok",
+        status: {
+          credentialConnected: accounts.some((account) => account.providerId === "credential"),
+          githubConnected: accounts.some((account) => account.providerId === "github"),
+        },
+      };
+    },
+    async beginTeacherGitHubLink(request: IncomingMessage, password: string): Promise<TeacherGitHubLinkResult> {
+      const headers = fromNodeHeaders(request.headers);
+      const current = await auth.api.getSession({ headers, query: { disableCookieCache: true } });
+      if (!current?.user) return { kind: "unauthenticated" };
+      const roles = typeof current.user.role === "string" ? current.user.role.split(",") : [];
+      if (current.user.isTeacher !== true && !roles.includes("admin")) return { kind: "forbidden" };
+
+      const now = Date.now();
+      for (const [userId, state] of passwordConfirmations) if (state.resetAt <= now) passwordConfirmations.delete(userId);
+      const attempt = passwordConfirmations.get(current.user.id);
+      if (attempt && attempt.attempts >= 5) return { kind: "rate_limited" };
+      passwordConfirmations.set(current.user.id, attempt
+        ? { attempts: attempt.attempts + 1, resetAt: attempt.resetAt }
+        : { attempts: 1, resetAt: now + 10 * 60_000 });
+
+      try {
+        await auth.api.verifyPassword({ body: { password }, headers });
+      } catch {
+        return { kind: "invalid_password" };
+      }
+
+      const confirmed = await auth.api.getSession({ headers, query: { disableCookieCache: true } });
+      if (!confirmed?.user || confirmed.user.id !== current.user.id) return { kind: "unauthenticated" };
+      const confirmedRoles = typeof confirmed.user.role === "string" ? confirmed.user.role.split(",") : [];
+      if (confirmed.user.isTeacher !== true && !confirmedRoles.includes("admin")) return { kind: "forbidden" };
+      const github = auth.options.database.prepare("SELECT 1 FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(current.user.id);
+      if (github) return { kind: "already_linked" };
+
+      passwordConfirmations.delete(current.user.id);
+      try {
+        const result = await auth.api.linkSocialAccount({
+          body: {
+            provider: "github",
+            callbackURL: "/teacher/mentor-control?githubLink=success",
+            errorCallbackURL: "/teacher/mentor-control?githubLink=error",
+            disableRedirect: true,
+          },
+          headers,
+          returnHeaders: true,
+        });
+        const target = new URL(result.response?.url ?? "");
+        if (target.origin !== "https://github.com" || target.pathname !== "/login/oauth/authorize") return { kind: "unavailable" };
+        return { kind: "started", authorizationUrl: target.toString(), setCookies: result.headers.getSetCookie() };
+      } catch {
+        return { kind: "unavailable" };
+      }
     },
     async student(request: IncomingMessage): Promise<{ id: string; githubAccountId: string; githubLogin: string | null; avatarUrl: string | null; registeredAt: string } | null> {
       const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });

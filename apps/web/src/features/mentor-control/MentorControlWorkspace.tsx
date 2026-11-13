@@ -4,6 +4,7 @@ import "./mentor-control.css";
 
 type AuthState = "loading" | "anonymous" | "teacher" | "denied";
 type Workspace = ReturnType<typeof MentorControlWorkspaceResponseSchema.parse>;
+type TeacherAccountStatus = { credentialConnected: boolean; githubConnected: boolean };
 
 async function checkSession(): Promise<AuthState> {
   try {
@@ -21,6 +22,8 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
   const [config, setConfig] = useState<MentorControlConfig>();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<TeacherAccountStatus | null>(null);
+  const [confirmingGitHub, setConfirmingGitHub] = useState(false);
 
   async function load() {
     const response = await fetch("/api/teacher/mentor-control", { credentials: "same-origin", cache: "no-store" });
@@ -32,7 +35,29 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
     setConfig(parsed.data.draft.config);
   }
 
-  useEffect(() => { void checkSession().then((state) => { setAuth(state); if (state === "teacher") void load(); }); }, []);
+  async function loadAccountStatus() {
+    const response = await fetch("/api/teacher/account", { credentials: "same-origin", cache: "no-store" });
+    const body = await response.json() as { ok?: boolean; data?: TeacherAccountStatus };
+    if (!response.ok || !body.data) throw new Error("No se pudo cargar la cuenta y el acceso.");
+    setAccountStatus(body.data);
+    return body.data;
+  }
+
+  useEffect(() => {
+    void checkSession().then(async (state) => {
+      setAuth(state);
+      if (state !== "teacher") return;
+      try {
+        await Promise.all([load(), loadAccountStatus()]);
+        const linkResult = new URLSearchParams(window.location.search).get("githubLink");
+        if (linkResult === "success") {
+          const confirmedStatus = await loadAccountStatus();
+          setMessage(confirmedStatus.githubConnected ? "GitHub quedó vinculado a esta cuenta docente." : "No pudimos confirmar la vinculación de GitHub.");
+        }
+        if (linkResult === "error") setMessage("No se pudo vincular GitHub. La cuenta y sus permisos siguen sin cambios.");
+      } catch { setMessage("No se pudo comprobar el estado de la cuenta."); }
+    });
+  }, []);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage("");
@@ -64,6 +89,32 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
     finally { setBusy(false); }
   }
 
+  async function linkGitHub(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setMessage("");
+    const form = event.currentTarget;
+    const passwordInput = form.elements.namedItem("password");
+    const password = passwordInput instanceof HTMLInputElement ? passwordInput.value : "";
+    try {
+      const response = await fetch("/api/teacher/account/github/link", {
+        method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      form.reset();
+      const body = await response.json() as { ok?: boolean; data?: { authorizationUrl?: unknown }; error?: { code?: string; message?: string } };
+      if (!response.ok || typeof body.data?.authorizationUrl !== "string") {
+        setMessage(body.error?.message ?? "No se pudo iniciar la vinculación.");
+        return;
+      }
+      const target = new URL(body.data.authorizationUrl);
+      if (target.origin !== "https://github.com" || target.pathname !== "/login/oauth/authorize") {
+        setMessage("No se pudo validar el destino de GitHub.");
+        return;
+      }
+      window.location.assign(target.toString());
+    } catch { setMessage("No pudimos conectar con el servicio de autenticación."); }
+    finally { setBusy(false); }
+  }
+
   function change<K extends keyof MentorControlConfig>(key: K, value: MentorControlConfig[K]) {
     setConfig((current) => current ? { ...current, [key]: value } : current);
   }
@@ -80,10 +131,24 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
     </form><a href="/teacher/reset-password" onClick={(event) => { event.preventDefault(); navigate("/teacher/reset-password"); }}>¿Olvidaste tu contraseña?</a>{message ? <p role="alert">{message}</p> : null}
   </main>;
 
-  if (!config || !workspace) return <main className="mentor-control"><p role="alert">{message || "Cargando configuración…"}</p><button onClick={() => void load()}>Reintentar</button></main>;
+  if (!config || !workspace || !accountStatus) return <main className="mentor-control"><p role="alert">{message || "Cargando configuración…"}</p><button onClick={() => { void Promise.all([load(), loadAccountStatus()]).catch(() => setMessage("No se pudo cargar el espacio docente.")); }}>Reintentar</button></main>;
   const total = config.criteria.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
   return <main className="mentor-control" aria-labelledby="mentor-control-title">
     <header className="mentor-control__header"><a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>← Inicio</a><p className="mentor-control__eyebrow">FRAGMENTS · ESPACIO DOCENTE</p><h1 id="mentor-control-title">Control de Mentor</h1><p>Define qué se evalúa. La versión publicada se conserva junto a cada resultado.</p></header>
+    <section className="mentor-control__account" aria-labelledby="account-access-title">
+      <h2 id="account-access-title">Cuenta y acceso</h2>
+      <p>Método actual: {accountStatus.credentialConnected ? "correo y contraseña" : "cuenta docente"}.</p>
+      <p>GitHub: <strong>{accountStatus.githubConnected ? "conectado" : "no conectado"}</strong></p>
+      {accountStatus.githubConnected ? null : confirmingGitHub ? <form className="mentor-control__link-form" onSubmit={(event) => void linkGitHub(event)}>
+        <p>Confirma tu contraseña actual. Después revisarás y autorizarás la cuenta en GitHub.</p>
+        <label htmlFor="teacher-link-password">Contraseña actual</label>
+        <input id="teacher-link-password" name="password" type="password" autoComplete="current-password" required maxLength={1024} />
+        <div className="mentor-control__account-actions">
+          <button className="button button--primary" disabled={busy}>{busy ? "Comprobando…" : "Continuar a GitHub"}</button>
+          <button className="button button--light" type="button" disabled={busy} onClick={() => setConfirmingGitHub(false)}>Cancelar</button>
+        </div>
+      </form> : <button className="button button--light" type="button" onClick={() => setConfirmingGitHub(true)}>Vincular cuenta de GitHub</button>}
+    </section>
     <section className="mentor-control__active" aria-label="Configuración activa"><strong>Versión activa {workspace.active.version}</strong><span>{workspace.active.config.subject} · {workspace.active.config.theme}</span><span>Publicada {new Date(workspace.active.publishedAt).toLocaleString()}</span></section>
     <form className="mentor-control__form" onSubmit={(event) => { event.preventDefault(); void save(false); }}>
       <h2>Consigna</h2>

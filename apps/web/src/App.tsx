@@ -14,6 +14,7 @@ import { createTrainerApi } from "./lib/api/trainer-api";
 import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
+import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
@@ -167,6 +168,7 @@ export function App() {
   }, []);
 
   if (path === "/student/login") return <><StudentLoginScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/auth/complete") return <><OAuthCompletionScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher/students") return <><TeacherStudentsWorkspace navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/inspector") {
