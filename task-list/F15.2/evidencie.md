@@ -96,3 +96,8 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 - Estado docente observado antes del handoff: `credentialConnected=true`, `githubConnected=false`. El navegador se cedió al propietario para completar la confirmación reciente de contraseña y el consentimiento OAuth. Todavía no se verificaron el callback real, logout/relogin con GitHub ni conservación del mismo `user.id`/rol en producción.
 - OAuth estudiantil real y permisos de galería/propiedad con una identidad GitHub personal siguen pendientes. Los tests, CI y revisiones independientes son evidencia de código/proveedor simulado, no sustituyen esas sesiones. Auditoría de seguridad: PASS acotado al código; detective OAuth: PASS local/BLOCKED real; revisión adversarial: PASS local/INCONCLUSIVE global. No se declara F15.2 completada.
 - Fragments público respondió HTTP 200 antes del release; Pits público estaba en HTTP 502 mientras sus contenedores locales de desarrollo y PostgreSQL estaban saludables. No se cambiaron Pits, PostgreSQL, Cloudflare ni otros servicios.
+
+### Lecturas anónimas post-despliegue — 2026-11-13
+
+- Requests `GET` directos a la API pública se hicieron sin cookies ni credenciales. `/api/me` devolvió HTTP 200 con `authenticated=false` y razón `session_required`; `/api/me/proposals`, `/api/gallery`, `/api/teacher/mentor-control` y `/api/teacher/account` devolvieron HTTP 401 (`AUTH_REQUIRED` en las rutas con ese contrato). No se leyeron propuestas, galería ni perfiles.
+- Estas respuestas acreditan el rechazo de acceso anónimo en la versión desplegada; no sustituyen la prueba con sesión real de estudiante o el flujo docente vinculado.
