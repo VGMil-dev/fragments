@@ -4,6 +4,14 @@
 .mentor-control__eyebrow { margin: 1.5rem 0 .4rem; color: var(--muted, #5f7183); font-size: .78rem; font-weight: 750; letter-spacing: .08em; }
 .mentor-control h1 { margin: .35rem 0; font-size: clamp(2rem, 5vw, 3rem); }
 .mentor-control__active { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; padding: 1rem; border: 1px solid var(--border-soft, #d8e0e7); border-radius: 12px; background: var(--powder, #edf4f8); }
+.mentor-control__account { display: grid; gap: .75rem; margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--border-soft, #d8e0e7); border-radius: 12px; background: var(--paper, #fff); }
+.mentor-control__account h2, .mentor-control__account p { margin: 0; }
+.mentor-control__account h2 { font-size: 1.15rem; }
+.mentor-control__link-form { display: grid; gap: .65rem; max-width: 440px; }
+.mentor-control__link-form label { font-size: .9rem; font-weight: 700; }
+.mentor-control__link-form input { width: 100%; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border-soft, #cbd5df); border-radius: 8px; background: #fff; color: var(--navy, #243747); font: inherit; }
+.mentor-control__link-form input:focus-visible { outline: 3px solid var(--blue, #4776a9); outline-offset: 2px; }
+.mentor-control__account-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 .mentor-control__form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--border-soft, #d8e0e7); border-radius: 14px; background: var(--paper, #fff); }
 .mentor-control__form h2 { grid-column: 1 / -1; margin: .5rem 0 0; font-size: 1.25rem; }
 .mentor-control__form label, .mentor-control__login label { display: grid; gap: .4rem; font-size: .9rem; font-weight: 700; }

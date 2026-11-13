@@ -12,6 +12,12 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("error") === "account_not_linked") {
+      setMessage("Esta cuenta coincide con una cuenta existente que no tiene GitHub vinculado. Si eres docente, entra con tus credenciales y vincula GitHub desde Cuenta y acceso.");
+    }
+  }, []);
+
+  useEffect(() => {
     let active = true;
     void api.getMe().then((result) => {
       if (!active) return;
@@ -29,7 +35,7 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
     try {
       const response = await fetch("/api/auth/sign-in/social", {
         method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider: "github", callbackURL: "/student/gallery", errorCallbackURL: "/student/login" }),
+        body: JSON.stringify({ provider: "github", callbackURL: "/auth/complete", errorCallbackURL: "/student/login" }),
       });
       if (!response.ok) throw new Error();
       const payload = await response.json() as { url?: unknown };

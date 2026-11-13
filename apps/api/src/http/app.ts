@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../auth/better-auth.js";
+import { createTeacherAccountHttp } from "../auth/teacher-account-http.js";
 import { createMentorHttp, type MentorEvaluationDiagnostic } from "../features/mentor/http.js";
 import { createAcademicHttp } from "../features/mentor/academic-http.js";
 import { createMentorControlHttp } from "../features/mentor/control-http.js";
@@ -33,6 +34,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
   const academicHandler = createAcademicHttp(database, options.auth);
+  const teacherAccountHandler = options.auth ? createTeacherAccountHttp(options.auth) : undefined;
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor, {
     ...(options.auth ? { auth: options.auth } : {}),
     ...(options.logFailure ? { logFailure: options.logFailure } : {}),
@@ -43,6 +45,10 @@ export function createHttpHandler(database: DatabaseSync, options: {
   const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     const pathname = new URL(request.url ?? "/", "http://fragments.local").pathname;
+    if (pathname === "/api/auth/link-social" && request.method === "POST") {
+      sendError(response, 404, "NOT_FOUND", "No se encontró la ruta.");
+      return;
+    }
     if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
       if (!options.auth) {
         sendError(response, 503, "AUTH_DISABLED", "El acceso docente no está habilitado.");
@@ -51,6 +57,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
       options.auth.handle(request, response);
       return;
     }
+    if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");
     if (request.method === "GET" && request.url === "/health") {
