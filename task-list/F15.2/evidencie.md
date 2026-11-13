@@ -28,17 +28,22 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 - `pnpm install --offline --frozen-lockfile --ignore-scripts`: 308 paquetes reutilizados, 0 descargados; sin scripts.
 - Pruebas rojas previas al arreglo: rutas docente 404 en vez de 200; perfil con cuenta estable y login ausente devuelto como no autenticado; UI no distinguía 503.
 - `pnpm --filter @fragments/contracts build`: exitoso.
-- `pnpm test`: Turbo 4/4 tareas exitosas: API 29 archivos/120 pruebas, web 20 archivos/78 pruebas y contratos 1 archivo/19 pruebas. Incluye el callback OAuth simulado y la regresión que bloquea `githubLogin` falsificado.
+- `pnpm test`: Turbo 4/4 tareas exitosas: API 29 archivos/122 pruebas, web 20 archivos/79 pruebas y contratos 1 archivo/19 pruebas. Incluye callbacks OAuth simulados de estudiante/docente, correo coincidente sin enlace, preservación del rol y regresión que bloquea `githubLogin` falsificado.
 - Nuevas regresiones: sesión Better Auth expirada y conservación de propuesta/publicación cuando cambian email y login. Prueba dirigida (`pnpm --filter @fragments/api exec vitest run src/auth/better-auth.test.ts src/features/mentor/academic-repository.test.ts`): 2 archivos, 14 pruebas pasan. La primera ejecución roja mostró que el fixture de expiración debía usar el formato de fecha ISO de SQLite; el caso corregido pasa.
 - Al añadir estas regresiones también se exige lectura de sesión sin cookie cache para `studentAccess`, `teacherId` y `userId`, evitando que estado de sesión cacheado desplace la expiración/revocación vigente en base de datos.
 - Diagnóstico del callback: Better Auth 1.7.17 aplica `parseAdditionalUserInputFromProviderProfile`; `input: false` elimina `githubLogin` también del `mapProfileToUser`. Como `academic-repository` exige un login válido para publicar entradas y listarlas en roster, ese resultado habría permitido sesión pero omitido esas áreas.
 - Corrección: `githubLogin` se acepta en el schema interno, mientras los hooks de base de datos solo admiten el campo cuando el contexto es el callback Better Auth validado `/callback/:id`; altas/actualizaciones normales que intentan fijarlo se rechazan. La regresión confirma que el callback OAuth simulado persiste login, sesión y asociación estable; correo personal, elegibilidad del roster y segundo callback reutilizando `user.id`/`accountId` sin duplicados. El callback normal no refresca el nombre por defecto; la propiedad nunca depende de ese atributo.
+- Regresión docente: el titular ya autenticado vincula vía `linkSocial` una cuenta GitHub con correo personal diferente; el callback conserva `isTeacher`, la cuenta `credential` y el mismo `user.id`; el reingreso GitHub devuelve esa misma cuenta docente. `allowDifferentEmails` permite el enlace explícito, mientras `disableImplicitLinking: true` permanece activo. Otra prueba completa callback estudiantil con correo coincidente no vinculado y demuestra `account_not_linked`, sin cuenta GitHub ni usuario duplicado.
 - `pnpm typecheck`: Turbo 4/4 exitosas.
 - `pnpm lint`: Turbo 1/1 tarea disponible (contratos) exit 0; API/web no tienen script lint.
 - `pnpm build`: Turbo 3/3 exitosas; Vite advierte chunk principal 522.68 kB sobre umbral 500 kB.
 - `git diff --check`: exit 0.
 - Commit de regresión OAuth: `6842ee5cfc3a07c4df96fbea32c1340de727d955`.
 - Commit de metadata confiable para galería/roster: `be7a61c2a1acfcda6ac59e75acecc693dae581b3`.
+- Commit de vinculación/reingreso docente y rechazo de asociación implícita: `baaae1d00d9da47414160386be479fffdf2bfa81`.
+- Hallazgo QA: tras iniciar sesión con contraseña, el panel docente autenticaba correctamente pero no cargaba el estado «Cuenta y acceso». Se corrigió el flujo para cargar conjuntamente workspace y estado de cuenta; prueba nueva `carga el estado de cuenta al iniciar sesión desde el formulario`. Commit: `4e9b7d6`.
+- Verificación fresca tras ese ajuste: `pnpm test` API 122/web 79/contratos 19 (Turbo 4/4); `pnpm typecheck` Turbo 4/4; `pnpm lint` 1/1 tarea disponible; `pnpm build` 3/3. Vite conserva advertencia preexistente de chunk principal de ~522.70 kB.
+- QA Ego Lite en la sesión autorizada «Fragments» (ID 10), build local y cuenta docente sintética aislada: escritorio y viewport móvil 390 px; tras login aparecen «Cuenta y acceso», el método de inicio de sesión y estado GitHub; `innerWidth` y `scrollWidth` son ambos 390 px. No hubo overflow horizontal. Esto no prueba OAuth real ni despliegue productivo.
 
 ## Contraste con el plan adjunto F15.2
 
@@ -65,11 +70,11 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 
 ## Pendiente
 
-- QA Ego Lite desktop/390 px contra los estados locales. La ronda desktop quedó sin ejecutar: la API de cambio de viewport usada no existe en Ego Lite 0.6.2.7. El CLI notificó una actualización disponible; la guía exige aprobación antes de actualizar, por lo que no se modificó la instalación. La ronda mobile anterior verificó ausencia de overflow y el estado recuperable local; requiere repetición final. No se usó Playwright ni otro navegador.
-- PR #25 [fix(F15.2): identidad GitHub personal y rutas docentes](https://github.com/VGMil-dev/fragments/pull/25), draft, hacia `main`. El check obligatorio `verify` pasó en run `43475532081` para el head `e952f6e991b59b69dcbec5a06bd15d6f22915232`; incluyó metadata Turbo, pruebas, typecheck, lint y build. El PR sigue en borrador mientras falta QA visual final.
-- `verify` run `43478214726` terminó exitosamente para el head exacto `c2e46213310d09c82ff6b05df7d7e548bd0b586f`, antes del hallazgo de metadata. La regresión ampliada en `be7a61c2a1acfcda6ac59e75acecc693dae581b3` vuelve a requerir CI remoto después del push.
+- QA visual local final con Ego Lite completado en escritorio y 390 px. No se usó Playwright ni otro navegador. Ego Lite notificó que existe una actualización; no se instaló.
+- PR #25 [fix(F15.2): identidad GitHub personal y rutas docentes](https://github.com/VGMil-dev/fragments/pull/25), draft, hacia `main`. El check obligatorio `verify` pasó en run `43475532081` para el head `e952f6e991b59b69dcbec5a06bd15d6f22915232`; incluyó metadata Turbo, pruebas, typecheck, lint y build. QA visual local ya pasó; el PR permanece en borrador hasta que se completen CI para el nuevo head y las verificaciones OAuth productivas requeridas.
+- `verify` run `43480291001` terminó exitosamente para el head `d1ea3f73af5939f101ec048a1c636e80a5feb865`, antes de las regresiones de docente/correo coincidente y del arreglo de carga de cuenta. Los commits `baaae1d` y `4e9b7d6` requieren nuevo CI remoto tras el push.
 - Diff de PR consultado en GitHub: 20 archivos; sin `.env`, bases de datos, capturas privadas ni artefactos generados. La revisión de código y los revisores independientes dieron PASS acotado para identidad/rutas; OAuth real queda inconcluso.
-- Merge normal a `main` pendiente hasta completar QA visual y los checks del head vigente. No se creó tag ni se ejecutó release; producción no se modificó.
+- Merge normal a `main` pendiente de nuevo CI remoto para el head vigente y de la validación OAuth real de docente y estudiante. No se creó tag ni se ejecutó release; producción no se modificó.
 - Revalidar backup, bundle F14 y checks; publicar nueva tag SemVer solo bajo autorización F15/addendum y aprobación protegida obligatoria.
 - Después del despliegue, pedir al alumno una acción real en Ego Lite para comprobar OAuth personal, `/api/me`, galería y propiedad sin crear proyectos. Pedir al propietario su intervención para contraseña/consentimiento de enlace docente y reingreso.
 - Verificación independiente PASS final aún no emitida.
