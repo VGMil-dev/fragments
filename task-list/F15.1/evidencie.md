@@ -58,3 +58,9 @@
 ### Aclaración de vigencia de la lectura Ego Lite
 
 La observación `credentialConnected=true`, `githubConnected=false` que se anotó arriba proviene de una sesión anterior y no se repitió durante F15.2. No demuestra el estado actual de una cuenta docente ni sustituye la lectura posterior al despliegue de la corrección de rutas.
+
+## v0.4.4 en producción — 2026-11-13
+
+- La versión `v0.4.4` quedó desplegada por el agente F14 desde `5cb799c58075ac3eabf1766370af66d3d5cd4e1b`; run `43489422906` terminó exitoso después de la aprobación protegida del propietario. API/web y la ruta docente están saludables; el GET autenticado `/api/teacher/mentor-control` devolvió 200.
+- En Ego Lite, `/api/teacher/account` devolvió `credentialConnected=true`, `githubConnected=false`, y la UI mostró «Cuenta y acceso». Por tanto, el feature está presente y la asociación real todavía no está demostrada. Se cedió el control al propietario para contraseña reciente y consentimiento GitHub; no se leyó ni introdujo contraseña ni se autorizó en su nombre.
+- La vinculación, cierre de sesión y reingreso GitHub conservando el mismo usuario docente y rol quedan pendientes de una interacción real y su verificación posterior. La revisión de seguridad del código es PASS acotado; no equivale a OAuth productivo.
