@@ -121,6 +121,99 @@ describe("Better Auth integration", () => {
     expect(database.prepare("SELECT githubLogin FROM user WHERE id = ?").get(signup.user.id)).toEqual({ githubLogin: null });
   });
 
+  it("links a personal GitHub email to the same authenticated teacher account without changing its role", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-github-callback-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const teacher = await auth.api.signUpEmail({ body: { name: "Teacher Fixture", email: "teacher@institution.example.test", password: "fixture-password-2026" } });
+    database.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(teacher.user.id);
+    const signIn = await auth.api.signInEmail({
+      returnHeaders: true,
+      body: { email: "teacher@institution.example.test", password: "fixture-password-2026" },
+    });
+    const sessionCookie = signIn.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const personalEmail = "teacher.personal@users.example.test";
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "https://github.com/login/oauth/access_token") return new Response(JSON.stringify({ access_token: "fixture-access-token", token_type: "bearer", scope: "read:user,user:email" }), { status: 200, headers: { "content-type": "application/json" } });
+      if (url === "https://api.github.com/user") return new Response(JSON.stringify({ id: 991338, login: "teacher-personal", name: "Teacher Personal", avatar_url: "https://avatars.githubusercontent.com/u/991338?v=4", email: null }), { status: 200, headers: { "content-type": "application/json" } });
+      if (url === "https://api.github.com/user/emails") return new Response(JSON.stringify([{ email: personalEmail, primary: true, verified: true }]), { status: 200, headers: { "content-type": "application/json" } });
+      throw new Error(`Unexpected fetch in fake OAuth provider: ${new URL(url).origin}`);
+    }));
+
+    const started = await auth.api.linkSocialAccount({
+      returnHeaders: true,
+      headers: new Headers({ cookie: sessionCookie }),
+      body: { provider: "github", callbackURL: "http://localhost:5173/teacher/mentor-control?githubLink=success", errorCallbackURL: "http://localhost:5173/teacher/mentor-control?githubLink=error" },
+    });
+    const authorizeUrl = new URL(started.response.url);
+    expect(authorizeUrl.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/auth/callback/github");
+    const callbackCookie = started.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const callback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(authorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie: callbackCookie } }));
+    expect(callback.status).toBe(302);
+    expect(callback.headers.get("location")).toBe("http://localhost:5173/teacher/mentor-control?githubLink=success");
+
+    const providers = database.prepare("SELECT providerId FROM account WHERE userId = ? ORDER BY providerId").all(teacher.user.id);
+    expect(providers).toEqual([{ providerId: "credential" }, { providerId: "github" }]);
+    expect(database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.user.id)).toEqual({ accountId: "991338" });
+    expect(database.prepare("SELECT isTeacher FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ isTeacher: 1 });
+    expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: sessionCookie } } as IncomingMessage)).toBe(teacher.user.id);
+    expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: sessionCookie } } as IncomingMessage)).toEqual({ kind: "role_not_student" });
+
+    const githubLogin = await auth.api.signInSocial({
+      returnHeaders: true,
+      body: { provider: "github", callbackURL: "http://localhost:5173/auth/complete", errorCallbackURL: "http://localhost:5173/teacher/mentor-control" },
+    });
+    const githubAuthorizeUrl = new URL(githubLogin.response.url);
+    const githubLoginStateCookie = githubLogin.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const githubLoginCallback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(githubAuthorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie: githubLoginStateCookie } }));
+    expect(githubLoginCallback.headers.get("location")).toBe("http://localhost:5173/auth/complete");
+    const githubLoginCookie = githubLoginCallback.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const loggedInSession = await auth.api.getSession({ headers: new Headers({ cookie: githubLoginCookie }), query: { disableCookieCache: true } });
+    expect(loggedInSession?.user.id).toBe(teacher.user.id);
+    expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: githubLoginCookie } } as IncomingMessage)).toBe(teacher.user.id);
+    expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
+  });
+
+  it("does not link by email coincidence during student sign-in", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-github-callback-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const existing = await auth.api.signUpEmail({ body: { name: "Existing Fixture", email: "same@example.test", password: "fixture-password-2026" } });
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "https://github.com/login/oauth/access_token") return new Response(JSON.stringify({ access_token: "fixture-access-token", token_type: "bearer", scope: "read:user,user:email" }), { status: 200, headers: { "content-type": "application/json" } });
+      if (url === "https://api.github.com/user") return new Response(JSON.stringify({ id: 991339, login: "unlinked-student", name: "Unlinked Student", avatar_url: "https://avatars.githubusercontent.com/u/991339?v=4", email: null }), { status: 200, headers: { "content-type": "application/json" } });
+      if (url === "https://api.github.com/user/emails") return new Response(JSON.stringify([{ email: "same@example.test", primary: true, verified: true }]), { status: 200, headers: { "content-type": "application/json" } });
+      throw new Error(`Unexpected fetch in fake OAuth provider: ${new URL(url).origin}`);
+    }));
+    const login = await auth.api.signInSocial({
+      returnHeaders: true,
+      body: { provider: "github", callbackURL: "http://localhost:5173/auth/complete", errorCallbackURL: "http://localhost:5173/student/login" },
+    });
+    const authorizeUrl = new URL(login.response.url);
+    const stateCookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const callback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(authorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie: stateCookie } }));
+
+    expect(callback.status).toBe(302);
+    expect(callback.headers.get("location")).toBe("http://localhost:5173/student/login?error=account_not_linked");
+    expect(database.prepare("SELECT id, githubLogin FROM user WHERE id = ?").get(existing.user.id)).toEqual({ id: existing.user.id, githubLogin: null });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM account WHERE providerId = 'github'").get()).toMatchObject({ count: 0 });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 1 });
+  });
+
   it("trusts only the normalized API and configured public app origins", async () => {
     const database = new DatabaseSync(":memory:");
     databases.push(database);

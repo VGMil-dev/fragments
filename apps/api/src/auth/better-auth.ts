@@ -117,7 +117,8 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
         },
       },
     } : {}),
-    account: { accountLinking: { disableImplicitLinking: true } },
+    // Different emails are allowed only on the explicit linkSocial flow; implicit linking stays disabled.
+    account: { accountLinking: { disableImplicitLinking: true, allowDifferentEmails: true } },
     disabledPaths: ["/link-social"],
     plugins: [admin()],
   });
