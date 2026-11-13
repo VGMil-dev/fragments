@@ -299,6 +299,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
   it("separates teacher authorization and historical records, and claims only with the original cookie", async () => {
     const base = await start();
     const database = databases.at(-1)!;
+    const draftProposal = await createProposal(base, "student-1");
     const token = "legacy-owner-cookie-token-that-is-long-enough-0123456789";
     const legacy = createMentorRepository(database).createProposal(draft, createHash("sha256").update(token).digest("hex"));
     const anonymous = await fetch(`${base}/api/teacher/students`);
@@ -312,6 +313,10 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(JSON.stringify(await students.json())).not.toContain("student-one@example.test");
     const projects = await fetch(`${base}/api/teacher/students/student-1/projects`, { headers: teacherHeaders });
     expect(projects.status).toBe(200);
+    expect(await projects.json()).toMatchObject({ ok: true, data: [expect.objectContaining({
+      id: draftProposal.id,
+      history: [expect.objectContaining({ version: 1, published: false })],
+    })] });
     const historical = await fetch(`${base}/api/teacher/historical-projects`, { headers: teacherHeaders });
     expect((await historical.json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).toContain(legacy.id);
 
