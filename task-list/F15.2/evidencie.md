@@ -52,6 +52,13 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 - Dominio Fragments HTTP 200. Pits público HTTP 502; Pits desarrollo y PostgreSQL mostraron `healthy` en `docker ps`. No se modificó ningún servicio vecino.
 - No se alteró producción, SQLite, tags, cuentas o permisos; no se consultaron secretos ni sesiones de estudiante.
 
+### Revalidación productiva y CI del PR — 2026-11-13
+
+- Se verificó otra vez la huella SSH ED25519 confiable (`SHA256:zzF20RQw2amdh66Pxm89w3oUCuhieg0nToMxJlGnNlQ`) y se mantuvo `StrictHostKeyChecking=yes`. La consulta requirió `sudo -n docker` porque el usuario `ubuntu` no accede directamente al socket Docker; no se cambió ningún grupo ni permiso.
+- API/web están `healthy` con imagen `sha-b7810f9bfb41c00a7db1f998badb3770fe710185`; polling, apply.path y backup timers `active`; `/health` local HTTP 200 con SQLite `ready`.
+- Web pública Fragments HTTP 200; Pits público HTTP 502. Contenedores de desarrollo Pits y PostgreSQL `healthy`; no se modificaron.
+- PR #25 sigue draft. Check requerido `verify`, run `43475876169`, pasó en head `da9b187b75c7894502cdd917258c1b50a0424b71`; incluye metadata Turbo y todas las suites/tipos/lint/build. El cambio de cabeza posterior para esta evidencia volverá a requerir check.
+
 ## Pendiente
 
 - QA Ego Lite desktop/390 px contra los estados locales. La ronda desktop quedó sin ejecutar: la API de cambio de viewport usada no existe en Ego Lite 0.6.2.7. El CLI notificó una actualización disponible; la guía exige aprobación antes de actualizar, por lo que no se modificó la instalación. La ronda mobile anterior verificó ausencia de overflow y el estado recuperable local; requiere repetición final. No se usó Playwright ni otro navegador.
