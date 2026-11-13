@@ -66,6 +66,8 @@ Esta revalidación no integra ni publica F13 en `main`; la comprobación de inte
 - Código local `9ffab86919be835775dcc2e3a83aefda20b22555`: `BuildVersion` ahora muestra los primeros 7 caracteres del SHA junto a la versión; el SHA completo permanece en `title` y `aria-label`. La metadata `dev` sin SHA no dibuja el sufijo.
 - Pruebas de regresión cubren el build de release y el estado `dev`. El test local no terminó porque pnpm intentó materializar 308 dependencias en el checkout exFAT; se detuvo esa instalación. GitHub Actions `verify`, run `43376762673`, pasó en el PR #18 e incluye tests, typecheck, lint y build.
 - Este cambio no altera la tag ni los assets `v0.4.1`, y no se desplegó. Aun integrado, requerirá una nueva tag/version y autorización específica antes de producción.
+- PR #18 se integró mediante merge normal: branch head `69c7ffaac3f62353a0a4d92e55602b6cd178d686`, merge SHA `ffb647706782c8bf3942e7793b117ec3d870d527`; check `verify` run `43376992320`: SUCCESS. `origin/main` en la revalidación quedó en `ffb647706782c8bf3942e7793b117ec3d870d527`.
+- La versión pública continúa siendo `v0.4.1` porque no se creó tag nueva ni se desplegó el cambio. El frontend público seguirá mostrando solo la versión y SHA completo accesible hasta la próxima release autorizada.
 
 ## Integración prevista con F14
 
