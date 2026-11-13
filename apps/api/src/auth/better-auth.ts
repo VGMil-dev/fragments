@@ -102,11 +102,13 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
         update: {
           before: async (user, context) => {
             if (context?.path === "/callback/:id") {
-              // On a verified provider callback, sync only the GitHub login. Better Auth's
-              // override option also proposes name/image/email, which must stay user-owned.
-              return typeof user.githubLogin === "string" && /^[A-Za-z0-9-]{1,39}$/.test(user.githubLogin)
-                ? { data: { githubLogin: user.githubLogin, name: undefined, image: undefined, email: undefined, emailVerified: undefined } }
-                : { data: { name: undefined, image: undefined, email: undefined, emailVerified: undefined, githubLogin: undefined } };
+              // Treat callback updates as an allow-list. Better Auth merges `data` over
+              // its profile update, so explicitly remove every proposed field first.
+              const safeUpdate = Object.fromEntries(Object.keys(user).map((field) => [field, undefined])) as typeof user;
+              if (typeof user.githubLogin === "string" && /^[A-Za-z0-9-]{1,39}$/.test(user.githubLogin)) {
+                safeUpdate.githubLogin = user.githubLogin;
+              }
+              return { data: safeUpdate };
             }
             return Object.hasOwn(user, "githubLogin") ? false : undefined;
           },

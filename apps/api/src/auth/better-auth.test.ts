@@ -64,11 +64,20 @@ describe("Better Auth integration", () => {
       });
       const authorizeUrl = new URL(login.response.url);
       const cookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
-      const callback = await auth.handler(new Request(`http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(authorizeUrl.searchParams.get("state") ?? "")}`, { headers: { cookie } }));
+      const state = authorizeUrl.searchParams.get("state") ?? "";
+      const callbackUrl = `http://localhost:3000/api/auth/callback/github?code=fixture-code&state=${encodeURIComponent(state)}`;
+      if (Number((database.prepare("SELECT COUNT(*) AS count FROM user").get() as { count: number }).count) === 0) {
+        const invalidState = await auth.handler(new Request(callbackUrl.replace(encodeURIComponent(state), "invalid-state"), { headers: { cookie } }));
+        expect(invalidState.headers.get("location")).toContain("state_mismatch");
+        expect(database.prepare("SELECT COUNT(*) AS count FROM user").get()).toMatchObject({ count: 0 });
+      }
+      const callback = await auth.handler(new Request(callbackUrl, { headers: { cookie } }));
       expect(callback.status).toBe(302);
       expect(callback.headers.get("location")).toBe("http://localhost:5173/auth/complete");
       const sessionCookie = callback.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
       const session = await auth.api.getSession({ headers: new Headers({ cookie: sessionCookie }), query: { disableCookieCache: true } });
+      const replay = await auth.handler(new Request(callbackUrl, { headers: { cookie } }));
+      expect(replay.headers.get("location")).toContain("state_mismatch");
       return { session, sessionCookie };
     }
 
@@ -139,6 +148,7 @@ describe("Better Auth integration", () => {
     });
     const teacher = await auth.api.signUpEmail({ body: { name: "Teacher Fixture", email: "teacher@institution.example.test", password: "fixture-password-2026" } });
     database.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(teacher.user.id);
+    const teacherProfileBeforeLink = database.prepare("SELECT email, emailVerified, image, name FROM user WHERE id = ?").get(teacher.user.id);
     const signIn = await auth.api.signInEmail({
       returnHeaders: true,
       body: { email: "teacher@institution.example.test", password: "fixture-password-2026" },
@@ -169,7 +179,7 @@ describe("Better Auth integration", () => {
     expect(providers).toEqual([{ providerId: "credential" }, { providerId: "github" }]);
     expect(database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.user.id)).toEqual({ accountId: "991338" });
     expect(database.prepare("SELECT isTeacher FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ isTeacher: 1 });
-    expect(database.prepare("SELECT githubLogin, email, name FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ githubLogin: "teacher-personal", email: "teacher@institution.example.test", name: "Teacher Fixture" });
+    expect(database.prepare("SELECT githubLogin, email, emailVerified, image, name FROM user WHERE id = ?").get(teacher.user.id)).toEqual({ githubLogin: "teacher-personal", ...teacherProfileBeforeLink });
     expect(await createFragmentsAuthService(auth).teacherId({ headers: { cookie: sessionCookie } } as IncomingMessage)).toBe(teacher.user.id);
     expect(await createFragmentsAuthService(auth).studentAccess({ headers: { cookie: sessionCookie } } as IncomingMessage)).toEqual({ kind: "role_not_student" });
 
