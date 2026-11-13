@@ -14,7 +14,11 @@ const bundles = (await readdir(directory)).filter((file) => file.endsWith(".js")
 if (bundles.length === 0) throw new Error("No se encontraron bundles JavaScript.");
 const contents = await Promise.all(bundles.map((file) => readFile(`${directory}/${file}`, "utf8")));
 const markers = contents.join("\n");
-const metadataPattern = new RegExp(`version:[\"']${expectedTag}[\"'],commit:[\"']${expectedSha}[\"']`);
+const maybeQuotedKey = `[\"'\\x60]?`;
+const quotedValue = `[\"'\\x60]`;
+const metadataPattern = new RegExp(
+  `${maybeQuotedKey}version${maybeQuotedKey}\\s*:\\s*${quotedValue}${expectedTag}${quotedValue}\\s*,\\s*${maybeQuotedKey}commit${maybeQuotedKey}\\s*:\\s*${quotedValue}${expectedSha}${quotedValue}`,
+);
 if (!metadataPattern.test(markers)) {
   throw new Error("El bundle no contiene la versión y el SHA exactos verificados.");
 }

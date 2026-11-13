@@ -36,5 +36,8 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release metadata reaches Vite through Turbo
+        run: node --test deploy/production/release-agent/test-turbo-release-metadata.mjs
+
       - name: Test, typecheck, lint, and build
         run: pnpm exec turbo run test typecheck lint build
