@@ -86,7 +86,10 @@ El workflow valida semver, tag anotada, SHA exacto y pertenencia a `main`; el jo
 - `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs` — 1/1; metadata de prueba `v99.98.97`, SHA `9de68d2761ff1b918e4280be75cdcad43f8e24e3`, 2 bundles JavaScript. El build sin variables conserva `dev`.
 - `node --test deploy/production/release-agent/test-release-agent-scripts.mjs` — 4/4. `node --check` de ambos scripts y `git diff --check` — salida 0.
 - En copia NTFS limpia: `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas exitosas, 0 en caché; contracts 19/19, API 109/109 y web 67/67. Typecheck, lint y builds exitosos.
-- Commit de hotfix en rama `codex/f14-turbo-release-env`: `9de68d2761ff1b918e4280be75cdcad43f8e24e3`. PR y check remoto pendientes al registrar esta evidencia.
+- Commits de hotfix en `codex/f14-turbo-release-env`: código `9de68d2761ff1b918e4280be75cdcad43f8e24e3` y evidencia `449573baf67f14c8c77bdb34f78fcf5a7f31f06a`.
+- PR #13 se fusionó con método `merge` normal; check `verify` requerido y exitoso en run `43338463332`. SHA final de `origin/main`: `42fa8ec24d5a348c4e63c54c046883c1b346a732`; el commit de hotfix está contenido en `main`.
+- Protección `main` configurada desde GitHub: exige pull request y check `verify`, sin aprobación adicional; “Do not allow bypassing” activado para administradores. No se exigió que la rama esté actualizada automáticamente. No se alteró el entorno protegido `fragments-production`.
+- `v0.4.0` sigue apuntando al objeto anotado `4b175b80a0b3159ff922bad491f8ef36efe4d0ee` → `e73d25fe3e07e4125bc1f76cd45136e9c479cd00`; no se movió. No existe `v0.4.1` y no se publicó release nuevo.
 - Producción no se modificó para este hotfix: API y web siguen healthy con `fragments-api:50e2ace-arm64` y `fragments-web:50e2ace-arm64`; el `.env` productivo mantiene las credenciales OAuth privadas instaladas antes. SQLite, Pits y PostgreSQL permanecen intactos. No se creó la tag `v0.4.1`.
 
 ## Reducción de independencia autorizada
