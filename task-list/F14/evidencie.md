@@ -146,4 +146,6 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 
 ## Estado de bundles futuros
 
-- La mejora que publica `fragments-images.attestation.jsonl` queda separada y habilitada solo después de desplegar `v0.4.1`, en preparación para un PR distinto. La implementación histórica `v0.4.1` no se reconstruyó ni modificó. El timer de polling queda activo.
+- PR #16 publicó `fragments-images.attestation.jsonl` en releases futuros y revalida el bundle en el job protegido. Check `verify`, run `43375995436`: SUCCESS; merge normal SHA `8990d37414d20c33f5dcfab40d5f11fb71c1ccca`. No se añadió ningún trigger alternativo. El cambio se integró después de confirmar la aplicación de `v0.4.1`.
+- Al merge de PR #15, el workflow aún coincidía con el de la tag y el agente aplicó `v0.4.1`. PR #16 modificó intencionadamente el workflow de `main` **después** del despliegue; el workflow y assets históricos de `v0.4.1` permanecen intactos. Las próximas tags construirán con el workflow nuevo que adjunta el bundle.
+- Estado final consultado por `git fetch origin main`: `origin/main` `8990d37414d20c33f5dcfab40d5f11fb71c1ccca`; el commit de PR #16 está contenido. No hubo otra tag, build de release ni despliegue. El timer de polling y el path de Fragments siguen activos. F14 queda completada con evidencia productiva; F15 conserva el bloqueo de OAuth real descrito en su evidencia.
