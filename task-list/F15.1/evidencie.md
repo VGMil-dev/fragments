@@ -16,8 +16,17 @@
 - Web `tsc -p tsconfig.json`: 0.
 - API build `tsc -p tsconfig.json`: 0.
 - Web `vite build`: exitoso; Vite conserva warning del chunk principal de 520.11 kB (umbral 500 kB).
-- Contracts lint disponible `tsc --noEmit -p tsconfig.json`: 0. API y web no declaran script lint. `turbo lint` se intentó; el linker default de pnpm no funciona en el volumen exFAT y el modo hoisted también falla al crear symlinks a paquetes workspace. No se modificó configuración versionada para ocultar esa limitación.
+- Contracts lint disponible `tsc --noEmit -p tsconfig.json`: 0. API y web no declaran script lint. El primer intento de `turbo lint` en D: exFAT no pudo enlazar paquetes de workspace; la repetición completa de lint en C: NTFS pasó, sin modificar configuración versionada.
 - `git diff --check`: limpio antes del commit.
+
+## Repetición en NTFS — 2026-11-13
+
+- Se creó worktree temporal detached desde `6cb0a80cecf3660559270cce3dc3d1ea6b189a8c` en C: NTFS; se instaló desde caché con `pnpm install --offline --frozen-lockfile --ignore-scripts` (308 paquetes reutilizados, 0 descargados). El worktree temporal se retiró después de las pruebas.
+- `pnpm test`: Turbo 4/4 tareas exitosas; API 29 archivos/114 pruebas, web 19 archivos/74 pruebas, contratos 1 archivo/19 pruebas.
+- `pnpm typecheck`: Turbo 4/4 tareas exitosas (API, web, contratos y dependencia de contratos).
+- `pnpm lint`: Turbo 1/1 tarea exitosa (lint disponible de contratos).
+- `pnpm build`: Turbo 3/3 tareas exitosas (API, web, contratos); mismo warning de chunk web de 520.11 kB.
+- Turbo avisó `failed to run git diff for dirty hash` al usar el caché compartido; no falló ninguna tarea. No se modificó configuración Git global.
 
 ## QA visual Ego Lite
 
@@ -28,7 +37,7 @@
 
 ## Git y limitaciones
 
-- SHA de commit de implementación: `510b157`; `git show --stat --oneline 510b157` confirma 15 archivos de código y documentación, y `git diff --check` antes del commit no reportó whitespace conflictivo.
+- SHA de commit de implementación: `510b157a49e4a1093b5bbfc64ace7e489a9bf587`; `git show --stat --oneline 510b157` confirma 15 archivos de código y documentación. Los resultados NTFS están registrados en un commit documental separado.
 - PR y check GitHub `verify`: pendientes de publicación de la rama. `AGENTS.md` prohíbe hacer push; no se publicará desde Git ni se intentará eludir esa regla.
 - `main` no se modifica; no se creó tag ni se desplegó. Producción continúa en `v0.4.1`; F15 sigue abierta hasta integrar, publicar una versión con aprobación y verificar una sesión real docente/estudiante.
 - No hubo cambios a SQLite, Pits, PostgreSQL, Cloudflare ni a `env`.
