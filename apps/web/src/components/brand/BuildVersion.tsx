@@ -1,14 +1,16 @@
 import { releaseMetadata } from "../../build/metadata";
 
 export function BuildVersion() {
-  const commitLabel = releaseMetadata.commit ? `; commit ${releaseMetadata.commit}` : "";
+  const commit = releaseMetadata.commit;
+  const commitLabel = commit ? `; commit ${commit}` : "";
   return (
     <span
       className="build-version"
-      title={releaseMetadata.commit ? `Commit exacto: ${releaseMetadata.commit}` : undefined}
+      title={commit ? `Commit exacto: ${commit}` : undefined}
       aria-label={`Versión ${releaseMetadata.version}${commitLabel}`}
     >
       {releaseMetadata.version}
+      {commit ? <span className="build-version__commit"> · {commit.slice(0, 7)}</span> : null}
     </span>
   );
 }

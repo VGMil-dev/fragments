@@ -61,6 +61,12 @@ Esta revalidación no integra ni publica F13 en `main`; la comprobación de inte
 - La landing y login caben en viewport Ego Lite de 390 px sin overflow horizontal.
 - Limitación solicitada en F15: el componente muestra actualmente solo la versión como texto; el SHA corto no es visible salvo tooltip/nombre accesible que contiene el SHA completo. No se modificó el artefacto aprobado `v0.4.1`; un cambio visual nuevo requiere versión nueva y autorización específica de tag.
 
+## SHA corto visible — PR #18
+
+- Código local `9ffab86919be835775dcc2e3a83aefda20b22555`: `BuildVersion` ahora muestra los primeros 7 caracteres del SHA junto a la versión; el SHA completo permanece en `title` y `aria-label`. La metadata `dev` sin SHA no dibuja el sufijo.
+- Pruebas de regresión cubren el build de release y el estado `dev`. El test local no terminó porque pnpm intentó materializar 308 dependencias en el checkout exFAT; se detuvo esa instalación. GitHub Actions `verify`, run `43376762673`, pasó en el PR #18 e incluye tests, typecheck, lint y build.
+- Este cambio no altera la tag ni los assets `v0.4.1`, y no se desplegó. Aun integrado, requerirá una nueva tag/version y autorización específica antes de producción.
+
 ## Integración prevista con F14
 
 - El workflow candidato continúa siendo únicamente manual y de build. Sus tres acciones ahora están fijadas a SHA completos porque GitHub se configura con `sha_pinning_required=true` y una lista cerrada de acciones permitidas; no se añadió capacidad de publicación ni despliegue.
