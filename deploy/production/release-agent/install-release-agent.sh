@@ -63,7 +63,7 @@ for forbidden_group in docker sudo lxd adm; do
 done
 test "$(getent passwd fragments-release | cut -d: -s -f7)" = /usr/sbin/nologin
 
-install -d -o root -g root -m 0700 "$state_dir" "$state_dir/docker-config" "$state_dir/gh-empty"
+install -d -o root -g root -m 0700 "$state_dir" "$state_dir/docker-config" "$state_dir/gh-empty" "$state_dir/attestations"
 chown root:fragments-release-request "$state_dir"
 chmod 0710 "$state_dir"
 install -d -o root -g fragments-release-request -m 1730 "$request_dir"
