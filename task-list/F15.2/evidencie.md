@@ -101,3 +101,10 @@ Commits de implementación: `6179b79` (`fix(f15.2): estabiliza identidad y permi
 
 - Requests `GET` directos a la API pública se hicieron sin cookies ni credenciales. `/api/me` devolvió HTTP 200 con `authenticated=false` y razón `session_required`; `/api/me/proposals`, `/api/gallery`, `/api/teacher/mentor-control` y `/api/teacher/account` devolvieron HTTP 401 (`AUTH_REQUIRED` en las rutas con ese contrato). No se leyeron propuestas, galería ni perfiles.
 - Estas respuestas acreditan el rechazo de acceso anónimo en la versión desplegada; no sustituyen la prueba con sesión real de estudiante o el flujo docente vinculado.
+
+### Revisión independiente post-release — 2026-11-13
+
+- Detective OAuth: PASS acotado para bundle público (`v0.4.4` y SHA corto/full) y respuestas anónimas; no inició OAuth real. Confirmó que falta estudiante personal autorizado y que el docente debe vincular, cerrar sesión y volver a entrar por GitHub.
+- Auditor de Seguridad: PASS acotado para rechazo anónimo y tag/run; INCONCLUSIVE para autorización con sesión real. No accedió a Ego Lite, cookies, cuentas ni filas de usuario.
+- Revisor adversarial: PASS para tag anotada/peeled SHA, run F14, aprobación visible y metadata pública; INCONCLUSIVE global. No pudo revalidar por su cuenta la SQLite/ledger ni la representación visual en navegador, y no hay OAuth real.
+- Veredicto independiente global: INCONCLUSIVE. F15 no cumple sus criterios de cierre hasta OAuth estudiantil real, link y reingreso docente, permisos de sesiones autenticadas, y PASS final. Main en el momento de revisión: `c83e8d3b9f47a7117bce133c5f5d23c46c846152`; producción sigue en la tag/SHA `v0.4.4` / `5cb799c58075ac3eabf1766370af66d3d5cd4e1b`.
