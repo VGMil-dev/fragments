@@ -23,7 +23,7 @@ async function render(fetcher: typeof fetch) {
   root = createRoot(container);
   const navigate = vi.fn();
   await act(async () => root?.render(<OAuthCompletionScreen navigate={navigate} />));
-  return { navigate, text: container.textContent ?? "" };
+  return { navigate, container, text: container.textContent ?? "" };
 }
 
 describe("OAuthCompletionScreen", () => {
@@ -47,14 +47,31 @@ describe("OAuthCompletionScreen", () => {
     expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/gallery");
   });
 
-  it("does not route an unlinked GitHub identity into either protected area", async () => {
+  it("explains an unconfirmed student identity without suggesting an institutional email", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ user: { id: "fixture-unlinked-user" } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { authenticated: false } }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { authenticated: false, reason: "github_account_not_linked" } }), { status: 200 }));
     const { navigate, text } = await render(fetcher as typeof fetch);
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(text).toContain("no tiene un perfil estudiantil GitHub habilitado");
+    expect(text).toContain("Esta sesión de Fragments no tiene una cuenta GitHub vinculada");
+    expect(text).not.toContain("institucional");
+  });
+
+  it("offers retry when the student profile API is temporarily unavailable", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: { id: "fixture-student" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: "NOT_READY" } }), { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ user: { id: "fixture-student" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { authenticated: true } }), { status: 200 }));
+    const { navigate, container, text } = await render(fetcher as typeof fetch);
+
+    expect(text).toContain("No pudimos comprobar tu acceso en este momento");
+    const retry = container.querySelector("button");
+    expect(retry?.textContent).toContain("Reintentar");
+    await act(async () => retry?.click());
+
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/gallery");
   });
 
   it("does not route if Better Auth has no valid session", async () => {
@@ -63,6 +80,6 @@ describe("OAuthCompletionScreen", () => {
 
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(navigate).not.toHaveBeenCalled();
-    expect(text).toContain("No pudimos validar la sesión");
+    expect(text).toContain("No encontramos una sesión activa");
   });
 });

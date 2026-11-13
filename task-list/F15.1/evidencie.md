@@ -47,3 +47,14 @@
 - Preflight de solo lectura en VPS: fingerprint ED25519 del host coincide con la huella previamente confiable; API y web devolvieron HTTP 200; ambos contenedores siguen en el SHA de producción `12b6e39fbb64016ab0f56ea104fe9b384da688fa` (`v0.4.1`). Timers del agente pull, apply.path y backup aparecen activos. El snapshot más reciente listado, `2026-11-13T05-53-47-732Z.sqlite`, devolvió `PRAGMA integrity_check=ok` y conserva `root:root 0600`. No se modificó VPS ni base de datos.
 - `origin/main` tras PR #21: `38ff1bd3014d1775d3ecbf03ec80dab938657845`. Main contiene `BuildVersion`, que muestra versión y los primeros siete caracteres del SHA, y conserva el workflow F14 con trigger de tags, verificación exacta, entorno `fragments-production` y atestación Sigstore offline. `v0.4.2` no existe localmente ni en remoto.
 - No se realizó OAuth real ni se tocó producción. Producción continúa en `v0.4.1`; no se creó tag ni se desplegó. F15.1 no se declara completada hasta integrar y validar una sesión OAuth real con intervención del propietario. No hubo cambios a SQLite, Pits, PostgreSQL, Cloudflare ni a `env`.
+
+## Validación de v0.4.3 y diagnóstico F15.2 — 2026-11-13
+
+- La web pública sirve `v0.4.3 · b7810f9`; contenedores API/web están saludables en el SHA exacto. El indicador mobile 390 px no desborda.
+- La sesión docente presente en Ego Lite devuelve `credentialConnected=true`, `githubConnected=false`. No se realizó vinculación, no se usó contraseña ni consentimiento personal.
+- En producción, `GET /api/teacher/account` respondió 200, pero al abrir el panel el GET a `/api/teacher/mentor-control` respondió 404. Causa en código: `academicHandler` tenía un catch-all más amplio y terminaba el request antes del handler de Mentor. F15.2 añade regresión integrada y corrige orden/alcance; la vinculación real queda pendiente hasta desplegar la corrección.
+- La configuración segura en código se conserva: `disableImplicitLinking=true`, contraseña reciente y `linkSocial` explícito; ningún rol se deriva del email.
+
+### Aclaración de vigencia de la lectura Ego Lite
+
+La observación `credentialConnected=true`, `githubConnected=false` que se anotó arriba proviene de una sesión anterior y no se repitió durante F15.2. No demuestra el estado actual de una cuenta docente ni sustituye la lectura posterior al despliegue de la corrección de rutas.

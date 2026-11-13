@@ -29,7 +29,7 @@ Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envu
 ## DTOs y permisos F15
 
 - `POST /api/auth/sign-in/social` acepta `provider: "github"` para estudiantes. La ruta de contraseña sigue reservada al acceso docente y no hay formulario de registro estudiantil por email.
-- `/api/me` devuelve una identidad GitHub pública mínima o el estado de OAuth disponible. `GET /api/me/proposals` y las rutas Mentor requieren sesión GitHub.
+- `/api/me` devuelve una identidad GitHub pública mínima o un estado de acceso con motivo seguro (`session_required`, `role_not_student`, `github_account_not_linked`, `invalid_github_identity`). La autorización estudiantil se basa en la sesión y `accountId` estable de GitHub; el correo y `githubLogin` no son claves de identidad. `githubLogin` y `profileUrl` pueden ser nulos en el perfil para que un nombre público ausente no bloquee el acceso. `GET /api/me/proposals` y las rutas Mentor requieren sesión GitHub.
 - `/api/proposals` y las rutas de edición/evaluación no aceptan propietario ni campos de publicación. El API asigna `owner_user_id` desde la sesión.
 - `GET /api/gallery?offset=&limit=` y `GET /api/gallery/:projectId` requieren sesión GitHub. Responden `AcademicGalleryPage`/`AcademicGalleryDetail`, con autoría GitHub y contexto/rúbrica originales; nunca exponen nota ni datos privados.
 - Una evaluación Mentor persistida solo crea una publicación cuando coinciden revisión, digest, evaluación y versión publicada de configuración. La publicación es automática y única por proyecto/revisión; una revisión nueva no sustituye una anterior elegible hasta completar su evaluación.

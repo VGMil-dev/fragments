@@ -19,6 +19,77 @@ afterEach(async () => {
 });
 
 describe("HTTP API", () => {
+  it("registra el panel Mentor antes del catch-all académico y conserva 401/403 por rol", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const authInstance = await createMigratedFragmentsAuth(db, {
+      secret: "http-test-mentor-routing-secret-0123456789",
+      baseURL: "http://localhost:3000",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    async function signedIn(email: string, isTeacher: boolean) {
+      const created = await authInstance.api.signUpEmail({ body: { name: "Fixture", email, password: "fixture-password-2026" } });
+      db.prepare("UPDATE user SET isTeacher = ? WHERE id = ?").run(isTeacher ? 1 : 0, created.user.id);
+      const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email, password: "fixture-password-2026" } });
+      return login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    }
+    const teacherCookie = await signedIn("teacher-personal@example.test", true);
+    const studentCookie = await signedIn("student-personal@example.test", false);
+    const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
+    const auth = createFragmentsAuthService(authInstance);
+    const server = createServer(createHttpHandler(db, { auth, mentor })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const base = `http://127.0.0.1:${address.port}`;
+
+    const anonymous = await fetch(`${base}/api/teacher/mentor-control`);
+    expect(anonymous.status).toBe(401);
+    const student = await fetch(`${base}/api/teacher/mentor-control`, { headers: { cookie: studentCookie } });
+    expect(student.status).toBe(403);
+    const teacher = await fetch(`${base}/api/teacher/mentor-control`, { headers: { cookie: teacherCookie } });
+    expect(teacher.status).toBe(200);
+    expect(await teacher.json()).toMatchObject({ ok: true, data: { active: { version: 1 }, draft: {} } });
+  });
+
+  it("reconoce identidad GitHub personal por la asociación estable aunque falte el login visible", async () => {
+    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const authInstance = await createMigratedFragmentsAuth(db, {
+      secret: "http-test-student-identity-secret-0123456789",
+      baseURL: "http://localhost:3000",
+      publicAppURL: "http://localhost:5173",
+      allowSignUp: true,
+      githubClientId: "fake-github-client-id",
+      githubClientSecret: "fake-github-client-secret",
+    });
+    const created = await authInstance.api.signUpEmail({ body: { name: "Fixture estudiante", email: "student.personal@example.test", password: "fixture-password-2026" } });
+    db.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
+      .run("github-personal-fixture", "github-stable-personal-id", created.user.id, Date.now(), Date.now());
+    const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "student.personal@example.test", password: "fixture-password-2026" } });
+    const cookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const unlinked = await authInstance.api.signUpEmail({ body: { name: "Fixture sin enlace", email: "unlinked.personal@example.test", password: "fixture-password-2026" } });
+    const unlinkedLogin = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "unlinked.personal@example.test", password: "fixture-password-2026" } });
+    const unlinkedCookie = unlinkedLogin.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    const auth = createFragmentsAuthService(authInstance);
+    const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, data: { authenticated: true, id: created.user.id, githubLogin: null, profileUrl: null } });
+    expect(db.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(created.user.id))
+      .toEqual({ accountId: "github-stable-personal-id" });
+    const unlinkedResponse = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie: unlinkedCookie } });
+    expect(await unlinkedResponse.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "github_account_not_linked" } });
+    expect(unlinked.user.id).not.toBe(created.user.id);
+    const anonymous = await fetch(`http://127.0.0.1:${address.port}/api/me`);
+    expect(await anonymous.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "session_required" } });
+  });
+
   it("reports SQLite readiness without exposing environment secrets", async () => {
     const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
     const server = createServer(createHttpHandler(db)); servers.push(server);

@@ -9,11 +9,13 @@ const api = createStudentApi(createApiClient());
 export function StudentLoginScreen({ navigate }: { navigate: (path: string) => void }) {
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("error") === "account_not_linked") {
-      setMessage("Esta cuenta coincide con una cuenta existente que no tiene GitHub vinculado. Si eres docente, entra con tus credenciales y vincula GitHub desde Cuenta y acceso.");
+      setMessage("Esta cuenta de GitHub coincide con una cuenta Fragments existente y no se vinculará automáticamente por correo. Entra con el método que ya usas. Si necesitas asociar identidades, solicita un proceso de vinculación verificado.");
     }
   }, []);
 
@@ -21,14 +23,30 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
     let active = true;
     void api.getMe().then((result) => {
       if (!active) return;
+      if (!result.ok) {
+        setUnavailable(true);
+        setLoading(false);
+        return;
+      }
+      setUnavailable(false);
       if (result.ok) {
         if (result.data.authenticated) navigate("/student/gallery");
-        else setConfigured(result.data.githubOAuthConfigured);
+        else {
+          if (result.data.reason === "role_not_student") { navigate("/teacher/mentor-control"); return; }
+          setConfigured(result.data.githubOAuthConfigured);
+          if (result.data.reason === "github_account_not_linked") {
+            setMessage("Esta sesión de Fragments no tiene GitHub vinculado. Usa la cuenta GitHub personal correcta. No unimos cuentas solo por coincidencia de correo.");
+          }
+        }
       }
+      setLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setUnavailable(true);
       setLoading(false);
     });
     return () => { active = false; };
-  }, [navigate]);
+  }, [navigate, attempt]);
 
   async function signIn() {
     setMessage("");
@@ -55,7 +73,8 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
       <button className="button button--primary" type="button" disabled={loading || !configured} onClick={() => void signIn()}>
         {loading ? "Comprobando acceso…" : "Iniciar sesión con GitHub"}
       </button>
-      {!loading && !configured ? <p role="status">El acceso con GitHub estará disponible cuando se configure la aplicación OAuth.</p> : null}
+      {unavailable ? <div role="alert"><p>No pudimos comprobar tu acceso en este momento.</p><button type="button" onClick={() => { setLoading(true); setAttempt((value) => value + 1); }}>Reintentar</button></div> : null}
+      {!loading && !configured && !unavailable ? <p role="status">El acceso con GitHub estará disponible cuando se configure la aplicación OAuth.</p> : null}
       {message ? <p role="alert">{message}</p> : null}
       <p className="identity-card__privacy">Fragments solicita acceso básico a tu perfil y correo de GitHub. No solicita acceso a tus repositorios.</p>
       <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>¿Eres docente? Accede aquí</a>

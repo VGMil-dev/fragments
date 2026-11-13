@@ -99,12 +99,14 @@ describe("Better Auth integration", () => {
     await expect(service.teacherId(teacher.request)).resolves.toBe(teacher.id);
     await expect(service.teacherId(student.request)).resolves.toBeNull();
     await expect(service.teacherId({ headers: {} } as IncomingMessage)).resolves.toBeNull();
+    await expect(service.studentAccess(teacher.request)).resolves.toEqual({ kind: "role_not_student" });
+    await expect(service.studentAccess(student.request)).resolves.toEqual({ kind: "github_account_not_linked" });
 
     database.prepare("UPDATE user SET role = 'admin' WHERE id = ?").run(student.id);
     await expect(service.teacherId(student.request)).resolves.toBe(student.id);
   });
 
-  it("resolves student ownership through the stable linked GitHub account id", async () => {
+  it("resolves student ownership through stable IDs when email and login change", async () => {
     const { database, auth, service } = await fixture();
     const signedUp = await auth.api.signUpEmail({ body: { name: "Fixture estudiante", email: "student-identity@example.test", password: "fixture-password-2026" } });
     database.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-before", signedUp.user.id);
@@ -115,8 +117,20 @@ describe("Better Auth integration", () => {
     const request = { headers: { cookie } } as IncomingMessage;
 
     await expect(service.student(request)).resolves.toMatchObject({ id: signedUp.user.id, githubAccountId: "github-stable-account-123", githubLogin: "student-before" });
-    database.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-after", signedUp.user.id);
+    database.prepare("UPDATE user SET email = ?, githubLogin = ? WHERE id = ?").run("student-renamed@personal.example.test", "student-after", signedUp.user.id);
     await expect(service.student(request)).resolves.toMatchObject({ id: signedUp.user.id, githubAccountId: "github-stable-account-123", githubLogin: "student-after" });
+    database.prepare("UPDATE account SET accountId = '' WHERE userId = ? AND providerId = 'github'").run(signedUp.user.id);
+    await expect(service.student(request)).resolves.toBeNull();
+    await expect(service.studentAccess(request)).resolves.toEqual({ kind: "invalid_github_identity" });
+  });
+
+  it("treats an expired Better Auth session as unauthenticated", async () => {
+    const { database, auth, service } = await fixture();
+    const student = await createAccount(database, auth, "expired-session@example.test", false);
+    const cookie = student.request.headers.cookie;
+    database.prepare("UPDATE session SET expiresAt = ? WHERE userId = ?").run(new Date(Date.now() - 60_000).toISOString(), student.id);
+
+    await expect(service.studentAccess({ headers: { cookie } } as IncomingMessage)).resolves.toEqual({ kind: "session_required" });
   });
 
   it("sends a single-use reset token, accepts it once, and revokes old sessions", async () => {

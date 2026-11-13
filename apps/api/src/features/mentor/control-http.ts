@@ -23,9 +23,12 @@ export function createMentorControlHttp(database: DatabaseSync, auth?: Fragments
     if (!url.pathname.startsWith("/api/teacher/mentor-control")) return "unhandled";
     if (!auth) { sendError(response, 503, "AUTH_DISABLED", "El acceso docente no está habilitado."); return "handled"; }
     let teacherId: string | null;
-    try { teacherId = await auth.teacherId(request); }
-    catch { sendError(response, 503, "AUTH_UNAVAILABLE", "No se pudo validar la sesión docente."); return "handled"; }
-    if (!teacherId) { sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como docente para continuar."); return "handled"; }
+    try {
+      const userId = await auth.userId(request);
+      if (!userId) { sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión para continuar."); return "handled"; }
+      teacherId = await auth.teacherId(request);
+    } catch { sendError(response, 503, "AUTH_UNAVAILABLE", "No se pudo validar la sesión docente."); return "handled"; }
+    if (!teacherId) { sendError(response, 403, "FORBIDDEN", "Esta acción requiere permisos docentes."); return "handled"; }
 
     try {
       if (request.method === "GET" && url.pathname === "/api/teacher/mentor-control") {
