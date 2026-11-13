@@ -47,3 +47,11 @@
 - Se integra F15 con F13/F14 mediante merge normal y PR.
 - El propietario autoriza aprobación manual por el mantenedor único, aun cuando publique la tag. Se registra la menor independencia; el bypass administrativo debe seguir desactivado.
 - `v0.4.0` se publica solo si las credenciales OAuth están instaladas en configuración persistente privada y la API las consume tras el despliegue; el login real y la galería se verifican después. Si algún control falla, no crear la tag ni desplegar.
+
+## Protocolo de aceptación del primer proyecto auténtico — 2026-11-13
+
+- El guardado se valida sin invocar IA: propiedad derivada de la sesión, lectura del titular, lista ajena sin el proyecto, lectura/edición ajena con 404 y borrador fuera de la galería.
+- Un docente autenticado puede consultar la información permitida; sesiones anónimas reciben 401 y estudiantes 403 en rutas docentes.
+- La evaluación productiva queda bloqueada hasta tener consentimiento del estudiante y autorización explícita del propietario, además de comprobar presupuesto vigente.
+- El procedimiento detallado y los resultados de prueba están en `task-list/F15/protocolo-aceptacion-piloto.md` y `task-list/F15/evidencie.md`.
+- F15 no se completa mientras no se acredite con un proyecto auténtico la evaluación persistida y publicación automática, o no se documente que ambas siguen pendientes del piloto.

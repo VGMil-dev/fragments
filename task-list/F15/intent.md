@@ -4,6 +4,10 @@
 
 Mentor hoy crea propuestas asociadas únicamente a una cookie anónima y la galería depende de una publicación voluntaria de la versión actual. Eso no acredita autoría académica ni conserva la relación visible entre proyecto, evaluación y rúbrica histórica.
 
+## Alcance de aceptación del piloto — 2026-11-13
+
+Validar el primer proyecto académico auténtico sin crear datos de prueba en producción. Separar el guardado y los controles de propiedad (sin IA) de una única evaluación productiva que requiere consentimiento explícito del estudiante, aprobación del propietario y presupuesto vigente comprobado.
+
 ## Objetivo
 
 Ampliar Better Auth con GitHub para estudiantes y mantener el acceso actual de docentes. Vincular propuestas nuevas con el usuario autenticado en el servidor; publicar automáticamente versiones evaluadas con contexto inmutable; exponer una galería para estudiantes autenticados y un panel docente protegido. Conservar los proyectos anónimos históricos y permitir reclamarlos solo con su cookie original y una sesión GitHub.
