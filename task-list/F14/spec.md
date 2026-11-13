@@ -18,6 +18,14 @@ El workflow de release se activa exclusivamente al publicar mediante `push` una 
 - Comprobar ascendencia del commit etiquetado en `origin/main`. Nunca sustituir el SHA del tag por `HEAD` de `main` ni por `git describe`.
 - La definición de workflow que controla privilegios debe ser confiable y protegida; el código de una tag arbitraria no puede sustituir esa definición ni relajar verificaciones.
 
+## Bundles de atestación
+
+- El job que firma el archivo debe conservar el `bundle-path` de `actions/attest` y publicarlo como un asset adicional `fragments-images.attestation.jsonl` en releases nuevos.
+- El agente acepta un único bundle acotado (máximo 1 MB) descargado por HTTPS desde el release aprobado. En un release histórico que no contenga dicho asset, solo puede usarse un bundle provisionado en `/var/lib/fragments-release/attestations/<releaseId>.jsonl`, propiedad de root y con permisos privados.
+- Verificar el bundle local con `gh attestation verify --bundle` y un trust root TUF actualizado con `gh attestation trusted-root`. Usar un `GH_CONFIG_DIR` vacío, sin token GitHub. No aceptar un trust root transportado junto con el bundle ni reemplazar la verificación criptográfica por hashes solos.
+- Exigir repositorio, workflow, SHA del workflow, ref, digest de fuente y sujeto exactos; el resultado debe incluir timestamps verificados y runner hospedado, y se debe pasar `--deny-self-hosted-runners`.
+- Cachear el paquete grande únicamente si su tamaño y digest coinciden con el manifiesto. Retenerlo ante fallos de atestación para que los reintentos no vuelvan a descargarlo. Limitar y limpiar archivos parciales, rechazar enlaces y fallar cerrado si falta material.
+
 ## Autorización y privilegios
 
 - El push válido inicia solamente la verificación. Antes del acceso a producción se requiere autorización del propietario mediante un entorno protegido o control equivalente cuya configuración efectiva se haya comprobado en GitHub.
