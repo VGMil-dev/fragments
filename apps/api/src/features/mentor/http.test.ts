@@ -227,6 +227,44 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect((await history.json() as { data: Array<{ version: number }> }).data.map((item) => item.version)).toEqual([1, 2]);
   });
 
+  it("keeps a saved proposal private to its student and does not evaluate or publish it", async () => {
+    let evaluationCalls = 0;
+    const local = createLocalMentorEvaluator();
+    const evaluator: MentorEvaluator = {
+      async evaluate(input) { evaluationCalls += 1; return local.evaluate(input); },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const owner = { "x-fixture-user": proposal.owner };
+    const secondStudent = { "x-fixture-user": "student-2" };
+
+    const ownerList = await fetch(`${base}/api/me/proposals`, { headers: owner });
+    const secondStudentList = await fetch(`${base}/api/me/proposals`, { headers: secondStudent });
+    const ownerBody = await ownerList.json() as { data: Array<{ id: string }> };
+    const secondStudentBody = await secondStudentList.json() as { data: Array<{ id: string }> };
+    expect(ownerList.status).toBe(200);
+    expect(ownerBody.data.map((item) => item.id)).toContain(proposal.id);
+    expect(secondStudentList.status).toBe(200);
+    expect(secondStudentBody.data.map((item) => item.id)).not.toContain(proposal.id);
+
+    const privateHistory = await fetch(`${base}/api/proposals/${proposal.id}/versions`, { headers: secondStudent });
+    const privateReview = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: secondStudent });
+    const privateEdit = await fetch(`${base}/api/proposals/${proposal.id}`, {
+      method: "PUT", headers: { ...secondStudent, "content-type": "application/json" },
+      body: JSON.stringify({ ...draft, title: "Intento de acceso", expectedVersion: proposal.version }),
+    });
+    const gallery = await fetch(`${base}/api/gallery`, { headers: owner });
+    const galleryBody = await gallery.json() as { data: { items: Array<{ id: string }> } };
+
+    expect(privateHistory.status).toBe(404);
+    expect(await privateHistory.text()).not.toContain(draft.title);
+    expect(privateReview.status).toBe(404);
+    expect(privateEdit.status).toBe(404);
+    expect(gallery.status).toBe(200);
+    expect(galleryBody.data.items.map((item) => item.id)).not.toContain(proposal.id);
+    expect(evaluationCalls).toBe(0);
+  });
+
   it("publishes eligible evaluations automatically and keeps the latest eligible revision", async () => {
     const base = await start();
     const published = await createProposal(base);
