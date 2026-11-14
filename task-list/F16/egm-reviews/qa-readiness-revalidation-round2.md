@@ -25,7 +25,7 @@
 ### Structural — Nit
 
 - `evidencie.md` conservaba antes de la sección de reanudación una oración sin fecha que decía que el API no estaba disponible y que submits/sesiones autenticadas no se habían ejecutado. Se renombró esa sección como evidencia de revisión inicial previa al fixture y se apuntó a QA-01..25. El marker, reglas sin sesión, viewports, IDs por fase y zoom equivalente estaban alineados.
-- `TASKS.md` aún decía R2 pendiente y `evidencie.md` indicaba R2 por registrar; era consistente con el snapshot previo al cierre de esa ronda. Se actualizará al estado R2 y al hash final después del commit.
+- En el snapshot de R2, `TASKS.md` aún decía R2 pendiente y `evidencie.md` indicaba R2 por registrar; era consistente con el corte previo al cierre de esa ronda. Elephant sincronizó después el estado completado y el hash de QA `61b268d32194dc749d86d02a4291d27357de2c5c` en un commit documental posterior; esta actualización no constituye nueva validación Goldfish.
 
 ## Resolución posterior del Elephant
 
@@ -33,7 +33,7 @@
 - `design_draft.md` ya no contiene una opción de sidebar/menú móvil que contradiga la elección definitiva; incluye los breakpoints requeridos.
 - `QA-07`, `QA-10`, `QA-18`, `QA-22`, `evidencie.md` y conteo de artefactos diferencian el README/PDF Mentor del payload Review, rotulan el snapshot histórico y detallan labels/contrastes/overlay Ego.
 - `screenshots/qa-final/fixture-review.pdf` fue retirado porque solo contenía el payload marcador. `fixture-mentor.pdf` sí fue descargado del renderer mínimo y se comprobó que contiene cabecera PDF, xref, trailer y EOF. El artefacto no se presenta como PDF de Review.
-- El estado final del task list y el hash del commit se deben sincronizar cuando el commit selectivo local termine. No hay nuevo resultado Goldfish posterior a estas correcciones y no se hará una tercera ronda ordinaria.
+- El estado final del task list y el hash del commit quedaron sincronizados tras el commit selectivo local. No hay nuevo resultado Goldfish posterior a las correcciones ni se hará una tercera ronda ordinaria.
 
 ## Estado EGM
 
