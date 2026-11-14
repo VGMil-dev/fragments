@@ -215,3 +215,9 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - Regresión: tests de `student-api` validan lectura de propuestas propias y actualización por versión; tests de Mentor verifican listado/selección, recuperación de evaluación y ruta de edición existente.
 - Verificación después del cambio: `pnpm --filter @fragments/web test` — 20 archivos/84 tests PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con advertencia existente de bundle JS 524.58 kB (>500 kB); `git diff --check` PASS.
 - La corrección está en la rama `codex/f15-first-project-acceptance`, todavía sin PR, merge ni despliegue. No se verificó visualmente en Ego Lite ni en producción después del cambio. No se atribuye un resultado productivo al código local.
+
+### PR y control de revisión — 2026-11-13
+
+- Se publicó `codex/f15-first-project-acceptance` y se abrió el PR [#33](https://github.com/VGMil-dev/fragments/pull/33) hacia `main`, head inicial `b9e52e69ef388eef4bc87003ddbed577397fd337`.
+- GitHub Actions `Fragments CI`, run `43541725815`, concluyó `success`. La API informó `mergeable=true` antes de pedir revisión.
+- La revisión de aprobación del mismo usuario que creó el PR fue rechazada por GitHub con HTTP 422: `Review Can not approve your own pull request`. No se utilizó bypass, no se fusionó y no se desplegó. El PR permanece abierto y necesita revisión independiente conforme a la protección del repositorio.
