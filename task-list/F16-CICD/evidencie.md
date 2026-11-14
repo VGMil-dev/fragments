@@ -1,6 +1,6 @@
 # F16-CICD — evidencia
 
-**Estado:** PR abierto; CI remoto inicial aprobado; actualización documental de preparación en curso. No se hizo despliegue ni operación de producción.
+**Estado:** PR #39 abierto; CI de GitHub aprobado en Linux, incluida la prueba `flock`. No se hizo merge, tag, despliegue ni operación de producción.
 
 ## Base
 
