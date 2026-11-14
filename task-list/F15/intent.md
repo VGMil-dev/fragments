@@ -35,3 +35,11 @@ PLANNER — rama `codex/f15-github-gallery`, basada en `origin/main`.
 - `ego-browser`: lectura obligatoria para QA visual; usar únicamente ego(lite), sin navegador alternativo.
 - Backend: aplicar los límites ligeros ya establecidos por los repositorios SQLite y Better Auth existentes.
 - Verificación: registrar comandos y resultados reales antes de cerrar.
+
+## Addendum — ejecución del piloto autorizado — 2026-11-13
+
+La autorización del propietario y del estudiante recibida en esta misión habilitó una propuesta auténtica y una evaluación real única en producción. Esta autorización acotada supersede para ese piloto la restricción anterior contra propuestas reales; no habilita despliegue, reinicios, tags ni cambios de infraestructura. El piloto verificó guardado, persistencia, evaluación y publicación de una revisión elegible. F15 continúa INCONCLUSIVE: faltan vista docente real del proyecto, aislamiento productivo con segunda cuenta, integridad/estado de SQLite productiva y verificación del SHA productivo. Véase `evidencie.md`.
+
+## Addendum — recuperación de fallos de carga — 2026-11-13
+
+La revisión independiente del PR #33 detectó que un fallo de lectura podía presentarse como ausencia de propuestas y que elegir una inspiración podía conservar la selección de una propuesta previa. La recuperación muestra un error con reintento y limpia la selección previa al iniciar una propuesta desde inspiración. Véase `evidencie.md`.

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   ApiResult,
   CreateMentorSubmissionRequest,
@@ -7,6 +7,7 @@ import type {
   MentorPublishedConfig,
   ProposalEvaluationResponse,
   ProposalResponse,
+  UpdateProposalRequest,
 } from "@fragments/contracts";
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
@@ -17,9 +18,16 @@ import "./mentor-screen.css";
 
 export interface MentorScreenProps {
   mentorContext?: MentorPublishedConfig | undefined;
-  initialProposal?: ProposalResponse;
-  initialEvaluation?: AsyncState<ProposalEvaluationResponse>;
+  initialProposal?: ProposalResponse | undefined;
+  initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
+  restoreEvaluation?: boolean;
+  savedProposals: ProposalResponse[];
+  proposalsLoading: boolean;
+  proposalsError?: boolean;
+  onRetryProposals?: () => void;
+  onOpenProposal: (proposal: ProposalResponse) => void;
   onSave: (draft: CreateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
+  onUpdate: (proposalId: string, draft: UpdateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
   onEvaluate: (proposalId: string) => Promise<ApiResult<ProposalEvaluationResponse>>;
   onRecoverEvaluation: (proposalId: string) => Promise<ApiResult<ProposalEvaluationResponse>>;
   onGenerateSubmission: (request: CreateMentorSubmissionRequest) => Promise<ApiResult<MentorSubmissionResponse>>;
@@ -77,7 +85,14 @@ export function MentorScreen({
   mentorContext,
   initialProposal,
   initialEvaluation,
+  restoreEvaluation = false,
+  savedProposals,
+  proposalsLoading,
+  proposalsError = false,
+  onRetryProposals,
+  onOpenProposal,
   onSave,
+  onUpdate,
   onEvaluate,
   onRecoverEvaluation,
   onGenerateSubmission,
@@ -100,6 +115,15 @@ export function MentorScreen({
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
+
+  useEffect(() => {
+    if (!restoreEvaluation || !initialProposal || initialEvaluation) return;
+    let active = true;
+    void onRecoverEvaluation(initialProposal.id).then((result) => {
+      if (active) setEvaluation(result.ok ? { status: "success", data: result.data } : null);
+    }).catch(() => { if (active) setEvaluation(null); });
+    return () => { active = false; };
+  }, [restoreEvaluation, initialProposal, initialEvaluation, onRecoverEvaluation]);
 
   function updateField(field: keyof ProposalDraftFields, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
@@ -146,7 +170,9 @@ export function MentorScreen({
     setFieldErrors({});
     setSaving(true);
     try {
-      const result = await onSave(validated.data);
+      const result = proposal
+        ? await onUpdate(proposal.id, { ...validated.data, expectedVersion: proposal.version })
+        : await onSave(validated.data);
       if (!result.ok) {
         setSaveError("No pudimos guardar tu propuesta. Revisa la conexión e inténtalo de nuevo.");
         return;
@@ -257,6 +283,23 @@ export function MentorScreen({
         </button>
         {importMessage ? <p className="mentor-screen__success" role="status">{importMessage}</p> : null}
         {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
+      </section>
+
+      <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
+        <h2 id="mentor-saved-title">Mis propuestas guardadas</h2>
+        {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : proposalsError ? (
+          <div role="alert"><p>No pudimos cargar tus propuestas guardadas.</p><button type="button" onClick={onRetryProposals}>Volver a intentar</button></div>
+        ) : savedProposals.length ? (
+          <ul>
+            {savedProposals.map((saved) => (
+              <li key={saved.id}>
+                <span>{saved.proposal.title}</span>
+                <span className="mentor-saved-proposals__version">Versión {saved.version}</span>
+                <button type="button" onClick={() => onOpenProposal(saved)}>{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
+              </li>
+            ))}
+          </ul>
+        ) : <p>Aún no tienes propuestas guardadas.</p>}
       </section>
 
       {mentorContext ? <section className="mentor-context" aria-label="Consigna de la evaluación">
