@@ -14,6 +14,33 @@ describe("createStudentApi", () => {
     expect(fetcher).toHaveBeenCalledWith("/api/gallery?offset=0&limit=20", expect.any(Object));
   });
 
+  it("loads only the authenticated student's saved proposals", async () => {
+    const saved = [{
+      id: "proposal-1",
+      version: 2,
+      proposal: { title: "Idea propia", problem: "Problema", solution: "Solución", goals: ["Meta"], skills: ["HTML"], tags: [], scope: "Alcance", constraints: [] },
+      updatedAt: "2026-11-13T12:00:00.000Z",
+    }];
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: saved }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.getMyProposals()).resolves.toEqual({ ok: true, data: saved });
+    expect(fetcher).toHaveBeenCalledWith("/api/me/proposals", expect.any(Object));
+  });
+
+  it("updates an owned proposal with its expected version", async () => {
+    const saved = {
+      id: "proposal-1", version: 2,
+      proposal: { title: "Idea editada", problem: "Problema", solution: "Solución", goals: ["Meta"], skills: ["HTML"], tags: [], scope: "Alcance", constraints: [] },
+      updatedAt: "2026-11-13T12:00:00.000Z",
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: saved }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.updateProposal("proposal-1", { ...saved.proposal, expectedVersion: 1 })).resolves.toEqual({ ok: true, data: saved });
+    expect(fetcher).toHaveBeenCalledWith("/api/proposals/proposal-1", expect.objectContaining({ method: "PUT" }));
+  });
+
   it("recovers a persisted Mentor evaluation with a read-only request", async () => {
     const evaluation = {
       evaluationId: "evaluation-1",

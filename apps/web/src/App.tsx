@@ -1,7 +1,7 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
 import { useCallback, useEffect, useState } from "react";
-import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, StudentMe } from "@fragments/contracts";
+import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, ProposalResponse, StudentMe, UpdateProposalRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -29,6 +29,9 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [inspiration, setInspiration] = useState<AcademicGalleryEntry | undefined>();
   const [mentorContext, setMentorContext] = useState<MentorPublishedConfig | undefined>();
   const [student, setStudent] = useState<StudentMe | null>(null);
+  const [ownedProposals, setOwnedProposals] = useState<ProposalResponse[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<ProposalResponse | undefined>();
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -81,6 +84,18 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     return () => { active = false; };
   }, [path]);
 
+  useEffect(() => {
+    if (path !== "/student/mentor" || !student) return;
+    let active = true;
+    setProposalsLoading(true);
+    void studentApi.getMyProposals().then((result) => {
+      if (!active) return;
+      if (result.ok) setOwnedProposals(result.data);
+      setProposalsLoading(false);
+    }).catch(() => { if (active) setProposalsLoading(false); });
+    return () => { active = false; };
+  }, [path, student]);
+
   if ((path === "/student/gallery" || path === "/student/mentor") && !student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
   return (
@@ -110,7 +125,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onUseProject={(entry) => { setInspiration(entry); setSelectedId(null); setSelectedDetail(null); navigate("/student/mentor"); }}
             hasMore={galleryNextOffset !== null}
             onLoadMore={() => { if (galleryNextOffset !== null) setGalleryOffset(galleryNextOffset); }}
-            onCreateProposal={() => { setInspiration(undefined); navigate("/student/mentor"); }}
+            onCreateProposal={() => { setInspiration(undefined); setSelectedProposal(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
         {path === "/student/mentor" ? (
@@ -118,8 +133,26 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
             <p className="student-workspace__sharing" role="note"><strong>Antes de enviar:</strong> al guardar y evaluar tu propuesta, la revisión evaluada con su materia, consigna y rúbrica se compartirá automáticamente con estudiantes que iniciaron sesión y docentes. La galería no muestra notas ni comentarios privados.</p>
             <MentorScreen
+              key={selectedProposal?.id ?? "new-proposal"}
               mentorContext={mentorContext}
-              onSave={(draft) => studentApi.saveProposal(draft)}
+              initialProposal={selectedProposal}
+              restoreEvaluation={Boolean(selectedProposal)}
+              savedProposals={ownedProposals}
+              proposalsLoading={proposalsLoading}
+              onOpenProposal={setSelectedProposal}
+              onSave={async (draft) => {
+                const result = await studentApi.saveProposal(draft);
+                if (result.ok) setOwnedProposals((current) => [result.data, ...current.filter((entry) => entry.id !== result.data.id)]);
+                return result;
+              }}
+              onUpdate={async (proposalId: string, draft: UpdateProposalRequest) => {
+                const result = await studentApi.updateProposal(proposalId, draft);
+                if (result.ok) {
+                  setOwnedProposals((current) => current.map((entry) => entry.id === result.data.id ? result.data : entry));
+                  setSelectedProposal(result.data);
+                }
+                return result;
+              }}
               onEvaluate={(proposalId) => studentApi.evaluateProposal(proposalId)}
               onRecoverEvaluation={(proposalId) => studentApi.recoverProposalEvaluation(proposalId)}
               onGenerateSubmission={(request) => studentApi.createMentorSubmission(request)}

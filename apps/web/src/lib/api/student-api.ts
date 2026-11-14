@@ -5,10 +5,12 @@ import {
   AcademicGalleryPageSchema,
   AcademicGalleryDetailSchema,
   MeResponseSchema,
+  OwnedProposalsResponseSchema,
   MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
+  UpdateProposalRequestSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
@@ -24,6 +26,7 @@ import {
   type MentorPublishedConfig,
   type ProposalEvaluationResponse,
   type ProposalResponse,
+  type UpdateProposalRequest,
   type ReviewRequest,
   type ReviewResponse,
   type ReviewSubmissionResponse,
@@ -68,6 +71,9 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
     getGallery(offset = 0, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryPage>> {
       return client.request(`/api/gallery?offset=${Math.max(0, Math.trunc(offset))}&limit=20`, AcademicGalleryPageSchema, withSignal(signal));
     },
+    getMyProposals(signal?: AbortSignal): Promise<ApiResult<ProposalResponse[]>> {
+      return client.request("/api/me/proposals", OwnedProposalsResponseSchema, withSignal(signal));
+    },
 
     getGalleryDetail(projectId: string, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryDetail>> {
       const id = encodeId(projectId);
@@ -79,6 +85,18 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
       const request = CreateProposalRequestSchema.safeParse(input);
       if (!request.success) return Promise.resolve(invalid<ProposalResponse>());
       return client.request("/api/proposals", ProposalResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+
+    updateProposal(proposalId: string, input: UpdateProposalRequest, signal?: AbortSignal): Promise<ApiResult<ProposalResponse>> {
+      const id = encodeId(proposalId);
+      const request = UpdateProposalRequestSchema.safeParse(input);
+      if (!id || !request.success) return Promise.resolve(invalid<ProposalResponse>());
+      return client.request(`/api/proposals/${id}`, ProposalResponseSchema, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request.data),
+        ...withSignal(signal),
+      });
     },
 
     evaluateProposal(proposalId: string, signal?: AbortSignal): Promise<ApiResult<ProposalEvaluationResponse>> {

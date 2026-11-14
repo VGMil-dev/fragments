@@ -48,7 +48,11 @@ const evaluation = {
 };
 
 const actions = {
+  savedProposals: [] as typeof proposal[],
+  proposalsLoading: false,
+  onOpenProposal: vi.fn(),
   onSave: vi.fn(async () => ({ ok: true as const, data: proposal })),
+  onUpdate: vi.fn(async () => ({ ok: true as const, data: proposal })),
   onEvaluate: vi.fn(async () => ({ ok: true as const, data: evaluation })),
   onRecoverEvaluation: vi.fn(async () => ({ ok: true as const, data: evaluation })),
   onGenerateSubmission: vi.fn(async () => ({ ok: false as const, error: { code: "TEST", message: "hidden" } })),
@@ -83,6 +87,46 @@ describe("MentorScreen", () => {
     expect(html).not.toContain("scope necesita");
   });
 
+  it("lists saved proposals and opens the selected one", () => {
+    const onOpenProposal = vi.fn();
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[proposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain("Mis propuestas guardadas");
+    expect(html).toContain("Diario de plantas");
+    expect(html).toContain("Abrir propuesta");
+  });
+
+  it("sends the chosen saved proposal to the workspace", async () => {
+    const onOpenProposal = vi.fn();
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} savedProposals={[proposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />);
+    });
+
+    const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
+    await act(async () => open?.click());
+    expect(onOpenProposal).toHaveBeenCalledWith(proposal);
+  });
+
+  it("recovers an evaluation when reopening a saved proposal", async () => {
+    const recover = vi.fn(async () => ({ ok: true as const, data: evaluation }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(
+        <MentorScreen {...actions} initialProposal={proposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
+      );
+    });
+
+    expect(recover).toHaveBeenCalledWith(proposal.id);
+    expect(mountedContainer.textContent).toContain("72/100");
+  });
+
   it("shows only the evaluation and findings supplied by the response", () => {
     const html = renderToStaticMarkup(
       <MentorScreen {...actions} initialProposal={proposal} initialEvaluation={{ status: "success", data: evaluation }} onBack={vi.fn()} />,
@@ -109,7 +153,7 @@ describe("MentorScreen", () => {
     const form = mountedContainer.querySelector("form");
     await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
 
-    expect(actions.onSave).toHaveBeenCalledWith(expect.objectContaining({ title: "Diario de plantas editado" }));
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ title: "Diario de plantas editado", expectedVersion: proposal.version }));
     const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     expect(evaluate).toBeDefined();
     await act(async () => evaluate?.click());
