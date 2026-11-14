@@ -107,7 +107,7 @@ Tres revisores frescos gpt-6-luna / medium, fork_turns: none; revisión read-onl
 |---|---|---|---|
 | seguridad/procedencia | Nit | Campo 403 rate-limit no asignaba código estable inequívoco. | Se especificó `http_rate_limited`; `http_transient_status` queda para 408/425/429/5xx excepto 403 rate-limit.|
 | readiness/recuperación | Nit | Mismo mapeo de causa faltante para 403 con `X-RateLimit-Remaining: 0`. | Mapeo explícito agregado en diseño/spec.|
-| alcance/simpleza | 2 Nits | `.amazonaws.com` era wildcard demasiado amplio; reintento remoto cada poll no explicaba volumen/backoff/logging. | Se elimina AWS de allowlist (falla cerrado ante host no aprobado); retry sigue el timer existente de cinco minutos, máximo un evento por release/ciclo, sin backoff adicional. | 
+| alcance/simpleza | 2 Nits | `.amazonaws.com` era wildcard demasiado amplio; reintento remoto cada poll no explicaba volumen/backoff/logging. | Se elimina AWS de allowlist (falla cerrado ante host no aprobado); retry sigue el timer existente de cinco minutos, máximo un evento por release/ciclo, sin backoff adicional. |
 
 Ronda 8 no limpia por Nits corregidos. Siguiente ronda debe confirmar decisiones y detectar regresiones.
 | seguridad/procedencia (revisión adicional) | Nit | El evento retry no cerraba el esquema JSON y no exigía pruebas con sentinels de body/stderr/excepción/secreto. | Se fijó schema exacto con `event` y campos cerrados, prohibición de extras y test de sentinels no filtrados.|
