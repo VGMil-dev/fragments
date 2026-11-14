@@ -207,3 +207,11 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 
 - Commit local del registro ampliado: `c14e1e9a080ec5eb6e1f7eb0233b7c814ef63581` (`docs(F15): registra piloto auténtico`).
 - `git diff --check` terminó sin errores antes del commit. Se actualizaron intent, spec, evidencia y estado de F15; la rama de trabajo quedó un commit por delante de `origin/codex/f15-first-project-acceptance`.
+
+### Corrección de recuperación en Mentor — 2026-11-13
+
+- Se reprodujo el síntoma en la sesión autorizada: tras guardar y recargar Mentor, aparecía un formulario nuevo y no había lista para volver a abrir la propuesta propia. La persistencia y la evaluación seguían disponibles en el servidor.
+- `949c7d2c789597fec56d317bc8fd7d08255920b1` (`fix(mentor): recupera propuestas guardadas`) añade la consulta de `/api/me/proposals`, una lista de propuestas propias, selección para reabrir, recuperación GET de la evaluación persistida y actualización PUT con `expectedVersion`. No se cambió `packages/contracts` ni el servidor.
+- Regresión: tests de `student-api` validan lectura de propuestas propias y actualización por versión; tests de Mentor verifican listado/selección, recuperación de evaluación y ruta de edición existente.
+- Verificación después del cambio: `pnpm --filter @fragments/web test` — 20 archivos/84 tests PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con advertencia existente de bundle JS 524.58 kB (>500 kB); `git diff --check` PASS.
+- La corrección está en la rama `codex/f15-first-project-acceptance`, todavía sin PR, merge ni despliegue. No se verificó visualmente en Ego Lite ni en producción después del cambio. No se atribuye un resultado productivo al código local.

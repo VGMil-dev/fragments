@@ -59,3 +59,7 @@
 ## Addendum — resultado del piloto real — 2026-11-13
 
 El propietario autorizó una evaluación real inicial y el estudiante consintió la propuesta. Se guardó el proyecto por la UI estudiantil, se comprobó la lista propia y su persistencia, y la galería permaneció vacía antes de evaluar. Tras no poder recuperar la propuesta guardada desde la pantalla Mentor, se hizo una única solicitud al endpoint oficial autenticado de evaluación; la respuesta quedó persistida y una revisión elegible apareció en la galería. No hubo reintento. La sesión estudiantil recibió 403 en endpoints docentes. La vista del proyecto con una sesión docente auténtica y el aislamiento con una segunda cuenta no se ejecutaron. El informe completo, incluido el desvío de UI y límites, está en `task-list/F15/evidencie.md`.
+
+## UI follow-up from the authentic pilot
+
+A student must be able to reopen an owned proposal after leaving or reloading Mentor, see a persisted evaluation, and update a saved version without creating a duplicate proposal. The server's expected-version check remains authoritative. Implementation and verification are recorded under the authentic pilot evidence.
