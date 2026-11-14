@@ -195,7 +195,7 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - Se creó el repositorio privado `MilordV/catalogo-proyectos-accesible`, manteniendo intacto el portafolio anterior. Es propiedad de la cuenta estudiantil; no se añadieron secretos ni datos personales. La visibilidad privada se confirmó en GitHub.
 - Se publicó la rama `codex/f15-catalogo-accesible`; GitHub mostró cuatro commits contando el commit inicial del README. Los tres commits de esta misión son `4495eff` (catálogo), `c498acf` (tests) y `47dce0c` (retos/procedencia). El último SHA completo visible fue `47dce0c7c50e8fbe3da423f1c0fbed0bbf26464d`.
 - El prototipo Angular usa seis registros sintéticos, búsqueda, filtro por tema, ficha expandible y recuperación del estado vacío. La procedencia asistida por IA está declarada en README y `docs/retos.md`; no se atribuye código generado al estudiante.
-- Node `v24.22.2`, npm `11.19.1`.`npm test -- --watch=false`: 1 archivo, 3 pruebas aprobadas.`npm run build`: generación de bundle completada. Ego Lite verificó en el navegador la búsqueda (dos coincidencias de “angular”), el filtro combinado sin resultados y la recuperación de los seis proyectos. No se hizo revisión móvil completa.
+- Node `v24.22.2`, npm `11.19.1`. `npm test -- --watch=false`: 1 archivo, 3 pruebas aprobadas. `npm run build`: generación de bundle completada. Ego Lite verificó en el navegador la búsqueda (dos coincidencias de “angular”), el filtro combinado sin resultados y la recuperación de los seis proyectos. No se hizo revisión móvil completa.
 
 ### Veredicto del piloto
 
@@ -214,7 +214,7 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - `949c7d2c789597fec56d317bc8fd7d08255920b1` (`fix(mentor): recupera propuestas guardadas`) añade la consulta de `/api/me/proposals`, una lista de propuestas propias, selección para reabrir, recuperación GET de la evaluación persistida y actualización PUT con `expectedVersion`. No se cambió `packages/contracts` ni el servidor.
 - Regresión: tests de `student-api` validan lectura de propuestas propias y actualización por versión; tests de Mentor verifican listado/selección, recuperación de evaluación y ruta de edición existente.
 - Verificación después del cambio: `pnpm --filter @fragments/web test` — 20 archivos/84 tests PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con advertencia existente de bundle JS 524.58 kB (>500 kB); `git diff --check` PASS.
-- La corrección está en la rama `codex/f15-first-project-acceptance`, todavía sin PR, merge ni despliegue. No se verificó visualmente en Ego Lite ni en producción después del cambio. No se atribuye un resultado productivo al código local.
+- La corrección se publicó en el PR #33; no se ha fusionado ni desplegado. No se verificó visualmente en Ego Lite ni en producción después del cambio. No se atribuye un resultado productivo al código local.
 
 ### PR y control de revisión — 2026-11-13
 
