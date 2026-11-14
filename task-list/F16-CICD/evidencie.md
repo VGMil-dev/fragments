@@ -56,4 +56,6 @@
 - `git diff --check` — código 0; solo aviso de normalización CRLF del README.
 - EGM implementación, ciclos 23–25 y reauditoría focal: se encontraron y corrigieron riesgos en rollback/poll, clasificación de `docker load`, persistencia de fallo tras `deploying` y shape incompleto del baseline. Revisión final de seguridad/procedencia, alcance/simpleza y recuperación no encontró Majors pendientes; los dos últimos confirmaron que IDs SHA-256 completos e inválidos se bloquean antes de observar/mutar. Ver `goldfish_review_report.md`.
 - Configuración solicitada/verificada: modelo `gpt-6-luna`, esfuerzo `medium`; Goldfish se lanzaron explícitamente con esos valores y contexto no heredado. La herramienta no muestra telemetría separada que permita afirmar el runtime efectivo interno de cada subagente.
-- Estado de commit: pendiente. Tras el primer commit, registrar aquí y en `task-list/TASKS.md` el hash de commit y verificación; no hacer push.
+- Commit de implementación: `0d8f18e1d26ded3bb911bf1981a80e592650d518` (`fix(F16-CICD): endurece flujo de releases`).
+- Verificación fresca tras el último ajuste de baseline y antes del commit: suite Python 41 OK/1 omitida; Node 11/11; Turbo 10/10; `py_compile` y `git diff --check` código 0. No se ejecutó GitHub Actions remoto ni operación de producción.
+- El commit de cierre que registra este hash en evidencia y `task-list/TASKS.md` se añade a continuación; no hacer push.

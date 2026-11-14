@@ -32,4 +32,4 @@ La lista `task-list/TASKS.md` de la base no contenía una asignación F16-CICD. 
 - Auditoría de implementación: ciclos 23–25 más reauditoría focal; los hallazgos Major se corrigieron y seguridad/alcance/recuperación confirmaron el ajuste final de baseline. Ver `goldfish_review_report.md`.
 - Verificación: Python 41 OK / 1 omitida en Windows (`flock` contention para Linux CI); Node 11/11; Turbo 10/10 con suites API 123, Web 85 y Contracts 19, además de typecheck/lint/build. Sin cambios a producción.
 - Modelo configurado y solicitado a Goldfish: `gpt-6-luna`, `medium`; no se expone telemetría independiente del runtime interno de subagentes.
-- SHA actual de la rama antes de commit: `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2` más cambios de trabajo; commits pendientes. No push ni deploy.
+- Commit de implementación: `0d8f18e1d26ded3bb911bf1981a80e592650d518`. El commit de cierre registra el hash en evidencia y estado de tarea. No push ni deploy.
