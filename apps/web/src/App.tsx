@@ -31,6 +31,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [student, setStudent] = useState<StudentMe | null>(null);
   const [ownedProposals, setOwnedProposals] = useState<ProposalResponse[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [proposalsError, setProposalsError] = useState(false);
+  const [proposalsReload, setProposalsReload] = useState(0);
   const [selectedProposal, setSelectedProposal] = useState<ProposalResponse | undefined>();
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
@@ -88,13 +90,15 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     if (path !== "/student/mentor" || !student) return;
     let active = true;
     setProposalsLoading(true);
+    setProposalsError(false);
     void studentApi.getMyProposals().then((result) => {
       if (!active) return;
       if (result.ok) setOwnedProposals(result.data);
+      else setProposalsError(true);
       setProposalsLoading(false);
-    }).catch(() => { if (active) setProposalsLoading(false); });
+    }).catch(() => { if (active) { setProposalsError(true); setProposalsLoading(false); } });
     return () => { active = false; };
-  }, [path, student]);
+  }, [path, student, proposalsReload]);
 
   if ((path === "/student/gallery" || path === "/student/mentor") && !student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
@@ -122,7 +126,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             detailLoading={detailLoading}
             onCloseDetail={() => { setSelectedId(null); setSelectedDetail(null); }}
             onChoose={(entry) => { setSelectedId(entry.id); setSelectedDetail({ project: entry, history: [entry] }); }}
-            onUseProject={(entry) => { setInspiration(entry); setSelectedId(null); setSelectedDetail(null); navigate("/student/mentor"); }}
+            onUseProject={(entry) => { setInspiration(entry); setSelectedProposal(undefined); setSelectedId(null); setSelectedDetail(null); navigate("/student/mentor"); }}
             hasMore={galleryNextOffset !== null}
             onLoadMore={() => { if (galleryNextOffset !== null) setGalleryOffset(galleryNextOffset); }}
             onCreateProposal={() => { setInspiration(undefined); setSelectedProposal(undefined); navigate("/student/mentor"); }}
@@ -139,6 +143,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               restoreEvaluation={Boolean(selectedProposal)}
               savedProposals={ownedProposals}
               proposalsLoading={proposalsLoading}
+              proposalsError={proposalsError}
+              onRetryProposals={() => setProposalsReload((value) => value + 1)}
               onOpenProposal={setSelectedProposal}
               onSave={async (draft) => {
                 const result = await studentApi.saveProposal(draft);

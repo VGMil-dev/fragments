@@ -23,6 +23,8 @@ export interface MentorScreenProps {
   restoreEvaluation?: boolean;
   savedProposals: ProposalResponse[];
   proposalsLoading: boolean;
+  proposalsError?: boolean;
+  onRetryProposals?: () => void;
   onOpenProposal: (proposal: ProposalResponse) => void;
   onSave: (draft: CreateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
   onUpdate: (proposalId: string, draft: UpdateProposalRequest) => Promise<ApiResult<ProposalResponse>>;
@@ -86,6 +88,8 @@ export function MentorScreen({
   restoreEvaluation = false,
   savedProposals,
   proposalsLoading,
+  proposalsError = false,
+  onRetryProposals,
   onOpenProposal,
   onSave,
   onUpdate,
@@ -283,7 +287,9 @@ export function MentorScreen({
 
       <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
         <h2 id="mentor-saved-title">Mis propuestas guardadas</h2>
-        {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : savedProposals.length ? (
+        {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : proposalsError ? (
+          <div role="alert"><p>No pudimos cargar tus propuestas guardadas.</p><button type="button" onClick={onRetryProposals}>Volver a intentar</button></div>
+        ) : savedProposals.length ? (
           <ul>
             {savedProposals.map((saved) => (
               <li key={saved.id}>

@@ -98,6 +98,22 @@ describe("MentorScreen", () => {
     expect(html).toContain("Abrir propuesta");
   });
 
+  it("does not report an empty list when saved proposals failed to load", async () => {
+    const retry = vi.fn();
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} proposalsError onRetryProposals={retry} onBack={vi.fn()} />);
+    });
+
+    expect(mountedContainer.textContent).toContain("No pudimos cargar tus propuestas guardadas.");
+    expect(mountedContainer.textContent).not.toContain("Aún no tienes propuestas guardadas.");
+    const button = Array.from(mountedContainer.querySelectorAll("button")).find((entry) => entry.textContent === "Volver a intentar");
+    await act(async () => button?.click());
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it("sends the chosen saved proposal to the workspace", async () => {
     const onOpenProposal = vi.fn();
     mountedContainer = document.createElement("div");

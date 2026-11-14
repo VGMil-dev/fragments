@@ -221,3 +221,10 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - Se publicó `codex/f15-first-project-acceptance` y se abrió el PR [#33](https://github.com/VGMil-dev/fragments/pull/33) hacia `main`, head inicial `b9e52e69ef388eef4bc87003ddbed577397fd337`.
 - GitHub Actions `Fragments CI`, run `43541725815`, concluyó `success`. La API informó `mergeable=true` antes de pedir revisión.
 - La revisión de aprobación del mismo usuario que creó el PR fue rechazada por GitHub con HTTP 422: `Review Can not approve your own pull request`. No se utilizó bypass, no se fusionó y no se desplegó. El PR permanece abierto y necesita revisión independiente conforme a la protección del repositorio.
+
+### Revisión de seguridad y regresiones — 2026-11-13
+
+- Revisión independiente de solo lectura del HEAD `5f0aa82` encontró dos P2: inspiración conservaba una propuesta seleccionada previa y error al cargar se presentaba como lista vacía. Sin hallazgos de autorización/ownership en los endpoints nuevos; la edición sigue usando `expectedVersion` y reabrir recupera evaluación por GET.
+- Se corrigieron ambas condiciones: elegir inspiración limpia la propuesta seleccionada; el fallo de lectura se muestra explícitamente con botón de reintento. Se añadió regresión de UI para impedir confundir error con lista vacía y validar reintento.
+- Verificación local después del arreglo: `pnpm --filter @fragments/web test -- src/features/mentor/mentor-screen.test.tsx` — 20 archivos/85 tests PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS (bundle JS 524.95 kB, advertencia preexistente de umbral 500 kB); `git diff --check` PASS.
+- Estas correcciones aún no están publicadas ni en CI; PR #33 todavía no se ha fusionado. No hubo actividad de navegador ni de producción en esta revisión.

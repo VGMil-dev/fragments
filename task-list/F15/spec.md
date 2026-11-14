@@ -63,3 +63,5 @@ El propietario autorizó una evaluación real inicial y el estudiante consintió
 ## UI follow-up from the authentic pilot
 
 A student must be able to reopen an owned proposal after leaving or reloading Mentor, see a persisted evaluation, and update a saved version without creating a duplicate proposal. The server's expected-version check remains authoritative. Implementation and verification are recorded under the authentic pilot evidence.
+
+When loading saved proposals fails, the UI must show a recoverable error and must not claim the student has no saved work. Starting a new proposal from a gallery inspiration clears any previously selected proposal.
