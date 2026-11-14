@@ -1,0 +1,17 @@
+id,name,row,column,output,origin,status,recommended_use
+IC-01,home,1,1,assets/icons/png/home.png,Generated icon atlas; manually review before integration,CANDIDATE,navigation
+IC-02,compass,1,2,assets/icons/png/compass.png,Generated icon atlas; manually review before integration,CANDIDATE,navigation
+IC-03,gallery,1,3,assets/icons/png/gallery.png,Generated icon atlas; manually review before integration,CANDIDATE,gallery
+IC-04,book,1,4,assets/icons/png/book.png,Generated icon atlas; manually review before integration,CANDIDATE,bitacora
+IC-05,analytics,2,1,assets/icons/png/analytics.png,Generated icon atlas; manually review before integration,CANDIDATE,analitica
+IC-06,search,2,2,assets/icons/png/search.png,Generated icon atlas; manually review before integration,CANDIDATE,busqueda
+IC-07,learning,2,3,assets/icons/png/learning.png,Generated icon atlas; manually review before integration,CANDIDATE,ruta
+IC-08,presentation,2,4,assets/icons/png/presentation.png,Generated icon atlas; manually review before integration,CANDIDATE,docente
+IC-09,code,3,1,assets/icons/png/code.png,Generated icon atlas; manually review before integration,CANDIDATE,review
+IC-10,checklist,3,2,assets/icons/png/checklist.png,Generated icon atlas; manually review before integration,CANDIDATE,tareas
+IC-11,award,3,3,assets/icons/png/award.png,Generated icon atlas; manually review before integration,CANDIDATE,logro
+IC-12,security,3,4,assets/icons/png/security.png,Generated icon atlas; manually review before integration,CANDIDATE,seguridad
+IC-13,settings,4,1,assets/icons/png/settings.png,Generated icon atlas; manually review before integration,CANDIDATE,ajustes
+IC-14,notification,4,2,assets/icons/png/notification.png,Generated icon atlas; manually review before integration,CANDIDATE,avisos
+IC-15,moon,4,3,assets/icons/png/moon.png,Generated icon atlas; manually review before integration,CANDIDATE,modo
+IC-16,ecocampus,4,4,assets/icons/png/ecocampus.png,Generated icon atlas; manually review before integration,CANDIDATE,ecocampus

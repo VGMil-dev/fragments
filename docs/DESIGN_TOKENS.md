@@ -1,13 +1,26 @@
-# Fragments UI art direction
-Reference: supplied nostalgic pixel-garden agency screenshot, used only as mood/inspiration. Production art in `/assets` is newly generated and SVGs original. Avoid reproducing its copy, exact flower/CRT placement, cards or brand.
+# Fragments F16 — Sistema visual Pixel Night
 
-## Brand
-- Display: `FRAGMENTS` / supporting line `Imagina. Construye. Demuestra.`
-- Canvas #FCF9F1; navy #17345C; blue #4776A9; cornflower #6E9BCC; powder #D8EAF9; border #AFC4D9; paper white #FFFDF8; success #3D7F6B; warning #B97A33.
-- Text body: system UI sans (15–17 px); headings use optional pixel-font under display only; never ship font files from unknown sources.
-- Layout: airy editorial content, sidebar only desktop, four real surfaces: landing, gallery, project workspace, teacher dashboard. No repetitive SaaS tile wall; use meaningful stepper and review timeline.
-- UI copy Spanish plain language. Buttons `Evaluar propuesta`, `Reevaluar`, `Generar entrega`, `Ver informe`, `Iniciar reto`.
-- `motion/react`: enter up 6px / 180–240ms max, status transitions, pressed button scale .98; supports reduced motion and no autoplay decorative loops.
-- SVG icon mark built from disconnected tiles symbolizing independent fragments becoming a coherent project. `assets/icon.svg`, favicon and social preview should use this mark, not Vite or previous Lumen assets.
-- Use `assets/hero-fragments.png` as optional hero; CSS gradient or illustration hidden at narrow viewport, never block form reading; `loading="lazy"` outside hero and optimized derivative during implementation.
-- Empty states: explain next action. Error states show recovery. Loading shows queue state rather than fake spinner forever.
+**Autoridad:** decisión explícita del propietario del 2026-11-14. Este documento sustituye para F16 las directrices cromáticas y de composición anteriores. No hay una paleta crema paralela para las vistas migradas. Se preservan todas las reglas funcionales, de privacidad, autenticación, contratos y accesibilidad.
+
+## Marca
+
+- Display: `FRAGMENTS` / línea de apoyo `Imagina. Construye. Demuestra.`
+- Night `#030407`: canvas principal y fondos de aplicación.
+- Cobalt `#1558C9`: identidad de marca, navegación y controles seleccionados.
+- Lime `#D4FF24`: acento, indicadores activos y acciones destacadas.
+- Tokens auxiliares aprobables por esta tarea: superficies azul-negras, texto claro legible, borde con contraste suficiente y estados semánticos. Se especifican y miden en `task-list/F16/DESIGN_SYSTEM_CONTRACT.md`; no desplazan los tres colores de marca.
+- Tipografía de sistema para lectura y controles; tipografía pixel solo en rótulos decorativos breves, con fallback y sin incrustar fuentes desconocidas.
+- UI en español claro. Conservar etiquetas funcionales establecidas: `Evaluar propuesta`, `Reevaluar`, `Generar entrega`, `Ver informe`, `Iniciar reto`.
+- Pixel art aprobado como identidad/acento; nunca como portador único de información. Preservar bytes y hashes del kit.
+
+## Composición
+
+- Landing editorial nocturna y layouts estudiante/docente coherentes; encabezado compartido con etiquetas visibles y sin sidebar, drawer ni menú oculto.
+- Evitar rejillas repetitivas sin semántica; usar grupos, cronologías y superficies según la tarea.
+- Estados vacíos explican el siguiente paso sin inventar datos; errores conservan recuperación; carga no se representa como vacío.
+- Microtransiciones breves para estado/feedback; no añadir reproducción decorativa continua. Respetar `prefers-reduced-motion` y sustituir sprites animados por frame estático.
+- Mantener reflow a 320 CSS px, foco visible, navegación por teclado y WCAG 2.2 AA.
+
+## Migración
+
+La paleta crema `#FCF9F1` y los azules históricos quedan **deprecados como directrices de diseño para las superficies migradas por F16**. No borrar archivos/estilos hasta verificar que no tienen consumidores. El avance se hace por grupos reversibles; al terminar F16 todas las rutas incluidas usan este sistema. El detalle de tokens, APIs y gates está en `task-list/F16/DESIGN_SYSTEM_CONTRACT.md` y `task-list/F16/design_draft.md`.

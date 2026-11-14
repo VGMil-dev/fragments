@@ -240,8 +240,8 @@ export function App() {
             <a className="button button--primary" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
             <p className="hero__note"><img src="/flower.svg" alt="" width="24" height="36" />Imagina. Construye. Demuestra.</p>
           </div>
-          <div className="hero__art" aria-label="Ilustración de una computadora rodeada de plantas y piezas de código" role="img">
-            <div className="art-frame"><img src="/hero-fragments.webp" alt="" fetchPriority="high" width="1774" height="944" /></div>
+          <div className="hero__art" aria-label="Ilustración de una estudiante programando junto a su gato" role="img">
+            <div className="art-frame"><picture><source media="(prefers-reduced-motion: reduce)" srcSet="/f16/Typing_Girl_and_Sleeping_Cat_frame-00.png" /><img src="/f16/Typing_Girl_and_Sleeping_Cat.webp" alt="" fetchPriority="high" width="640" height="640" /></picture></div>
             <span className="art-label"><span aria-hidden="true">✳</span>ideas en proceso</span>
           </div>
           <div className="hero__footnote"><span>01</span>APRENDER CON PROYECTOS REALES</div>

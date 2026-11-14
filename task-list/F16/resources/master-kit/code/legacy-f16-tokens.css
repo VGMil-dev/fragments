@@ -1,0 +1,26 @@
+/* F16 design tokens — propuesta, integrar en la arquitectura real tras auditoría */
+:root {
+  --f16-bg: #030407;
+  --f16-brand: #1558C9;
+  --f16-accent: #D4FF24;
+  --f16-text: #F7F9FF;
+  --f16-text-muted: #A7B1C8;
+  --f16-surface: #101725;
+  --f16-surface-raised: #182237;
+  --f16-border: #34415B;
+  --f16-space-1: 4px;
+  --f16-space-2: 8px;
+  --f16-space-3: 12px;
+  --f16-space-4: 16px;
+  --f16-space-6: 24px;
+  --f16-space-8: 32px;
+  --f16-space-12: 48px;
+  --f16-radius-sm: 8px;
+  --f16-radius-md: 12px;
+  --f16-radius-lg: 16px;
+  --f16-content-max: 1200px;
+}
+.f16-asset { display:block; max-width:100%; height:auto; }
+.f16-pixel-art { image-rendering: pixelated; }
+:focus-visible { outline: 2px solid var(--f16-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .f16-motion-enhancement { animation: none !important; transition: none !important; } }

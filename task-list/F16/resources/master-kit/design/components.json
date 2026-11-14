@@ -1,0 +1,146 @@
+[
+  {
+    "id": "COMP-01",
+    "name": "Button",
+    "adapter": "Astryx Button",
+    "uses": "CTA, guardar, cancelar, evaluaciones",
+    "implementation_note": "CLI component Button; validar props",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-02",
+    "name": "Card",
+    "adapter": "Astryx Card",
+    "uses": "Cards de galería y módulos",
+    "implementation_note": "CLI component Card; composición",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-03",
+    "name": "Stack",
+    "adapter": "Astryx Stack",
+    "uses": "Espaciado y layouts verticales",
+    "implementation_note": "CLI component Stack",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-04",
+    "name": "Text",
+    "adapter": "Astryx tipografía / primitives",
+    "uses": "Titulares y textos; validar nombre exportado",
+    "implementation_note": "No asumir export Text",
+    "priority": "Media"
+  },
+  {
+    "id": "COMP-05",
+    "name": "TextField",
+    "adapter": "Astryx campo, comprobar componente real",
+    "uses": "Inputs, validación y ayudas",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-06",
+    "name": "Select",
+    "adapter": "Astryx selector, comprobar componente real",
+    "uses": "Filtros y opciones",
+    "implementation_note": "CLI component --list",
+    "priority": "Media"
+  },
+  {
+    "id": "COMP-07",
+    "name": "Tabs",
+    "adapter": "Astryx tabs, comprobar componente real",
+    "uses": "Propuestas, vistas, resultados",
+    "implementation_note": "CLI component --list",
+    "priority": "Media"
+  },
+  {
+    "id": "COMP-08",
+    "name": "Dialog",
+    "adapter": "Astryx modal/dialog, comprobar componente real",
+    "uses": "Confirmación y detalles",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-09",
+    "name": "Table",
+    "adapter": "Astryx tabla, comprobar componente real",
+    "uses": "Docente/estudiantes",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-10",
+    "name": "Badge",
+    "adapter": "Astryx etiqueta, comprobar componente real",
+    "uses": "Estados, progreso",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-11",
+    "name": "Alert",
+    "adapter": "Astryx alerta, comprobar componente real",
+    "uses": "Errores, warnings",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "COMP-12",
+    "name": "Skeleton",
+    "adapter": "Astryx skeleton, comprobar componente real",
+    "uses": "Carga",
+    "implementation_note": "CLI component --list",
+    "priority": "Media"
+  },
+  {
+    "id": "COMP-13",
+    "name": "Progress",
+    "adapter": "Astryx progreso, comprobar componente real",
+    "uses": "Review y Trainer",
+    "implementation_note": "CLI component --list",
+    "priority": "Media"
+  },
+  {
+    "id": "COMP-14",
+    "name": "Navigation",
+    "adapter": "Astryx navegación, comprobar componente real",
+    "uses": "Sidebar, mobile nav",
+    "implementation_note": "CLI component --list",
+    "priority": "Alta"
+  },
+  {
+    "id": "F16-01",
+    "name": "AppShell",
+    "adapter": "Composición propia + Astryx",
+    "uses": "Sidebar, header, panel",
+    "implementation_note": "No inventar componente Astryx; crear wrapper",
+    "priority": "Alta"
+  },
+  {
+    "id": "F16-02",
+    "name": "PixelArtFrame",
+    "adapter": "Componente propio",
+    "uses": "WebP/PNG pixel-art con ratio y reduced motion",
+    "implementation_note": "No modificar originales",
+    "priority": "Alta"
+  },
+  {
+    "id": "F16-03",
+    "name": "FeatureCard",
+    "adapter": "Componente propio + Card",
+    "uses": "Hero cards con assets",
+    "implementation_note": "Conservar semántica de enlaces",
+    "priority": "Alta"
+  },
+  {
+    "id": "F16-04",
+    "name": "AsyncStateView",
+    "adapter": "Componente propio",
+    "uses": "loading/empty/error/success",
+    "implementation_note": "Mantener contrato existente",
+    "priority": "Alta"
+  }
+]

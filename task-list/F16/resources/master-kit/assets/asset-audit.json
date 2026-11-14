@@ -1,0 +1,198 @@
+[
+  {
+    "file": "assets/approved/Goggle_Kid_Walk.webp",
+    "dimensions": "640x640",
+    "frames": 8,
+    "animated": true,
+    "sha256": "73f58fc11bcc830524b880d2dbd9e85eec880c7fcd8101852f0ad38dba2887b3"
+  },
+  {
+    "file": "assets/approved/Typing_Girl_and_Sleeping_Cat.webp",
+    "dimensions": "640x640",
+    "frames": 1,
+    "animated": false,
+    "sha256": "cddad20e376968b1c6b346392a03739c5caa230095b36943bdda2ef8b52174a5"
+  },
+  {
+    "file": "assets/icons/png/analytics.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "952b0a99efae01039dc073a0dcf371e368a0d9232d04391c094ffb657abb8de9"
+  },
+  {
+    "file": "assets/icons/png/award.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "f1fbbf9ade65181012d6ed0c6b1009941c83fae1fcbbe97df9ec04885f46cd54"
+  },
+  {
+    "file": "assets/icons/png/book.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "7de31d94d3fd5ce293bd3d8b58e9a740ccd1693f5b83aeae8fddb6e479cd8d9f"
+  },
+  {
+    "file": "assets/icons/png/checklist.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "fc67fdafca9f7b619100cca440b9cbf92add582b552c3923df58505cccb7039f"
+  },
+  {
+    "file": "assets/icons/png/code.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "4b5a211489b87be0cef33a82eb2e76142c51c630d63bf8ecf838eba8607d2603"
+  },
+  {
+    "file": "assets/icons/png/compass.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "22b91371b5faf30c5a2523b2e7ab620fe4a54a89f29c9d63f6212a3d1449eee2"
+  },
+  {
+    "file": "assets/icons/png/ecocampus.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "a67a79b9eed1b5224f85167d3dd5c15480ba8ac98fcc6d6d1808a9aab1bf7e84"
+  },
+  {
+    "file": "assets/icons/png/gallery.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "f91095a1ddc7a3a3e6e0d6c3cf51337864c0813b4fc9708c1b5757401b0ff990"
+  },
+  {
+    "file": "assets/icons/png/home.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "c845051454e2d7ec9406ae2f25f529201b4ab15c10be5f296006b6c60604e70a"
+  },
+  {
+    "file": "assets/icons/png/learning.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "346cd4af7db0b283b6ba74af67dd3af9b63703aca3c0b1bb1f71bd722fdfad69"
+  },
+  {
+    "file": "assets/icons/png/moon.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "5477ab50705dfe2bf24084d0e423fa52a7d76425e9d2956d317238f63d25bb4f"
+  },
+  {
+    "file": "assets/icons/png/notification.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "c853b4bf704867b476e29c0c23389361d5c78761f0c9bf415b3d92fe41b4b53b"
+  },
+  {
+    "file": "assets/icons/png/presentation.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "e8a8c28f8d3346032954bfb69ef3d1aeeafd59fb78861377e77c3a10c7bc1abf"
+  },
+  {
+    "file": "assets/icons/png/search.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "5525efa0622fa3ad39f275a4184c562b7a92bb715896f083ad259d4c8c0335b1"
+  },
+  {
+    "file": "assets/icons/png/security.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "c5a4fb03abce8fcc8fabcd9da9d9a69b79927bf92e8cd3bb389eefc9ed8e90f7"
+  },
+  {
+    "file": "assets/icons/png/settings.png",
+    "dimensions": "256x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "66b012a582f5dc9ad19cba86c9f4941e8dc788ccaab56d0fe7135a0858a0400a"
+  },
+  {
+    "file": "assets/icons/source/icon-atlas-4x4.png",
+    "dimensions": "1254x1254",
+    "frames": 1,
+    "animated": false,
+    "sha256": "5384d4df2876dd8514c23651054ce89891a9ed1d99aaeb9ac61c1d2eefaef4be"
+  },
+  {
+    "file": "assets/reduced-motion/Goggle_Kid_Walk_frame-00.png",
+    "dimensions": "640x640",
+    "frames": 1,
+    "animated": false,
+    "sha256": "7d9e5dc283ddb03deb1dabd96fe9a616b9aa42449ee48c2ee7201787ace98e71"
+  },
+  {
+    "file": "assets/reduced-motion/Typing_Girl_and_Sleeping_Cat_frame-00.png",
+    "dimensions": "640x640",
+    "frames": 1,
+    "animated": false,
+    "sha256": "0af55aa4f74789d842bf330fdbdeff691b885dcb332bdda18aa2e01ed7170e4b"
+  },
+  {
+    "file": "assets/references/card-analisis-datos.png",
+    "dimensions": "1536x1024",
+    "frames": 1,
+    "animated": false,
+    "sha256": "54c18428549c54ffb8b0f908dcd412366dc4ec7a1a002f5bc5b6818eed19cc4b"
+  },
+  {
+    "file": "assets/references/card-bitacora-libro.png",
+    "dimensions": "1774x887",
+    "frames": 1,
+    "animated": false,
+    "sha256": "25d3d50f16525fbb7f769c26eb356be6428b45356cb95f1093728fa5e5784554"
+  },
+  {
+    "file": "assets/references/card-ecocampus-terrario.png",
+    "dimensions": "1402x1122",
+    "frames": 1,
+    "animated": false,
+    "sha256": "1ef94b8affb351c466ea700e2281bc66ae80c06b0c87b4f2df3a66c15d791378"
+  },
+  {
+    "file": "assets/references/card-ruta-personaje.png",
+    "dimensions": "1312x1199",
+    "frames": 1,
+    "animated": false,
+    "sha256": "9d3fd47da3bfa2bce945054d3db5985d871225c424bd0393ec8b15a4e27ebe2f"
+  },
+  {
+    "file": "assets/references/hero-estudiante-gato.png",
+    "dimensions": "1774x887",
+    "frames": 1,
+    "animated": false,
+    "sha256": "f6b4fc99e62c55bf272d5ccf7e915895c1c28502cd80b48fef8ea95b2ac1bf40"
+  },
+  {
+    "file": "assets/sheets/Goggle_Kid_Walk_sheet.png",
+    "dimensions": "2048x256",
+    "frames": 1,
+    "animated": false,
+    "sha256": "40b7d5b2d5c8f422b27ee33e8eb3f054d3f96fb1a2ee5768e6648fa0a45635a6"
+  },
+  {
+    "file": "assets/sheets/Typing_Girl_and_Sleeping_Cat_sheet.png",
+    "dimensions": "2048x204",
+    "frames": 1,
+    "animated": false,
+    "sha256": "dc79685b20ce0822a6bde3b577582cf9a9cf6a764137f53c1c1e2bd9a34354da"
+  }
+]
