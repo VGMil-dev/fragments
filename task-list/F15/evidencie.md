@@ -165,3 +165,40 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - Commit de protocolo y prueba de aislamiento: `30bac2c` (`test(F15): protege propuestas antes de IA`).
 - Regresión docente indicada por el revisor: `bb5b3f4` (`test(F15): cubre borrador en vista docente`).
 - Actualización independiente: la última revisión corrió `src/features/mentor/http.test.ts`, 1 archivo/10 pruebas PASS; revisión acotada sin producción/IA.
+
+## Piloto auténtico F15 — 2026-11-13
+
+### Identidad y propuesta
+
+- Se usó Ego Lite con una sesión estudiantil GitHub ya autenticada. `/api/me` confirmó una identidad estudiantil reconocida; la lista inicial de propuestas propias y `/api/gallery` devolvieron cero.
+- El estudiante creó una propuesta auténtica desde la interfaz de Fragments. No se incluyó su texto, nombre, correo, identificador, cookie ni respuesta completa en esta evidencia.
+- La UI confirmó el guardado. Tras recargar, `/api/me/proposals` devolvió una propuesta propia persistida; la galería seguía en cero antes de la evaluación. La referencia privada se mantuvo solo en memoria durante QA.
+- Se verificó antes de la evaluación que no existía revisión persistida (GET de evaluación 404). No se observó publicación prematura.
+
+### Evaluación, publicación y privacidad
+
+- Aprobación del propietario y consentimiento del estudiante se aportaron explícitamente para una evaluación real inicial. Antes del dispatch se revisaron los presupuestos vigentes de Vercel y GitHub; el detalle está en la sección de costos.
+- La UI Mentor no permitió reabrir/seleccionar la propuesta guardada después de recargar: mostraba un formulario nuevo. Para evitar crear una segunda propuesta o enviar una evaluación distinta, se confirmó la referencia ya guardada y se hizo exactamente una solicitud al endpoint autenticado oficial de Fragments `POST /api/proposals/:id/review`. No se falsificó el evaluador ni se alteró el estado.
+- El POST respondió 200; el GET posterior de la misma evaluación respondió 200 con el resultado persistido. No hubo reintentos ni solicitudes duplicadas. Resultado académico: factible/elegible, con hallazgos y orientaciones. La revisión histórica quedó asociada a versión de propuesta 1 y contexto de rúbrica 2, rubric `mentor-control-v2`.
+- El proveedor reportado fue `alibaba/qwen3.7-flash`. Logs de AI Gateway muestran una solicitud 200, aproximadamente 1.2k tokens de entrada y 787 de salida; el costo de esa fila aparece como `$0.0001` redondeado. El panel MTD mostraba `$0.03`; esos valores son la precisión disponible del panel, no un cálculo exacto de facturación.
+- Antes de evaluar, `/api/gallery` tenía cero elementos; luego tuvo una publicación elegible y el detalle respondió 200. Las claves del contrato público no incluían correo, nota, comentarios privados, instrucciones docentes ni token. Tras recargar, la evaluación persistía y la galería seguía con un elemento.
+- Desde la sesión estudiantil, `/api/teacher/mentor-control` y `/api/teacher/students` respondieron 403. No se inició sesión docente ni se abrió su vista del proyecto auténtico en esta corrida. Tampoco se usó una segunda cuenta estudiantil para probar aislamiento productivo; quedan pendientes las verificaciones directas de B y docente.
+
+### Presupuestos y Codespaces
+
+- Vercel AI Gateway: se verificaron límites de equipo y clave de `$5`, ambos sin renovación; el gasto MTD previo mostrado era `$0.03` y había crédito visible de `$14.49`. El costo máximo preflight de una solicitud con los topes del producto era menor a `$0.001`. No se cambió configuración ni límite.
+- GitHub personal: plan Free; la cuota observada era 120 core-hours/mes y 15 GB-month. El presupuesto de sobreconsumo de Codespaces estaba en `$0` con “Usage blocked”, por lo que el uso de pago quedaba bloqueado. No se habilitó facturación ni se aumentaron límites. La pantalla de uso final no se volvió a consultar después de parar el Codespace; no afirmar un asiento final de coste facturado.
+- Se creó el Codespace `scaling space adventure` y se detuvo desde GitHub al terminar. La vista de GitHub confirmó el estado `stopped`. No se verificó el tipo exacto de máquina ni se exportó un reporte final de horas de uso.
+
+### Repositorio privado y retos
+
+- Se creó el repositorio privado `MilordV/catalogo-proyectos-accesible`, manteniendo intacto el portafolio anterior. Es propiedad de la cuenta estudiantil; no se añadieron secretos ni datos personales. La visibilidad privada se confirmó en GitHub.
+- Se publicó la rama `codex/f15-catalogo-accesible`; GitHub mostró cuatro commits contando el commit inicial del README. Los tres commits de esta misión son `4495eff` (catálogo), `c498acf` (tests) y `47dce0c` (retos/procedencia). El último SHA completo visible fue `47dce0c7c50e8fbe3da423f1c0fbed0bbf26464d`.
+- El prototipo Angular usa seis registros sintéticos, búsqueda, filtro por tema, ficha expandible y recuperación del estado vacío. La procedencia asistida por IA está declarada en README y `docs/retos.md`; no se atribuye código generado al estudiante.
+- Node `v24.22.2`, npm `11.19.1`.`npm test -- --watch=false`: 1 archivo, 3 pruebas aprobadas.`npm run build`: generación de bundle completada. Ego Lite verificó en el navegador la búsqueda (dos coincidencias de “angular”), el filtro combinado sin resultados y la recuperación de los seis proyectos. No se hizo revisión móvil completa.
+
+### Veredicto del piloto
+
+- PASS: OAuth estudiantil de producción, identidad reconocida, guardado/persistencia propia, borrador no publicado antes de IA, una evaluación auténtica persistida, publicación elegible tras evaluar, contrato público sin campos privados, denegación estudiantil de rutas docentes, repositorio privado, rama y Codespace detenido.
+- INCONCLUSIVE: vista docente autenticada del proyecto, aislamiento productivo con otra cuenta, comprobación productiva de integridad SQLite y atribución del SHA productivo. El resultado no sustituye la QA sintética existente.
+- F15 global permanece INCONCLUSIVE, no cerrado ni listo para release. No se publicó PR del repositorio académico ni se creó tag, release o despliegue de Fragments. El desvío de la UI para evaluar la propuesta guardada debe convertirse en una mejora de producto con prueba de regresión.

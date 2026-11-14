@@ -55,3 +55,7 @@
 - La evaluación productiva queda bloqueada hasta tener consentimiento del estudiante y autorización explícita del propietario, además de comprobar presupuesto vigente.
 - El procedimiento detallado y los resultados de prueba están en `task-list/F15/protocolo-aceptacion-piloto.md` y `task-list/F15/evidencie.md`.
 - F15 no se completa mientras no se acredite con un proyecto auténtico la evaluación persistida y publicación automática, o no se documente que ambas siguen pendientes del piloto.
+
+## Addendum — resultado del piloto real — 2026-11-13
+
+El propietario autorizó una evaluación real inicial y el estudiante consintió la propuesta. Se guardó el proyecto por la UI estudiantil, se comprobó la lista propia y su persistencia, y la galería permaneció vacía antes de evaluar. Tras no poder recuperar la propuesta guardada desde la pantalla Mentor, se hizo una única solicitud al endpoint oficial autenticado de evaluación; la respuesta quedó persistida y una revisión elegible apareció en la galería. No hubo reintento. La sesión estudiantil recibió 403 en endpoints docentes. La vista del proyecto con una sesión docente auténtica y el aislamiento con una segunda cuenta no se ejecutaron. El informe completo, incluido el desvío de UI y límites, está en `task-list/F15/evidencie.md`.
