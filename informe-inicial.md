@@ -55,4 +55,3 @@ Estas observaciones son del implementador y no equivalen a una revisión Goldfis
 - Pruebas locales: no ejecutadas; solo se consultó el estado remoto de Actions.
 - Estado de automatización: el CI de PR más reciente consultado y la publicación de `v0.4.5` terminaron correctamente; aplicación en VPS no confirmada.
 - SHA de cambios: ninguno.
-
