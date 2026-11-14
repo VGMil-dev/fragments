@@ -15,13 +15,13 @@ Este archivo es la especificación operativa de F16. Los objetivos, límites y d
 - GIVEN una lista cargando, vacía, con error o con datos, WHEN se representa, THEN cada estado se distingue, no se informa vacío al fallar y retry conserva su intención.
 - GIVEN formulario válido o inválido, WHEN se guarda/envía, THEN se aplican las validaciones y campos actuales; cada error se anuncia junto al campo; busy/success/error no alteran la acción.
 - GIVEN persona que usa teclado, WHEN recorre header, navegación, listas, dialogs existentes y formularios, THEN el orden es lógico, foco visible, skip link presente y no existe trampa.
-- GIVEN viewport de 320, 390, 768, 1024 o 1440 CSS px, WHEN se renderiza la pantalla, THEN contenido y acciones siguen visibles, legibles y sin overflow horizontal de página.
+- GIVEN viewport de 320, 375, 768 o 1440 CSS px (1024 adicional para comparación), WHEN se renderiza la pantalla, THEN contenido y acciones siguen visibles, legibles y sin overflow horizontal de página. Los anchos CSS equivalentes a 200%/400% se registran aparte si el navegador no expone zoom real.
 - GIVEN `prefers-reduced-motion: reduce`, WHEN se muestra contenido visual, THEN no hay movimiento decorativo continuo y el arte sigue comprensible en estático.
 - GIVEN asset original aprobado, WHEN se copia a web/public, THEN sus bytes/hashes permanecen idénticos.
 
 ## Límites exactos de archivos
 
-Este allowlist queda cerrado antes de implementar. No editar archivos fuera de él sin volver a especificar y revisar el alcance.
+Este allowlist define los archivos de producto. Los documentos/evidencias F16 y el fixture local de QA listados abajo también pertenecen al alcance de cierre; no se editan archivos de producto fuera del allowlist.
 
 **Diseño del producto:**
 
@@ -49,14 +49,24 @@ Este allowlist queda cerrado antes de implementar. No editar archivos fuera de �
 
 **Prohibido:** `apps/api/**`, `packages/contracts/**`, APIs/clients/validators/hooks, `AGENTS.md`, tooling raíz excepto metadatos Astryx anteriores, CI/workflows/deploy, fuentes externas y originales del kit.
 
+**Entregables de documentación/evidencia permitidos (rutas exactas):**
+
+- `docs/DESIGN_TOKENS.md`, `docs/SYSTEM_DESIGN.md`.
+- `task-list/TASKS.md` (solo PLANNER; actualizar estado y referencia a evidencia/commit).
+- `task-list/F16/GOAL.md`, `intent.md`, `spec.md`, `evidencie.md`, `concepts_brief.md`, `design_draft.md`, `SCREEN_INVENTORY.md`, `DESIGN_SYSTEM_CONTRACT.md`, `decisions.md`, `QA-INTERACTION-MATRIX.md`.
+- `task-list/F16/egm-reviews/*.md` (informes F16 de las rondas autorizadas), `task-list/F16/qa-fixtures/api-server.mjs` y `task-list/F16/screenshots/{baseline,current,qa-final}/**`.
+- `task-list/F16/resources/master-kit/**` es solo entrada de lectura; no se modifica ni se incluye en staging.
+
+**Fixture local de QA autorizado:** `task-list/F16/qa-fixtures/api-server.mjs`. Solo levanta el API ya compilada con SQLite en memoria, identidades sintéticas `.example.test` y proveedores fake etiquetados; enlaza únicamente a `127.0.0.1`, no carga `.env`, no realiza llamadas externas y no modifica fuentes bajo `apps/api/**`. Este archivo permite comprobar el flujo local integrado, no sustituye pruebas OAuth/IA/GitHub/correo reales. Evidencia Ego Lite: `task-list/F16/screenshots/qa-final/`.
+
 ## Fases estables, checkpoints y reversión
 
-Cada fase produce un commit local checkpoint en `feature/f16-experience-redesign`. Antes de avanzar: `pnpm --filter @fragments/contracts build`; `pnpm --filter @fragments/web test`; `pnpm --filter @fragments/web typecheck`; `pnpm --filter @fragments/web build`; comprobar rutas/acciones afectadas en Ego Lite. Si falla un gate por el cambio de esa fase, detener avance, ejecutar `git revert <hash-checkpoint>` (sin reescribir historia), registrar causa/salida en `evidencie.md`, corregir en un commit nuevo y repetir.
+La planificación pedía un commit local checkpoint por fase en `feature/f16-experience-redesign`. El historial efectivamente contiene el commit agregado de implementación `7a3fc86fca563c139000a0eed4488914555a6dd3` y el commit documental `595ce175e7395feab6999fc6b1ba472d65e6a31f`; no se reescribe historia ni se afirma que hubo checkpoints por fase. La QA de cierre revalida todas las superficies juntas. Para cambios futuros, antes de avanzar se ejecutan `pnpm --filter @fragments/contracts build`; `pnpm --filter @fragments/web test`; `pnpm --filter @fragments/web typecheck`; `pnpm --filter @fragments/web build`; y Ego Lite en las rutas/estados afectados. Si un gate falla por el cambio de esa fase, detener avance, ejecutar `git revert <hash-checkpoint>` (sin reescribir historia), registrar causa/salida en `evidencie.md`, corregir en commit nuevo y repetir.
 
 1. **Fundamento visual:** cambiar tokens CSS, los dos documentos visuales, `index.html`, cuatro assets de marca y dos copias estáticas. Gate: contraste AA del contrato, el mismo arte estático se muestra en modo normal/reduced-motion, hashes del kit coinciden; QA-01 landing y comandos completos.
-2. **Landing y estudiante:** `App.tsx`, `student-workspace.css`, auth, gallery, mentor, review, trainer, submissions (archivos exactos arriba). Gate: `/`, `/student/login`, `/auth/complete`, `/student/gallery`, `/student/mentor`, `/student/review`, `/student/trainer`; QA-01..11, keyboard y todos los anchos; sin sesión Review/Trainer conservan montaje actual.
-3. **Docente:** inspector, mentor-control, teacher-students (archivos exactos arriba). Gate: `/teacher/inspector`, `/teacher/mentor-control`, `/teacher/students`, `/teacher/reset-password`; pruebas de control Mentor/reset, gates actuales, navegación no expuesta fuera del contexto docente y todos los anchos.
-4. **Cierre:** corregir solo allowlist que falle; cerrar QA-12..23, Ego Lite por ruta/estado/viewport, teclado, reduced motion, hashes y drift report. Cierre solo con todos los gates y evidencia real.
+2. **Landing y estudiante:** `App.tsx`, `student-workspace.css`, auth, gallery, mentor, review, trainer, submissions (archivos exactos arriba). Gate: `/`, `/student/login`, `/auth/complete`, `/student/gallery`, `/student/mentor`, `/student/review`, `/student/trainer`; QA-01..11, teclado y anchos 320/375/768/1440; Review/Trainer sin sesión conservan el montaje actual.
+3. **Docente:** inspector, mentor-control, teacher-students (archivos exactos arriba). Gate: `/teacher/inspector`, `/teacher/mentor-control`, `/teacher/students`, `/teacher/reset-password`; QA-12..16, pruebas locales del control Mentor, gates actuales, navegación por las rutas docentes y todos los anchos. El email de recuperación no se envía a servicios reales.
+4. **Cierre:** corregir solo allowlist que falle; cerrar QA-17..25, Ego Lite por ruta/estado/viewport, teclado, reduced motion, hashes y drift report. Se acepta cierre local parcial solo si cada aserción externa/zoom no disponible está etiquetada `BLOCKED`/`NOT_RUN`, el fixture fake está diferenciado de integraciones reales y la recomendación limita expresamente readiness; nunca se convierte un bloqueo en PASS.
 
 Se elige encabezado superior común con etiquetas visibles y scroll horizontal de navegación en viewport angosto; no sidebar ni menú oculto. Review/Trainer se montan como hoy sin gate `getMe()`; Gallery/Mentor retienen el gate actual. Astryx no se adopta tras evaluar APIs y requerimiento de tema/estilos; sus dependencias temporales se retiran.
 

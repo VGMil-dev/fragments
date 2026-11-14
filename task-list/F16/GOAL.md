@@ -1,6 +1,6 @@
 # GOAL F16 — Rediseño integral de experiencia Fragments
 
-**Estado:** En progreso · **Fecha de inicio:** 2026-11-14 · **Base verificada:** `origin/main` / `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2`
+**Estado:** QA local de cierre completo; rama lista para revisión visual humana, no aprobación de merge · **Fecha de inicio:** 2026-11-14 · **Base verificada:** `origin/main` / `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2`
 
 ## Objetivo
 
@@ -34,4 +34,8 @@ La decisión explícita del propietario del 2026-11-14 gobierna la visual F16: s
 
 ## Restricción de modelos
 
-El usuario pide GPT-6 Luna Medio para el Elephant y cada Goldfish, sin escalamiento. Las herramientas de esta sesión permiten fijar Luna Medio en subagentes, pero no exponen un selector verificable para el modelo del agente principal. Esta limitación queda abierta; no se atribuirá el modelo pedido al principal sin evidencia.
+El usuario configuró manualmente GPT-6 Luna Medio para el agente principal y exige Luna Medio para cada Goldfish, sin escalamiento. El modelo principal no puede comprobarse mediante la API disponible. Estado exacto: `MODEL_SELECTION_USER_CONFIGURED_UNVERIFIABLE`. No se declara una verificación inexistente ni se bloquea UX/UI o QA por esa limitación; los revisores independientes se seleccionan explícitamente en Luna Medio y con contexto nuevo.
+
+## Regla de cierre parcial
+
+Se pueden cerrar las verificaciones locales que tengan evidencia reproducible. OAuth real con GitHub, correo de recuperación real y cualquier aserción de integración con servicios externos quedan `BLOCKED`/`NOT_RUN` cuando el entorno de prueba no los provea. Un fixture fake exitoso prueba el comportamiento local de UI/API solamente y nunca se describe como OAuth, IA, correo o repositorio real. La recomendación de readiness debe conservar estos límites.

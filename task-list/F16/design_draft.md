@@ -28,7 +28,7 @@ Header editorial con marca, navegación por anclas existente y CTA hacia galerí
 
 ### Student Layout
 
-Header/topbar y navegación única compartida; ancho de lectura hasta 1280 px y contenido por feature. En escritorio puede usar barra lateral si las pruebas confirman que no duplica la navegación actual ni reduce ancho útil; en móvil usa menú accesible persistente o colapsable. Mantiene skip link, contexto de sección, cuenta y acciones de salida. Los formularios de Mentor y Review preservan scroll, valores, borrador y CTA de retorno.
+Header/topbar y navegación única compartida; ancho de lectura hasta 1280 px y contenido por feature. Se usa un encabezado común con navegación superior visible en todos los anchos; en móvil la fila de navegación tiene scroll horizontal propio. No se usa sidebar, drawer ni menú oculto. Mantiene skip link, contexto de sección, cuenta y acciones de salida. Los formularios de Mentor y Review preservan scroll, valores, borrador y CTA de retorno.
 
 ### Teacher Layout
 
@@ -44,7 +44,7 @@ Cada página tiene un solo H1, título de contexto, acción principal clara y co
 
 ## 6. Tokens de diseño
 
-El contrato detallado está en `DESIGN_SYSTEM_CONTRACT.md`. Tokens aprobados: Night `#030407`, Cobalt `#1558C9`, Lime `#D4FF24`. Propuestas: superficies azul-negras; texto blanco frío y gris azulado; estados informativos/éxito/advertencia/error; espaciado base múltiplo de 4; radios discretos; foco lime con contorno visible; sombra contenida; movimiento 140–220 ms, eliminado bajo reducción; breakpoints 390, 768 y 1024 px. Todo color de texto/feedback se verifica contra superficie con WCAG 2.2 AA. Sin fuentes externas nuevas.
+El contrato detallado está en `DESIGN_SYSTEM_CONTRACT.md`. Tokens aprobados: Night `#030407`, Cobalt `#1558C9`, Lime `#D4FF24`. Propuestas: superficies azul-negras; texto blanco frío y gris azulado; estados informativos/éxito/advertencia/error; espaciado base múltiplo de 4; radios discretos; foco lime con contorno visible; sombra contenida; movimiento 140–220 ms, eliminado bajo reducción; breakpoints 320, 375, 768, 1024 y 1440 px. Todo color de texto/feedback se verifica contra superficie con WCAG 2.2 AA. Sin fuentes externas nuevas.
 
 ## 7. Alternativas de componentes y sistema
 
@@ -95,7 +95,7 @@ Mantener rutas y efectos de cada CTA, volver, elegir detalle/proyecto, guardar/e
 ## 16. Criterios de aceptación
 
 1. Las once rutas de `SCREEN_INVENTORY.md` se conservan y se contrastan con el código.
-2. Cada layout responde a 320, 390, 768, 1024 y 1440 px sin recortes ni solapamientos; 320 CSS px valida el criterio de reflow WCAG.
+2. Cada layout responde a 320, 375, 768, 1024 y 1440 px sin recortes ni solapamientos; 320 CSS px valida el criterio de reflow WCAG.
 3. La navegación, CTA, retorno, formularios, descarga, estados de sesión y permisos conservan su destino/comportamiento.
 4. Todos los estados catalogados tienen mensaje y recuperación pertinentes.
 5. Contraste y foco satisfacen AA en componentes visibles; las acciones pueden recorrerse con teclado.
@@ -113,7 +113,7 @@ Mantener rutas y efectos de cada CTA, volver, elegir detalle/proyecto, guardar/e
 | Inconsistencia residual con CSS/tokens legacy | Inventariar consumidores antes de borrar reglas; test/build y captura por superficie tras cada fase; si cambia una feature, restaurar solo la hoja del checkpoint y corregir selectores. |
 | Shell compartido altera foco, ancho o estado | Shell solo presenta navegación; no reubica estado feature. Validar foco activo, scroll/selección y rutas afectadas; revertir solo el shell si cambia comportamiento. |
 | Navegación docente aparece a estudiantes | Renderizar enlaces dentro de la condición de ruta/rol actual; probar acceso anónimo y estudiante; no añadir gate ni cambiar permisos. |
-| Tabla/detail móvil pierde encabezados, orden o selección | Conservar semántica/DOM cuando sea posible; verificar 320/390 px, teclado y selección antes de sustituir por bloques; rollback de esa superficie ante pérdida. |
+| Tabla/detail móvil pierde encabezados, orden o selección | Conservar semántica/DOM cuando sea posible; verificar 320/375 px, teclado y selección antes de sustituir por bloques; rollback de esa superficie ante pérdida. |
 | Reduced-motion conserva sprite/scroll animado | `prefers-reduced-motion` sustituye sprite por frame estático y desactiva transición; comprobar preferencia y respuesta del DOM. |
 | Main avanzó desde la matriz | Matriz cita SHA F16 de partida; actualizar rutas desde `App.tsx` y registrar cualquier diferencia antes de implementar. |
 
@@ -131,7 +131,7 @@ Los shells comparten marca, skip-link y navegación; los componentes, estado y a
 - Contraste calculado para pares token/fondo y medición visual en aplicación.
 - Tests dirigidos a conservación de flujos, etiquetas, errores y rutas.
 - `pnpm --filter @fragments/contracts build`, test web, typecheck y build web.
-- Ego Lite para landing y cada superficie en 320/390/768/1024/1440; keyboard-only y reduced-motion.
+- Ego Lite para landing y cada superficie en 320/375/768/1024/1440; keyboard-only y reduced-motion.
 - QA Interaction Matrix enlaza acción, estado inicial, resultado esperado, viewport, comando/observación y evidencia.
 - Auditoría EGM de especificación y readiness; rondas ordinarias limitadas a dos por hito y pendientes señaladas.
 - `egm-drift-report` contra diseño final después de implementar.
