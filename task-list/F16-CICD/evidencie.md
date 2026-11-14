@@ -1,6 +1,6 @@
 # F16-CICD — evidencia
 
-**Estado:** IMPLEMENTACIÓN LOCAL COMPLETA; commits de cierre registrados; validación de integración remota en curso. No se hizo despliegue ni operación de producción.
+**Estado:** PR abierto; CI remoto inicial aprobado; actualización documental de preparación en curso. No se hizo despliegue ni operación de producción.
 
 ## Base
 
@@ -57,6 +57,18 @@
 - EGM implementación, ciclos 23–25 y reauditoría focal: se encontraron y corrigieron riesgos en rollback/poll, clasificación de `docker load`, persistencia de fallo tras `deploying` y shape incompleto del baseline. Revisión final de seguridad/procedencia, alcance/simpleza y recuperación no encontró Majors pendientes; los dos últimos confirmaron que IDs SHA-256 completos e inválidos se bloquean antes de observar/mutar. Ver `goldfish_review_report.md`.
 - Configuración solicitada/verificada: modelo `gpt-6-luna`, esfuerzo `medium`; Goldfish se lanzaron explícitamente con esos valores y contexto no heredado. La herramienta no muestra telemetría separada que permita afirmar el runtime efectivo interno de cada subagente.
 - Commit de implementación: `0d8f18e1d26ded3bb911bf1981a80e592650d518` (`fix(F16-CICD): endurece flujo de releases`).
-- Verificación fresca tras el último ajuste de baseline y antes del commit: suite Python 41 OK/1 omitida; Node 11/11; Turbo 10/10; `py_compile` y `git diff --check` código 0. No se ejecutó GitHub Actions remoto ni operación de producción.
-- Commits locales registrados: `0d8f18e1d26ded3bb911bf1981a80e592650d518` implementación, `26efb9de67a2d83f931cd717fc2ddbc90c82ba34` evidencia, `da3cc8bb` y `2f7c7998e37acefe1f557922605abf9a829ff7fa` cierre documental. El HEAD actual contiene esos cuatro commits sobre `origin/main`.
-- Integración remota: pendiente de publicación de la rama y ejecución real de los workflows. No inferir pase Linux de `flock` desde la omisión local de Windows.
+- Verificación local fresca: suite Python 41 OK/1 omitida en Windows; Node 11/11; Turbo 10/10; `py_compile` y `git diff --check` código 0. No se hizo operación de producción.
+- Commits iniciales del PR: `0d8f18e1d26ded3bb911bf1981a80e592650d518`, `26efb9de67a2d83f931cd717fc2ddbc90c82ba34`, `da3cc8bb...`, `2f7c7998e37acefe1f557922605abf9a829ff7fa`, `6e215c75c04f5f4f33dc8af075aaef852dd6290e`; cinco commits sobre `origin/main` al abrir PR. El último corrigió el Nit documental detectado por Goldfish.
+
+## Preparación e integración remota — 2026-11-14
+
+- Modelo Codex configurado y solicitado a Goldfish: `gpt-6-luna`, esfuerzo `medium`; ambos están disponibles en la herramienta. Los tres auditores Goldfish de esta revisión se lanzaron con esos valores explícitos. No existe telemetría independiente del runtime interno ni marcador privado esperado en el encargo, por lo que no se afirma verificación runtime más allá de los parámetros de lanzamiento.
+- Revisión del diff `origin/main...HEAD`: 18/18 archivos dentro del allowlist F16; escaneo de credenciales (tokens GitHub, claves AWS, llaves privadas, bearer tokens y asignaciones de secretos) sin coincidencias. No cambia `apps/api`, migraciones, protecciones, configuración de environment ni targets de deploy.
+- Goldfish de preparación: seguridad/procedencia 0 Blocker/0 Major/0 Nit; readiness 0 Blocker/0 Major (caveat de ejecución Linux ya comprobado por CI); scope 0 Blocker/0 Major/1 Nit documental, corregido en `6e215c75c04f5f4f33dc8af075aaef852dd6290e`. No quedan hallazgos críticos conocidos.
+- Push normal sin force de `codex/f16-cicd-autonomy`; SHA publicado `6e215c75c04f5f4f33dc8af075aaef852dd6290e`. `origin/main` no avanzó y permanece en `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2`.
+- PR abierto hacia `main`, sin automerge: https://github.com/VGMil-dev/fragments/pull/39.
+- GitHub Actions run `43643109443`, job `verify`, sobre `6e215c75c04f5f4f33dc8af075aaef852dd6290e`: **success** en `ubuntu-24.04`. Instalar lockfile, policy/backup Node, suite Python, metadatos Vite/Turbo, tests, typecheck, lint y build pasaron.
+- Prueba Linux: Python imprimió `Ran 41 tests ... OK` sin skips; por ello la prueba POSIX de contención `flock` corrió en esa ejecución. En el paso Node se informaron 10 tests OK; el test de metadatos ejecutado después pasó en el siguiente paso (1 test). No hubo fallos reproducibles.
+- Anotación no bloqueante de GitHub: warning deprecación Node 20 de las versiones fijadas de checkout/setup-node/pnpm action; no falló el job. Pins siguen siendo los SHA aprobados por la política local.
+- El environment `fragments-production` no se modificó. La conexión GitHub disponible no expone lectura de reglas de protección del environment/branch, así que su estado efectivo no se afirma. El workflow conserva la referencia al environment y su aprobación configurada en GitHub debe confirmarse por su administrador antes de activación.
+- Sin tag, release, merge, deploy ni declaración `AUTONOMOUS_PRODUCTION_VERIFIED`. El CI del PR demuestra el pipeline de CI; no es una verificación autorizada de extremo a extremo en producción.
