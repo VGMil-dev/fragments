@@ -202,3 +202,8 @@ Ejecutadas desde cada paquete con los binarios ya disponibles en el checkout; se
 - PASS: OAuth estudiantil de producción, identidad reconocida, guardado/persistencia propia, borrador no publicado antes de IA, una evaluación auténtica persistida, publicación elegible tras evaluar, contrato público sin campos privados, denegación estudiantil de rutas docentes, repositorio privado, rama y Codespace detenido.
 - INCONCLUSIVE: vista docente autenticada del proyecto, aislamiento productivo con otra cuenta, comprobación productiva de integridad SQLite y atribución del SHA productivo. El resultado no sustituye la QA sintética existente.
 - F15 global permanece INCONCLUSIVE, no cerrado ni listo para release. No se publicó PR del repositorio académico ni se creó tag, release o despliegue de Fragments. El desvío de la UI para evaluar la propuesta guardada debe convertirse en una mejora de producto con prueba de regresión.
+
+### Registro de evidencia de esta misión
+
+- Commit local del registro ampliado: `c14e1e9a080ec5eb6e1f7eb0233b7c814ef63581` (`docs(F15): registra piloto auténtico`).
+- `git diff --check` terminó sin errores antes del commit. Se actualizaron intent, spec, evidencia y estado de F15; la rama de trabajo quedó un commit por delante de `origin/codex/f15-first-project-acceptance`.
