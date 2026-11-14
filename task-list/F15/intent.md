@@ -43,3 +43,7 @@ La autorización del propietario y del estudiante recibida en esta misión habil
 ## Addendum — recuperación de fallos de carga — 2026-11-13
 
 La revisión independiente del PR #33 detectó que un fallo de lectura podía presentarse como ausencia de propuestas y que elegir una inspiración podía conservar la selección de una propuesta previa. La recuperación muestra un error con reintento y limpia la selección previa al iniciar una propuesta desde inspiración. Véase `evidencie.md`.
+
+## Addendum — QA productivo v0.4.5 — 2026-11-14
+
+La cuenta estudiantil propietaria `MilordV` pudo reabrir su única propuesta, recuperar la evaluación existente de la versión 1 y guardar una edición mínima como versión 2 conservando el mismo identificador. La publicación elegible existente sigue en la galería. No se evaluó la versión 2. F15 permanece INCONCLUSIVE hasta validar SQLite mediante `PRAGMA integrity_check` con evidencia directa y, si existe una cuenta estudiantil B autorizada, el aislamiento entre estudiantes.
