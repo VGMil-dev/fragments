@@ -4,16 +4,43 @@
 !deploy/production/.env.bootstrap.example
 deploy/production/.env
 deploy/production/.env.bootstrap
+/env
+
+# Claves privadas locales de SSH sin extensión
+id_rsa
+id_ecdsa
+id_ed25519
+id_dsa
+id_ed25519_sk
+
+.ssh/
 *.pem
 *.key
+*.ppk
+*.p12
+*.pfx
 node_modules/
 dist/
 coverage/
+/.worktrees/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 .data/
 .turbo/
 *.sqlite
-*.sqlite-shm
+*.sqlite3
+*.db
 *.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+*.db-wal
+*.db-shm
+*.db-journal
 
 # Informes y evidencias locales de auditoría
 /task-list/F10/evidence/
