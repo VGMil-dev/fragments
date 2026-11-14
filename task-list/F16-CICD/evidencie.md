@@ -1,6 +1,6 @@
 # F16-CICD — evidencia
 
-**Estado:** IMPLEMENTACIÓN Y VERIFICACIÓN LOCALES COMPLETAS; falta registrar commit(s). No se hizo despliegue ni operación de producción.
+**Estado:** IMPLEMENTACIÓN LOCAL COMPLETA; commits de cierre registrados; validación de integración remota en curso. No se hizo despliegue ni operación de producción.
 
 ## Base
 
@@ -58,4 +58,5 @@
 - Configuración solicitada/verificada: modelo `gpt-6-luna`, esfuerzo `medium`; Goldfish se lanzaron explícitamente con esos valores y contexto no heredado. La herramienta no muestra telemetría separada que permita afirmar el runtime efectivo interno de cada subagente.
 - Commit de implementación: `0d8f18e1d26ded3bb911bf1981a80e592650d518` (`fix(F16-CICD): endurece flujo de releases`).
 - Verificación fresca tras el último ajuste de baseline y antes del commit: suite Python 41 OK/1 omitida; Node 11/11; Turbo 10/10; `py_compile` y `git diff --check` código 0. No se ejecutó GitHub Actions remoto ni operación de producción.
-- El commit de cierre que registra este hash en evidencia y `task-list/TASKS.md` se añade a continuación; no hacer push.
+- Commits locales registrados: `0d8f18e1d26ded3bb911bf1981a80e592650d518` implementación, `26efb9de67a2d83f931cd717fc2ddbc90c82ba34` evidencia, `da3cc8bb` y `2f7c7998e37acefe1f557922605abf9a829ff7fa` cierre documental. El HEAD actual contiene esos cuatro commits sobre `origin/main`.
+- Integración remota: pendiente de publicación de la rama y ejecución real de los workflows. No inferir pase Linux de `flock` desde la omisión local de Windows.
