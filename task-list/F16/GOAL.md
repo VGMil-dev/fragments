@@ -26,6 +26,7 @@ CI/CD, workflows, permisos, releases, despliegues, infraestructura, producción,
 - Conservar íntegro el ZIP de entrada y los hashes de los recursos originales aprobados; los iconos raster nuevos siguen siendo candidatos hasta revisión visual.
 - Ejecutar pruebas, typecheck, build y auditoría con Ego Lite cuando las herramientas estén disponibles; informar bloqueos sin declarar cobertura no observada.
 - No marcar revisiones EGM aprobadas mientras falten revisores requeridos.
+- El cierre técnico F16 del 2026-11-15 mantiene la tarea abierta: R5 tuvo una sola ronda limpia y no satisface la convergencia; zoom nativo 200/400 está bloqueado por Ego Lite y lector de pantalla/inicio docente quedan NOT_VERIFIED. No solicitar aprobación de merge hasta resolver o aceptar explícitamente estos pendientes.
 - Entregar una rama aislada lista para revisión humana; sin push, merge ni deploy.
 
 ## Fuente de autoridad y tratamiento de adjuntos
