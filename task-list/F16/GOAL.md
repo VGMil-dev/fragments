@@ -1,6 +1,6 @@
 # GOAL F16 — Rediseño integral de experiencia Fragments
 
-**Estado:** implementación y QA funcional completados; galería local lista para revisión visual del propietario (QA-26 PASS). R4 encontró dos Majors documentales, corregidos por Elephant después de la última ronda ordinaria; fixes sin revalidación Goldfish. Sin aprobación de merge/convergencia · **Fecha de inicio:** 2026-11-14 · **Base F16 inicial:** `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2` · **origin/main actualizado:** `1366702f69e7b01675d9930aa442922445490b3d`, integrado en la rama F16 por merge normal `7e62f12`
+**Estado:** aceptación visual F16.1 aprobada. R5 y R6 resultaron dos rondas limpias consecutivas en el alcance readiness y convergen según EGM. Dictamen técnico: **CONDITIONAL REVIEW**; zoom nativo BLOCKED y lector de pantalla NOT_VERIFIED por límite del entorno. Login docente de fixture PASS. Sin push/merge/deploy. · **Fecha de inicio:** 2026-11-14 · **Base F16 inicial:** `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2` · **origin/main actualizado:** `1366702f69e7b01675d9930aa442922445490b3d`, integrado en la rama F16 por merge normal `7e62f12`
 
 ## Objetivo
 
@@ -26,7 +26,7 @@ CI/CD, workflows, permisos, releases, despliegues, infraestructura, producción,
 - Conservar íntegro el ZIP de entrada y los hashes de los recursos originales aprobados; los iconos raster nuevos siguen siendo candidatos hasta revisión visual.
 - Ejecutar pruebas, typecheck, build y auditoría con Ego Lite cuando las herramientas estén disponibles; informar bloqueos sin declarar cobertura no observada.
 - No marcar revisiones EGM aprobadas mientras falten revisores requeridos.
-- El cierre técnico F16 del 2026-11-15 mantiene la tarea abierta: R5 tuvo una sola ronda limpia y no satisface la convergencia; zoom nativo 200/400 está bloqueado por Ego Lite y lector de pantalla/inicio docente quedan NOT_VERIFIED. No solicitar aprobación de merge hasta resolver o aceptar explícitamente estos pendientes.
+- El cierre R6 del 2026-11-15 confirma convergencia EGM limitada al readiness tras R5 y R6 limpios. Dictamen CONDITIONAL REVIEW: zoom nativo 200/400 está BLOCKED por Ego Lite y lector de pantalla NOT_VERIFIED; login docente con fixture PASS. Mantener visibles esos límites al solicitar revisión de merge.
 - Entregar una rama aislada lista para revisión humana; sin push, merge ni deploy.
 
 ## Fuente de autoridad y tratamiento de adjuntos
