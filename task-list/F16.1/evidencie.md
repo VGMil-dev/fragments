@@ -36,6 +36,16 @@ Build deja advertencia por chunk mayor de 500 kB: mammoth.browser 491.75 kB, bun
 
 QA visual/funcional ya ejecutado con Ego Lite durante F16.1: capturas 320/375/768/1440 px para rutas de estudiante y docente según el conjunto de archivos en `task-list/F16/screenshots/f16.1/`; sin overflow horizontal de página. Se revisó la galería de comparaciones (14/14 imágenes cargadas), navegación de Galería a detalle/inspiración/Mentor y reto Trainer sintético con fake provider, pista consultada, progreso e historial. No se contactaron servicios externos.
 
+## Paquete final de revisión externa
+
+- Ruta: `task-list/F16.1/F16.1-QA-FINAL-REVIEW/`.
+- Verificación estructural: 20 archivos exactos, 18 PNG + 2 Markdown, cero subcarpetas; mismo inventario de nombres que el paquete F16 anterior.
+- Dimensiones: PNG desktop 1440×900 y móvil 320×900.
+- Comparación SHA-256: 14 capturas difieren del paquete F16 y cuatro (landing/login) son idénticas porque esas pantallas no cambiaron en F16.1.
+- Integridad/privacidad: todos los PNG validan firma y dimensiones; no contienen chunks PNG textuales ni EXIF. Revisión visual confirmó fixtures sintéticos, campos vacíos donde aplica y ausencia de secretos/datos de producción.
+- Commit del paquete: `56e4a2a52e5b0a68e1669e73872b8a0d942af914`.
+- Manifiesto completo de nombres, dimensiones y SHA-256: `task-list/F16.1/F16.1-QA-FINAL-REVIEW/20-QA-STATUS.md`.
+
 ## Revisiones Goldfish independientes
 
 - Readiness de flujos inicial y revalidación: sin hallazgos Blocker/Major/Nit en Galería, Mentor, Review, Trainer, privacidad o acceso/docente.
