@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import type { ProposalDraftFields } from "./proposal-validation";
 
 export const MAX_MENTOR_DOCX_BYTES = 2 * 1024 * 1024;
@@ -383,6 +382,7 @@ export async function importMentorDocx(file: File): Promise<MentorDocxImportResu
     const buffer = await readFileBuffer(file);
     if (buffer.byteLength !== file.size) throw invalidDocument();
     const entries = inspectZip(buffer);
+    const JSZip = (await import("jszip")).default;
     const zip = await JSZip.loadAsync(buffer, { checkCRC32: true });
     const contentTypesPart = zip.file("[Content_Types].xml");
     const documentPart = zip.file("word/document.xml");
