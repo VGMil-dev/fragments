@@ -6,11 +6,17 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import YAML from "yaml";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const manifestScript = path.join(directory, "create-release-manifest.mjs");
 const bundleScript = path.join(directory, "verify-release-bundle.mjs");
-const releaseWorkflow = path.resolve(directory, "../../../.github/workflows/release.yml");
+const workflowDirectory = path.resolve(directory, "../../../.github/workflows");
+const workflowPaths = {
+  ci: path.join(workflowDirectory, "ci.yml"),
+  candidate: path.join(workflowDirectory, "release-build-candidate.yml"),
+  release: path.join(workflowDirectory, "release.yml"),
+};
 const sha = "1".repeat(40);
 const tagObject = "2".repeat(40);
 
@@ -66,45 +72,135 @@ test("bundle verifier accepts only the expected tag and exact built SHA", async 
   });
 });
 
-test("release workflow has only a tag-push trigger and no alternate activation path", async () => {
-  const source = await readFile(releaseWorkflow, "utf8");
-  const trigger = source.match(/^on:\r?\n((?:[ \t].*(?:\r?\n|$))*)/m)?.[1];
-  assert.ok(trigger, "missing workflow trigger block");
-  assert.match(trigger, /^\s{2}push:\s*$/m);
-  assert.match(trigger, /^\s{6}- ['"]?v\*\.\*\.\*['"]?\s*$/m);
-  assert.doesNotMatch(trigger, /pull_request|workflow_dispatch|schedule|release:/);
-  assert.doesNotMatch(source, /^\s{2}(?:workflow_dispatch|schedule|release):/m);
-  assert.match(source, /environment:\s*\r?\n\s+name: fragments-production/);
-  assert.match(source, /steps\.attest\.outputs\.bundle-path/);
-  assert.match(source, /fragments-images\.attestation\.jsonl/);
-  assert.match(source, /gh attestation verify/);
-  assert.match(source, /--deny-self-hosted-runners/);
-  assert.match(source, /fragments-release-attestation-\$\{\{ github\.run_id \}\}/);
+const approvedPins = new Map([
+  ["actions/checkout", "11bd71901bbe5b1630ceea73d27597364c9af683"],
+  ["pnpm/action-setup", "b906affcce14559ad1aafd4ab0e942779e9f58b1"],
+  ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
+  ["actions/upload-artifact", "ea165f8d65b6e75b540449e92b4886f43607fa02"],
+  ["actions/download-artifact", "d3f86a106a0bac45b974a628896c90dbdf5c8093"],
+  ["actions/attest", "1e69f48acb82d1966a394da916b4c1698aa569d6"],
+]);
+const allowedRunners = new Set(["ubuntu-24.04", "ubuntu-24.04-arm", "ubuntu-latest"]);
+const releaseJobPermissions = {
+  "verify-build": { contents: "read" },
+  "attest-package": {
+    actions: "read",
+    contents: "read",
+    attestations: "write",
+    "id-token": "write",
+    "artifact-metadata": "write",
+  },
+  "publish-approved-release": { actions: "read", contents: "write" },
+};
+
+function parseWorkflow(source, name) {
+  try {
+    return YAML.parse(source, { version: "1.2", uniqueKeys: true, prettyErrors: true });
+  } catch (error) {
+    throw new Error(`${name}: YAML inválido o con claves duplicadas: ${error.message}`);
+  }
+}
+
+function exactKeys(value, expected) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    && JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort());
+}
+
+function assertWorkflowPolicy(workflows) {
+  const ci = workflows.ci;
+  const candidate = workflows.candidate;
+  const release = workflows.release;
+  assert.ok(exactKeys(ci.on, ["pull_request"]), "CI must have only pull_request trigger");
+  assert.deepEqual(ci.on.pull_request?.branches, ["main"]);
+  assert.ok(exactKeys(candidate.on, ["workflow_dispatch"]), "candidate must have only workflow_dispatch trigger");
+  assert.ok(exactKeys(release.on, ["push"]), "release must have only push trigger");
+  assert.deepEqual(release.on.push?.tags, ["v*.*.*"]);
+  assert.deepEqual(ci.permissions, { contents: "read" });
+  assert.deepEqual(candidate.permissions, { contents: "read" });
+  assert.deepEqual(release.permissions, { contents: "read" });
+
+  assert.equal(candidate.jobs?.["build-web"]?.if, "github.ref == 'refs/heads/main'");
+  assert.deepEqual(Object.keys(release.jobs ?? {}).sort(), ["attest-package", "publish-approved-release", "verify-build"]);
+  assert.deepEqual(release.jobs["verify-build"].permissions, releaseJobPermissions["verify-build"]);
+  assert.deepEqual(release.jobs["attest-package"].permissions, releaseJobPermissions["attest-package"]);
+  assert.deepEqual(release.jobs["publish-approved-release"].permissions, releaseJobPermissions["publish-approved-release"]);
+  assert.equal(release.jobs["publish-approved-release"].environment?.name, "fragments-production");
+
+  for (const [name, workflow] of Object.entries(workflows)) {
+    assert.ok(workflow && typeof workflow === "object", `${name}: workflow must be a mapping`);
+    assert.ok(workflow.jobs && typeof workflow.jobs === "object" && Object.keys(workflow.jobs).length > 0, `${name}: jobs required`);
+    for (const [jobName, job] of Object.entries(workflow.jobs)) {
+      assert.ok(allowedRunners.has(job["runs-on"]), `${name}/${jobName}: runner is not approved`);
+      if (name !== "release" && job.permissions !== undefined) {
+        assert.deepEqual(job.permissions, { contents: "read" }, `${name}/${jobName}: job permissions may not exceed contents:read`);
+      }
+      for (const step of job.steps ?? []) {
+        if (step.uses === undefined) continue;
+        assert.equal(typeof step.uses, "string", `${name}/${jobName}: uses must be a literal string`);
+        const separator = step.uses.lastIndexOf("@");
+        assert.notEqual(separator, -1, `${name}/${jobName}: action must be pinned: ${step.uses}`);
+        const repository = step.uses.slice(0, separator);
+        const sha = step.uses.slice(separator + 1);
+        assert.match(sha, /^[0-9a-f]{40}$/, `${name}/${jobName}: action must use a full commit SHA: ${step.uses}`);
+        assert.equal(approvedPins.get(repository), sha, `${name}/${jobName}: action pin is not approved: ${step.uses}`);
+      }
+    }
+  }
+}
+
+async function loadWorkflows() {
+  const entries = await Promise.all(Object.entries(workflowPaths).map(async ([name, workflowPath]) => {
+    const source = await readFile(workflowPath, "utf8");
+    return [name, parseWorkflow(source, name)];
+  }));
+  return Object.fromEntries(entries);
+}
+
+test("all workflows satisfy the structural policy for triggers, effective permissions, runners, and action pins", async () => {
+  const workflows = await loadWorkflows();
+  assertWorkflowPolicy(workflows);
+  assert.match(await readFile(workflowPaths.release, "utf8"), /gh attestation verify/);
+  assert.match(await readFile(workflowPaths.release, "utf8"), /--deny-self-hosted-runners/);
 });
 
-test("release workflow pins each GitHub Action to a commit from its own official repository", async () => {
-  const source = await readFile(releaseWorkflow, "utf8");
-  const expectedPins = new Map([
-    ["actions/checkout", "11bd71901bbe5b1630ceea73d27597364c9af683"],
-    ["pnpm/action-setup", "b906affcce14559ad1aafd4ab0e942779e9f58b1"],
-    ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
-    ["actions/upload-artifact", "ea165f8d65b6e75b540449e92b4886f43607fa02"],
-    ["actions/download-artifact", "d3f86a106a0bac45b974a628896c90dbdf5c8093"],
-    ["actions/attest", "1e69f48acb82d1966a394da916b4c1698aa569d6"],
-  ]);
-  const references = [...source.matchAll(/^\s*uses:\s*([^\s#]+)(?:\s+#.*)?$/gm)].map((match) => match[1]);
-  assert.ok(references.length > 0, "release workflow must use pinned actions");
+test("policy fixtures reject extra triggers and broader tag filters", async () => {
+  const workflows = await loadWorkflows();
+  const extraTrigger = structuredClone(workflows.ci);
+  extraTrigger.on.schedule = [{ cron: "0 * * * *" }];
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, ci: extraTrigger }));
 
-  for (const reference of references) {
-    const separator = reference.lastIndexOf("@");
-    assert.notEqual(separator, -1, `action must be pinned: ${reference}`);
-    const repository = reference.slice(0, separator);
-    const sha = reference.slice(separator + 1);
-    assert.match(sha, /^[0-9a-f]{40}$/, `action must use a full commit SHA: ${reference}`);
-    assert.equal(expectedPins.get(repository), sha, `pin must belong to ${repository}'s approved official commit`);
-  }
+  const broaderTags = structuredClone(workflows.release);
+  broaderTags.on.push.tags = ["v*.*.*", "*"];
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, release: broaderTags }));
+});
 
-  assert.ok(references.includes("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"));
-  assert.ok(references.includes("actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"));
-  assert.ok(!references.includes("actions/upload-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"));
+test("policy fixtures reject a missing candidate branch guard and self-hosted runner", async () => {
+  const workflows = await loadWorkflows();
+  const missingGuard = structuredClone(workflows.candidate);
+  delete missingGuard.jobs["build-web"].if;
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, candidate: missingGuard }));
+
+  const selfHosted = structuredClone(workflows.ci);
+  selfHosted.jobs.verify["runs-on"] = "self-hosted";
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, ci: selfHosted }));
+});
+
+test("policy fixtures reject unpinned actions and excess permissions", async () => {
+  const workflows = await loadWorkflows();
+  const unpinned = structuredClone(workflows.ci);
+  unpinned.jobs.verify.steps.find((step) => step.uses).uses = "actions/checkout@v4";
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, ci: unpinned }));
+
+  const globalWrite = structuredClone(workflows.ci);
+  globalWrite.permissions = { contents: "write" };
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, ci: globalWrite }));
+
+  const jobWrite = structuredClone(workflows.release);
+  jobWrite.jobs["verify-build"].permissions = { contents: "write" };
+  assert.throws(() => assertWorkflowPolicy({ ...workflows, release: jobWrite }));
+});
+
+test("YAML parser rejects duplicate keys and malformed fixtures", () => {
+  assert.throws(() => parseWorkflow("on:\n  push: {}\non:\n  schedule: []\n", "duplicate"));
+  assert.throws(() => parseWorkflow("jobs: [unterminated", "malformed"));
 });

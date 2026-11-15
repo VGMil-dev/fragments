@@ -8,14 +8,18 @@ try:
 except ImportError:  # Test parsing and validation on Windows; production runs Linux ARM64.
     fcntl = None
 import gzip
+import http.client
 import hashlib
+import ipaddress
 import json
 import os
 import re
 import sqlite3
+import socket
 import stat
 import subprocess
 import sys
+import tarfile
 import time
 import urllib.error
 import urllib.parse
@@ -41,7 +45,64 @@ ATTESTATION_ASSET_NAME = "fragments-images.attestation.jsonl"
 
 
 class AgentError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, code: str = "unknown_error", http_status: int | None = None, observed_tag: str | None = None):
+        super().__init__(message)
+        self.code = code
+        self.http_status = http_status
+        self.observed_tag = observed_tag
+
+
+class TransientError(AgentError):
+    """A recognized, retryable failure that must not terminalize a release."""
+
+
+def _http_error_code(status: int, headers: object) -> tuple[str, bool]:
+    if status == 403:
+        values = headers.get_all("X-RateLimit-Remaining", []) if hasattr(headers, "get_all") else []
+        if len(values) == 1 and values[0].strip(" \t") == "0":
+            return "http_rate_limited", True
+        return "http_forbidden", False
+    if status in {408, 425, 429} or 500 <= status <= 599:
+        return "http_transient_status", True
+    if status == 401:
+        return "http_unauthorized", False
+    if status == 404:
+        return "http_not_found", False
+    if status == 409:
+        return "http_conflict", False
+    if 300 <= status <= 399:
+        return "http_unexpected_status", False
+    return "http_unexpected_status", False
+
+
+def _raise_http_error(error: urllib.error.HTTPError) -> None:
+    code, transient = _http_error_code(error.code, error.headers)
+    message = f"GitHub respondió con HTTP {error.code}."
+    if transient:
+        raise TransientError(message, code=code, http_status=error.code) from error
+    raise AgentError(message, code=code, http_status=error.code) from error
+
+
+def _transport_reason(error: BaseException) -> str | None:
+    if isinstance(error, socket.gaierror):
+        return "transport_error"
+    if isinstance(error, (TimeoutError, socket.timeout, ConnectionError, http.client.RemoteDisconnected)):
+        return "transport_error"
+    if isinstance(error, urllib.error.URLError) and isinstance(error.reason, BaseException):
+        return _transport_reason(error.reason)
+    return None
+
+
+def _raise_url_error(error: urllib.error.URLError) -> None:
+    code = _transport_reason(error)
+    if code is not None:
+        raise TransientError("Error de transporte al consultar GitHub.", code=code) from error
+    raise AgentError("La respuesta o el transporte remoto no es reconocido.", code="unknown_error") from error
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
 
 
 def sha256_file(path: Path) -> str:
@@ -53,34 +114,47 @@ def sha256_file(path: Path) -> str:
 
 
 def request_json(url: str, max_bytes: int = 5_000_000) -> dict | list:
-    if not url.startswith("https://api.github.com/"):
-        raise AgentError("API URL fuera de api.github.com.")
+    try:
+        parsed_url = urllib.parse.urlsplit(url)
+        port = parsed_url.port
+    except (TypeError, ValueError) as error:
+        raise AgentError("API URL fuera de api.github.com.", code="provenance_mismatch") from error
+    if parsed_url.scheme != "https" or parsed_url.hostname != "api.github.com" or parsed_url.username is not None or parsed_url.password is not None or port not in (None, 443):
+        raise AgentError("API URL fuera de api.github.com.", code="provenance_mismatch")
     request = urllib.request.Request(
         url,
         headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT, "X-GitHub-Api-Version": "2026-03-10"},
     )
+    opener = urllib.request.build_opener(_NoRedirect())
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with opener.open(request, timeout=20) as response:
             body = response.read(max_bytes + 1)
-    except (urllib.error.URLError, TimeoutError) as error:
-        raise AgentError("No se pudo consultar la API pública de GitHub.") from error
+    except urllib.error.HTTPError as error:
+        _raise_http_error(error)
+    except urllib.error.URLError as error:
+        _raise_url_error(error)
+    except (socket.gaierror, TimeoutError, socket.timeout, ConnectionError, http.client.RemoteDisconnected) as error:
+        raise TransientError("Error de transporte al consultar la API pública de GitHub.", code="transport_error") from error
     if len(body) > max_bytes:
-        raise AgentError("La respuesta de GitHub excede el tamaño permitido.")
+        raise AgentError("La respuesta de GitHub excede el tamaño permitido.", code="invalid_response")
     try:
-        return json.loads(body)
+        result = json.loads(body)
     except json.JSONDecodeError as error:
-        raise AgentError("GitHub devolvió JSON inválido.") from error
+        raise AgentError("GitHub devolvió JSON inválido.", code="invalid_response") from error
+    if not isinstance(result, (dict, list)):
+        raise AgentError("GitHub devolvió JSON con una forma no permitida.", code="invalid_response")
+    return result
 
 
 def require_tag(tag: object) -> str:
     if not isinstance(tag, str) or not TAG_PATTERN.fullmatch(tag):
-        raise AgentError("La publicación no tiene una tag vMAJOR.MINOR.PATCH válida.")
+        raise AgentError("La publicación no tiene una tag vMAJOR.MINOR.PATCH válida.", code="provenance_mismatch")
     return tag
 
 
 def require_sha(value: object, field: str) -> str:
     if not isinstance(value, str) or not SHA_PATTERN.fullmatch(value):
-        raise AgentError(f"{field} no es un SHA-1 completo válido.")
+        raise AgentError(f"{field} no es un SHA-1 completo válido.", code="provenance_mismatch")
     return value
 
 
@@ -124,7 +198,7 @@ def validate_manifest(manifest: dict, release: dict) -> tuple[str, str, str, str
     return tag, tag_object, commit, digest
 
 
-def run_checked(arguments: list[str], timeout: int = 600, input_text: str | None = None) -> str:
+def run_checked(arguments: list[str], timeout: int = 600, input_text: str | None = None, *, remote: bool = False) -> str:
     environment = {
         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "LANG": "C.UTF-8",
@@ -138,10 +212,16 @@ def run_checked(arguments: list[str], timeout: int = 600, input_text: str | None
     }
     try:
         result = subprocess.run(arguments, input=input_text, text=True, capture_output=True, timeout=timeout, env=environment, check=False)
-    except (OSError, subprocess.TimeoutExpired) as error:
-        raise AgentError(f"No se pudo ejecutar {Path(arguments[0]).name}.") from error
+    except subprocess.TimeoutExpired as error:
+        if remote:
+            raise TransientError("La operación remota agotó el tiempo.", code="command_timeout") from error
+        raise AgentError("La operación local agotó el tiempo.", code="command_timeout") from error
+    except OSError as error:
+        raise AgentError("No se pudo iniciar el comando.", code="command_failed") from error
     if result.returncode != 0:
-        raise AgentError(f"{Path(arguments[0]).name} terminó con código {result.returncode}.")
+        if remote:
+            raise TransientError("La operación remota terminó con error.", code="remote_command_unavailable")
+        raise AgentError("La operación local terminó con error.", code="command_failed")
     return result.stdout.strip()
 
 
@@ -156,7 +236,7 @@ def verify_git_source(git_directory: Path, tag: str, tag_object: str, commit: st
     run_checked([
         "git", "--git-dir", str(git_directory), "fetch", "--no-tags", "origin",
         "+refs/heads/main:refs/remotes/origin/main", f"{tag_ref}:{tag_ref}",
-    ])
+    ], remote=True)
     if run_checked(["git", "--git-dir", str(git_directory), "cat-file", "-t", tag_ref]) != "tag":
         raise AgentError("La tag remota no es anotada.")
     if run_checked(["git", "--git-dir", str(git_directory), "rev-parse", tag_ref]) != tag_object:
@@ -170,31 +250,84 @@ def verify_git_source(git_directory: Path, tag: str, tag_object: str, commit: st
         raise AgentError("El workflow de la tag no coincide con el workflow confiable actual de main.")
 
 
-def _github_asset_opener() -> urllib.request.OpenerDirector:
-    class GitHubAssetRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, request, response, code, message, headers, new_url):
-            parsed = urllib.parse.urlparse(new_url)
-            host = (parsed.hostname or "").lower()
-            permitted = host in {"github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"} or host.endswith(".githubusercontent.com") or host.endswith(".amazonaws.com")
-            if parsed.scheme != "https" or not permitted:
-                raise AgentError("La descarga salió de los dominios HTTPS permitidos de GitHub.")
-            return super().redirect_request(request, response, code, message, headers, new_url)
+def canonical_dns_hostname(hostname: str) -> str:
+    if not isinstance(hostname, str) or not hostname or not hostname.isascii() or hostname.endswith("."):
+        raise AgentError("El hostname del asset no es DNS ASCII canónico.", code="asset_redirect_rejected")
+    canonical = hostname.lower()
+    try:
+        ipaddress.ip_address(canonical)
+    except ValueError:
+        pass
+    else:
+        raise AgentError("No se aceptan IP literales como host de asset.", code="asset_redirect_rejected")
+    if len(canonical.encode("ascii")) > 253:
+        raise AgentError("El hostname excede el límite DNS.", code="asset_redirect_rejected")
+    labels = canonical.split(".")
+    if any(
+        not 1 <= len(label) <= 63
+        or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
+        for label in labels
+    ):
+        raise AgentError("El hostname no cumple la gramática DNS LDH.", code="asset_redirect_rejected")
+    return canonical
 
-    return urllib.request.build_opener(GitHubAssetRedirect())
+
+def asset_url_identity(url: str) -> tuple[str, str, int, str, str]:
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        port = parsed.port
+    except (TypeError, ValueError) as error:
+        raise AgentError("URL de asset malformada.", code="asset_redirect_rejected") from error
+    if parsed.scheme.lower() != "https" or parsed.username is not None or parsed.password is not None or parsed.netloc.endswith(":") or port not in (None, 443):
+        raise AgentError("La URL de asset requiere HTTPS:443 y no permite userinfo.", code="asset_redirect_rejected")
+    host = canonical_dns_hostname(parsed.hostname or "")
+    return ("https", host, 443, parsed.path or "/", parsed.query)
+
+
+def _asset_host_allowed(host: str) -> bool:
+    if host in {"github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"}:
+        return True
+    suffix = ".githubusercontent.com"
+    return host.endswith(suffix) and len(host) > len(suffix)
+
+
+class GitHubAssetRedirect(urllib.request.HTTPRedirectHandler):
+    def __init__(self, initial_url: str, *, max_hops: int = 5):
+        super().__init__()
+        self.max_hops = max_hops
+        self.hops = 0
+        self.visited = {asset_url_identity(initial_url)}
+
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        identity = asset_url_identity(new_url)
+        host = identity[1]
+        if not _asset_host_allowed(host):
+            raise AgentError("El destino de redirección no pertenece a la allowlist de assets.", code="asset_redirect_rejected")
+        if identity in self.visited:
+            raise AgentError("Se rechazó un ciclo de redirección de asset.", code="asset_redirect_rejected")
+        if self.hops >= self.max_hops:
+            raise AgentError("La descarga excedió cinco redirecciones de asset.", code="asset_redirect_rejected")
+        self.hops += 1
+        self.visited.add(identity)
+        return super().redirect_request(request, response, code, message, headers, new_url)
+
+
+def _github_asset_opener(initial_url: str) -> urllib.request.OpenerDirector:
+    return urllib.request.build_opener(GitHubAssetRedirect(initial_url))
 
 
 def download_asset(asset: dict, destination: Path, maximum_size: int = MAX_ARCHIVE_SIZE) -> None:
     url = asset.get("browser_download_url", "")
-    parsed = urllib.parse.urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != "github.com" or not parsed.path.startswith(f"/{OWNER}/{REPOSITORY}/releases/download/") or not isinstance(asset.get("size"), int) or not 0 < asset["size"] <= maximum_size:
-        raise AgentError("La URL o el tamaño del asset no está permitido.")
+    identity = asset_url_identity(url)
+    if identity[1] != "github.com" or not identity[3].startswith(f"/{OWNER}/{REPOSITORY}/releases/download/") or not isinstance(asset.get("size"), int) or not 0 < asset["size"] <= maximum_size:
+        raise AgentError("La URL o el tamaño del asset no está permitido.", code="artifact_invalid")
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/octet-stream"})
     if destination.is_symlink():
         raise AgentError("El destino del asset no puede ser un enlace simbólico.")
     partial = destination.with_name(destination.name + ".partial")
     partial.unlink(missing_ok=True)
     total = 0
-    opener = _github_asset_opener()
+    opener = _github_asset_opener(url)
     try:
         with opener.open(request, timeout=60) as response, partial.open("xb") as output:
             while chunk := response.read(1024 * 1024):
@@ -202,15 +335,24 @@ def download_asset(asset: dict, destination: Path, maximum_size: int = MAX_ARCHI
                 if total > maximum_size:
                     raise AgentError("El asset excedió el tamaño máximo.")
                 output.write(chunk)
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
+    except urllib.error.HTTPError as error:
         partial.unlink(missing_ok=True)
-        raise AgentError("No se pudo descargar el asset público de GitHub.") from error
+        _raise_http_error(error)
+    except urllib.error.URLError as error:
+        partial.unlink(missing_ok=True)
+        _raise_url_error(error)
+    except (socket.gaierror, TimeoutError, socket.timeout, ConnectionError, http.client.RemoteDisconnected) as error:
+        partial.unlink(missing_ok=True)
+        raise TransientError("Error de transporte al descargar el asset.", code="transport_error") from error
+    except OSError as error:
+        partial.unlink(missing_ok=True)
+        raise AgentError("No se pudo escribir el asset temporal.", code="command_failed") from error
     except AgentError:
         partial.unlink(missing_ok=True)
         raise
     if total != asset.get("size"):
         partial.unlink(missing_ok=True)
-        raise AgentError("El tamaño descargado no coincide con la API de GitHub.")
+        raise AgentError("El tamaño descargado no coincide con la API de GitHub.", code="artifact_invalid")
     os.chmod(partial, 0o600)
     os.replace(partial, destination)
 
@@ -272,7 +414,7 @@ def ensure_archive_available(asset: dict, destination: Path, expected_digest: st
 
 
 def refresh_trusted_root(state_dir: Path) -> Path:
-    output = run_checked(["gh", "attestation", "trusted-root"], timeout=300)
+    output = run_checked(["gh", "attestation", "trusted-root"], timeout=300, remote=True)
     encoded = (output + "\n").encode("utf-8")
     if not output or len(encoded) > MAX_TRUSTED_ROOT_SIZE:
         raise AgentError("GitHub CLI no devolvió un trust root Sigstore acotado.")
@@ -306,17 +448,65 @@ def read_ledger(path: Path) -> dict:
 
 
 def write_ledger(path: Path, data: dict) -> None:
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    os.chmod(temporary, 0o600)
-    os.replace(temporary, path)
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    payload = json.dumps(data, indent=2) + "\n"
+    try:
+        with temporary.open("x", encoding="utf-8") as output:
+            output.write(payload)
+            output.flush()
+            if os.name == "posix":
+                os.fsync(output.fileno())
+        os.chmod(temporary, 0o600)
+        if os.name == "posix":
+            with temporary.open("rb") as output:
+                os.fsync(output.fileno())
+        os.replace(temporary, path)
+        if os.name == "posix":
+            directory_fd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def ledger_contains(ledger: dict, tag: str, commit: str, release_id: int) -> bool:
     return any(
-        item.get("tag") == tag or item.get("commit") == commit or item.get("releaseId") == release_id
+        (bool(tag) and item.get("tag") == tag)
+        or (bool(commit) and item.get("commit") == commit)
+        or (release_id is not None and item.get("releaseId") == release_id)
         for item in ledger["releases"]
     )
+
+
+TERMINAL_RELEASE_STATES = {
+    "deployed", "reconciled_previous_state", "rejected", "recovery_required",
+    "rolled_back", "rolled_back_manual", "rollback_failed",
+}
+RETRY_ERROR_CODES = {
+    "transport_error", "http_transient_status", "http_rate_limited", "command_timeout", "remote_command_unavailable",
+}
+
+
+def error_record(error: AgentError) -> dict:
+    result = {"code": error.code}
+    if error.http_status is not None:
+        result["http_status"] = error.http_status
+    return result
+
+
+def report_retry(release_id: int, tag: str | None, error: TransientError) -> None:
+    event = {
+        "event": "release_retry",
+        "release_id": str(release_id),
+        "tag": tag or "",
+        "code": error.code,
+    }
+    if error.http_status is not None:
+        event["http_status"] = error.http_status
+    print(json.dumps(event, separators=(",", ":"), ensure_ascii=True))
 
 
 def image_info(image: str) -> dict:
@@ -347,6 +537,13 @@ def container_snapshot() -> dict:
 
 def container_image(container: str) -> str:
     return run_checked(["docker", "inspect", "--format", "{{.Config.Image}}", container])
+
+
+def container_image_id(container: str) -> str:
+    value = run_checked(["docker", "inspect", "--format", "{{.Image}}", container])
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", value):
+        raise AgentError("Docker no devolvió un ID inmutable de imagen.", code="unknown_error")
+    return value
 
 
 def fragments_data_volume() -> str:
@@ -400,9 +597,9 @@ def compose_override(
 ) -> Path:
     web_version = api_version if web_version is None else web_version
     web_sha = api_sha if web_sha is None else web_sha
-    if not re.fullmatch(r"v?[0-9A-Za-z.+-]{1,64}", api_version + "x") or not SHA_PATTERN.fullmatch(api_sha):
+    if not isinstance(api_version, str) or not re.fullmatch(r"v?[0-9A-Za-z.+-]{1,64}", api_version) or not isinstance(api_sha, str) or not SHA_PATTERN.fullmatch(api_sha):
         raise AgentError("Metadata de override API inválida.")
-    if not re.fullmatch(r"v?[0-9A-Za-z.+-]{1,64}", web_version + "x") or not SHA_PATTERN.fullmatch(web_sha):
+    if not isinstance(web_version, str) or not re.fullmatch(r"v?[0-9A-Za-z.+-]{1,64}", web_version) or not isinstance(web_sha, str) or not SHA_PATTERN.fullmatch(web_sha):
         raise AgentError("Metadata de override web inválida.")
     if not re.fullmatch(r"fragments-api:[A-Za-z0-9_.-]{1,128}", api_image) or not re.fullmatch(r"fragments-web:[A-Za-z0-9_.-]{1,128}", web_image):
         raise AgentError("Referencia de imagen fuera del espacio de nombres Fragments.")
@@ -462,6 +659,20 @@ def integrity_check_backup(config: dict, existing: set[str]) -> dict:
 
 def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[dict, dict, dict, Path, Path]:
     release = request_json(f"{API_ROOT}/releases/{release_id}")
+    observed_tag = release.get("tag_name") if isinstance(release, dict) and isinstance(release.get("tag_name"), str) else None
+    try:
+        return _get_release_assets_for_release(release_id, release, config, state_dir)
+    except AgentError as error:
+        if error.observed_tag is None:
+            error.observed_tag = observed_tag
+        raise
+    except Exception as error:
+        raise AgentError("La metadata de la release no se pudo validar.", code="unknown_error", observed_tag=observed_tag) from error
+
+
+def _get_release_assets_for_release(release_id: int, release: dict, config: dict, state_dir: Path) -> tuple[dict, dict, dict, Path, Path]:
+    if not isinstance(release, dict):
+        raise AgentError("GitHub devolvió metadata de release con una forma no permitida.", code="invalid_response")
     if release.get("id") != release_id or release.get("draft") or release.get("prerelease"):
         raise AgentError("El release solicitado no es una publicación estable.")
     if release.get("author", {}).get("login") != "github-actions[bot]":
@@ -497,6 +708,7 @@ def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[
 
 
 def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> None:
+    archived_images = archive_image_info(archive_path, images, tag, commit)
     try:
         with gzip.open(archive_path, "rb") as image_stream:
             subprocess.run(
@@ -508,12 +720,69 @@ def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: s
                     "DOCKER_CONFIG": "/var/lib/fragments-release/docker-config",
                 },
             )
-    except (OSError, subprocess.SubprocessError) as error:
-        raise AgentError("Docker no pudo cargar el paquete de imágenes verificado.") from error
+    except subprocess.TimeoutExpired as error:
+        raise AgentError("docker load agotó el tiempo permitido.", code="command_timeout") from error
+    except subprocess.CalledProcessError as error:
+        raise AgentError("docker load terminó con error.", code="command_failed") from error
+    except (gzip.BadGzipFile, EOFError) as error:
+        raise AgentError("El paquete de imágenes no es un gzip válido.", code="artifact_invalid") from error
+    except OSError as error:
+        raise AgentError("No se pudo ejecutar docker load.", code="command_failed") from error
     for image_name in ("api", "web"):
         info = image_info(images[image_name])
-        if (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit):
-            raise AgentError("Labels o arquitectura de imagen no coinciden con la metadata aprobada.")
+        if info.get("id") != archived_images[images[image_name]]["id"] or (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit):
+            raise AgentError("Identidad, labels o arquitectura de imagen no coinciden con el artefacto aprobado.", code="artifact_invalid")
+
+
+def archive_image_info(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> dict[str, dict]:
+    expected_refs = {images.get("api"), images.get("web")}
+    if None in expected_refs or len(expected_refs) != 2:
+        raise AgentError("El manifiesto no contiene dos referencias de imagen únicas.", code="artifact_invalid")
+    try:
+        with tarfile.open(archive_path, mode="r:gz") as archive:
+            manifest_member = archive.getmember("manifest.json")
+            if not manifest_member.isfile() or not 0 < manifest_member.size <= 1_000_000:
+                raise AgentError("El manifest del archivo Docker excede el tamaño permitido.", code="artifact_invalid")
+            manifest_stream = archive.extractfile(manifest_member)
+            if manifest_stream is None:
+                raise AgentError("Falta el manifest del archivo Docker.", code="artifact_invalid")
+            manifest = json.loads(manifest_stream.read(1_000_001))
+            if not isinstance(manifest, list) or len(manifest) != 2:
+                raise AgentError("El archivo Docker no contiene exactamente dos imágenes.", code="artifact_invalid")
+            result: dict[str, dict] = {}
+            for entry in manifest:
+                if not isinstance(entry, dict) or not isinstance(entry.get("RepoTags"), list) or len(entry["RepoTags"]) != 1:
+                    raise AgentError("El manifest Docker tiene referencias ambiguas.", code="artifact_invalid")
+                reference = entry["RepoTags"][0]
+                config_name = entry.get("Config")
+                if reference not in expected_refs or reference in result or not isinstance(config_name, str) or not config_name.endswith(".json") or "/" in config_name or "\\" in config_name or config_name in {".", ".."}:
+                    raise AgentError("El manifest Docker contiene una referencia o ruta no permitida.", code="artifact_invalid")
+                config_member = archive.getmember(config_name)
+                if not config_member.isfile() or not 0 < config_member.size <= 16_000_000:
+                    raise AgentError("La configuración de imagen excede el tamaño permitido.", code="artifact_invalid")
+                config_stream = archive.extractfile(config_member)
+                if config_stream is None:
+                    raise AgentError("Falta configuración de una imagen Docker.", code="artifact_invalid")
+                config_bytes = config_stream.read(16_000_001)
+                config = json.loads(config_bytes)
+                labels = config.get("config", {}).get("Labels", {})
+                image_id = f"sha256:{hashlib.sha256(config_bytes).hexdigest()}"
+                info = {
+                    "id": image_id,
+                    "architecture": config.get("architecture"),
+                    "version": labels.get("org.opencontainers.image.version"),
+                    "revision": labels.get("org.opencontainers.image.revision"),
+                }
+                if (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit):
+                    raise AgentError("Labels o arquitectura del archivo no coinciden con la metadata aprobada.", code="artifact_invalid")
+                result[reference] = info
+            if set(result) != expected_refs:
+                raise AgentError("El archivo Docker no enlaza exactamente las imágenes aprobadas.", code="artifact_invalid")
+            return result
+    except AgentError:
+        raise
+    except (OSError, tarfile.TarError, json.JSONDecodeError, KeyError, TypeError, AttributeError) as error:
+        raise AgentError("El archivo Docker no tiene un manifest verificable.", code="artifact_invalid") from error
 
 
 def verify_attestation(archive_path: Path, tag: str, commit: str, run_id: int, expected_digest: str, bundle_path: Path, state_dir: Path) -> None:
@@ -590,6 +859,149 @@ def image_refs_for_running() -> dict[str, str]:
     return {"fragments-api-1": container_image("fragments-api-1"), "fragments-web-1": container_image("fragments-web-1")}
 
 
+def image_ids_for_running() -> dict[str, str]:
+    return {"fragments-api-1": container_image_id("fragments-api-1"), "fragments-web-1": container_image_id("fragments-web-1")}
+
+
+def _health_endpoint_is_ok() -> bool:
+    try:
+        response = subprocess.run(
+            ["curl", "--silent", "--show-error", "--output", "/dev/null", "--write-out", "%{http_code}", "http://127.0.0.1:3001/health"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return response.returncode == 0 and response.stdout.strip() == "200"
+
+
+def observe_recovery_state() -> dict:
+    health = {
+        name: container_health(name)[:2]
+        for name in ("fragments-api-1", "fragments-web-1")
+    }
+    return {
+        "imageIds": image_ids_for_running(),
+        "health": health,
+        "httpOk": _health_endpoint_is_ok(),
+        "volume": fragments_data_volume(),
+        "neighbors": container_snapshot(),
+    }
+
+
+def _baseline_matches(record: dict, observation: dict) -> bool:
+    return observation.get("volume") == record.get("previousVolume") and observation.get("neighbors") == record.get("beforeNeighbors")
+
+
+def _containers_healthy(observation: dict) -> bool:
+    health = observation.get("health")
+    expected = {"fragments-api-1", "fragments-web-1"}
+    return (
+        isinstance(health, dict)
+        and set(health) == expected
+        and all(health[name] == ("running", "healthy") for name in expected)
+        and observation.get("httpOk") is True
+    )
+
+
+def _complete_recovery_baseline(record: dict) -> bool:
+    names = {"fragments-api-1", "fragments-web-1"}
+    image_refs = record.get("previousImages")
+    image_ids = record.get("previousImageIds")
+    target_ids = record.get("targetImageIds")
+    target_refs = record.get("targetImages")
+    neighbors = record.get("beforeNeighbors")
+    return (
+        isinstance(record.get("previousVolume"), str)
+        and bool(record["previousVolume"])
+        and isinstance(neighbors, dict)
+        and all(isinstance(name, str) and isinstance(value, dict) and isinstance(value.get("id"), str) and isinstance(value.get("state"), str) for name, value in neighbors.items())
+        and isinstance(image_refs, dict)
+        and set(image_refs) == names
+        and all(isinstance(value, str) and bool(value) for value in image_refs.values())
+        and isinstance(image_ids, dict)
+        and set(image_ids) == names
+        and all(isinstance(value, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", value) for value in image_ids.values())
+        and isinstance(target_refs, dict)
+        and set(target_refs) == {"api", "web"}
+        and all(isinstance(value, str) and bool(value) for value in target_refs.values())
+        and isinstance(target_ids, dict)
+        and set(target_ids) == names
+        and all(isinstance(value, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", value) for value in target_ids.values())
+    )
+
+
+def reconcile_deploying_record(ledger: dict, ledger_path: Path, record: dict) -> str:
+    required = {
+        "releaseId", "tag", "tagObject", "commit", "targetImages", "targetImageIds",
+        "previousImages", "previousImageIds", "previousVolume", "beforeNeighbors",
+    }
+    if not required.issubset(record) or not _complete_recovery_baseline(record):
+        record["status"] = "recovery_required"
+        record["error"] = {"code": "unknown_error"}
+        record["recoveryAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        write_ledger(ledger_path, ledger)
+        return record["status"]
+    try:
+        first = observe_recovery_state()
+        second = observe_recovery_state()
+    except Exception:
+        first = second = None
+    if first is None or second is None or first != second:
+        status = "recovery_required"
+    elif not _containers_healthy(first) or not _baseline_matches(record, first):
+        status = "recovery_required"
+    elif first["imageIds"] == record["targetImageIds"]:
+        status = "deployed"
+    elif first["imageIds"] == record["previousImageIds"]:
+        status = "reconciled_previous_state"
+    else:
+        status = "recovery_required"
+    record["status"] = status
+    record["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if status == "recovery_required":
+        record["error"] = {"code": "unknown_error"}
+    else:
+        record.pop("error", None)
+    write_ledger(ledger_path, ledger)
+    return status
+
+
+def _entries_for_release_id(ledger: dict, release_id: int) -> list[dict]:
+    return [item for item in ledger["releases"] if item.get("releaseId") == release_id]
+
+
+def _record_permanent_validation_failure(ledger: dict, ledger_path: Path, release_id: int, error: AgentError, pending: dict | None) -> None:
+    if pending is not None:
+        pending["status"] = "recovery_required"
+        pending["error"] = error_record(error)
+        if error.observed_tag:
+            pending["observedTag"] = error.observed_tag
+        pending["recoveryAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        write_ledger(ledger_path, ledger)
+        return
+    tag = error.observed_tag or ""
+    if ledger_contains(ledger, tag, "", release_id):
+        print(json.dumps({"event": "release_apply_rejected", "release_id": str(release_id), "tag": tag, "code": error.code}, separators=(",", ":")))
+        return
+    record = {
+        "releaseId": release_id,
+        "tag": tag,
+        "status": "rejected",
+        "error": error_record(error),
+        "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    ledger["releases"].append(record)
+    write_ledger(ledger_path, ledger)
+
+
+def _cleanup_release_files(release_id: int, state_dir: Path, archive_path: Path | None = None, attestation_path: Path | None = None) -> None:
+    if archive_path is not None and archive_path.parent == state_dir:
+        archive_path.unlink(missing_ok=True)
+    (state_dir / f"incoming-{release_id}-manifest.json").unlink(missing_ok=True)
+    if attestation_path is not None and attestation_path.parent == state_dir and attestation_path.name == f"incoming-{release_id}-attestation.jsonl":
+        attestation_path.unlink(missing_ok=True)
+
+
 def process_release(release_id: int, config: dict) -> None:
     state_dir = Path(config["stateDirectory"])
     state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -599,42 +1011,118 @@ def process_release(release_id: int, config: dict) -> None:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         ledger_path = Path(config["ledgerPath"])
         ledger = read_ledger(ledger_path)
-        manifest, release, archive_asset, archive_path, attestation_path = get_release_assets(release_id, config, state_dir)
-        tag, tag_object, commit, archive_digest = validate_manifest(manifest, release)
-        if ledger_contains(ledger, tag, commit, release_id):
-            raise AgentError("Tag, SHA o releaseId ya aparece en el ledger; se rechaza la repetición.")
+        matching_ids = _entries_for_release_id(ledger, release_id)
+        if len(matching_ids) > 1:
+            print(json.dumps({"event": "release_apply_rejected", "release_id": str(release_id), "tag": "", "code": "provenance_mismatch"}, separators=(",", ":")))
+            return
+        pending = matching_ids[0] if matching_ids else None
+        if pending is not None and pending.get("status") in TERMINAL_RELEASE_STATES:
+            print(json.dumps({"event": "release_apply_noop", "release_id": str(release_id), "tag": pending.get("tag", ""), "code": "terminal_state"}, separators=(",", ":")))
+            return
+        if pending is not None and pending.get("status") != "deploying":
+            print(json.dumps({"event": "release_apply_rejected", "release_id": str(release_id), "tag": pending.get("tag", ""), "code": "unknown_error"}, separators=(",", ":")))
+            return
+        if pending is not None and not {
+            "releaseId", "tag", "tagObject", "commit", "targetImages", "targetImageIds",
+            "previousImages", "previousImageIds", "previousVolume", "beforeNeighbors",
+        }.issubset(pending):
+            pending["status"] = "recovery_required"
+            pending["error"] = {"code": "unknown_error"}
+            write_ledger(ledger_path, ledger)
+            return
 
-        run_id = int(manifest["runId"])
-        run = request_json(f"{API_ROOT}/actions/runs/{run_id}")
-        jobs = request_json(f"{API_ROOT}/actions/runs/{run_id}/jobs?per_page=100")
-        validate_release_run(run, jobs, manifest, tag)
-        verify_git_source(Path(config["gitDirectory"]), tag, tag_object, commit)
-        ensure_archive_available(archive_asset, archive_path, archive_digest)
-        verify_attestation(archive_path, tag, commit, run_id, archive_digest, attestation_path, state_dir)
-        load_archive(archive_path, manifest["images"], tag, commit)
+        archive_path: Path | None = None
+        attestation_path: Path | None = None
+        tag = pending.get("tag") if pending else None
+        record: dict | None = pending
+        try:
+            manifest, release, archive_asset, archive_path, attestation_path = get_release_assets(release_id, config, state_dir)
+            tag, tag_object, commit, archive_digest = validate_manifest(manifest, release)
+            if pending is not None and (tag, tag_object, commit, release_id) != (pending.get("tag"), pending.get("tagObject"), pending.get("commit"), pending.get("releaseId")):
+                raise AgentError("La identidad remota contradice la transacción pendiente.", code="provenance_mismatch", observed_tag=tag)
 
+            run_id = int(manifest["runId"])
+            run = request_json(f"{API_ROOT}/actions/runs/{run_id}")
+            jobs = request_json(f"{API_ROOT}/actions/runs/{run_id}/jobs?per_page=100")
+            validate_release_run(run, jobs, manifest, tag)
+            verify_git_source(Path(config["gitDirectory"]), tag, tag_object, commit)
+            ensure_archive_available(archive_asset, archive_path, archive_digest)
+            verify_attestation(archive_path, tag, commit, run_id, archive_digest, attestation_path, state_dir)
+            archived_image_data = archive_image_info(archive_path, manifest["images"], tag, commit)
+            target_image_ids = {
+                "fragments-api-1": archived_image_data[manifest["images"]["api"]]["id"],
+                "fragments-web-1": archived_image_data[manifest["images"]["web"]]["id"],
+            }
+
+            if pending is not None:
+                if target_image_ids != pending.get("targetImageIds") or manifest["images"] != pending.get("targetImages"):
+                    raise AgentError("La identidad de imagen aprobada contradice el baseline pendiente.", code="provenance_mismatch", observed_tag=tag)
+                status = reconcile_deploying_record(ledger, ledger_path, pending)
+                print(json.dumps({"event": "release_reconciled", "release_id": str(release_id), "tag": tag, "code": status}, separators=(",", ":")))
+                _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+                return
+
+            conflicting = [item for item in ledger["releases"] if item.get("tag") == tag or item.get("commit") == commit]
+            if conflicting:
+                _record_permanent_validation_failure(
+                    ledger, ledger_path, release_id,
+                    AgentError("La tag o SHA ya tiene una entrada de ledger distinta.", code="provenance_mismatch", observed_tag=tag),
+                    None,
+                )
+                _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+                return
+
+            load_archive(archive_path, manifest["images"], tag, commit)
+            before_neighbors = container_snapshot()
+            previous_images = image_refs_for_running()
+            previous_image_ids = image_ids_for_running()
+            previous_volume = fragments_data_volume()
+            if not previous_volume:
+                raise AgentError("El volumen persistente no tiene nombre verificable.", code="unknown_error", observed_tag=tag)
+            for container in ("fragments-api-1", "fragments-web-1"):
+                observed_health = container_health(container)
+                if observed_health[0] != "running" or observed_health[1] != "healthy":
+                    raise AgentError("El servicio previo de Fragments no está saludable; se cancela el cambio.", code="unknown_error", observed_tag=tag)
+
+            record = {
+                "releaseId": release_id,
+                "tag": tag,
+                "tagObject": tag_object,
+                "commit": commit,
+                "status": "deploying",
+                "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "targetImages": manifest["images"],
+                "targetImageIds": target_image_ids,
+                "previousImages": previous_images,
+                "previousImageIds": previous_image_ids,
+                "previousVolume": previous_volume,
+                "beforeNeighbors": before_neighbors,
+            }
+            ledger["releases"].append(record)
+            write_ledger(ledger_path, ledger)
+        except TransientError as error:
+            if error.observed_tag:
+                tag = error.observed_tag
+            report_retry(release_id, tag, error)
+            _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+            return
+        except AgentError as error:
+            if error.observed_tag is None:
+                error.observed_tag = tag
+            _record_permanent_validation_failure(ledger, ledger_path, release_id, error, pending)
+            _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+            return
+        except Exception:
+            error = AgentError("Error no clasificado durante validación del release.", code="unknown_error", observed_tag=tag)
+            _record_permanent_validation_failure(ledger, ledger_path, release_id, error, pending)
+            _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+            return
+
+        assert record is not None
         images = manifest["images"]
-
-        before_neighbors = container_snapshot()
-        previous_images = image_refs_for_running()
-        previous_volume = fragments_data_volume()
-        if not previous_volume:
-            raise AgentError("El volumen persistente no tiene nombre verificable.")
-        for container in ("fragments-api-1", "fragments-web-1"):
-            if container_health(container)[1] != "healthy":
-                raise AgentError("El servicio previo de Fragments no está saludable; se cancela el cambio.")
-
-        record = {
-            "releaseId": release_id,
-            "tag": tag,
-            "tagObject": tag_object,
-            "commit": commit,
-            "status": "deploying",
-            "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "previousImages": previous_images,
-        }
-        ledger["releases"].append(record)
-        write_ledger(ledger_path, ledger)
+        before_neighbors = record["beforeNeighbors"]
+        previous_images = record["previousImages"]
+        previous_volume = record["previousVolume"]
 
         deployment_started = False
         try:
@@ -677,8 +1165,9 @@ def process_release(release_id: int, config: dict) -> None:
                     record["status"] = "rollback_failed"
                     record["rollback"] = "manual_intervention_required"
             else:
-                record["status"] = "failed_before_change"
-            record["failure"] = type(error).__name__
+                record["status"] = "recovery_required"
+                stable_error = error if isinstance(error, AgentError) else AgentError("Fallo no clasificado antes de cambiar servicios.", code="unknown_error")
+                record["error"] = error_record(stable_error)
             record["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             write_ledger(ledger_path, ledger)
             raise
@@ -693,20 +1182,51 @@ def rollback_latest(config: dict) -> None:
     if fcntl is None:
         raise AgentError("El mecanismo de exclusión flock requiere Linux.")
     state_dir = Path(config["stateDirectory"])
+    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     with (state_dir / "agent.lock").open("a", encoding="utf-8") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        ledger = read_ledger(Path(config["ledgerPath"]))
-        candidates = [item for item in ledger["releases"] if item.get("status") in {"deployed", "rollback_failed"}]
-        if not candidates:
-            raise AgentError("No hay un release desplegado con imágenes previas registradas para revertir.")
-        record = candidates[-1]
+        ledger_path = Path(config["ledgerPath"])
+        ledger = read_ledger(ledger_path)
+        if not ledger["releases"]:
+            raise AgentError("El ledger no tiene una release reciente para revertir.")
+        record = ledger["releases"][-1]
+        if not isinstance(record, dict) or record.get("status") not in {"deployed", "rollback_failed"}:
+            raise AgentError("Solo se puede revertir la última release si está deployed o rollback_failed.")
+        required = {
+            "releaseId", "tag", "commit", "targetImages", "targetImageIds", "previousImages",
+            "previousImageIds", "previousVolume", "beforeNeighbors",
+        }
+        if not required.issubset(record):
+            raise AgentError("El ledger no conserva el baseline completo para revertir.")
+        require_tag(record.get("tag"))
+        require_sha(record.get("commit"), "commit")
+        expected_names = {"fragments-api-1", "fragments-web-1"}
         previous_images = record.get("previousImages")
-        if not isinstance(previous_images, dict) or set(previous_images) != {"fragments-api-1", "fragments-web-1"}:
+        if not isinstance(previous_images, dict) or set(previous_images) != expected_names:
             raise AgentError("El ledger no conserva las dos referencias de imagen anteriores.")
-        current_volume = fragments_data_volume()
-        before_neighbors = container_snapshot()
+        if not isinstance(record.get("targetImages"), dict) or set(record["targetImages"]) != {"api", "web"}:
+            raise AgentError("El ledger no conserva las referencias de imagen objetivo.")
+        for key in ("targetImageIds", "previousImageIds"):
+            value = record.get(key)
+            if not isinstance(value, dict) or set(value) != expected_names or any(
+                not isinstance(image_id, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image_id)
+                for image_id in value.values()
+            ):
+                raise AgentError("El ledger no conserva IDs inmutables de las imágenes.")
+        if not isinstance(record.get("previousVolume"), str) or not record["previousVolume"] or not isinstance(record.get("beforeNeighbors"), dict):
+            raise AgentError("El ledger no conserva volumen y snapshot de vecinos válidos.")
+
+        observation = observe_recovery_state()
+        if not _containers_healthy(observation) or not _baseline_matches(record, observation):
+            raise AgentError("La salud, el volumen o los servicios vecinos difieren del baseline guardado.")
+        if observation.get("imageIds") != record["targetImageIds"]:
+            raise AgentError("Las imágenes en ejecución no coinciden con los IDs objetivo guardados.")
+
+        previous_image_ids = record["previousImageIds"]
         api_info = image_info(previous_images["fragments-api-1"])
         web_info = image_info(previous_images["fragments-web-1"])
+        if api_info.get("id") != previous_image_ids["fragments-api-1"] or web_info.get("id") != previous_image_ids["fragments-web-1"]:
+            raise AgentError("Una imagen previa ya no apunta al ID inmutable registrado.")
         override = compose_override(
             state_dir,
             previous_images["fragments-api-1"],
@@ -720,20 +1240,26 @@ def rollback_latest(config: dict) -> None:
             "docker", "compose", "--project-directory", config["composeDirectory"],
             "-f", config["composeFile"], "-f", str(override), "config", "--quiet",
         ], timeout=60)
+        previous_images = record.get("previousImages")
         try:
             compose_up(config, override)
             wait_for_health(record["tag"], record["commit"], previous_images, rollback=True)
-            if fragments_data_volume() != current_volume or container_snapshot() != before_neighbors:
-                raise AgentError("La verificación posterior encontró cambios en SQLite o un servicio vecino.")
+            after = observe_recovery_state()
+            if (
+                after.get("imageIds") != previous_image_ids
+                or not _containers_healthy(after)
+                or not _baseline_matches(record, after)
+            ):
+                raise AgentError("La verificación posterior encontró una identidad, health o baseline distinto.")
             record["status"] = "rolled_back_manual"
             record["rollback"] = "code_images_restored_database_untouched"
             record["rollbackCompletedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            write_ledger(Path(config["ledgerPath"]), ledger)
+            write_ledger(ledger_path, ledger)
             print(f"release_rollback tag={record['tag']} commit={record['commit']} status=ok database=untouched")
         except Exception:
             record["status"] = "rollback_failed"
             record["rollback"] = "manual_intervention_required"
-            write_ledger(Path(config["ledgerPath"]), ledger)
+            write_ledger(ledger_path, ledger)
             raise
 
 
@@ -764,14 +1290,18 @@ def poll(config: dict) -> None:
             manifest_assets = [asset for asset in release.get("assets", []) if asset.get("name") == "release-manifest.json"]
             if len(manifest_assets) != 1:
                 continue
-            # A previous ledger entry prevents duplicate processing. The root transaction rechecks it under flock.
-            try:
-                if ledger_contains(ledger, tag, "", release.get("id")):
-                    continue
-            except (TypeError, ValueError):
-                continue
             release_id = release.get("id")
             if not isinstance(release_id, int) or release_id <= 0:
+                continue
+            matching = _entries_for_release_id(ledger, release_id)
+            if len(matching) > 1:
+                print(json.dumps({"event": "release_apply_rejected", "release_id": str(release_id), "tag": tag, "code": "provenance_mismatch"}, separators=(",", ":")))
+                continue
+            if matching:
+                # Only the same release identity in deploying is eligible for a recovery retry.
+                if matching[0].get("status") != "deploying" or matching[0].get("tag") != tag:
+                    continue
+            elif ledger_contains(ledger, tag, "", None):
                 continue
             request_path = request_directory / "release.request"
             try:
