@@ -1,6 +1,6 @@
 # GOAL F16 — Rediseño integral de experiencia Fragments
 
-**Estado:** QA local de cierre completo; rama lista para revisión visual humana, no aprobación de merge · **Fecha de inicio:** 2026-11-14 · **Base verificada:** `origin/main` / `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2`
+**Estado:** implementación y QA funcional completados; galería local del propietario en verificación, sin aprobación de merge · **Fecha de inicio:** 2026-11-14 · **Base F16 inicial:** `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2` · **origin/main actualizado:** `1366702f69e7b01675d9930aa442922445490b3d`, integrado en la rama F16 por merge normal `7e62f12`
 
 ## Objetivo
 
