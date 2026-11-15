@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>F16 · Galería de revisión visual · Fragments</title>
+  <style>
+    :root { color-scheme: dark; --night:#030407; --cobalt:#1558C9; --lime:#D4FF24; --surface:#0c1222; --raised:#121c32; --text:#f3f7ff; --muted:#adbbd3; --line:#314363; --focus:#D4FF24; --body:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box }
+    html { scroll-behavior:smooth }
+    body { margin:0; min-width:320px; background:var(--night); color:var(--text); font:16px/1.5 var(--body) }
+    a { color:inherit }
+    button,select,input { font:inherit }
+    :focus-visible { outline:3px solid var(--focus); outline-offset:3px }
+    .top { border-bottom:1px solid var(--line); background:#070a12; position:sticky; top:0; z-index:3 }
+    .top-inner { max-width:1480px; margin:auto; padding:14px 24px; display:flex; gap:18px; align-items:center; justify-content:space-between }
+    .brand { font-weight:850; letter-spacing:.04em; text-decoration:none; white-space:nowrap }
+    .brand span { color:var(--lime) }
+    .eyebrow,.tag { color:var(--lime); text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:750 }
+    .top-note { color:var(--muted); font-size:13px; text-align:right }
+    .layout { max-width:1480px; margin:auto; display:grid; grid-template-columns:260px minmax(0,1fr); min-height:calc(100vh - 60px) }
+    aside { border-right:1px solid var(--line); padding:22px 14px; position:sticky; top:61px; align-self:start; max-height:calc(100vh - 61px); overflow:auto }
+    .search { width:100%; padding:10px 12px; color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:8px }
+    .nav-group { margin:18px 0 8px; padding:0 10px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase }
+    .nav-list { list-style:none; margin:0; padding:0 }
+    .nav-list a { display:block; padding:9px 10px; color:var(--muted); text-decoration:none; border-radius:7px; font-size:14px }
+    .nav-list a:hover,.nav-list a[aria-current="page"] { background:var(--raised); color:var(--text) }
+    .nav-list a[aria-current="page"] { box-shadow:inset 3px 0 var(--lime) }
+    main { min-width:0; padding:26px clamp(16px,3vw,44px) 60px }
+    .intro { padding:8px 0 22px; border-bottom:1px solid var(--line) }
+    h1 { margin:5px 0 8px; font-size:clamp(30px,4vw,48px); line-height:1.08; letter-spacing:-.045em }
+    h2 { margin:0; font-size:clamp(22px,2.5vw,30px); letter-spacing:-.025em }
+    h3 { margin:0 0 5px; font-size:16px }
+    .lede { max-width:820px; margin:0; color:var(--muted) }
+    .tokens { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:18px 0 12px }
+    .swatch,.type-card,.note-card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px }
+    .swatch { display:flex; align-items:center; gap:10px; min-width:0 }
+    .swatch-chip { width:30px; height:30px; border-radius:7px; border:1px solid #ffffff55; flex:none }
+    .swatch b,.swatch code { display:block }
+    .swatch code { color:var(--muted); font-size:12px }
+    .visual-notes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+    .type-card { min-height:102px }
+    .type-card p { margin:4px 0 0; color:var(--muted); font-size:13px }
+    .sample-heading { font-size:25px; letter-spacing:-.04em; font-weight:800 }
+    .sample-body { font-size:16px; line-height:1.5 }
+    .sample-meta { font-size:14px; color:var(--muted) }
+    .route-head { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; margin:28px 0 14px }
+    .route-head p { margin:5px 0 0; color:var(--muted) }
+    .route-url { color:var(--lime); font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere }
+    .controls { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin:16px 0 }
+    .controls label { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:13px }
+    select,.mode-btn { min-height:40px; padding:8px 11px; color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:8px }
+    .mode-btn { cursor:pointer }
+    .mode-btn[aria-pressed="true"] { background:var(--cobalt); border-color:var(--lime); color:white }
+    .mode-btn:disabled { cursor:not-allowed; opacity:.55 }
+    .fixture { display:inline-flex; align-items:center; min-height:24px; padding:2px 8px; color:var(--night); background:var(--lime); border-radius:999px; font-size:11px; font-weight:850; letter-spacing:.04em; text-transform:uppercase }
+    .fixture.neutral { color:var(--text); background:var(--raised); border:1px solid var(--line) }
+    .caption { display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:12px; margin:0 0 8px }
+    .stage { display:grid; grid-template-columns:minmax(0,1fr); gap:14px }
+    .stage.compare { grid-template-columns:repeat(2,minmax(0,1fr)) }
+    figure { margin:0; min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden }
+    figure img { display:block; width:100%; height:auto; background:#080d18 }
+    figure.mobile img { width:min(100%,420px); margin:0 auto }
+    .frame-label { padding:9px 12px; color:var(--muted); border-top:1px solid var(--line); font-size:12px }
+    .extra { margin-top:20px }
+    .f16-1-comparisons { display:grid; gap:22px; margin-top:14px }
+    .f16-1-comparisons article { min-width:0; padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--surface) }
+    .f16-1-comparisons article h3 { margin:0 0 10px; font-size:16px }
+    .extra-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:10px }
+    .extra figure img { max-height:520px; object-fit:contain; object-position:top; }
+    .hint { color:var(--muted); font-size:13px }
+    .coverage { margin-top:28px; padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--surface); color:var(--muted); font-size:13px }
+    .coverage pre { width:100%; max-width:100%; min-width:0; overflow-x:auto; padding:10px; border:1px solid var(--line); border-radius:8px; background:#070a12 }
+    .coverage pre code { display:block; max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word }
+    .hide { display:none !important }
+    .skip { position:absolute; left:12px; top:-60px; z-index:5; padding:10px 14px; color:var(--night); background:var(--lime); border-radius:8px }
+    .skip:focus { top:10px }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0 }
+    @media (max-width:800px) { .layout { grid-template-columns:1fr } aside { position:relative; top:auto; max-height:none; border-right:0; border-bottom:1px solid var(--line); padding:12px 16px } .nav-list { display:flex; flex-wrap:wrap; gap:5px; overflow:visible; padding:4px } .nav-list a { white-space:normal } .nav-group { display:block; margin:10px 0 2px } main { padding-top:18px } }
+    @media (max-width:560px) { .top-inner { padding:11px 15px } .top-note { font-size:11px } .tokens,.visual-notes { grid-template-columns:1fr } .route-head { display:block } .stage.compare { grid-template-columns:1fr } .controls { align-items:stretch } .controls label { flex:1 1 100%; align-items:flex-start; flex-direction:column } select { width:100% } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#screen">Saltar a la pantalla</a>
+  <header class="top"><div class="top-inner"><a class="brand" href="#inicio">FRAGMENTS<span>.</span> <small>F16</small></a><div class="top-note">Revisión local · capturas verificadas Ego Lite<br>11 rutas · Night / Cobalt / Lime</div></div></header>
+  <div class="layout">
+    <aside aria-label="Navegación de pantallas">
+      <label class="sr-only" for="filter">Buscar pantalla</label><input class="search" id="filter" type="search" placeholder="Buscar ruta o área…">
+      <nav id="nav" aria-label="Secciones de la galería"></nav>
+    </aside>
+    <main id="inicio">
+      <section class="intro" aria-labelledby="title">
+        <div class="eyebrow">Galería de aprobación visual</div><h1 id="title">Fragments, sistema Pixel Night</h1>
+        <p class="lede">Explora cada ruta, revisa estados locales de prueba y alterna capturas anteriores con F16 cuando sus dimensiones coinciden. Las comparaciones históricas proceden de `baseline/` y `current/`; las tomas finales de interacción están marcadas cuando usan datos sintéticos.</p>
+        <div class="tokens" aria-label="Paleta F16">
+          <div class="swatch"><span class="swatch-chip" style="background:#030407"></span><span><b>Night</b><code>#030407 · canvas</code></span></div>
+          <div class="swatch"><span class="swatch-chip" style="background:#1558C9"></span><span><b>Cobalt</b><code>#1558C9 · marca / navegación</code></span></div>
+          <div class="swatch"><span class="swatch-chip" style="background:#D4FF24"></span><span><b>Lime</b><code>#D4FF24 · acciones / foco</code></span></div>
+        </div>
+        <div class="visual-notes" aria-label="Referencia para revisar el sistema visual">
+          <article class="type-card"><div class="tag">Tipografía</div><div class="sample-heading">Imagina. Construye.</div><p>Sistema sans · cuerpo 16 px · interlineado 1.5 · metadatos 14 px.</p></article>
+          <article class="type-card"><div class="tag">Escala y espaciado</div><div class="sample-body">Título responsive · 48–64 px escritorio, 36–44 px móvil.</div><p>Escala base 4 px · gutters 16 / 24 / 32 px · radio controles 8 px.</p></article>
+          <article class="type-card"><div class="tag">Iconos, arte y movimiento</div><p>Iconos de acción acompañados de texto. Pixel art aprobado conservado. Movimiento breve; `prefers-reduced-motion` elimina animación decorativa.</p></article>
+        </div>
+      </section>
+      <section id="screen" aria-live="polite" aria-atomic="true"></section>
+      <section class="extra" id="f16-1-polish" aria-labelledby="f16-1-title">
+        <h2 id="f16-1-title">Refinamiento visual F16.1</h2>
+        <p class="hint">Comparaciones antes/después de los cinco hallazgos. Las capturas F16 originales se conservan; las nuevas se tomaron con Ego Lite usando fixtures locales. Los datos de proyecto y las sesiones son sintéticos.</p>
+        <div class="f16-1-comparisons">
+          <article><h3>Navegación Review · 320 px</h3><div class="stage compare"><figure class="mobile"><figcaption class="frame-label">Antes · F16</figcaption><img src="student-review-auth-320.png" alt="Review F16 antes del refinamiento, ancho 320 px"></figure><figure class="mobile"><figcaption class="frame-label">Después · F16.1</figcaption><img src="../f16.1/student-review-320.png" alt="Review F16.1 después del refinamiento, ancho 320 px"></figure></div></article>
+          <article><h3>Navegación Trainer · 320 px</h3><div class="stage compare"><figure class="mobile"><figcaption class="frame-label">Antes · F16</figcaption><img src="student-trainer-auth-320.png" alt="Trainer F16 antes del refinamiento, ancho 320 px"></figure><figure class="mobile"><figcaption class="frame-label">Después · F16.1</figcaption><img src="../f16.1/student-trainer-320.png" alt="Trainer F16.1 después del refinamiento, ancho 320 px"></figure></div></article>
+          <article><h3>Trainer · metadatos e historial · 1440 px</h3><div class="stage compare"><figure><figcaption class="frame-label">Antes · F16 con fixture</figcaption><img src="trainer-fixture-interactive-1440.png" alt="Trainer F16 con reto e historial sintéticos"></figure><figure><figcaption class="frame-label">Después · F16.1 con fixture</figcaption><img src="../f16.1/trainer-flow-1440.png" alt="Trainer F16.1 con reto, progreso e historial sintéticos"></figure></div></article>
+          <article><h3>Jerarquía tipográfica y layout docente · 1440 px</h3><div class="stage compare"><figure><figcaption class="frame-label">Antes · Estudiantes y proyectos</figcaption><img src="teacher-students-auth-1440.png" alt="Panel Estudiantes y proyectos F16 antes del refinamiento"></figure><figure><figcaption class="frame-label">Después · Estudiantes y proyectos</figcaption><img src="../f16.1/teacher-students-1440.png" alt="Panel Estudiantes y proyectos F16.1 después del refinamiento"></figure></div></article>
+          <article><h3>Tarjetas de proyectos · 1440 px</h3><div class="stage compare"><figure><figcaption class="frame-label">Antes · Galería F16</figcaption><img src="student-gallery-auth-1440.png" alt="Galería de proyectos F16 antes del refinamiento"></figure><figure><figcaption class="frame-label">Después · Galería F16.1</figcaption><img src="../f16.1/student-gallery-1440.png" alt="Galería de proyectos F16.1 después del refinamiento"></figure></div></article>
+          <article><h3>Mentor y aviso de privacidad · 320 px</h3><div class="stage compare"><figure class="mobile"><figcaption class="frame-label">Antes · F16</figcaption><img src="student-mentor-auth-320.png" alt="Mentor F16 antes del refinamiento, ancho 320 px"></figure><figure class="mobile"><figcaption class="frame-label">Después · F16.1</figcaption><img src="../f16.1/student-mentor-320.png" alt="Mentor F16.1 después del refinamiento, ancho 320 px"></figure></div></article>
+          <article><h3>Inspector y encabezado docente · 1440 px</h3><div class="stage compare"><figure><figcaption class="frame-label">Antes · Inspector F16</figcaption><img src="teacher-inspector-auth-1440.png" alt="Inspector F16 antes del refinamiento"></figure><figure><figcaption class="frame-label">Después · Inspector F16.1</figcaption><img src="../f16.1/teacher-inspector-1440.png" alt="Inspector F16.1 después del refinamiento"></figure></div></article>
+        </div>
+      </section>
+      <div class="coverage"><b>Cómo leer esta galería.</b> Vista F16 usa capturas `qa-final` en 1440 px y 320 px; los estados autenticados/sintéticos indican fixture. “Antes / después” compara snapshots de la misma ruta solo cuando ambas imágenes cargan y sus dimensiones coinciden: escritorio 1440 px (11 rutas) y móvil 390 px (9 rutas); Review y Trainer no tienen par móvil fiable (419×907 frente a 390×844). Las capturas principales móviles de F16 son de 320 px, por lo que la comparación móvil se mantiene en su viewport histórico de 390 px. Las rutas API de las capturas anteriores representan estados offline, no paridad funcional. Cada estado extra conserva su viewport real y se etiqueta como escritorio cuando corresponde. Las imágenes no se recortan ni alteran.
+        <details class="local-app"><summary>Abrir la aplicación F16 con datos sintéticos locales</summary><p>Desde la raíz del worktree, en PowerShell, compila los paquetes:</p><pre><code>pnpm --filter @fragments/contracts build
+pnpm --filter @fragments/api build</code></pre><p>Terminal 1 — API local efímera, SQLite en memoria y providers fake:</p><pre><code>node task-list/F16/qa-fixtures/api-server.mjs</code></pre><p>Terminal 2 — frontend local:</p><pre><code>pnpm --filter @fragments/web dev --host 127.0.0.1</code></pre><p>Abre <code>http://127.0.0.1:5173</code> y usa los enlaces directos de abajo. Gallery y Mentor requieren sesión; el fixture no ofrece OAuth real. Los usuarios/proyectos usan dominios sintéticos <code>.example.test</code> y la clave de prueba está declarada solo en el fixture. No introduzcas cuentas reales. GitHub OAuth y correo real permanecen desconectados. Detén ambos procesos con Ctrl+C; la base desaparece al parar la API.</p><ul class="route-links"><li><a href="http://127.0.0.1:5173/">Landing</a></li><li><a href="http://127.0.0.1:5173/student/login">Login estudiante</a></li><li><a href="http://127.0.0.1:5173/auth/complete">Callback OAuth</a></li><li><a href="http://127.0.0.1:5173/student/gallery">Galería</a></li><li><a href="http://127.0.0.1:5173/student/mentor">Mentor</a></li><li><a href="http://127.0.0.1:5173/student/review">Review</a></li><li><a href="http://127.0.0.1:5173/student/trainer">Trainer</a></li><li><a href="http://127.0.0.1:5173/teacher/inspector">Inspector</a></li><li><a href="http://127.0.0.1:5173/teacher/mentor-control">Control de Mentor</a></li><li><a href="http://127.0.0.1:5173/teacher/students">Estudiantes</a></li><li><a href="http://127.0.0.1:5173/teacher/reset-password">Restablecer contraseña</a></li></ul></details></div>
+    </main>
+  </div>
+  <script>
+    const screens = [
+      {id:'home',group:'Pública',label:'Landing pública',path:'/',desktop:'home-1440.png',mobile:'home-320.png',compare:'home',note:'Página pública y navegación principal.',extras:[['Movimiento reducido','home-reduced-motion-final.png','Estado reducido · recurso pixel-art estático.'],['Reflow equivalente','home-reflow-320.png','320 CSS px; también disponibles 360 y 720 px.']]},
+      {id:'login',group:'Identidad',label:'Login estudiante',path:'/student/login',desktop:'student-login-1440.png',mobile:'student-login-320.png',compare:'student-login',note:'OAuth GitHub no configurado en fixture; botón aparece deshabilitado.',synthetic:false},
+      {id:'callback',group:'Identidad',label:'Callback OAuth',path:'/auth/complete',desktop:'auth-complete-1440.png',mobile:'auth-complete-320.png',compare:'auth-complete',note:'Estado visible sin callback real. Éxito/error del callback se cubren con pruebas de componente; no se usó OAuth externo.',synthetic:false},
+      {id:'gallery',group:'Estudiante',label:'Galería y proyecto',path:'/student/gallery',desktop:'student-gallery-auth-1440.png',mobile:'student-gallery-auth-320.png',compare:'student-gallery',note:'Galería publicada y detalle con proyecto de prueba. Datos de lista, autor y rúbrica son sintéticos.',synthetic:true,extras:[['Sin sesión / gate','student-gallery-1440.png','Estado del gate de sesión.'],['Detalle del proyecto','gallery-fixture-1440.png','Detalle del proyecto ficticio; evidencia adicional solo escritorio.']]},
+      {id:'mentor',group:'Estudiante',label:'Mentor',path:'/student/mentor',desktop:'student-mentor-auth-1440.png',mobile:'student-mentor-auth-320.png',compare:'student-mentor',note:'Sesión de estudiante y propuesta evaluada con proveedor fake.',synthetic:true,extras:[['Inspiración desde Galería','mentor-inspiration-fixture-1440.png','Nota de referencia contextual; evidencia adicional solo escritorio.']]},
+      {id:'review',group:'Estudiante',label:'Review',path:'/student/review',desktop:'student-review-auth-1440.png',mobile:'student-review-auth-320.png',compare:'student-review',note:'Cola y hallazgo provienen del proveedor local fake; no es una revisión GitHub real.',synthetic:true,extras:[['Resultado sintético completado','review-fixture-completed-1440.png','Resultado local; descarga observada usa payload marcador que no es PDF válido.']]},
+      {id:'trainer',group:'Estudiante',label:'Trainer',path:'/student/trainer',desktop:'student-trainer-auth-1440.png',mobile:'student-trainer-auth-320.png',compare:'student-trainer',note:'Reto, pista e intento en fixture local; el reto se deriva del Review fake.',synthetic:true,extras:[['Reto interactivo','trainer-fixture-interactive-1440.png','Reto/pista/progreso; evidencia adicional solo escritorio.']]},
+      {id:'inspector',group:'Docente',label:'Inspector',path:'/teacher/inspector',desktop:'teacher-inspector-auth-1440.png',mobile:'teacher-inspector-auth-320.png',compare:'teacher-inspector',note:'Sesión docente sintética. Inspector lista estudiante/proyecto de prueba.',synthetic:true,extras:[['Login / acceso denegado','teacher-inspector-1440.png','La denegación del rol estudiante y login docente se ejercieron localmente.']]},
+      {id:'mentor-control',group:'Docente',label:'Control de Mentor',path:'/teacher/mentor-control',desktop:'teacher-mentor-control-auth-1440.png',mobile:'teacher-mentor-control-auth-320.png',compare:'teacher-mentor-control',note:'Borrador y publicación persistidos solo en la base SQLite efímera del fixture.',synthetic:true,extras:[['Acceso / formulario','teacher-mentor-control-1440.png','Estado de acceso sin sesión.']]},
+      {id:'students',group:'Docente',label:'Estudiantes y proyectos',path:'/teacher/students',desktop:'teacher-students-auth-1440.png',mobile:'teacher-students-auth-320.png',compare:'teacher-students',note:'Usuario y proyecto sintéticos; no son datos de estudiantes reales.',synthetic:true,extras:[['Login docente','teacher-students-1440.png','Estado de acceso sin sesión.']]},
+      {id:'reset',group:'Docente',label:'Restablecer contraseña',path:'/teacher/reset-password',desktop:'teacher-reset-password-auth-1440.png',mobile:'teacher-reset-password-auth-320.png',compare:'teacher-reset-password',note:'Validación local visible; no se envió correo de recuperación.',synthetic:true,extras:[['Formulario sin sesión','teacher-reset-password-1440.png','No se envió correo.']]}
+    ];
+    const groups=['Pública','Identidad','Estudiante','Docente']; let active=screens[0], state='route', mode='f16', viewport='desktop';
+    const compareReady = new Map(), compareReason = new Map();
+    const nav=document.querySelector('#nav'), section=document.querySelector('#screen'), filter=document.querySelector('#filter');
+    const esc=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function pairKey(screen,size){return `${screen.id}:${size}`}
+    function pairPaths(screen,size){return [`../baseline/${screen.compare}-${size}.png`,`../current/${screen.compare}-${size}.png`]}
+    function imageAvailable(src){return new Promise(resolve=>{const image=new Image();image.onload=()=>resolve({width:image.naturalWidth,height:image.naturalHeight});image.onerror=()=>resolve(null);image.src=src})}
+    function ensurePair(screen,size){const key=pairKey(screen,size);if(compareReady.has(key))return;compareReady.set(key,null);Promise.all(pairPaths(screen,size).map(imageAvailable)).then(results=>{const [before,after]=results;const sameSize=before&&after&&before.width===after.width&&before.height===after.height&&before.width===Number(size);compareReady.set(key,Boolean(sameSize));if(!sameSize)compareReason.set(key,!before||!after?'Falta una captura del par.':`Dimensiones distintas: ${before.width}×${before.height} frente a ${after.width}×${after.height}; no es un par de viewport fiable.`);if(active.id===screen.id&&viewport===sizeViewport(size)){if(mode==='compare'&&!sameSize)mode='f16';render()} })}
+    function sizeViewport(size){return size==='1440'?'desktop':'mobile'}
+    function updateCompareButton(){const button=section.querySelector('#view-compare'),hint=section.querySelector('#compare-status');if(!button)return;const size=viewport==='desktop'?'1440':'390',key=pairKey(active,size),status=compareReady.get(key);button.disabled=status!==true;if(hint)hint.textContent=status===true?'Comparación disponible: ruta y dimensiones coinciden.':status===false?compareReason.get(key)||'Comparación no disponible: falta una captura emparejada.':'Comprobando ruta y dimensiones de las capturas…';}
+    function renderNav(){ const q=filter.value.trim().toLowerCase(); nav.innerHTML=groups.map(g=>{const items=screens.filter(s=>s.group===g&&(`${s.label} ${s.path}`.toLowerCase().includes(q)));return items.length?`<h2 class="nav-group">${g}</h2><ul class="nav-list">${items.map(s=>`<li><a href="#${s.id}" data-id="${s.id}" ${s.id===active.id?'aria-current="page"':''}>${esc(s.label)}</a></li>`).join('')}</ul>`:''}).join(''); }
+    function render(){
+      const isCompare=mode==='compare'; const current=state==='route'?active:active.extras?.[Number(state)-1];
+      const frame=(label,src,klass='')=>src?`<figure class="${klass}"><figcaption class="frame-label">${esc(label)}</figcaption><img src="${esc(src)}" alt="${esc(active.label)} — ${esc(label)}" loading="lazy"></figure>`:`<div class="note-card hint">No hay captura de este estado para ese ancho. Se muestra la ruta principal en la vista de arriba.</div>`;
+      let content='';
+      if(isCompare){const size=viewport==='desktop'?'1440':'390';content=compareReady.get(pairKey(active,size))===true?`<div class="stage compare">${frame(`Antes · ${size} px · baseline anterior a F16`,`../baseline/${active.compare}-${size}.png`,viewport==='mobile'?'mobile':'')}${frame(`Después · ${size} px · implementación F16`,`../current/${active.compare}-${size}.png`,viewport==='mobile'?'mobile':'')}</div><p class="hint">Comparación de snapshots a igual ruta y ancho. Las rutas dependientes de API reflejan estados offline en esas capturas históricas.</p>`:`<div class="note-card hint">${compareReady.get(pairKey(active,size))===false?esc(compareReason.get(pairKey(active,size))||'No hay un par de dimensiones válido.'):'Comprobando disponibilidad y dimensiones del par…'}</div>`;}
+      else if(state==='route'){const image=viewport==='desktop'?active.desktop:active.mobile;content=`<div class="stage">${frame(`F16 · ${viewport==='desktop'?'1440 px escritorio':'320 px móvil'}${active.synthetic?' · fixture sintético':''}`,`./${image}`,viewport==='mobile'?'mobile':'')}</div>`;}
+      else {const extra=active.extras[Number(state)-1];content=`<div class="stage">${frame(extra[0],`./${extra[1]}`)}</div><p class="hint">${esc(extra[2])}${active.synthetic?' · Datos de prueba sintéticos.':''}</p>`;}
+      const options=[`<option value="route">Ruta principal</option>`,...(active.extras||[]).map((e,i)=>`<option value="${i+1}" ${String(state)===String(i+1)?'selected':''}>${esc(e[0])}</option>`)].join('');
+      section.innerHTML=`<div class="route-head"><div><div class="eyebrow">${esc(active.group)} · pantalla ${screens.indexOf(active)+1} de ${screens.length}</div><h2>${esc(active.label)}</h2><div class="route-url">${esc(active.path)}</div><p>${esc(active.note)}</p></div><span class="fixture ${active.synthetic?'':'neutral'}">${active.synthetic?'Fixture sintético':'Sin fixture en esta vista'}</span></div>
+        <div class="controls"><label>Estado<select id="state-select">${options}</select></label><button class="mode-btn" id="view-f16" aria-pressed="${mode==='f16'}">Capturas QA F16</button><button class="mode-btn" id="view-compare" aria-pressed="${mode==='compare'}" disabled>Antes / después</button><button class="mode-btn" id="size-desktop" aria-pressed="${viewport==='desktop'}">Escritorio</button><button class="mode-btn" id="size-mobile" aria-pressed="${viewport==='mobile'}">Móvil</button><span id="compare-status" class="hint" role="status"></span></div>
+        ${content}${active.extras?.length?`<div class="extra"><h3>Otros estados disponibles de esta ruta</h3><p class="hint">Selecciona un estado para abrir su captura y distinguir fixtures de integración real.</p><div class="extra-grid">${active.extras.map((e,i)=>`<button class="mode-btn extra-btn" data-state="${i+1}">${esc(e[0])}</button>`).join('')}</div></div>`:''}`;
+      renderNav(); section.querySelector('#state-select').addEventListener('change',e=>{state=e.target.value;mode='f16';render()});
+      section.querySelector('#view-f16').addEventListener('click',()=>{mode='f16';if(state!=='route')state='route';render()}); section.querySelector('#view-compare').addEventListener('click',()=>{if(compareReady.get(pairKey(active,viewport==='desktop'?'1440':'390'))===true){mode='compare';state='route';render()}});
+      section.querySelector('#size-desktop').addEventListener('click',()=>{viewport='desktop';render()}); section.querySelector('#size-mobile').addEventListener('click',()=>{viewport='mobile';render()});
+      section.querySelectorAll('.extra-btn').forEach(b=>b.addEventListener('click',()=>{state=b.dataset.state;mode='f16';render()}));
+      ensurePair(active,viewport==='desktop'?'1440':'390');updateCompareButton();
+    }
+    nav.addEventListener('click',e=>{const link=e.target.closest('[data-id]');if(!link)return;e.preventDefault();active=screens.find(s=>s.id===link.dataset.id);state='route';mode='f16';render();history.replaceState(null,'',`#${active.id}`);section.scrollIntoView({block:'start'});});
+    filter.addEventListener('input',renderNav); window.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(e.target?.tagName)||e.target?.isContentEditable)return;const idx=screens.indexOf(active);if(e.key==='ArrowRight'){active=screens[(idx+1)%screens.length];state='route';mode='f16';render()}if(e.key==='ArrowLeft'){active=screens[(idx-1+screens.length)%screens.length];state='route';mode='f16';render()}});
+    const hash=location.hash.slice(1); if(screens.some(s=>s.id===hash))active=screens.find(s=>s.id===hash); render();
+  </script>
+</body>
+</html>

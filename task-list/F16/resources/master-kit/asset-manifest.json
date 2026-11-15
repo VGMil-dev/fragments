@@ -1,0 +1,236 @@
+{
+  "project": "Fragments F16",
+  "created": "2026-11-14",
+  "files": [
+    {
+      "path": "F16-SCREEN-AND-ASSET-MATRIX.xlsx",
+      "sha256": "487de216bc680075e4b04cc636ceb87cb90081b218917e05da36ad46316d95e5",
+      "bytes": 19846
+    },
+    {
+      "path": "README.md",
+      "sha256": "4b452a2b5989d2ad45bbfe58e405c4c3154cac98fb91cdb227b0ab6fcafc1dcc",
+      "bytes": 2416
+    },
+    {
+      "path": "assets/approved/Goggle_Kid_Walk.webp",
+      "sha256": "73f58fc11bcc830524b880d2dbd9e85eec880c7fcd8101852f0ad38dba2887b3",
+      "bytes": 731832
+    },
+    {
+      "path": "assets/approved/Typing_Girl_and_Sleeping_Cat.webp",
+      "sha256": "cddad20e376968b1c6b346392a03739c5caa230095b36943bdda2ef8b52174a5",
+      "bytes": 25390
+    },
+    {
+      "path": "assets/asset-audit.json",
+      "sha256": "785cb93dfdbb758ae5af45b61c13838bd96e03c7c6f2e3bfbc3b1d1b6d2e72fd",
+      "bytes": 5902
+    },
+    {
+      "path": "assets/icons/icon-manifest.csv",
+      "sha256": "0f6b921fbd402984a89a05437e3e51de705e15cb8b7dc5f90dff0a3ecdf9666d",
+      "bytes": 2036
+    },
+    {
+      "path": "assets/icons/png/analytics.png",
+      "sha256": "952b0a99efae01039dc073a0dcf371e368a0d9232d04391c094ffb657abb8de9",
+      "bytes": 16558
+    },
+    {
+      "path": "assets/icons/png/award.png",
+      "sha256": "f1fbbf9ade65181012d6ed0c6b1009941c83fae1fcbbe97df9ec04885f46cd54",
+      "bytes": 26455
+    },
+    {
+      "path": "assets/icons/png/book.png",
+      "sha256": "7de31d94d3fd5ce293bd3d8b58e9a740ccd1693f5b83aeae8fddb6e479cd8d9f",
+      "bytes": 39834
+    },
+    {
+      "path": "assets/icons/png/checklist.png",
+      "sha256": "fc67fdafca9f7b619100cca440b9cbf92add582b552c3923df58505cccb7039f",
+      "bytes": 30694
+    },
+    {
+      "path": "assets/icons/png/code.png",
+      "sha256": "4b5a211489b87be0cef33a82eb2e76142c51c630d63bf8ecf838eba8607d2603",
+      "bytes": 18487
+    },
+    {
+      "path": "assets/icons/png/compass.png",
+      "sha256": "22b91371b5faf30c5a2523b2e7ab620fe4a54a89f29c9d63f6212a3d1449eee2",
+      "bytes": 35369
+    },
+    {
+      "path": "assets/icons/png/ecocampus.png",
+      "sha256": "a67a79b9eed1b5224f85167d3dd5c15480ba8ac98fcc6d6d1808a9aab1bf7e84",
+      "bytes": 21646
+    },
+    {
+      "path": "assets/icons/png/gallery.png",
+      "sha256": "f91095a1ddc7a3a3e6e0d6c3cf51337864c0813b4fc9708c1b5757401b0ff990",
+      "bytes": 23091
+    },
+    {
+      "path": "assets/icons/png/home.png",
+      "sha256": "c845051454e2d7ec9406ae2f25f529201b4ab15c10be5f296006b6c60604e70a",
+      "bytes": 26726
+    },
+    {
+      "path": "assets/icons/png/learning.png",
+      "sha256": "346cd4af7db0b283b6ba74af67dd3af9b63703aca3c0b1bb1f71bd722fdfad69",
+      "bytes": 25926
+    },
+    {
+      "path": "assets/icons/png/moon.png",
+      "sha256": "5477ab50705dfe2bf24084d0e423fa52a7d76425e9d2956d317238f63d25bb4f",
+      "bytes": 19448
+    },
+    {
+      "path": "assets/icons/png/notification.png",
+      "sha256": "c853b4bf704867b476e29c0c23389361d5c78761f0c9bf415b3d92fe41b4b53b",
+      "bytes": 17904
+    },
+    {
+      "path": "assets/icons/png/presentation.png",
+      "sha256": "e8a8c28f8d3346032954bfb69ef3d1aeeafd59fb78861377e77c3a10c7bc1abf",
+      "bytes": 29306
+    },
+    {
+      "path": "assets/icons/png/search.png",
+      "sha256": "5525efa0622fa3ad39f275a4184c562b7a92bb715896f083ad259d4c8c0335b1",
+      "bytes": 20986
+    },
+    {
+      "path": "assets/icons/png/security.png",
+      "sha256": "c5a4fb03abce8fcc8fabcd9da9d9a69b79927bf92e8cd3bb389eefc9ed8e90f7",
+      "bytes": 32714
+    },
+    {
+      "path": "assets/icons/png/settings.png",
+      "sha256": "66b012a582f5dc9ad19cba86c9f4941e8dc788ccaab56d0fe7135a0858a0400a",
+      "bytes": 28338
+    },
+    {
+      "path": "assets/icons/source/icon-atlas-4x4.png",
+      "sha256": "5384d4df2876dd8514c23651054ce89891a9ed1d99aaeb9ac61c1d2eefaef4be",
+      "bytes": 811828
+    },
+    {
+      "path": "assets/reduced-motion/Goggle_Kid_Walk_frame-00.png",
+      "sha256": "7d9e5dc283ddb03deb1dabd96fe9a616b9aa42449ee48c2ee7201787ace98e71",
+      "bytes": 143654
+    },
+    {
+      "path": "assets/reduced-motion/Typing_Girl_and_Sleeping_Cat_frame-00.png",
+      "sha256": "0af55aa4f74789d842bf330fdbdeff691b885dcb332bdda18aa2e01ed7170e4b",
+      "bytes": 205650
+    },
+    {
+      "path": "assets/references/card-analisis-datos.png",
+      "sha256": "54c18428549c54ffb8b0f908dcd412366dc4ec7a1a002f5bc5b6818eed19cc4b",
+      "bytes": 871728
+    },
+    {
+      "path": "assets/references/card-bitacora-libro.png",
+      "sha256": "25d3d50f16525fbb7f769c26eb356be6428b45356cb95f1093728fa5e5784554",
+      "bytes": 539236
+    },
+    {
+      "path": "assets/references/card-ecocampus-terrario.png",
+      "sha256": "1ef94b8affb351c466ea700e2281bc66ae80c06b0c87b4f2df3a66c15d791378",
+      "bytes": 530053
+    },
+    {
+      "path": "assets/references/card-ruta-personaje.png",
+      "sha256": "9d3fd47da3bfa2bce945054d3db5985d871225c424bd0393ec8b15a4e27ebe2f",
+      "bytes": 463663
+    },
+    {
+      "path": "assets/references/hero-estudiante-gato.png",
+      "sha256": "f6b4fc99e62c55bf272d5ccf7e915895c1c28502cd80b48fef8ea95b2ac1bf40",
+      "bytes": 882469
+    },
+    {
+      "path": "assets/sheets/Goggle_Kid_Walk_sheet.png",
+      "sha256": "40b7d5b2d5c8f422b27ee33e8eb3f054d3f96fb1a2ee5768e6648fa0a45635a6",
+      "bytes": 389205
+    },
+    {
+      "path": "assets/sheets/Typing_Girl_and_Sleeping_Cat_sheet.png",
+      "sha256": "dc79685b20ce0822a6bde3b577582cf9a9cf6a764137f53c1c1e2bd9a34354da",
+      "bytes": 361649
+    },
+    {
+      "path": "code/f16-design-tokens.css",
+      "sha256": "f910d9678a444d92f886ebe623bd37a887f8e00730cf4c3a6824d073e7cdcedd",
+      "bytes": 823
+    },
+    {
+      "path": "code/legacy-f16-tokens.css",
+      "sha256": "802bdcfe3644078812f930926b34fae41ead9ea60eeae07c6f050a9a294c9c14",
+      "bytes": 880
+    },
+    {
+      "path": "design/components.json",
+      "sha256": "c26117bdf6a429fd43a962fb3ccc584f2cf0ca72c0fe160ba7ba881cb7bf0094",
+      "bytes": 4010
+    },
+    {
+      "path": "design/layouts.json",
+      "sha256": "11b7d6d2d17126e4a01122e32a668ea2c14ca8923d28c8bce856261c7b077bdf",
+      "bytes": 2253
+    },
+    {
+      "path": "design/screens.json",
+      "sha256": "a1630b1eed33733fe3ed3d1597af2dedb4df360a45e9d974a1ab0d1b92c1f687",
+      "bytes": 8516
+    },
+    {
+      "path": "design/tokens.json",
+      "sha256": "c06eaa60671bffa136bc23e7051d59c8396c88fc550e8ec9d7f993ffde80c808",
+      "bytes": 3536
+    },
+    {
+      "path": "docs/ASTRYX-ADOPTION.md",
+      "sha256": "7a0bf4c853f32c26ce2d0d9d5a44323f8aadd65f976e169b53fc60468890888b",
+      "bytes": 1993
+    },
+    {
+      "path": "docs/CODEX-MASTER-PROMPT.md",
+      "sha256": "0a40faf54cf74f8135059d117c1926d5562cd0e425c389ccea5442906c349ee3",
+      "bytes": 3956
+    },
+    {
+      "path": "docs/DESIGN-SYSTEM.md",
+      "sha256": "5be9ae2c409a4a31cd39275a525c0d84145b881376358fef47750a4c7124422b",
+      "bytes": 2502
+    },
+    {
+      "path": "docs/QUALITY-GATES.md",
+      "sha256": "c3457345d08f691338fc3980534207d666ffa9f6b67582e0a36d9946388f9f76",
+      "bytes": 1084
+    },
+    {
+      "path": "docs/SCREEN-PLAN.md",
+      "sha256": "28ec1188b451527482d75f419f87807375c440d96e3efaa4bd9482723473fc23",
+      "bytes": 1107
+    },
+    {
+      "path": "evidence/icons-contact-sheet.png",
+      "sha256": "4865c63782a73f8d40243edc879f61ef392e8566c013d5f63405ed6e115750cf",
+      "bytes": 220208
+    },
+    {
+      "path": "evidence/icons-review.html",
+      "sha256": "0d1295e58bf2dbb0caa11ca539e8d12a8a2cfd540f319f7a0da1dd78861d6cee",
+      "bytes": 2850
+    },
+    {
+      "path": "tools/split_icon_sheet.py",
+      "sha256": "3caedfe32a58bbec1d6713996d6dedcc26a068a7509ac6512667d5a100013797",
+      "bytes": 1863
+    }
+  ]
+}

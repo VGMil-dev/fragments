@@ -1,0 +1,14 @@
+/* F16 PROPOSED TOKEN CONTRACT — do not replace existing tokens without audit */
+:root[data-fragments-theme="pixel-night"] {
+  --f16-bg:#030407; --f16-surface:#0C1222; --f16-surface-raised:#121C32;
+  --f16-primary:#1558C9; --f16-primary-hover:#2875E6; --f16-accent:#D4FF24;
+  --f16-text:#F3F7FF; --f16-muted:#ADBBD3; --f16-border:#314363;
+  --f16-info:#65B8FF; --f16-success:#67DCAA; --f16-warning:#FFD166; --f16-danger:#FF7785;
+  --f16-sidebar:248px; --f16-max-width:1280px; --f16-header:72px;
+  --f16-radius-sm:8px; --f16-radius-md:14px; --f16-radius-lg:20px;
+  --f16-motion-fast:140ms; --f16-motion-normal:220ms;
+}
+@media (prefers-reduced-motion:reduce) {
+  :root[data-fragments-theme="pixel-night"] {--f16-motion-fast:0ms;--f16-motion-normal:0ms;}
+}
+.f16-pixel-art { image-rendering: pixelated; object-fit:contain; }

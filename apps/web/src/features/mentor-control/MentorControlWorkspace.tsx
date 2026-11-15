@@ -121,9 +121,9 @@ export function MentorControlWorkspace({ navigate }: { navigate: (path: string) 
 
   if (auth === "loading") return <main className="mentor-control"><p>Comprobando el acceso docente…</p></main>;
   if (auth !== "teacher") return <main className="mentor-control">
-    <a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>← Inicio</a>
+    <header className="mentor-control__header"><a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>← Inicio</a>
     <p className="mentor-control__eyebrow">FRAGMENTS · ESPACIO DOCENTE</p><h1>Control de Mentor</h1>
-    <p>Inicia sesión con una cuenta docente para configurar la consigna y la rúbrica.</p>
+    <p>Inicia sesión con una cuenta docente para configurar la consigna y la rúbrica.</p></header>
     <form onSubmit={(event) => void signIn(event)} className="mentor-control__login">
       <label>Correo<input type="email" name="email" required autoComplete="username" /></label>
       <label>Contraseña<input type="password" name="password" required autoComplete="current-password" /></label>

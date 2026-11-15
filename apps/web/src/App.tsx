@@ -18,6 +18,7 @@ import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
+import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const inspectorApi = createInspectorApi(createApiClient());
@@ -116,6 +117,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
           <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
         </nav>
+        <span className="student-workspace__nav-hint" aria-hidden="true">Secciones de estudiante</span>
         <div className="student-workspace__account">{student ? <>{student.profileUrl && student.githubLogin ? <a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a> : <span>Cuenta GitHub</span>}<button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
       </header>
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
@@ -240,8 +242,8 @@ export function App() {
             <a className="button button--primary" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
             <p className="hero__note"><img src="/flower.svg" alt="" width="24" height="36" />Imagina. Construye. Demuestra.</p>
           </div>
-          <div className="hero__art" aria-label="Ilustración de una computadora rodeada de plantas y piezas de código" role="img">
-            <div className="art-frame"><img src="/hero-fragments.webp" alt="" fetchPriority="high" width="1774" height="944" /></div>
+          <div className="hero__art" aria-label="Ilustración de una estudiante programando junto a su gato" role="img">
+            <div className="art-frame"><picture><source media="(prefers-reduced-motion: reduce)" srcSet="/f16/Typing_Girl_and_Sleeping_Cat_frame-00.png" /><img src="/f16/Typing_Girl_and_Sleeping_Cat.webp" alt="" fetchPriority="high" width="640" height="640" /></picture></div>
             <span className="art-label"><span aria-hidden="true">✳</span>ideas en proceso</span>
           </div>
           <div className="hero__footnote"><span>01</span>APRENDER CON PROYECTOS REALES</div>
