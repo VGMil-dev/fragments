@@ -63,9 +63,6 @@ jobs:
             echo "commit=$RELEASE_SHA"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Test release agent validation and package metadata helpers
-        run: node --test deploy/production/release-agent/test-release-agent-scripts.mjs
-
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -79,6 +76,12 @@ jobs:
 
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Test release policy and synthetic SQLite backup
+        run: node --test deploy/production/release-agent/test-release-agent-scripts.mjs deploy/production/release-agent/test-backup-script.mjs
+
+      - name: Test release agent state machine
+        run: python3 -m unittest discover -s deploy/production/release-agent -p 'test_*.py'
 
       - name: Test, typecheck, lint, and build exact release source
         env:

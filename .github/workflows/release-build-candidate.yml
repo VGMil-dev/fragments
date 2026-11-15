@@ -63,6 +63,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Test release policy and synthetic SQLite backup
+        run: node --test deploy/production/release-agent/test-release-agent-scripts.mjs deploy/production/release-agent/test-backup-script.mjs
+
+      - name: Test release agent state machine
+        run: python3 -m unittest discover -s deploy/production/release-agent -p 'test_*.py'
+
       - name: Build the exact release source
         env:
           FRAGMENTS_RELEASE_TAG: ${{ inputs.tag }}
