@@ -7,10 +7,11 @@
   background: transparent;
   color: var(--f16-lime, #1558C9);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--f16-type-body);
   font-weight: 650;
   cursor: pointer;
 }
+.mentor-screen .student-screen__header h1 { font-size: var(--f16-type-page); }
 
 .mentor-screen__back:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 
@@ -25,7 +26,7 @@
 
 .mentor-field { display: grid; align-content: start; gap: 8px; min-width: 0; }
 .mentor-field--wide, .mentor-form__footer { grid-column: 1 / -1; }
-.mentor-field > span { font-size: 13px; font-weight: 700; }
+.mentor-field > span { font-size: var(--f16-type-body); font-weight: 700; }
 .mentor-field input, .mentor-field textarea {
   width: 100%;
   min-height: 46px;
@@ -35,12 +36,12 @@
   background: var(--f16-surface-raised);
   color: var(--navy, #F3F7FF);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--f16-type-body);
 }
 .mentor-field textarea { min-height: 100px; resize: vertical; line-height: 1.5; }
 .mentor-field input:focus-visible, .mentor-field textarea:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 2px; }
 .mentor-field [aria-invalid="true"] { border-color: #FF7785; }
-.mentor-field small { color: var(--muted, #ADBBD3); font-size: 12px; }
+.mentor-field small { color: var(--muted, #ADBBD3); font-size: var(--f16-type-body); line-height: 1.5; }
 .mentor-field small[role="alert"] { color: #FF7785; }
 
 .mentor-form__footer {
@@ -51,12 +52,12 @@
   padding-top: 9px;
   border-top: 1px solid var(--border-soft, #314363);
 }
-.mentor-form__footer p { margin: 0; color: var(--muted, #ADBBD3); font-size: 12px; }
+.mentor-form__footer p { margin: 0; color: var(--muted, #ADBBD3); font-size: var(--f16-type-body); }
 .mentor-form__footer button:disabled { cursor: wait; opacity: .75; }
 .mentor-screen .button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
-.mentor-screen__success { margin: 14px 0 0; color: var(--success, #67DCAA); font-size: 14px; }
-.mentor-screen__error { margin: 14px 0 0; color: #FF7785; font-size: 14px; }
-.mentor-screen__hint { margin: 0; color: var(--muted, #ADBBD3); font-size: 13px; }
+.mentor-screen__success { margin: 14px 0 0; color: var(--success, #67DCAA); font-size: var(--f16-type-body); }
+.mentor-screen__error { margin: 14px 0 0; color: #FF7785; font-size: var(--f16-type-body); }
+.mentor-screen__hint { margin: 0; color: var(--muted, #ADBBD3); font-size: var(--f16-type-body); }
 
 .mentor-choices {
   display: flex;
@@ -93,25 +94,25 @@
   gap: 24px;
 }
 .mentor-evaluation__heading .student-screen__eyebrow { margin-bottom: 7px; }
-.mentor-evaluation__heading h2 { margin: 0 0 7px; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.04em; }
-.mentor-evaluation__heading p:not(.student-screen__eyebrow) { margin: 0; color: var(--muted, #ADBBD3); font-size: 13px; }
+.mentor-evaluation__heading h2 { margin: 0 0 7px; font-size: var(--f16-type-section, clamp(22px, 3vw, 30px)); letter-spacing: -.04em; }
+.mentor-evaluation__heading p:not(.student-screen__eyebrow) { margin: 0; color: var(--muted, #ADBBD3); font-size: var(--f16-type-body); }
 .mentor-evaluation__heading button:disabled { opacity: .65; }
 
 .mentor-result { display: grid; gap: 20px; padding: 22px; border: 1px solid var(--border, #6682AC); background: var(--paper-white, #121C32); }
 .mentor-result__summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-.mentor-result__label { margin: 0 0 5px; color: var(--muted, #ADBBD3); font-size: 12px; }
-.mentor-result__summary h3 { margin: 0; font-size: 19px; }
+.mentor-result__label { margin: 0 0 5px; color: var(--muted, #ADBBD3); font-size: var(--f16-type-meta, .875rem); }
+.mentor-result__summary h3 { margin: 0; font-size: var(--f16-type-card, 1.125rem); }
 .mentor-result__score { flex: 0 0 auto; margin: 0; color: var(--f16-lime, #1558C9); font-size: 27px; font-weight: 750; letter-spacing: -.04em; }
 .mentor-findings, .mentor-similarity ul { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
 .mentor-findings > li { padding-top: 13px; border-top: 1px solid var(--border-soft, #314363); }
-.mentor-findings p { margin: 0 0 5px; font-size: 14px; }
-.mentor-findings .mentor-finding__status { color: var(--f16-lime, #1558C9); font-size: 11px; font-weight: 700; }
-.mentor-finding__evidence { margin: 8px 0 0; padding-left: 18px; color: var(--muted, #ADBBD3); font-size: 12px; }
-.mentor-similarity h3 { margin: 0 0 10px; font-size: 14px; }
-.mentor-similarity li { display: grid; gap: 3px; font-size: 13px; }
+.mentor-findings p { margin: 0 0 5px; font-size: var(--f16-type-body); }
+.mentor-findings .mentor-finding__status { color: var(--f16-lime, #1558C9); font-size: var(--f16-type-body); font-weight: 700; }
+.mentor-finding__evidence { margin: 8px 0 0; padding-left: 18px; color: var(--muted, #ADBBD3); font-size: var(--f16-type-meta, .875rem); }
+.mentor-similarity h3 { margin: 0 0 10px; font-size: var(--f16-type-card, 1.125rem); }
+.mentor-similarity li { display: grid; gap: 3px; font-size: var(--f16-type-body); }
 .mentor-similarity span { color: var(--muted, #ADBBD3); }
-.mentor-guidance h3 { margin: 0 0 9px; font-size: 14px; }
-.mentor-guidance ul { display: grid; gap: 7px; margin: 0; padding-left: 19px; color: var(--muted, #ADBBD3); font-size: 13px; }
+.mentor-guidance h3 { margin: 0 0 9px; font-size: var(--f16-type-card, 1.125rem); }
+.mentor-guidance ul { display: grid; gap: 7px; margin: 0; padding-left: 19px; color: var(--muted, #ADBBD3); font-size: var(--f16-type-body); }
 
 @media (max-width: 680px) {
   .mentor-form { grid-template-columns: 1fr; gap: 18px; }
@@ -121,7 +122,7 @@
   .mentor-result { padding: 17px; }
 }
 .mentor-context { margin: 1.5rem 0; padding: 1.25rem 1.5rem; border-left: 4px solid var(--blue, #1558C9); border-radius: 0 12px 12px 0; background: var(--powder, #1A2842); color: var(--navy, #F3F7FF); }
-.mentor-context h2 { margin: .35rem 0; font-size: 1.3rem; }
+.mentor-context h2 { margin: .35rem 0; font-size: var(--f16-type-section, 1.3rem); }
 .mentor-context p { margin: .4rem 0; }
 .mentor-saved-proposals {
   margin: 1.25rem 0;
@@ -133,7 +134,7 @@
 
 .mentor-saved-proposals h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  font-size: var(--f16-type-section, 1.3rem);
 }
 
 .mentor-saved-proposals ul {
@@ -159,5 +160,5 @@
 
 .mentor-saved-proposals__version {
   color: var(--muted, #ADBBD3);
-  font-size: 0.9rem;
+  font-size: var(--f16-type-meta, .875rem);
 }

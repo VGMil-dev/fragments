@@ -2,24 +2,24 @@
 .mentor-control__header { margin-bottom: 1.5rem; }
 .mentor-control__header > a { color: var(--f16-lime, #1558C9); }
 .mentor-control__eyebrow { margin: 1.5rem 0 .4rem; color: var(--muted, #ADBBD3); font-size: .78rem; font-weight: 750; letter-spacing: .08em; }
-.mentor-control h1 { margin: .35rem 0; font-size: clamp(2rem, 5vw, 3rem); }
+.mentor-control h1 { margin: .35rem 0; font-size: var(--f16-type-page); }
 .mentor-control__active { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; padding: 1rem; border: 1px solid var(--border-soft, #314363); border-radius: 12px; background: var(--powder, #1A2842); }
 .mentor-control__account { display: grid; gap: .75rem; margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--border-soft, #314363); border-radius: 12px; background: var(--paper, #121C32); }
 .mentor-control__account h2, .mentor-control__account p { margin: 0; }
-.mentor-control__account h2 { font-size: 1.15rem; }
+.mentor-control__account h2 { font-size: var(--f16-type-section); }
 .mentor-control__link-form { display: grid; gap: .65rem; max-width: 440px; }
 .mentor-control__link-form label { font-size: .9rem; font-weight: 700; }
 .mentor-control__link-form input { width: 100%; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border-soft, #314363); border-radius: 8px; background: #121C32; color: var(--navy, #F3F7FF); font: inherit; }
 .mentor-control__link-form input:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 2px; }
 .mentor-control__account-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 .mentor-control__form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--border-soft, #314363); border-radius: 14px; background: var(--paper, #121C32); }
-.mentor-control__form h2 { grid-column: 1 / -1; margin: .5rem 0 0; font-size: 1.25rem; }
+.mentor-control__form h2 { grid-column: 1 / -1; margin: .5rem 0 0; font-size: var(--f16-type-section); }
 .mentor-control__form label, .mentor-control__login label { display: grid; gap: .4rem; font-size: .9rem; font-weight: 700; }
 .mentor-control__form input, .mentor-control__form textarea, .mentor-control__login input { width: 100%; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border-soft, #314363); border-radius: 8px; background: #121C32; color: var(--navy, #F3F7FF); font: inherit; font-weight: 450; }
 .mentor-control__form input:focus-visible, .mentor-control__form textarea:focus-visible, .mentor-control__login input:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 2px; }
 .mentor-control__wide { grid-column: 1 / -1; }
 .mentor-control__criterion { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 100px auto; align-items: end; gap: .75rem; min-width: 0; padding: 1rem; border: 1px solid var(--border-soft, #314363); border-radius: 10px; }
-.mentor-control__criterion legend { padding: 0 .4rem; color: var(--muted, #ADBBD3); font-size: .82rem; font-weight: 700; }
+.mentor-control__criterion legend { padding: 0 .4rem; color: var(--muted, #ADBBD3); font-size: var(--f16-type-meta); font-weight: 700; }
 .mentor-control__remove { min-height: 42px; border: 0; background: transparent; color: #FF7785; cursor: pointer; font: inherit; }
 .mentor-control__actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; gap: .75rem; padding-top: .75rem; }
 .mentor-control__login { display: grid; gap: 1rem; max-width: 420px; margin-top: 1.5rem; }

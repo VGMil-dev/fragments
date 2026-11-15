@@ -36,6 +36,9 @@ describe("GalleryScreen", () => {
     expect(html).toContain("@garden-student");
     expect(html).toContain("Consigna");
     expect(html).toContain("Rúbrica de proyectos");
+    expect(html).toContain('class="gallery-entry__status"');
+    expect(html).toContain("Evaluada");
+    expect(html).toContain('class="gallery-entry__action"');
     expect(html).not.toContain("nota");
   });
 

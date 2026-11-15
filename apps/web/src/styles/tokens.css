@@ -28,6 +28,11 @@
   --f16-motion-fast: 140ms;
   --f16-motion-normal: 220ms;
   --f16-content-max: 1280px;
+  --f16-type-page: clamp(2rem, 4vw, 3rem);
+  --f16-type-section: clamp(1.3rem, 2.4vw, 1.75rem);
+  --f16-type-card: 1.125rem;
+  --f16-type-body: 1rem;
+  --f16-type-meta: .875rem;
   --paper: var(--f16-night);
   --paper-deep: var(--f16-surface);
   --paper-white: var(--f16-surface-raised);

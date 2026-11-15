@@ -75,7 +75,7 @@ export function TrainerScreen({ api }: { api: Api }) {
         </div>
         {loading ? <p role="status">Buscando análisis completados…</p> : null}
         {!loading && !reviews.length ? <p className="trainer-empty">Primero analiza un repositorio en Review. Aquí aparecerá cuando el análisis esté listo.</p> : null}
-        {review ? <p className="trainer-commit">Commit usado: <code>{review.commitSha}</code></p> : null}
+        {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
       </section>
 
       {message ? <p className="trainer-message" role="status">{message}</p> : null}
@@ -107,7 +107,7 @@ export function TrainerScreen({ api }: { api: Api }) {
 
       <section className="trainer-history" aria-labelledby="trainer-history-title">
         <div className="trainer-history__heading"><div><p className="trainer-eyebrow">TU RECORRIDO</p><h2 id="trainer-history-title">Historial de práctica</h2></div><span>{history.length} {history.length === 1 ? "intento" : "intentos"}</span></div>
-        {history.length ? <ol>{history.map((item) => <li key={item.id}><span><strong>{item.feature}</strong><small>{new Date(item.attemptedAt).toLocaleString("es-CO")} · {item.hintsUsed} pistas</small></span><span className="trainer-history__status">{statusLabels[item.status]}</span></li>)}</ol> : <p className="trainer-empty">Tus prácticas quedarán guardadas aquí en este navegador.</p>}
+        {history.length ? <ol className="trainer-history__list">{history.map((item) => <li key={item.id}><span><strong>{item.feature}</strong><small>{new Date(item.attemptedAt).toLocaleString("es-CO")} · {item.hintsUsed} pistas consultadas</small></span><span className="trainer-history__status">{statusLabels[item.status]}</span></li>)}</ol> : <p className="trainer-empty">Tus prácticas quedarán guardadas aquí en este navegador.</p>}
       </section>
     </main>
   );

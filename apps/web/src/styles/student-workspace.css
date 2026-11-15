@@ -1,9 +1,11 @@
 .student-workspace { min-height: 100vh; padding-bottom: 2rem; background: var(--f16-night); color: var(--f16-text-primary); }
 .student-workspace__nav { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.25rem; min-height: 76px; padding: .65rem clamp(1rem, 4vw, 3.25rem); border-bottom: 1px solid var(--f16-border); background: color-mix(in srgb, var(--f16-night) 94%, transparent); backdrop-filter: blur(14px); }
 .student-workspace__nav nav { display: flex; align-items: center; justify-content: center; gap: clamp(.55rem, 2vw, 1.5rem); min-width: 0; }
-.student-workspace__nav nav a, .student-workspace__account a, .student-workspace__account button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .5rem .65rem; border: 0; border-radius: var(--f16-radius-control); background: transparent; color: var(--f16-text-secondary); font-size: .875rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.student-workspace__nav nav a, .student-workspace__account a, .student-workspace__account button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .5rem .65rem; border: 0; border-radius: var(--f16-radius-control); background: transparent; color: var(--f16-text-secondary); font-size: var(--f16-type-body); font-weight: 650; text-decoration: none; white-space: nowrap; }
 .student-workspace__nav nav a:hover, .student-workspace__account a:hover { color: var(--f16-lime); }
 .student-workspace__nav nav a[aria-current="page"] { color: var(--f16-lime); background: color-mix(in srgb, var(--f16-cobalt) 24%, transparent); box-shadow: inset 0 -2px var(--f16-lime); }
+.student-workspace__nav nav a:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 2px; }
+.student-workspace__nav-hint { display: none; }
 .student-workspace__account { display: flex; align-items: center; justify-content: flex-end; gap: .4rem; }
 .student-workspace__account button { border: 1px solid var(--f16-border); cursor: pointer; }
 .student-workspace__account button:hover { border-color: var(--f16-lime); color: var(--f16-lime); }
@@ -20,10 +22,11 @@
   .student-workspace__nav .brand__icon { width: 34px; height: 34px; }
   .student-workspace__nav .brand__name { font-size: 20px; }
   .student-workspace__account { grid-column: 2; grid-row: 1; max-width: 52vw; overflow-x: auto; }
-  .student-workspace__account a, .student-workspace__account button { min-height: 40px; padding-inline: .45rem; font-size: .78rem; }
-  .student-workspace__nav nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: .4rem; width: 100%; padding: .3rem 0 .5rem; overflow-x: auto; scrollbar-width: thin; }
+  .student-workspace__account a, .student-workspace__account button { min-height: 40px; padding-inline: .45rem; font-size: var(--f16-type-meta); }
+  .student-workspace__nav nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: .4rem; width: 100%; padding: .3rem 6px .5rem; overflow-x: auto; scrollbar-width: thin; scroll-padding-inline: 6px; }
   .student-workspace__nav nav a { flex: 0 0 auto; min-height: 44px; padding-inline: .75rem; }
   .student-workspace__content { width: min(100% - 1rem, 1120px); margin-top: 1rem; }
+  .student-workspace__sharing { width: 100%; margin-bottom: .75rem; padding: .55rem .7rem; font-size: var(--f16-type-body); line-height: 1.4; }
   .student-workspace__footer { width: min(100% - 1rem, 1120px); }
 }
 
@@ -31,6 +34,8 @@
   .student-workspace__nav { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .student-workspace__nav > .brand { grid-column: 1; grid-row: 1; }
   .student-workspace__account { grid-column: 1; grid-row: 2; justify-content: flex-start; max-width: 100%; }
-  .student-workspace__nav nav { grid-column: 1; grid-row: 3; }
+  .student-workspace__nav nav { grid-column: 1; grid-row: 3; flex-wrap: wrap; justify-content: space-between; gap: .25rem; overflow: visible; padding-bottom: .4rem; }
   .student-workspace__nav .brand__name { font-size: 18px; }
+  .student-workspace__nav nav a { min-height: 42px; padding-inline: .6rem; }
+  .student-workspace__nav-hint { display: block; grid-column: 1; grid-row: 4; padding: 0 0 .45rem .6rem; color: var(--f16-text-secondary); font-size: .6875rem; }
 }
