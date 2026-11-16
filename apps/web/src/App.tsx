@@ -16,6 +16,7 @@ import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordR
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
+import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 import "./styles/teacher-workspace.css";
@@ -220,33 +221,54 @@ export function App() {
 
   return (
     <>
+      <div className="f162-landing">
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
-      <header className="site-header">
+      <header className="f162-header">
         <a className="brand" href="#inicio" aria-label="Fragments, ir al inicio">
           <BrandMark className="brand__icon" />
           <span className="brand__name">fragments<span className="brand__period">.</span></span>
         </a>
-        <nav className="site-nav" aria-label="Navegación principal">
-          <a href="#como-funciona">Cómo funciona</a>
-          <a href="#para-quien">Para estudiantes</a>
+        <nav className="f162-auth" aria-label="Acceso">
+          <a className="f162-login" href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Iniciar sesión</a>
+          <a className="f162-signup" href="/student/login" aria-label="Crear cuenta; continuar con GitHub" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Crear cuenta</a>
         </nav>
-        <a className="header-link" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Empezar <span aria-hidden="true">↗</span></a>
       </header>
 
       <main id="contenido">
-        <section className="hero" id="inicio" aria-labelledby="hero-title">
-          <div className="hero__copy">
-            <p className="eyebrow"><span className="eyebrow__dot" aria-hidden="true" />TU ESPACIO PARA APRENDER HACIENDO</p>
-            <h1 id="hero-title">Una idea.<br />Muchos <span className="highlight">fragmentos.</span></h1>
-            <p className="hero__lead">Aprende programación construyendo proyectos propios, paso a paso y con guía en el camino.</p>
-            <a className="button button--primary" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
-            <p className="hero__note"><img src="/flower.svg" alt="" width="24" height="36" />Imagina. Construye. Demuestra.</p>
+        <section className="f162-hero" id="inicio" aria-labelledby="f162-title">
+          <div className="f162-visual" aria-hidden="true">
+            <img className="f162-art-image" src="/f16-2/moonlit-fragments.webp" alt="" fetchPriority="high" decoding="async" width="1774" height="887" />
           </div>
-          <div className="hero__art" aria-label="Ilustración de una estudiante programando junto a su gato" role="img">
-            <div className="art-frame"><picture><source media="(prefers-reduced-motion: reduce)" srcSet="/f16/Typing_Girl_and_Sleeping_Cat_frame-00.png" /><img src="/f16/Typing_Girl_and_Sleeping_Cat.webp" alt="" fetchPriority="high" width="640" height="640" /></picture></div>
-            <span className="art-label"><span aria-hidden="true">✳</span>ideas en proceso</span>
+          <div className="f162-intro">
+            <h1 id="f162-title">Fragments</h1>
+            <p className="f162-tagline">Sueña · Crea · Conecta</p>
+            <p className="f162-description">Un lugar para imaginar, aprender y construir proyectos a tu ritmo.</p>
           </div>
-          <div className="hero__footnote"><span>01</span>APRENDER CON PROYECTOS REALES</div>
+          <section className="f162-dock" aria-label="Descubre Fragments">
+            <div className="f162-dock-inner">
+              <ul className="f162-benefits" aria-label="Lo que encontrarás en Fragments">
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14 2 19l5-2 3-3M11 13l-2-2c2-5 5-7 12-8-1 7-3 10-8 12l-2-2ZM8 16l-2 3"/><path d="M14 9h.01"/></svg></span>
+                  <span className="f162-benefit-full">Desarrollo sin límites</span><span aria-hidden="true" className="f162-benefit-short">Desarrollo</span>
+                </li>
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6m-5 3h4m-5-7a7 7 0 1 1 6 0c-1 1-1 2-1 4h-4c0-2 0-3-1-4ZM12 1v2M2 10h2M20 10h2"/></svg></span>
+                  <span className="f162-benefit-full">Ideas que inspiran</span><span aria-hidden="true" className="f162-benefit-short">Ideas</span>
+                </li>
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 19c0-4 3-6 6-6s6 2 6 6M11 19c0-4 3-6 6-6s5 2 5 6"/></svg></span>
+                  <span className="f162-benefit-full">Comunidad unida</span><span aria-hidden="true" className="f162-benefit-short">Comunidad</span>
+                </li>
+              </ul>
+              <div className="f162-action">
+                <p>Un nuevo capítulo comienza...</p>
+                <a className="f162-start" href="/student/login" aria-label="Comenzar; continuar con GitHub" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>
+                  <span>Comenzar</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>
+                </a>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section className="intro" id="para-quien" aria-labelledby="intro-title">
@@ -269,13 +291,6 @@ export function App() {
           </ol>
         </section>
 
-        <section className="closing" aria-labelledby="closing-title">
-          <div className="closing__ornament" aria-hidden="true"><span>✳</span><span>✳</span><span>✳</span></div>
-          <p className="eyebrow">TU SIGUIENTE PROYECTO TE ESPERA</p>
-          <h2 id="closing-title">¿Qué te gustaría<br />hacer realidad?</h2>
-          <a className="button button--light" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
-          <p className="closing__caption">Una idea a la vez. Un fragmento a la vez.</p>
-        </section>
       </main>
 
       <footer className="site-footer">
@@ -287,6 +302,7 @@ export function App() {
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
         <BuildVersion />
       </footer>
+      </div>
     </>
   );
 }
