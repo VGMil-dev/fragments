@@ -61,15 +61,15 @@
   overflow: hidden;
   background: #040715;
 }
-.f162-visual { position: absolute; z-index: -2; inset: 0; overflow: hidden; background: #040715; }
+.f162-visual { position: absolute; z-index: -2; inset: 0 0 113px; overflow: hidden; background: #040715; }
 .f162-art-image {
   position: absolute;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 53% 52%;
+  object-fit: contain;
+  object-position: center;
 }
 .f162-visual::after {
   position: absolute;
@@ -180,15 +180,15 @@
 .f162-start svg { flex: 0 0 auto; width: 19px; height: 19px; }
 @media (hover: hover) { .f162-start:hover { transform: translateY(-1px); } }
 
-@media (min-width: 701px) and (max-width: 1100px) {
+@media (min-width: 768px) and (max-width: 1100px) {
   .f162-landing .f162-hero {
-    grid-template-rows: auto minmax(220px, 1fr) auto;
-    min-height: calc(100svh - 72px);
+    grid-template-rows: auto auto auto;
+    min-height: 0;
   }
   .f162-intro { grid-row: 1; width: auto; margin: 0; padding: 30px var(--f162-pad) 28px; }
   .f162-intro h1 { font-size: clamp(54px, 6vw, 68px); }
   .f162-description { max-width: 480px; margin-top: 14px; }
-  .f162-visual { position: relative; grid-row: 2; inset: auto; z-index: 0; min-height: 220px; margin: 0 22px; }
+  .f162-visual { position: relative; grid-row: 2; inset: auto; z-index: 0; width: auto; aspect-ratio: 2 / 1; min-height: 0; margin: 0 22px; }
   .f162-art-image { object-fit: contain; object-position: center; }
   .f162-visual::after { background: linear-gradient(0deg, rgba(2, 5, 17, .44), transparent 23%); }
   .f162-dock { grid-row: 3; }
@@ -200,13 +200,7 @@
   .f162-start { min-width: 148px; }
 }
 
-@media (min-width: 701px) and (max-width: 820px) {
-  .f162-intro { padding-bottom: 85px; }
-  .f162-visual { margin: 0; }
-  .f162-art-image { object-fit: fill; }
-}
-
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .f162-landing { --f162-header-height: 70px; }
   .f162-landing .f162-header { min-height: 70px; padding: 10px 18px; gap: 10px; }
   .f162-header .brand { gap: 8px; }
@@ -214,15 +208,14 @@
   .f162-header .brand__name { font-size: 18px; }
   .f162-auth { gap: 8px; }
   .f162-auth a { min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 12px; border-radius: 10px; }
-  .f162-landing .f162-hero { display: flex; flex-direction: column; min-height: calc(100svh - var(--f162-header-height)); overflow: visible; }
+  .f162-landing .f162-hero { display: flex; flex-direction: column; min-height: 0; overflow: visible; }
   .f162-intro { order: 1; align-self: stretch; width: auto; margin: 0; padding: clamp(44px, 8vh, 68px) 22px 4px; }
   .f162-intro h1 { margin-bottom: 5px; font-size: clamp(43px, 11vw, 57px); }
   .f162-tagline { font-size: 21px; }
   .f162-description { max-width: 320px; margin-top: 18px; font-size: 16px; line-height: 1.55; }
-  .f162-visual { position: relative; order: 2; inset: auto; z-index: 0; width: 100%; aspect-ratio: 8 / 5; margin-top: 22px; }
-  .f162-art-image { object-fit: cover; object-position: center; }
+  .f162-visual { position: relative; order: 2; inset: auto; z-index: 0; width: 100%; aspect-ratio: 2 / 1; margin-top: 22px; }
   .f162-visual::after { background: linear-gradient(180deg, rgba(3, 6, 17, .08), transparent 68%, rgba(3, 6, 17, .55)); }
-  .f162-dock { order: 3; flex: 1; border-top: 0; backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, #060b21, #030611); }
+  .f162-dock { order: 3; flex: 0 0 auto; border-top: 0; backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, #060b21, #030611); }
   .f162-dock-inner { display: flex; flex-direction: column; align-items: stretch; gap: 20px; min-height: 0; padding: 14px 22px max(32px, env(safe-area-inset-bottom)); }
   .f162-benefits { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: none; padding: 11px 0; border-top: 1px solid var(--f162-line); border-bottom: 1px solid var(--f162-line); }
   .f162-benefits li { flex: 1; justify-content: center; gap: 5px; padding: 0 9px; }
@@ -257,7 +250,7 @@
   .f162-dock-inner { padding-right: 18px; padding-left: 18px; }
   .f162-benefit-short { font-size: 11px; }
   .f162-benefit-icon { width: 15px; height: 15px; }
-  .f162-visual { aspect-ratio: 8 / 5; }
+  .f162-visual { aspect-ratio: 2 / 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
