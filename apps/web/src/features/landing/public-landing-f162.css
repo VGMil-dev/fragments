@@ -68,7 +68,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 .f162-motion-video { opacity: 0; }
@@ -191,7 +191,7 @@
   .f162-intro h1 { font-size: clamp(54px, 6vw, 68px); }
   .f162-description { max-width: 480px; margin-top: 14px; }
   .f162-visual { position: relative; grid-row: 2; inset: auto; z-index: 0; width: auto; aspect-ratio: 2 / 1; min-height: 0; margin: 0 22px; }
-  .f162-art-image { object-fit: contain; object-position: center; }
+  .f162-art-image { object-fit: cover; object-position: center; }
   .f162-visual::after { background: linear-gradient(0deg, rgba(2, 5, 17, .44), transparent 23%); }
   .f162-dock { grid-row: 3; }
   .f162-dock-inner { gap: 12px; padding: 12px 22px; }
