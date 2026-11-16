@@ -43,4 +43,5 @@
 ## Dictamen y commits
 
 - Readiness: **PENDING OWNER VISUAL APPROVAL**. La revisión técnica Goldfish R1/R2 convergió; el propietario debe aceptar o rechazar las bandas laterales por la diferencia de ratio 16:9→2:1.
-- Commits locales: pendientes. No push, merge, release ni despliegue.
+- Commit local de implementación/evidencia visual: `0fa7880` (`feat(F16.4): integra video ambiental`). El cierre de estado se documentará en un commit de QA separado.
+- Sin push, merge, release ni despliegue.
