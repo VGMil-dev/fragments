@@ -14,6 +14,7 @@ import { createTrainerApi } from "./lib/api/trainer-api";
 import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
+import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
 import "./features/landing/public-landing-f162.css";
@@ -236,9 +237,7 @@ export function App() {
 
       <main id="contenido">
         <section className="f162-hero" id="inicio" aria-labelledby="f162-title">
-          <div className="f162-visual" aria-hidden="true">
-            <img className="f162-art-image" src="/f16-2/moonlit-fragments.webp" alt="" fetchPriority="high" decoding="async" width="1774" height="887" />
-          </div>
+          <LandingHeroMedia />
           <div className="f162-intro">
             <h1 id="f162-title">Fragments</h1>
             <p className="f162-tagline">Sueña · Crea · Conecta</p>

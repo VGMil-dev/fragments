@@ -36,13 +36,14 @@ describe("F16.2 portada pública", () => {
     expect(html).toContain("Área docente");
   });
 
-  it("usa el WebP de escena del kit sin declarar reproducción de video", () => {
+  it("usa el poster WebP del video decorativo y conserva el marco del hero", () => {
     window.history.replaceState({}, "", "/");
     const html = renderToStaticMarkup(<App />);
 
-    expect(html).toContain("/f16-2/moonlit-fragments.webp");
-    expect(html).toContain('width="1774" height="887"');
+    expect(html).toContain("/f16-4/hero-poster.webp");
+    expect(html).not.toContain("/f16-2/moonlit-fragments.webp");
+    expect(html).toContain('width="1280" height="720"');
     expect(html).toContain('alt=""');
-    expect(html).not.toContain("<video");
+    expect(html).not.toContain("/f16-4/hero-motion.webm");
   });
 });

@@ -71,6 +71,8 @@
   object-fit: contain;
   object-position: center;
 }
+.f162-motion-video { opacity: 0; }
+.f162-motion-video.is-ready { opacity: 1; }
 .f162-visual::after {
   position: absolute;
   z-index: 1;
