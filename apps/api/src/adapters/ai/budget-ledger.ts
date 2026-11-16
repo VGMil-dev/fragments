@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 const DEFAULT_LIMIT_MICROUSD = 1_000_000;
 const RESERVATION_MARGIN = 2;
+const STALE_RESERVATION_MS = 5 * 60_000;
 
 export type AiGatewayRateCard = { inputUsdPerMillion: number; outputUsdPerMillion: number };
 type CostReceipt<T> = { value: T; costUsd?: number };
@@ -47,9 +48,17 @@ export class SqliteAiBudgetLedger {
     if (!/^[a-z][a-z0-9_-]{0,39}$/i.test(input.requestKind) || !Number.isSafeInteger(input.estimateMicroUsd)
       || input.estimateMicroUsd < 1) throw new AiBudgetUnavailableError();
     this.database.exec("BEGIN IMMEDIATE");
+    let committed = false;
     try {
+      // Long-lived reservations are ambiguous after a process crash; never release or reuse them automatically.
+      this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE status='reserved' AND updated_at<=?")
+        .run(now, now - STALE_RESERVATION_MS);
       const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
-      if (uncertain) throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
+      if (uncertain) {
+        this.database.exec("COMMIT");
+        committed = true;
+        throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
+      }
       this.database.prepare(`INSERT INTO ai_budget_reservations
         (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
         VALUES (?, ?, ?, NULL, 'reserved', ?, ?)`)
@@ -57,7 +66,7 @@ export class SqliteAiBudgetLedger {
       this.database.exec("COMMIT");
       return id;
     } catch (error) {
-      this.database.exec("ROLLBACK");
+      if (!committed) this.database.exec("ROLLBACK");
       throw error;
     }
   }

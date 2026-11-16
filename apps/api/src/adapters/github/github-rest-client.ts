@@ -1,5 +1,6 @@
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@fragments/contracts";
 import { digestSnapshot } from "../../features/review/review.service.js";
+import { ReviewProcessingError } from "../../features/review/review-errors.js";
 import type { ExactCommitRequest } from "./github.repository-reader.js";
 
 const githubApi = "https://api.github.com";
@@ -44,11 +45,26 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
     if (options.token) headers.set("authorization", `Bearer ${options.token}`);
     const timeoutSignal = AbortSignal.timeout(timeoutMs);
     const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-    const response = await fetchImpl(url, { method: "GET", headers, redirect: "error", signal: requestSignal });
-    if (!response.ok) throw new Error("No se pudo leer el commit solicitado desde GitHub.");
+    let response: Response;
+    try {
+      response = await fetchImpl(url, { method: "GET", headers, redirect: "error", signal: requestSignal });
+    } catch (error) {
+      if (signal?.aborted) throw new ReviewProcessingError("repository", "GITHUB_UNAVAILABLE", "manual");
+      if (timeoutSignal.aborted || error instanceof TypeError) throw new ReviewProcessingError("repository", "GITHUB_UNAVAILABLE", "transient");
+      throw new ReviewProcessingError("repository", "GITHUB_UNAVAILABLE", "manual");
+    }
+    if (!response.ok) {
+      if (response.status === 429 || (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")) {
+        throw new ReviewProcessingError("repository", "GITHUB_RATE_LIMITED", "transient");
+      }
+      if (response.status >= 500) throw new ReviewProcessingError("repository", "GITHUB_SERVER_ERROR", "transient");
+      if (response.status === 404) throw new ReviewProcessingError("repository", "GITHUB_NOT_FOUND", "permanent");
+      if (response.status === 401 || response.status === 403) throw new ReviewProcessingError("repository", "GITHUB_ACCESS_DENIED", "permanent");
+      throw new ReviewProcessingError("repository", "GITHUB_RESPONSE_INVALID", "permanent");
+    }
     const length = Number(response.headers.get("content-length"));
-    if (Number.isFinite(length) && length > maxBytes) throw new Error("La respuesta de GitHub supera el límite de lectura.");
-    if (!response.body) throw new Error("GitHub respondió sin contenido.");
+    if (Number.isFinite(length) && length > maxBytes) throw new ReviewProcessingError("repository", "GITHUB_RESPONSE_INVALID", "permanent");
+    if (!response.body) throw new ReviewProcessingError("repository", "GITHUB_RESPONSE_INVALID", "manual");
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];
     let totalBytes = 0;
@@ -59,7 +75,7 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
         totalBytes += chunk.value.byteLength;
         if (totalBytes > maxBytes) {
           await reader.cancel();
-          throw new Error("La respuesta de GitHub supera el límite de lectura.");
+          throw new ReviewProcessingError("repository", "GITHUB_RESPONSE_INVALID", "permanent");
         }
         chunks.push(chunk.value);
       }
@@ -70,7 +86,7 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
     try { return JSON.parse(new TextDecoder().decode(bytes)) as unknown; }
-    catch { throw new Error("GitHub respondió con JSON no válido."); }
+    catch { throw new ReviewProcessingError("repository", "GITHUB_RESPONSE_INVALID", "manual"); }
   }
 
   return {

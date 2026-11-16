@@ -8,9 +8,9 @@ import {
   ReviewSubmissionResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
-import type { ReviewContext } from "./review.service.js";
+import { reviewIdempotencyKey, type ReviewContext } from "./review.service.js";
 import type { createReviewService } from "./review.service.js";
-import type { createSqliteReviewStore } from "./sqlite-store.js";
+import type { ReviewJobView, createSqliteReviewStore } from "./sqlite-store.js";
 
 type Store = ReturnType<typeof createSqliteReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
@@ -36,13 +36,47 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
           return "handled";
         }
         const job = await options.store.enqueue({ request: parsed.data, context });
-        const data = ReviewQueuedResponseSchema.parse({
-          id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
-          status: "queued", createdAt: job.createdAt,
-        });
-        sendJson(response, 202, data);
+        if (job.status === "failed") {
+          sendError(response, 409, "REVIEW_RETRY_REQUIRED", "Esta revisión falló. Usa el reintento disponible o pide apoyo a tu docente.");
+          return "handled";
+        }
+        sendJson(response, job.status === "completed" ? 200 : 202, publicReview(job));
       } catch {
         sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo encolar la revisión en este momento.");
+      }
+      return "handled";
+    }
+
+    const retryMatch = request.method === "POST" && url.pathname.match(/^\/api\/reviews\/([A-Za-z0-9_-]{1,100})\/retry$/);
+    if (retryMatch) {
+      try {
+        const current = options.store.getJob(retryMatch[1]!);
+        if (!current) {
+          sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
+          return "handled";
+        }
+        const reviewRequest = ReviewRequestSchema.parse({ owner: current.owner, repo: current.repo, commitSha: current.commitSha });
+        const context = await options.resolveContext(request, reviewRequest);
+        if (!context || await reviewIdempotencyKey(reviewRequest, context) !== current.key) {
+          sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
+          return "handled";
+        }
+        const retry = options.store.retryFailed(retryMatch[1]!);
+        if (retry.kind === "missing") {
+          sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
+          return "handled";
+        }
+        if (retry.kind === "too_early") {
+          sendError(response, 429, "REVIEW_RETRY_DELAY", "Espera un momento antes de volver a intentarlo.");
+          return "handled";
+        }
+        if (retry.kind === "not_retryable" || retry.kind === "exhausted") {
+          sendError(response, 409, "REVIEW_RETRY_UNAVAILABLE", "No es posible reintentar esta revisión de forma segura. Pide apoyo a tu docente.");
+          return "handled";
+        }
+        sendJson(response, retry.kind === "completed" ? 200 : 202, publicReview(retry.job));
+      } catch {
+        sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo reintentar la revisión en este momento.");
       }
       return "handled";
     }
@@ -54,19 +88,7 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión.");
         return "handled";
       }
-      const data = ReviewResponseSchema.parse(job.status === "completed" && job.record ? {
-        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
-        status: "completed", analysis: job.record.analysis, progress: 100, updatedAt: job.updatedAt,
-      } : job.status === "failed" ? {
-        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
-        status: "failed", message: job.message ?? "No se pudo completar la revisión en este momento.", updatedAt: job.updatedAt,
-      } : job.status === "running" ? {
-        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
-        status: "running", progress: job.progress, updatedAt: job.updatedAt,
-      } : {
-        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
-        status: "queued", createdAt: job.createdAt, progress: job.progress, updatedAt: job.updatedAt,
-      });
+      const data = publicReview(job);
       sendJson(response, 200, data);
       return "handled";
     }
@@ -128,6 +150,22 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
 
     return "unhandled";
   };
+}
+
+function publicReview(job: ReviewJobView) {
+  return ReviewResponseSchema.parse(job.status === "completed" && job.record ? {
+    id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
+    status: "completed", analysis: job.record.analysis, progress: 100, updatedAt: job.updatedAt,
+  } : job.status === "failed" ? {
+    id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
+    status: "failed", message: "No se pudo completar la revisión en este momento.", updatedAt: job.updatedAt,
+  } : job.status === "running" ? {
+    id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
+    status: "running", progress: job.progress, updatedAt: job.updatedAt,
+  } : {
+    id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha,
+    status: "queued", createdAt: job.createdAt, progress: job.progress, updatedAt: job.updatedAt,
+  });
 }
 
 async function readJson(request: IncomingMessage, response: ServerResponse): Promise<unknown | undefined> {

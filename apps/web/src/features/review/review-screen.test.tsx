@@ -40,6 +40,7 @@ const actions = {
     progress: 0,
     createdAt: "2026-11-04T12:00:00.000Z",
   } })),
+  onRetry: vi.fn(async () => ({ ok: true as const, data: completed })),
   onRefresh: vi.fn(async () => ({ ok: true as const, data: completed })),
   onGenerateSubmission: vi.fn(async () => ({ ok: false as const, error: { code: "TEST", message: "hidden" } })),
   onPdf: vi.fn(async () => ({ ok: true as const, data: new Blob(["pdf"]) })),

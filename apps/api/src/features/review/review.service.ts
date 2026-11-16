@@ -12,6 +12,7 @@ import {
   type ReviewResponse,
   type SubmissionSnapshot,
 } from "@fragments/contracts";
+import { ReviewProcessingError, type ReviewStage } from "./review-errors.js";
 
 export type ReviewContext = {
   projectId: string;
@@ -26,7 +27,7 @@ export type ReviewAiBudget = {
   signal: AbortSignal;
 };
 export type ReviewAiInput = { packedText: string; snapshotFiles: Array<{ path: string; content: string }>; rubricVersion: string; inputDigest: string; snapshotDigest: string; budget: ReviewAiBudget };
-export type ReviewProcessingSignal = { signal?: AbortSignal };
+export type ReviewProcessingSignal = { signal?: AbortSignal; onStage?: (stage: ReviewStage) => void };
 type SubmissionResponseData = ReturnType<typeof SubmissionResponseSchema.parse>;
 export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
 export type ReviewRecord = {
@@ -192,39 +193,67 @@ export function createReviewService(dependencies: ReviewDependencies) {
   }
 
   return {
-    async review(rawRequest: unknown, rawContext: unknown, options: { signal?: AbortSignal; reviewId?: string; leaseOwner?: string } = {}) {
-      const request = parseReviewRequest(rawRequest);
-      const context = parseReviewContext(rawContext);
-      const key = await keyFor(request, context);
-      const cached = await dependencies.evaluations.getByKey(key);
-      if (cached) return toPublicReviewResponse(cached);
+    async review(rawRequest: unknown, rawContext: unknown, options: { signal?: AbortSignal; onStage?: (stage: ReviewStage) => void; reviewId?: string; leaseOwner?: string } = {}) {
+      let stage: ReviewStage = "snapshot_validation";
+      try {
+        const request = parseReviewRequest(rawRequest);
+        const context = parseReviewContext(rawContext);
+        const key = await keyFor(request, context);
+        const cached = await dependencies.evaluations.getByKey(key);
+        if (cached) return toPublicReviewResponse(cached);
 
-      const commitRequest = { owner: request.owner, repo: request.repo, commitSha: request.commitSha };
-      const rawSnapshot = options.signal
-        ? await dependencies.repository.getCommitSnapshot(commitRequest, { signal: options.signal })
-        : await dependencies.repository.getCommitSnapshot(commitRequest);
-      const snapshot = await validateSnapshot(rawSnapshot, request);
-      const packed = await dependencies.packer.pack(snapshot, { maxBytes, maxTokens, ...(options.signal ? { signal: options.signal } : {}) });
-      if (new TextEncoder().encode(packed.text).length > maxBytes || packed.tokenCount > maxTokens) throw new Error("El contenido empaquetado supera el presupuesto de revisión.");
-      if (await sha256(packed.text) !== packed.inputDigest) throw new Error("La huella del contenido empaquetado no coincide.");
-      const timeoutSignal = AbortSignal.timeout(aiTimeoutMs);
-      const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
-      const analysis = await validateEvidence(AiAnalysisSchema.parse(await dependencies.ai.analyze({
-        packedText: packed.text,
-        snapshotFiles: snapshot.files.map(({ path, content }) => ({ path, content })),
-        rubricVersion: context.rubricVersion,
-        inputDigest: packed.inputDigest,
-        snapshotDigest: snapshot.digest,
-        budget: { maxInputBytes: maxBytes, maxInputTokens: maxTokens, maxOutputTokens, timeoutMs: aiTimeoutMs, signal },
-      })), snapshot, packed.inputDigest);
-      if (analysis.rubricVersion !== context.rubricVersion) throw new Error("El análisis devolvió una rúbrica distinta a la solicitada.");
-      if (packed.omittedPaths?.length) analysis.limitations.push(`El presupuesto omitió ${packed.omittedPaths.length} archivo(s): ${packed.omittedPaths.slice(0, 20).join(", ")}${packed.omittedPaths.length > 20 ? ", …" : ""}.`);
-      const record = await dependencies.evaluations.save({
-        id: options.reviewId ?? id(), key, projectId: context.projectId, owner: request.owner, repo: request.repo, commitSha: snapshot.commitSha,
-        rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion,
-        updatedAt: now().toISOString(), packedDigest: packed.inputDigest, analysis,
-      }, options.leaseOwner ? { owner: options.leaseOwner } : undefined);
-      return toPublicReviewResponse(record);
+        const commitRequest = { owner: request.owner, repo: request.repo, commitSha: request.commitSha };
+        stage = "repository";
+        options.onStage?.(stage);
+        const rawSnapshot = options.signal
+          ? await dependencies.repository.getCommitSnapshot(commitRequest, { signal: options.signal })
+          : await dependencies.repository.getCommitSnapshot(commitRequest);
+        stage = "snapshot_validation";
+        options.onStage?.(stage);
+        const snapshot = await validateSnapshot(rawSnapshot, request);
+        stage = "packing";
+        options.onStage?.(stage);
+        const packed = await dependencies.packer.pack(snapshot, { maxBytes, maxTokens, ...(options.signal ? { signal: options.signal } : {}) });
+        if (new TextEncoder().encode(packed.text).length > maxBytes || packed.tokenCount > maxTokens) {
+          throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
+        }
+        if (await sha256(packed.text) !== packed.inputDigest) throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
+        const timeoutSignal = AbortSignal.timeout(aiTimeoutMs);
+        const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+        stage = "ai_dispatch";
+        options.onStage?.(stage);
+        const rawAnalysis = await dependencies.ai.analyze({
+          packedText: packed.text,
+          snapshotFiles: snapshot.files.map(({ path, content }) => ({ path, content })),
+          rubricVersion: context.rubricVersion,
+          inputDigest: packed.inputDigest,
+          snapshotDigest: snapshot.digest,
+          budget: { maxInputBytes: maxBytes, maxInputTokens: maxTokens, maxOutputTokens, timeoutMs: aiTimeoutMs, signal },
+        });
+        stage = "analysis_validation";
+        options.onStage?.(stage);
+        const analysis = await validateEvidence(AiAnalysisSchema.parse(rawAnalysis), snapshot, packed.inputDigest);
+        if (analysis.rubricVersion !== context.rubricVersion) throw new ReviewProcessingError("analysis_validation", "AI_OUTPUT_INVALID", "manual");
+        if (packed.omittedPaths?.length) analysis.limitations.push(`El presupuesto omitió ${packed.omittedPaths.length} archivo(s): ${packed.omittedPaths.slice(0, 20).join(", ")}${packed.omittedPaths.length > 20 ? ", …" : ""}.`);
+        stage = "result_persistence";
+        options.onStage?.(stage);
+        const record = await dependencies.evaluations.save({
+          id: options.reviewId ?? id(), key, projectId: context.projectId, owner: request.owner, repo: request.repo, commitSha: snapshot.commitSha,
+          rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion,
+          updatedAt: now().toISOString(), packedDigest: packed.inputDigest, analysis,
+        }, options.leaseOwner ? { owner: options.leaseOwner } : undefined);
+        return toPublicReviewResponse(record);
+      } catch (error) {
+        if (error instanceof ReviewProcessingError) throw error;
+        const defaultCode = stage === "snapshot_validation" ? "SNAPSHOT_INVALID"
+          : stage === "repository" ? "GITHUB_UNAVAILABLE"
+            : stage === "packing" ? "PACK_RUNNER_FAILED"
+              : stage === "ai_dispatch" ? "AI_OUTCOME_UNCERTAIN"
+                : stage === "analysis_validation" ? "AI_OUTPUT_INVALID"
+                  : stage === "result_persistence" ? "RESULT_PERSIST_FAILED" : "REVIEW_UNCLASSIFIED";
+        const defaultClass = stage === "snapshot_validation" ? "permanent" : "manual";
+        throw new ReviewProcessingError(stage, defaultCode, defaultClass);
+      }
     },
 
     getFeedback(reviewId: string, guidanceLevel: 1 | 2 | 3 | 4) {

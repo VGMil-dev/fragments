@@ -16,6 +16,7 @@ import "./review-screen.css";
 export interface ReviewScreenProps {
   initialReview?: AsyncState<ReviewResponse>;
   onQueue: (request: ReviewRequest) => Promise<ApiResult<ReviewResponse>>;
+  onRetry: (reviewId: string) => Promise<ApiResult<ReviewResponse>>;
   onRefresh: (reviewId: string) => Promise<ApiResult<ReviewResponse>>;
   onGenerateSubmission: (request: CreateReviewSubmissionRequest) => Promise<ApiResult<ReviewSubmissionResponse>>;
   onPdf: (submissionId: string) => Promise<ApiResult<Blob>>;
@@ -31,7 +32,7 @@ function evidenceLabel(evidence: EvidenceReference): string {
     : `Campo: ${evidence.field}`;
 }
 
-export function ReviewScreen({ initialReview, onQueue, onRefresh, onGenerateSubmission, onPdf, onBack, mode = "real" }: ReviewScreenProps) {
+export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, mode = "real" }: ReviewScreenProps) {
   const initialData = initialReview?.status === "success" ? initialReview.data : undefined;
   const [fields, setFields] = useState<ReviewFields>(() => initialData
     ? { owner: initialData.owner, repo: initialData.repo, commitSha: initialData.commitSha }
@@ -77,6 +78,19 @@ export function ReviewScreen({ initialReview, onQueue, onRefresh, onGenerateSubm
         : { status: "error", retry: () => void refreshReview(reviewId) });
     } catch {
       setReviewState({ status: "error", retry: () => void refreshReview(reviewId) });
+    }
+  }
+
+  async function retryReview(reviewId: string) {
+    setReviewState({ status: "loading" });
+    setSubmission(null);
+    try {
+      const result = await onRetry(reviewId);
+      setReviewState(result.ok
+        ? { status: "success", data: result.data }
+        : { status: "error", retry: () => void retryReview(reviewId) });
+    } catch {
+      setReviewState({ status: "error", retry: () => void retryReview(reviewId) });
     }
   }
 
@@ -163,7 +177,7 @@ export function ReviewScreen({ initialReview, onQueue, onRefresh, onGenerateSubm
           <div className="review-failed" role="alert">
             <h3>No se pudo completar este análisis</h3>
             <p>Revisa el commit e inténtalo de nuevo.</p>
-            <button className="button button--light" type="button" onClick={() => void queueReview()}>Intentar de nuevo</button>
+            <button className="button button--light" type="button" onClick={() => void retryReview(currentReview.id)}>Intentar de nuevo</button>
           </div>
         ) : null}
         {currentReview?.status === "completed" ? (

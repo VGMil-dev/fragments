@@ -191,6 +191,31 @@ const migrations = [
       withdrawn_at TEXT NOT NULL
     );`,
   },
+  {
+    version: 11,
+    sql: `ALTER TABLE jobs ADD COLUMN last_stage TEXT;
+    ALTER TABLE jobs ADD COLUMN last_error_code TEXT;
+    ALTER TABLE jobs ADD COLUMN retry_class TEXT CHECK (retry_class IS NULL OR retry_class IN ('transient', 'permanent', 'manual'));
+    ALTER TABLE jobs ADD COLUMN next_retry_at INTEGER;
+    CREATE TABLE review_attempts (
+      job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+      attempt INTEGER NOT NULL CHECK (attempt > 0),
+      started_at INTEGER,
+      finished_at INTEGER,
+      duration_ms INTEGER,
+      stage TEXT,
+      error_code TEXT,
+      retry_class TEXT CHECK (retry_class IS NULL OR retry_class IN ('transient', 'permanent', 'manual')),
+      final_status TEXT NOT NULL CHECK (final_status IN ('running', 'completed', 'failed')),
+      PRIMARY KEY (job_id, attempt)
+    );
+    CREATE INDEX review_attempts_started ON review_attempts(started_at DESC);
+    UPDATE jobs SET last_stage='unknown', last_error_code='LEGACY_UNCLASSIFIED', retry_class='manual'
+      WHERE type='review' AND status='failed';
+    INSERT OR IGNORE INTO review_attempts(job_id, attempt, started_at, finished_at, duration_ms, stage, error_code, retry_class, final_status)
+      SELECT id, attempts, NULL, updated_at, NULL, 'unknown', 'LEGACY_UNCLASSIFIED', 'manual', 'failed'
+      FROM jobs WHERE type='review' AND status='failed' AND attempts > 0;`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

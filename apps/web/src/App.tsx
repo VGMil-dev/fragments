@@ -171,6 +171,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         {path === "/student/review" ? (
           <ReviewScreen
             onQueue={(request) => studentApi.createReview(request)}
+            onRetry={(reviewId) => studentApi.retryReview(reviewId)}
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}

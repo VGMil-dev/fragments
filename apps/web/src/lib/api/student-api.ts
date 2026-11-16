@@ -14,7 +14,6 @@ import {
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
-  ReviewQueuedResponseSchema,
   type ApiResult,
   type CreateMentorSubmissionRequest,
   type CreateProposalRequest,
@@ -114,7 +113,13 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
     createReview(input: ReviewRequest, signal?: AbortSignal): Promise<ApiResult<ReviewResponse>> {
       const request = ReviewRequestSchema.safeParse(input);
       if (!request.success) return Promise.resolve(invalid<ReviewResponse>());
-      return client.request("/api/reviews", ReviewQueuedResponseSchema, jsonRequest("POST", request.data, signal));
+      return client.request("/api/reviews", ReviewResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+
+    retryReview(reviewId: string, signal?: AbortSignal): Promise<ApiResult<ReviewResponse>> {
+      const id = encodeId(reviewId);
+      if (!id) return Promise.resolve(invalid<ReviewResponse>());
+      return client.request(`/api/reviews/${id}/retry`, ReviewResponseSchema, withSignal(signal, { method: "POST" }));
     },
 
     getReview(reviewId: string, signal?: AbortSignal): Promise<ApiResult<ReviewResponse>> {

@@ -38,7 +38,7 @@ describe("Repomix temporary-tree adapter", () => {
   it("rejects unsafe snapshot paths without invoking Repomix", async () => {
     const runCli = vi.fn();
     const packer = createRepomixRepositoryPacker(runCli);
-    await expect(packer.pack({ ...snapshot, files: [{ path: "../escape.ts", content: "bad", sha: "f".repeat(40) }] }, { maxBytes: 1000, maxTokens: 1000 })).rejects.toThrow("ruta no válida");
+    await expect(packer.pack({ ...snapshot, files: [{ path: "../escape.ts", content: "bad", sha: "f".repeat(40) }] }, { maxBytes: 1000, maxTokens: 1000 })).rejects.toMatchObject({ errorCode: "PACK_REJECTED", retryClass: "permanent" });
     expect(runCli).not.toHaveBeenCalled();
   });
 
@@ -49,7 +49,7 @@ describe("Repomix temporary-tree adapter", () => {
       await writeFile(options.outputFilePath, "x".repeat(100));
     });
     const packer = createRepomixRepositoryPacker(runCli);
-    await expect(packer.pack(snapshot, { maxBytes: 50, maxTokens: 100 })).rejects.toThrow("presupuesto de bytes");
+    await expect(packer.pack(snapshot, { maxBytes: 50, maxTokens: 100 })).rejects.toMatchObject({ errorCode: "PACK_REJECTED", retryClass: "permanent" });
     await expect(readdir(roots[0]!)).rejects.toThrow();
   });
 });
