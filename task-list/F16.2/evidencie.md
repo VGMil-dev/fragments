@@ -55,4 +55,4 @@ CONDITIONAL REVIEW: rondas Goldfish cerradas con dos rondas limpias consecutivas
 ## Commits
 
 - Commits de implementación: `7fb1739` (dock, arte y estilos), `6936482` (marca del encabezado público alineada con las capturas adjuntas).
-- Paquete inicial de documentación/evidencia con capturas y checklist: `78b52d5`; actualización final de capturas y QA R9/R10: pendiente.
+- Paquete inicial de documentación/evidencia con checklist: `78b52d5`; capturas finales y actualización QA R9/R10: `716174d`.
