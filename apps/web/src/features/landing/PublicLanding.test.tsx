@@ -12,6 +12,8 @@ describe("F16.2 portada pública", () => {
     expect(header).toContain("Iniciar sesión");
     expect(header).toContain("Crear cuenta");
     expect(header).toContain("Fragments<span class=\"brand__period\">.</span>");
+    expect(header).toContain('src="/brand/fragments-isotipo-recto.svg"');
+    expect(header).toContain('width="40" height="32"');
     expect(header.match(/href="\/student\/login"/g)).toHaveLength(2);
     expect(header).not.toContain("Cómo funciona");
   });
@@ -26,6 +28,8 @@ describe("F16.2 portada pública", () => {
     expect(hero).toContain("Desarrollo sin límites");
     expect(hero).toContain("Ideas que inspiran");
     expect(hero).toContain("Comunidad unida");
+    expect(hero.match(/stroke-width="1\.8"/g)).toHaveLength(3);
+    expect(hero.match(/<svg\b(?=[^>]*aria-hidden="true")[^>]*>/g)).toHaveLength(4);
     expect(hero.match(/class="f162-benefit-full"/g)).toHaveLength(3);
     expect(hero.match(/(?:aria-hidden="true" class="f162-benefit-short"|class="f162-benefit-short" aria-hidden="true")/g)).toHaveLength(3);
     expect(hero).toContain("Un nuevo capítulo comienza...");

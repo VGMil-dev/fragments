@@ -1,5 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
+import { Lightbulb, Rocket, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, ProposalResponse, StudentMe, UpdateProposalRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
@@ -226,7 +227,7 @@ export function App() {
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
       <header className="f162-header">
         <a className="brand" href="#inicio" aria-label="Fragments, ir al inicio">
-          <BrandMark className="brand__icon" />
+          <img className="brand__icon f162-isotipo" src="/brand/fragments-isotipo-recto.svg" alt="" width={40} height={32} />
           <span className="brand__name">Fragments<span className="brand__period">.</span></span>
         </a>
         <nav className="f162-auth" aria-label="Acceso">
@@ -247,15 +248,15 @@ export function App() {
             <div className="f162-dock-inner">
               <ul className="f162-benefits" aria-label="Lo que encontrarás en Fragments">
                 <li>
-                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14 2 19l5-2 3-3M11 13l-2-2c2-5 5-7 12-8-1 7-3 10-8 12l-2-2ZM8 16l-2 3"/><path d="M14 9h.01"/></svg></span>
+                  <span aria-hidden="true" className="f162-benefit-icon"><Rocket size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
                   <span className="f162-benefit-full">Desarrollo sin límites</span><span aria-hidden="true" className="f162-benefit-short">Desarrollo</span>
                 </li>
                 <li>
-                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6m-5 3h4m-5-7a7 7 0 1 1 6 0c-1 1-1 2-1 4h-4c0-2 0-3-1-4ZM12 1v2M2 10h2M20 10h2"/></svg></span>
+                  <span aria-hidden="true" className="f162-benefit-icon"><Lightbulb size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
                   <span className="f162-benefit-full">Ideas que inspiran</span><span aria-hidden="true" className="f162-benefit-short">Ideas</span>
                 </li>
                 <li>
-                  <span aria-hidden="true" className="f162-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 19c0-4 3-6 6-6s6 2 6 6M11 19c0-4 3-6 6-6s5 2 5 6"/></svg></span>
+                  <span aria-hidden="true" className="f162-benefit-icon"><UsersRound size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
                   <span className="f162-benefit-full">Comunidad unida</span><span aria-hidden="true" className="f162-benefit-short">Comunidad</span>
                 </li>
               </ul>

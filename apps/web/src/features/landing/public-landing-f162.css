@@ -23,6 +23,7 @@
 }
 
 .f162-header .brand { min-height: 44px; gap: 10px; }
+.f162-header .f162-isotipo { flex: 0 0 auto; width: 40px; height: auto; border-radius: 0; }
 .f162-header .brand__name { color: var(--f16-text-primary); }
 .f162-header .brand__period { color: var(--f16-lime); }
 .f162-auth { display: flex; align-items: center; gap: 12px; }
@@ -95,27 +96,28 @@
 .f162-intro h1 {
   margin: 0 0 8px;
   color: var(--f16-text-primary);
-  font-size: clamp(56px, 5.1vw, 84px);
+  font-size: clamp(60px, 5.35vw, 88px);
   font-weight: 850;
-  line-height: 1.02;
+  line-height: 1;
   letter-spacing: -.065em;
 }
 .f162-tagline {
-  margin: 0;
+  margin: 0 0 2px;
   color: #00e2fa;
-  font-size: clamp(23px, 2vw, 30px);
-  font-weight: 550;
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 650;
   line-height: 1.35;
   letter-spacing: -.03em;
 }
 .f162-description {
-  max-width: 340px;
-  margin: 24px 0 0;
+  max-width: 380px;
+  margin: 20px 0 0;
   padding-left: 15px;
   border-left: 3px solid var(--f16-lime);
   color: #edf3ff;
-  font-size: clamp(16px, 1.2vw, 18px);
-  line-height: 1.6;
+  font-size: clamp(16px, 1.25vw, 18px);
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .f162-dock {
@@ -155,7 +157,7 @@
 }
 .f162-benefits li:first-child { padding-left: 0; }
 .f162-benefits li:last-child { border-right: 0; }
-.f162-benefit-icon { flex: 0 0 auto; width: 27px; height: 27px; color: var(--f16-lime); }
+.f162-benefit-icon { flex: 0 0 auto; width: 22px; height: 22px; color: var(--f16-lime); }
 .f162-benefit-icon svg { display: block; width: 100%; height: 100%; }
 .f162-benefit-full { font-size: clamp(13px, .98vw, 16px); font-weight: 720; letter-spacing: -.01em; line-height: 1.32; }
 .f162-benefit-short { display: none; }
@@ -188,7 +190,7 @@
     min-height: 0;
   }
   .f162-intro { grid-row: 1; width: auto; margin: 0; padding: 30px var(--f162-pad) 28px; }
-  .f162-intro h1 { font-size: clamp(54px, 6vw, 68px); }
+  .f162-intro h1 { font-size: clamp(56px, 6vw, 70px); }
   .f162-description { max-width: 480px; margin-top: 14px; }
   .f162-visual { position: relative; grid-row: 2; inset: auto; z-index: 0; width: auto; aspect-ratio: 2 / 1; min-height: 0; margin: 0 22px; }
   .f162-art-image { object-fit: cover; object-position: center; }
@@ -196,7 +198,7 @@
   .f162-dock { grid-row: 3; }
   .f162-dock-inner { gap: 12px; padding: 12px 22px; }
   .f162-benefits li { gap: 8px; padding: 8px 10px; }
-  .f162-benefit-icon { width: 22px; height: 22px; }
+  .f162-benefit-icon { width: 20px; height: 20px; }
   .f162-action { gap: 0; }
   .f162-action p { display: none; }
   .f162-start { min-width: 148px; }
@@ -206,14 +208,14 @@
   .f162-landing { --f162-header-height: 70px; }
   .f162-landing .f162-header { min-height: 70px; padding: 10px 18px; gap: 10px; }
   .f162-header .brand { gap: 8px; }
-  .f162-header .brand__icon { width: 32px; height: 32px; }
+  .f162-header .f162-isotipo { width: 36px; }
   .f162-header .brand__name { font-size: 18px; }
   .f162-auth { gap: 8px; }
   .f162-auth a { min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 12px; border-radius: 10px; }
   .f162-landing .f162-hero { display: flex; flex-direction: column; min-height: 0; overflow: visible; }
   .f162-intro { order: 1; align-self: stretch; width: auto; margin: 0; padding: clamp(44px, 8vh, 68px) 22px 4px; }
   .f162-intro h1 { margin-bottom: 5px; font-size: clamp(43px, 11vw, 57px); }
-  .f162-tagline { font-size: 21px; }
+  .f162-tagline { margin-bottom: 0; font-size: 21px; }
   .f162-description { max-width: 320px; margin-top: 18px; font-size: 16px; line-height: 1.55; }
   .f162-visual { position: relative; order: 2; inset: auto; z-index: 0; width: 100%; aspect-ratio: 2 / 1; margin-top: 22px; }
   .f162-visual::after { background: linear-gradient(180deg, rgba(3, 6, 17, .08), transparent 68%, rgba(3, 6, 17, .55)); }
@@ -223,7 +225,7 @@
   .f162-benefits li { flex: 1; justify-content: center; gap: 5px; padding: 0 9px; }
   .f162-benefits li:first-child { justify-content: flex-start; padding-left: 0; }
   .f162-benefits li:last-child { justify-content: flex-end; padding-right: 0; }
-  .f162-benefit-icon { width: 17px; height: 17px; }
+  .f162-benefit-icon { width: 16px; height: 16px; }
   .f162-benefit-full {
     position: absolute;
     width: 1px;
@@ -251,7 +253,7 @@
   .f162-tagline { font-size: 19px; }
   .f162-dock-inner { padding-right: 18px; padding-left: 18px; }
   .f162-benefit-short { font-size: 11px; }
-  .f162-benefit-icon { width: 15px; height: 15px; }
+  .f162-benefit-icon { width: 16px; height: 16px; }
   .f162-visual { aspect-ratio: 2 / 1; }
 }
 
