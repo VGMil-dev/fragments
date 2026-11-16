@@ -44,7 +44,7 @@
 
 ## Auditoría Goldfish
 
-Pendiente: dos rondas consecutivas independientes sobre el estado final documentado. El reporte anterior de F16.5 detectó solo esta falta de evidencia y se descartó como ronda limpia hasta completar el registro.
+Ronda 1 — 2026-11-16: CLEAN por dos auditores independientes (Brand/Implementation y UX/Accessibility). Revisaron el diff, alcance, proporción y bytes del SVG, Lucide/lockfile, capturas e implementación. No reportaron defectos accionables. Limitación compartida: no repitieron Ego Lite; navegador y tamaños se revisaron en evidencia/capturas, y zoom nativo/lector de pantalla siguen NOT_VERIFIED. Esta ronda cuenta como limpia, no verificó de nuevo runtime.
 
 Commit de implementación: `8c3cb958cbe6cd04dea82dbf46a3699564fe69e5` (`feat(F16.5): refina identidad de la portada`).
 
