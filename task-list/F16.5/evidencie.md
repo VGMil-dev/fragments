@@ -52,4 +52,6 @@ Commit de implementación: `8c3cb958cbe6cd04dea82dbf46a3699564fe69e5` (`feat(F16
 
 ## Estado de integración/publicación
 
-Implementación y quality gates locales listos; falta registrar hashes de commits, completar Goldfish final, abrir PR, checks remotos, merge, siguiente PATCH, release, pipeline de producción y smoke test según autorización explícita del propietario. No se omitirán protecciones ni checks.
+`origin/main` se actualizó el 2026-11-16 a `85244808d4f962f022b4a3cf412d20825715edb4` (HEAD protegido; check requerido `verify`) y se integró con merge normal en `4ee8c589813d9c73cbb155433dc0041fbb8d0228`. La suite pos-merge `pnpm exec turbo run test typecheck lint build --force` pasó 10/10 tareas Turbo y 236/236 pruebas; `git diff --check` pasó. El último release consultado es `v0.4.6`; siguiente PATCH previsto `v0.4.7`. `allow_auto_merge=false`; se usará merge normal al pasar `verify`.
+
+Implementación y quality gates locales listos; falta PR, checks remotos, merge, PATCH/tag, pipeline de producción y smoke test según autorización explícita. No se omitirán protecciones ni checks.
