@@ -46,6 +46,8 @@
 
 Ronda 1 — 2026-11-16: CLEAN por dos auditores independientes (Brand/Implementation y UX/Accessibility). Revisaron el diff, alcance, proporción y bytes del SVG, Lucide/lockfile, capturas e implementación. No reportaron defectos accionables. Limitación compartida: no repitieron Ego Lite; navegador y tamaños se revisaron en evidencia/capturas, y zoom nativo/lector de pantalla siguen NOT_VERIFIED. Esta ronda cuenta como limpia, no verificó de nuevo runtime.
 
+Ronda 2 — 2026-11-16: CLEAN por dos auditores independientes. Revisaron regresiones, rutas y autenticación, responsive, recursos, dependencias, alcance y restricciones de publicación. Un auditor cuestionó `task-list/TASKS.md`; se consideró y resolvió como no aplicable: `AGENTS.md` reserva esa lista al planner y la fila F16.5 asigna explícitamente el trabajo a PLANNER, función que desempeña este orquestador. El otro auditor no encontró defectos accionables. No quedaron hallazgos Blocker/Major sin resolver; por definición EGM se registran dos rondas consecutivas limpias (converged). Limitaciones: no repitieron navegador ni pruebas; se basan en capturas/evidencia local, y zoom nativo/lector de pantalla continúan NOT_VERIFIED.
+
 Commit de implementación: `8c3cb958cbe6cd04dea82dbf46a3699564fe69e5` (`feat(F16.5): refina identidad de la portada`).
 
 ## Estado de integración/publicación
