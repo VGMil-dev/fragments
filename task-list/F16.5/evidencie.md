@@ -39,12 +39,14 @@
 
 - Rojo TDD: la prueba de portada falló inicialmente por ausencia del logo maestro y del stroke Lucide esperado; tras integrar los cambios, `pnpm --filter @fragments/web exec vitest run src/features/landing/PublicLanding.test.tsx` pasó 3/3.
 - `pnpm --filter @fragments/contracts build`: PASS, exit 0.
-- `pnpm exec turbo run test typecheck build --force`: PASS, exit 0; 9/9 tareas Turbo; 52 archivos y 236 pruebas (contracts 19, API 123, web 94), typecheck y build en los tres paquetes. Vite muestra avisos informativos de directivas de módulo en Lucide; no afectan build ni runtime.
+- `pnpm exec turbo run test typecheck lint build --force`: PASS, exit 0; 10/10 tareas Turbo; 52 archivos y 236 pruebas (contracts 19, API 123, web 94), typecheck y build en los tres paquetes. Vite muestra avisos informativos de directivas de módulo en Lucide; no afectan build ni runtime.
 - `git diff --check`: PASS. Diff auditado; no contiene secretos ni cambios en `.env`, autenticación, contratos, backend, infraestructura o rutas privadas.
 
 ## Auditoría Goldfish
 
 Pendiente: dos rondas consecutivas independientes sobre el estado final documentado. El reporte anterior de F16.5 detectó solo esta falta de evidencia y se descartó como ronda limpia hasta completar el registro.
+
+Commit de implementación: `8c3cb958cbe6cd04dea82dbf46a3699564fe69e5` (`feat(F16.5): refina identidad de la portada`).
 
 ## Estado de integración/publicación
 
