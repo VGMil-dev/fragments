@@ -12,12 +12,13 @@
 
 - Unificación del dock inferior con beneficios, bienvenida y CTA; se eliminó la CTA duplicada del cierre de la portada.
 - Enlace de inicio y acceso/creación de cuenta conectados al acceso estudiantil GitHub existente. El texto accesible aclara el flujo.
+- El lockup del encabezado público usa «Fragments.» como en las referencias adjuntas; se añadió aserción específica. La marca de rutas privadas no se modificó.
 - Ajustes específicos para 1024 px y pantallas móviles; lista accesible de beneficios con etiquetas visuales cortas en móvil.
 - Recurso estático con preload; sin video ni generación de arte.
 
 ## Verificación automatizada
 
-- `pnpm test` — PASS: contracts 19/19, API 123/123, web 88/88; 230 pruebas totales.
+- `pnpm test` — PASS, ejecución final posterior al ajuste tipográfico: contracts 19/19, API 123/123, web 88/88; 230 pruebas totales.
 - `pnpm typecheck` — PASS (4 tareas Turbo).
 - `pnpm build` — PASS (3 tareas Turbo; Vite 161 módulos).
 - `git diff --check` — PASS.
@@ -25,11 +26,12 @@
 
 ## QA visual, responsive y accesibilidad
 
-- Ego Lite (v2.2.1), viewport reproducible: 1440×900, 1024×900, 768×900, 390×844, 375×812 y 320×909. Imágenes finales en `task-list/F16.2/screenshots/after-{1440,1024,768,390,375,320}.png`; comparadas individualmente con las seis referencias correspondientes y la comparativa objetivo del paquete.
+- Ego Lite (v2.2.1), viewport reproducible: 1440×900, 1024×900, 768×900, 390×844, 375×812 y 320×909. Imágenes finales regeneradas tras ajustar la marca en `task-list/F16.2/screenshots/after-{1440,1024,768,390,375,320}.png`. Comparadas con las referencias de kit de 1440/1024/768/390/320, la vista 375 adicional y las dos imágenes adjuntas por el usuario (escritorio 1440 y móvil 390).
 - En las seis medidas: arte cargado, sin overflow horizontal, CTA con altura ≥52 px. A 1024 el arte queda inset 22 px; en 390 inicia cerca de y=309 (referencia ≈305); a 320 el CTA queda en x=18, y≈619, w=284, h=52. Resto de offsets observados son de pocos píxeles y no bloquean.
 - Se comprobó orden de tabulador (skip link, marca, iniciar sesión, crear cuenta, Comenzar) y outline visible; Enter en Comenzar lleva a `/student/login`. Árbol de accesibilidad incluye los tres nombres completos.
 - No hay video/animación de fondo; con movimiento reducido la página sigue estática y la transición del CTA se desactiva.
-- **No verificado:** zoom nativo del navegador a 200/400 % (atajos del control remoto no alteraron zoom/viewport) y lector de pantalla real. Inspección de árbol AX no sustituye una sesión con lector de pantalla.
+- Se intentó zoom nativo con atajos `Control+Equal` (cinco y ocho pulsaciones) en Ego Lite; el viewport se mantuvo en 1920 CSS px y `visualViewport.scale` en 1, así que no se pudo cambiar/verificar zoom real.
+- **No verificado:** zoom nativo del navegador a 200/400 % y lector de pantalla real. Inspección de árbol AX no sustituye una sesión con lector de pantalla.
 
 ## Revisiones Goldfish
 
@@ -42,12 +44,15 @@
 - R6 funcional: CLEAN. R6 visual detectó recorte de la planta derecha con `cover`; se ajustó a `fill`, preservando la ilustración completa de la referencia.
 - R7 visual y funcional/accesibilidad: CLEAN en estado posterior a la corrección.
 - R8 visual y funcional/accesibilidad: CLEAN. Segunda ronda consecutiva limpia con revisores frescos; sin hallazgos accionables.
+- Tras la comparación explícita de las imágenes adjuntas, se corrigió la capitalización visible del lockup público y se actualizó su prueba.
+- R9 visual y funcional/accesibilidad: CLEAN, ambos revisores compararon las imágenes adjuntas en el estado actualizado.
+- R10 visual y funcional/accesibilidad: CLEAN. Segunda ronda consecutiva limpia con revisores frescos sobre la versión final; sin hallazgos accionables.
 
 ## Dictamen
 
-CONDITIONAL REVIEW: ronda Goldfish cerrada con dos rondas limpias consecutivas (R7 y R8). Zoom nativo del navegador y lector de pantalla real no fueron verificados, por lo que la revisión humana de esas dos condiciones sigue pendiente. No hubo acceso a servicios externos, push, merge, release o despliegue.
+CONDITIONAL REVIEW: rondas Goldfish cerradas con dos rondas limpias consecutivas después del último cambio (R9 y R10). Zoom nativo del navegador y lector de pantalla real no fueron verificados, por lo que la revisión humana de esas dos condiciones sigue pendiente. No hubo acceso a servicios externos, push, merge, release o despliegue.
 
 ## Commits
 
-- Commit de implementación: `7fb1739`.
-- Commit de documentación/evidencia con capturas y checklist: `78b52d5`.
+- Commits de implementación: `7fb1739` (dock, arte y estilos), `6936482` (marca del encabezado público alineada con las capturas adjuntas).
+- Paquete inicial de documentación/evidencia con capturas y checklist: `78b52d5`; actualización final de capturas y QA R9/R10: pendiente.
