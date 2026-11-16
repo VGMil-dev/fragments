@@ -11,6 +11,7 @@ describe("F16.2 portada pública", () => {
 
     expect(header).toContain("Iniciar sesión");
     expect(header).toContain("Crear cuenta");
+    expect(header).toContain("Fragments<span class=\"brand__period\">.</span>");
     expect(header.match(/href="\/student\/login"/g)).toHaveLength(2);
     expect(header).not.toContain("Cómo funciona");
   });

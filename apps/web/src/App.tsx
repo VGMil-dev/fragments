@@ -226,7 +226,7 @@ export function App() {
       <header className="f162-header">
         <a className="brand" href="#inicio" aria-label="Fragments, ir al inicio">
           <BrandMark className="brand__icon" />
-          <span className="brand__name">fragments<span className="brand__period">.</span></span>
+          <span className="brand__name">Fragments<span className="brand__period">.</span></span>
         </a>
         <nav className="f162-auth" aria-label="Acceso">
           <a className="f162-login" href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Iniciar sesión</a>
