@@ -50,4 +50,4 @@ CONDITIONAL REVIEW: ronda Goldfish cerrada con dos rondas limpias consecutivas (
 ## Commits
 
 - Commit de implementación: `7fb1739`.
-- Commit de documentación/evidencia: pendiente.
+- Commit de documentación/evidencia con capturas y checklist: `78b52d5`.
