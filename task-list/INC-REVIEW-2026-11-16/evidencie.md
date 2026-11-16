@@ -2,7 +2,7 @@
 
 ## Estado
 
-IN PROGRESS. No se desplegó ni se modificaron los seis trabajos originales.
+COMPLETED LOCAL. No se desplegó ni se modificaron los seis trabajos originales.
 
 ## Línea base
 
@@ -52,7 +52,8 @@ IN PROGRESS. No se desplegó ni se modificaron los seis trabajos originales.
 - `nginx -t`: exitoso con la imagen desplegada, ejecutada efímeramente y sin red.
 - Revisiones independientes: fiabilidad, seguridad OAuth/Nginx e idempotencia/persistencia. Rondas 5 y 6: las tres áreas CLEAN en ambas rondas consecutivas.
 - Rama local: `codex/review-incident-2026-11-16`; worktree aislado indicado arriba. Sin push, PR, deploy ni reejecución productiva.
-- Hash de commit y estado final: se agregarán después de confirmar el commit local.
+- Commit local de implementación: `ca77ac1` (`fix(review): recupera trabajos fallidos y protege logs`).
+- Estado final: readiness local PASS para revisión/PR; despliegue NO autorizado y no realizado. No hubo push ni PR.
 
 ### Plan de recuperación estudiantil
 
