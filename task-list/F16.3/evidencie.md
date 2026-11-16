@@ -60,4 +60,4 @@ Los pares de seis tamaños se guardan en `task-list/F16.3/screenshots/` como `be
 
 - Readiness: **READY FOR REVIEW**, sujeto a la limitación explícita de zoom nativo y lector de pantalla real no verificados.
 - Rama local: `codex/f16.3-final-visual-polish`; sin push, merge, release ni despliegue.
-- Commit de implementación: pendiente de registrar.
+- Commit de implementación local: `af8547e` (`feat(F16.3): pule portada pública`). El cierre de evidencia y estado de tarea se registra en un commit documental posterior.
