@@ -28,20 +28,20 @@
 ## Integración y QA
 
 - Solo cambió el markup del arte en el hero, un componente multimedia dedicado, su clase de opacidad de carga y pruebas de landing. El marco `.f162-visual`, 2:1, cabecera, intro, dock, paleta, espaciado, tipografía, beneficios, bienvenida, CTA y navegación se preservan. No se alteraron ilustraciones F16.3 ni otras rutas.
-- Capturas antes F16.3 y después F16.4 en `screenshots/{before,after}-{320,375,390,768,1024,1440}.png`.
-- En 320/375/390 el visual mantiene marcos 320×160, 375×188 y 390×195; descripción→escena 22 px y CTA→sección siguiente 32 px. En 768 la escena es 724×362 con margen lateral 22 px; a 1024 es 980×490; en 1440 el stage conserva el alto F16.3 de 715 px. No hubo desbordamiento horizontal en ningún ancho. Título, marca, texto, dock/beneficios y CTA se ven donde correspondía en la captura de referencia; el mensaje de bienvenida a 768/1024 sigue oculto por la regla de breakpoint F16.3.
-- El origen de video es 16:9 y el stage F16.3 2:1. Se usó `contain`, sin recortar sujeto, gato ni luna; quedan bandas Night a ambos lados del video (≈11,1% del ancho del marco en relación a la imagen completa). Esta diferencia de encuadre se deja explícita para la aprobación visual del propietario.
+- Capturas comparativas previas F16.3/F16.4 en `screenshots/{before,after}-{320,375,390,768,1024,1440}.png`; capturas del ajuste `object-fit: cover` en `screenshots/cover-{320,375,390,768,1024,1440}.png`, recapturadas con viewport CSS exacto.
+- La QA de F16.4 antes del ajuste mantuvo los espacios F16.3, título, marca, beneficios y CTA en los seis tamaños, sin desbordamiento. El mensaje de bienvenida sigue oculto en 768/1024 por la regla de breakpoint existente.
+- Ajuste visual a solicitud del propietario: poster y video ahora usan `object-fit: cover` en el mismo contenedor F16.3, sin tocar el layout. En los marcos 2:1 se recortan cerca de 40 px de la fuente arriba y abajo; la chica, el gato y la luna permanecen completos en las seis capturas. Ego Lite midió marcos 320×160, 375×187,5, 390×195, 724×362, 980×490 y 1440×795 px; `scrollWidth` coincidió con `innerWidth` en los seis anchos. Se pierden algunos detalles periféricos de la habitación. En el hero ancho, el ajuste también llena el marco sin crear una composición nueva.
 - Normal: 390 eligió y descargó solo `hero-mobile.webm`; 1024 eligió y descargó solo `hero-motion.webm`; MP4 queda como respaldo y no se descargó en navegador VP9. Los atributos observados son autoplay, muted, loop, playsInline, poster, `preload=none`, sin controles.
 - Reduced motion emulado antes de navegar: video 0, sources 0; se solicitó únicamente el poster. Imagen de fallback se conserva visible. Al bloquear WebM y MP4 para probar error real, ambas fuentes fallaron y el poster permaneció; no se bloqueó el título. Al desplazarse fuera del hero se desmonta el video; al regresar se carga/reproduce otra vez.
 - CTA en Ego Lite llega a `/student/login` (“Continúa con GitHub”); los enlaces y contenido público se conservan. Pruebas unitarias de LandingHeroMedia cubren poster/reduced-motion, atributos, fuente por viewport, cambio de breakpoint, desmontaje fuera de vista y fallback por error.
-- `pnpm exec turbo run test typecheck build --force` (verificación fresca 2026-11-15): PASS; 52 archivos/236 pruebas (contracts 19, API 123, web 94), typecheck y build PASS; Vite transformó 162 módulos. `git diff --check`: PASS.
+- `pnpm exec turbo run test typecheck build --force` (verificación fresca 2026-11-15): PASS; 52 archivos/236 pruebas (contracts 19, API 123, web 94), typecheck y build PASS; Vite transformó 162 módulos. Tras el ajuste se repitió el comando: 9/9 tareas PASS (tests, typecheck y build en contracts/API/web); `git diff --check` PASS.
 - Ego Lite skill ejecutada antes de visual QA. No se usó Playwright, Puppeteer ni otro navegador.
-- Goldfish R1 visual/funcional: **CLEAN / CLEAN**.
-- Goldfish R2 visual/funcional: **CLEAN / CLEAN**, segunda ronda consecutiva limpia. Ambas revisaron capturas, bucle y scope; confirmaron como pendiente separada la aprobación visual propietaria de las bandas laterales.
+- Goldfish R1 visual/funcional del ajuste `cover`: **CLEAN / CLEAN** tras revisar las capturas corregidas; confirmaron íntegros los sujetos clave.
+- Goldfish R2 visual/funcional del ajuste `cover`: **CLEAN / CLEAN**, segunda ronda consecutiva limpia. Revisaron el diff y las seis capturas; confirmaron sujetos completos, layout/fallback/reduced-motion intactos y recorte limitado a bordes periféricos.
 - Se ejecutó la skill `ego-browser` antes de QA visual/E2E; fue el único navegador. No se añadió ni usó Playwright, Puppeteer o alternativa.
 
 ## Dictamen y commits
 
-- Readiness: **PENDING OWNER VISUAL APPROVAL**. La revisión técnica Goldfish R1/R2 convergió; el propietario debe aceptar o rechazar las bandas laterales por la diferencia de ratio 16:9→2:1.
-- Commit local de implementación/evidencia visual: `0fa7880` (`feat(F16.4): integra video ambiental`). El cierre de estado se documentará en un commit de QA separado.
+- Readiness: **PENDING OWNER VISUAL APPROVAL** sobre el nuevo encuadre `cover`. R1/R2 convergieron; queda que el propietario confirme que prefiere llenar el marco aunque se recorten bordes periféricos.
+- Commits locales: `0fa7880` (`feat(F16.4): integra video ambiental`); `9850ee3` (9850ee3c6c85b56aef8c3da9ec1c26e9ee7135eb) (`feat(F16.4): llena el marco del hero`). `b9ed83c` (`docs(F16.4): corrige capturas del encuadre`). Capturas del encuadre final: `screenshots/cover-{320,375,390,768,1024,1440}.png`.
 - Sin push, merge, release ni despliegue.
