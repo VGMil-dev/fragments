@@ -8,7 +8,7 @@ La implementación y sus pruebas se limitan a estos paths:
 - `apps/api/src/adapters/ai/gateway-error.ts` y `gateway-error.test.ts`: clasificación redactada del error y extracción segura de Retry-After/IDs.
 - `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `gateway-dispatch-policy.test.ts`: política de despacho, backoff, límites y resultado financiero de reintentos.
 - `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts` y `gateway-mentor-evaluator.test.ts`: adaptación del SDK y preservación de estado/certeza de despacho.
-- `apps/api/src/features/mentor/service.ts`, `http.ts` y sus pruebas correspondientes: traducción del error a la interfaz Mentor.
+- `apps/api/src/features/mentor/service.ts`, `http.ts`, `service.test.ts` y `http.test.ts`: traducción del error a la interfaz Mentor.
 - `apps/api/src/db/migrate.ts`, `migrate.test.ts` y `open.test.ts`: migración aditiva y compatibilidad al abrir la base.
 - `apps/web/src/features/mentor/mentor-screen.tsx` y `mentor-screen.test.tsx`: presentación del rate limit/indisponibilidad sin reintento automático.
 - `task-list/INC-AI-GATEWAY-429/{intent.md,spec.md,evidencie.md,recovery-plan.md,goldfish_review_report.md}` y `task-list/TASKS.md`: alcance, evidencia y procedimiento operativo de este incidente.

@@ -55,6 +55,29 @@ describe("bounded shared Gateway dispatch policy", () => {
     expect(databases[0]!.prepare("SELECT COUNT(*) AS count FROM ai_budget_reservations WHERE operation_key=?").get(operationKey)).toEqual({ count: 1 });
   });
 
+  it("keeps an ambiguous dispatched 429 reservation uncertain after wrapping", async () => {
+    const ledger = makeLedger();
+    const generate = vi.fn(async () => {
+      throw Object.assign(rateLimitError(undefined, false), { providerDispatchPossible: true });
+    });
+    const failure = await ledger.run({
+      requestKind: "mentor",
+      inputTokens: 1_000,
+      outputTokens: 1_000,
+      operationKey: "8".repeat(64),
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
+        sleep: async () => { throw new Error("ambiguous dispatched request must not be retried"); },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", safeNoCharge: false, providerDispatchPossible: true });
+    expect(classifyGatewayFailure(failure)).toMatchObject({ gatewayHttpStatus: 429, providerDispatchPossible: true });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, settledMicroUsd: 0, reservedMicroUsd: 1 });
+    expect(databases[0]!.prepare("SELECT status FROM ai_budget_reservations WHERE operation_key=?").get("8".repeat(64))).toEqual({ status: "uncertain" });
+  });
+
   it("backs off with jitter, honors Retry-After, and settles one logical evaluation after recovery", async () => {
     const ledger = makeLedger();
     let now = 1_000;

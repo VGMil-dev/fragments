@@ -57,3 +57,22 @@ Resultados agregados R2 para `a71ef7a1cf050b43c496bb159fc7371ea9d819d6`:
 | Zoom Out | 0 | 0 | 1 |
 
 El Major de readiness se remedia con el alcance/esquema añadido arriba. Los Nits eran de trazabilidad en evidencia y spec de readiness; ahora se registra el SHA, commit y CI ya confirmados, y se deja explícito que la revisión del siguiente HEAD documental queda pendiente. La puerta de compatibilidad de la imagen API previa con esquema v12 sigue como condición de release en `recovery-plan.md`, no como Blocker/Major de merge.
+
+## Revisión fresca R3 y remediación en curso
+
+Goldfish volvió a revisar el HEAD `743007db0340bf3c93ca5e3dd20f8645ec3edd69`, comparado con la base `e25bacf1d4a3c32ca31fd510bbcb5d0a8b90cdb6` del PR. Conteo agregado:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 1 | 0 |
+| Implementation Readiness | 0 | 1 | 1 |
+| Zoom Out | 0 | 0 | 1 |
+
+Hallazgos:
+
+- **Major financiero (Codebase Details):** `GatewayRetryExhaustedError` no copiaba `providerDispatchPossible`. Un 429 ambiguo con señal explícita de despacho posible podía reclasificarse como rechazo sin cargo y permitir liberar la reserva del ledger.
+- **Major de alcance (Implementation Readiness):** la lista de archivos de Mentor decía “pruebas correspondientes” en lugar de enumerar `apps/api/src/features/mentor/service.test.ts` y `http.test.ts`.
+- **Nit (Implementation Readiness):** `origin/main` local apuntaba a `35546eb`, distinto de la base `e25bacf` solicitada para esta revisión. Goldfish usó el SHA base solicitado explícitamente.
+- **Nit (Zoom Out):** la evidencia y TASKS aún no tenían CI/Goldfish del SHA R3 bajo revisión.
+
+Remediación local posterior a R3: el wrapper ahora copia `providerDispatchPossible`; una prueba de política→ledger demuestra que el 429 ambiguo produce una sola llamada y conserva la reserva `uncertain`/bloqueante. La prueba se ejecutó en rojo antes del arreglo y en verde después (suite focalizada 7/7). `spec.md` ahora enumera ambos paths de prueba. La rama requiere además sincronización normal con el `origin/main` que avanzó a `35546eb`; CI/Goldfish del SHA siguiente siguen pendientes y no se atribuyen a R3.

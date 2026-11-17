@@ -28,6 +28,7 @@ class GatewayRetryExhaustedError extends Error {
   readonly gatewayCode = "rate_limit_exceeded";
   readonly providerHttpStatus: number | null;
   readonly providerCode: string | null;
+  readonly providerDispatchPossible: boolean;
 
   constructor(original: unknown, retryAfterMs: number, safeNoCharge: boolean) {
     const details = classifyGatewayFailure(original);
@@ -37,6 +38,7 @@ class GatewayRetryExhaustedError extends Error {
     this.retryAfterMs = retryAfterMs;
     this.providerHttpStatus = details.providerHttpStatus;
     this.providerCode = details.providerCode;
+    this.providerDispatchPossible = details.providerDispatchPossible;
     if (details.gatewayGenerationId) this.generationId = details.gatewayGenerationId;
   }
 }
