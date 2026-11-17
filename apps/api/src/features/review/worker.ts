@@ -1,6 +1,7 @@
 import type { ReviewRequest } from "@fragments/contracts";
 import type { ReviewContext, createReviewService } from "./review.service.js";
 import type { createSqliteReviewStore } from "./sqlite-store.js";
+import { reviewFailure, ReviewProcessingError, writeReviewOperationalEvent, type ReviewOperationalEvent, type ReviewStage } from "./review-errors.js";
 
 type Store = ReturnType<typeof createSqliteReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
@@ -12,6 +13,7 @@ export type ReviewWorkerOptions = {
   leaseDurationMs?: number;
   heartbeatIntervalMs?: number;
   now?: () => number;
+  logEvent?: (event: ReviewOperationalEvent) => void;
 };
 
 /** One leased review job per call; the caller owns the long-running polling loop. */
@@ -23,14 +25,31 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
     throw new Error("El intervalo heartbeat debe ser menor que la duración del lease.");
   }
   const now = options.now ?? Date.now;
+  const logEvent = options.logEvent ?? writeReviewOperationalEvent;
 
   return {
     async runOnce(): Promise<boolean> {
-      const job = options.store.claim(options.workerId, now(), leaseDurationMs);
+      const recovered = options.store.reconcileExpiredLeases(now());
+      for (const result of recovered) {
+        logEvent({
+          event: "review.lease.recovered", reviewId: result.id, jobId: result.id, stage: result.stage,
+          errorCode: result.errorCode as ReviewOperationalEvent["errorCode"], durationMs: result.durationMs,
+          attempt: result.attempt, finalStatus: result.finalStatus,
+        });
+      }
+      const startedAt = now();
+      let job;
+      try {
+        job = options.store.claim(options.workerId, startedAt, leaseDurationMs);
+      } catch {
+        throw new ReviewProcessingError("queue_claim", "QUEUE_STORAGE_FAILED", "manual");
+      }
       if (!job) return false;
 
       const controller = new AbortController();
       let leaseLost = false;
+      let stage: ReviewStage = "repository";
+      let leaseErrorCode: ReviewOperationalEvent["errorCode"] = "REVIEW_LEASE_EXPIRED";
       const heartbeat = setInterval(() => {
         try {
           if (options.store.heartbeat(job.id, options.workerId, now(), leaseDurationMs)) return;
@@ -38,17 +57,53 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
           controller.abort(new Error("La reserva del trabajo Review expiró."));
         } catch {
           leaseLost = true;
+          leaseErrorCode = "QUEUE_STORAGE_FAILED";
           controller.abort(new Error("No se pudo renovar la reserva del trabajo Review."));
         }
       }, heartbeatIntervalMs);
       heartbeat.unref?.();
 
       try {
-        const result = await options.service.review(job.request satisfies ReviewRequest, job.context satisfies ReviewContext, { signal: controller.signal, reviewId: job.id, leaseOwner: options.workerId });
-        if (result.status !== "completed") throw new Error("El worker no recibió un resultado completo.");
-        if (!options.store.complete(job.id, options.workerId, now())) throw new Error("La reserva del trabajo Review ya no pertenece a este worker.");
-      } catch {
-        if (!leaseLost) options.store.fail(job.id, options.workerId, undefined, now());
+        const result = await options.service.review(job.request satisfies ReviewRequest, job.context satisfies ReviewContext, {
+          signal: controller.signal, reviewId: job.id, leaseOwner: options.workerId,
+          onStage(nextStage) {
+            stage = nextStage;
+            try {
+              if (options.store.setStage(job.id, options.workerId, nextStage, now())) return;
+              leaseLost = true;
+              leaseErrorCode = "REVIEW_LEASE_EXPIRED";
+              throw new ReviewProcessingError("lease_heartbeat", "REVIEW_LEASE_EXPIRED", "manual");
+            } catch (error) {
+              if (error instanceof ReviewProcessingError) throw error;
+              leaseLost = true;
+              leaseErrorCode = "QUEUE_STORAGE_FAILED";
+              throw new ReviewProcessingError("lease_heartbeat", "QUEUE_STORAGE_FAILED", "manual");
+            }
+          },
+        });
+        if (result.status !== "completed") throw new ReviewProcessingError("analysis_validation", "AI_OUTPUT_INVALID", "manual");
+        if (!options.store.complete(job.id, options.workerId, now())) {
+          logEvent({ event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "queue_completion", errorCode: "REVIEW_LEASE_EXPIRED", durationMs: Math.max(0, now() - startedAt), attempt: job.attempts, finalStatus: "lease_lost" });
+          return true;
+        }
+        logEvent({ event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "result_persistence", errorCode: null, durationMs: Math.max(0, now() - startedAt), attempt: job.attempts, finalStatus: "completed" });
+      } catch (error) {
+        const failure = reviewFailure(error, stage, Math.max(0, now() - startedAt));
+        if (leaseLost) {
+          logEvent({ event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "lease_heartbeat", errorCode: leaseErrorCode, durationMs: failure.durationMs, attempt: job.attempts, finalStatus: "lease_lost" });
+          return true;
+        }
+        try {
+          const failed = options.store.fail(job.id, options.workerId, failure, now());
+          logEvent({
+            event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: failure.stage,
+            errorCode: failure.errorCode, durationMs: failure.durationMs, attempt: job.attempts,
+            finalStatus: failed && failure.retryClass === "transient" && job.attempts < 3 ? "retry_wait" : failed ? "failed" : "lease_lost",
+          });
+        } catch {
+          logEvent({ event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "queue_completion", errorCode: "QUEUE_STORAGE_FAILED", durationMs: failure.durationMs, attempt: job.attempts, finalStatus: "degraded" });
+          throw new ReviewProcessingError("queue_completion", "QUEUE_STORAGE_FAILED", "manual");
+        }
       } finally {
         clearInterval(heartbeat);
       }

@@ -402,6 +402,7 @@ describe("Better Auth integration", () => {
     expect(auth.options.emailAndPassword?.resetPasswordTokenExpiresIn).toBe(60 * 60);
     expect(auth.options.emailAndPassword?.revokeSessionsOnPasswordReset).toBe(true);
     expect(auth.options.rateLimit?.enabled).toBe(true);
+    expect(auth.options.advanced?.ipAddress?.ipAddressHeaders).toEqual(["x-real-ip"]);
     expect(auth.options.rateLimit?.customRules).toMatchObject({
       "/request-password-reset": { window: 60, max: 3 },
       "/reset-password": { window: 60, max: 5 },

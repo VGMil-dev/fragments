@@ -56,6 +56,13 @@ describe("SqliteAiBudgetLedger", () => {
     expect(() => budget.reserve({ requestKind: "mentor", estimateMicroUsd: 1 })).toThrow(AiBudgetUnavailableError);
   });
 
+  it("converts an abandoned reservation to uncertain before allowing another provider call", () => {
+    const budget = ledger(1_000_000);
+    budget.reserve({ requestKind: "review", estimateMicroUsd: 500, id: "possibly-dispatched", now: 1_000 });
+    expect(() => budget.reserve({ requestKind: "mentor", estimateMicroUsd: 500, id: "later-call", now: 301_001 })).toThrow(AiBudgetUnavailableError);
+    expect(databases.at(-1)!.prepare("SELECT status FROM ai_budget_reservations WHERE id='possibly-dispatched'").get()).toEqual({ status: "uncertain" });
+  });
+
   it("persists a known overrun without enforcing the old local ceiling", async () => {
     const budget = ledger(1_000_000);
     const rates = { inputUsdPerMillion: 1, outputUsdPerMillion: 1 };

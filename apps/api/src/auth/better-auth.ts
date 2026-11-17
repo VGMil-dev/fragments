@@ -58,7 +58,10 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     secret: options.secret,
     baseURL,
     trustedOrigins,
-    advanced: { database: { validateSchema: options.validateSchema ?? true } },
+    advanced: {
+      database: { validateSchema: options.validateSchema ?? true },
+      ipAddress: { ipAddressHeaders: ["x-real-ip"] },
+    },
     rateLimit: {
       enabled: true,
       customRules: {

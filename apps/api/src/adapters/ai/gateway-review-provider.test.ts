@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "../../db/migrate.js";
-import { AiBudgetUnavailableError, SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { SqliteAiBudgetLedger } from "./budget-ledger.js";
 import { createGatewayReviewAiProvider } from "./gateway-review-provider.js";
 
 const databases: DatabaseSync[] = [];
@@ -42,7 +42,7 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
   it("requires Gateway configuration and uses a minimum reservation without a rate card", async () => {
     const generate = vi.fn(async () => ({ value: result, costUsd: 0 }));
     const provider = createGatewayReviewAiProvider({ gatewayKeyConfigured: false, ledger: makeLedger(), generate });
-    await expect(provider.analyze(input)).rejects.toThrow(/no está configurada/);
+    await expect(provider.analyze(input)).rejects.toMatchObject({ errorCode: "AI_NOT_CONFIGURED", retryClass: "permanent" });
     const configured = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger: makeLedger(), generate });
     await expect(configured.analyze(input)).resolves.toMatchObject({ modelId: "fixture/model" });
     expect(generate).toHaveBeenCalledOnce();
@@ -52,14 +52,14 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
     const ledger = makeLedger();
     const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger,
       generate: async () => ({ value: result }) });
-    await expect(provider.analyze(input)).rejects.toThrow(AiBudgetUnavailableError);
+    await expect(provider.analyze(input)).rejects.toMatchObject({ errorCode: "AI_BUDGET_BLOCKED", retryClass: "manual" });
     expect(ledger.summary().blocked).toBe(true);
   });
 
   it("rejects quotes that are absent from the exact snapshot", async () => {
     const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger: makeLedger(),
       generate: async () => ({ value: { ...result, findings: [{ ...result.findings[0]!, evidence: [{ path: "App.tsx", quote: "missing citation text" }] }] }, costUsd: 0 }) });
-    await expect(provider.analyze(input)).rejects.toThrow(/no está presente/);
+    await expect(provider.analyze(input)).rejects.toMatchObject({ errorCode: "AI_OUTPUT_INVALID", retryClass: "manual" });
   });
 
   it("resolves repeated literal citations to every exact source line", async () => {

@@ -78,15 +78,15 @@ describe("HTTP API", () => {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
 
-    const response = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie } });
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie, "x-real-ip": "198.51.100.42" } });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ ok: true, data: { authenticated: true, id: created.user.id, githubLogin: null, profileUrl: null } });
     expect(db.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(created.user.id))
       .toEqual({ accountId: "github-stable-personal-id" });
-    const unlinkedResponse = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie: unlinkedCookie } });
+    const unlinkedResponse = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie: unlinkedCookie, "x-real-ip": "198.51.100.42" } });
     expect(await unlinkedResponse.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "github_account_not_linked" } });
     expect(unlinked.user.id).not.toBe(created.user.id);
-    const anonymous = await fetch(`http://127.0.0.1:${address.port}/api/me`);
+    const anonymous = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { "x-real-ip": "198.51.100.42" } });
     expect(await anonymous.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "session_required" } });
   });
 

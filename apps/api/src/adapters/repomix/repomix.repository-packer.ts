@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, resolve, sep } from "node:path";
 import type { RepositorySnapshot } from "@fragments/contracts";
 import { sha256, type PackedRepository } from "../../features/review/review.service.js";
+import { ReviewProcessingError } from "../../features/review/review-errors.js";
 
 const excludedFilePath = /(?:^|\/)(?:\.git|node_modules|dist|build|coverage|\.next|\.ssh)(?:\/|$)|(?:^|\/)(?:\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|\.repomixignore|repomix\.config\.(?:json|jsonc|json5|ya?ml)|id_rsa|id_ed25519|[^/]*(?:secret|credential)[^/]*|package-lock\.json|pnpm-lock\.yaml|npm-shrinkwrap\.json|bun\.lockb?|.*\.(?:lock|png|jpe?g|gif|webp|ico|pdf|zip|gz|sqlite|db|pem|key|p12|wasm|woff2?|ttf|mp4|mov))$/i;
 const privateMaterial = /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|\bgh[pousr]_[A-Za-z0-9]{20,}|\bAKIA[0-9A-Z]{16}\b/i;
@@ -21,7 +22,7 @@ export type RepomixRunCli = (options: {
 
 function safeRelativePath(path: string): string {
   if (!path || path.startsWith("/") || path.includes("\\") || path.split("/").some((part) => !part || part === "." || part === "..")) {
-    throw new Error("El snapshot contiene una ruta no válida para empaquetar.");
+    throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
   }
   return path;
 }
@@ -29,7 +30,7 @@ function safeRelativePath(path: string): string {
 function asPackedResult(text: string, omittedPaths: string[], maxBytes: number, maxTokens: number): Promise<PackedRepository> {
   const byteCount = new TextEncoder().encode(text).byteLength;
   const tokenCount = Math.ceil(text.length / 4);
-  if (byteCount > maxBytes || tokenCount > maxTokens) throw new Error("El contenido Repomix supera el presupuesto de revisión.");
+  if (byteCount > maxBytes || tokenCount > maxTokens) throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
   return sha256(text).then((inputDigest) => ({ text, inputDigest, tokenCount, omittedPaths }));
 }
 
@@ -37,7 +38,7 @@ export function createRepomixRepositoryPacker(runCli: RepomixRunCli) {
   return {
     async pack(snapshot: RepositorySnapshot, budget: { maxBytes: number; maxTokens: number; signal?: AbortSignal }): Promise<PackedRepository> {
       if (!Number.isSafeInteger(budget.maxBytes) || budget.maxBytes < 1 || !Number.isSafeInteger(budget.maxTokens) || budget.maxTokens < 1) {
-        throw new Error("El presupuesto de empaquetado debe ser un entero positivo.");
+        throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
       }
       const eligibleFiles = snapshot.files.filter((file) => !excludedFilePath.test(file.path) && !file.content.includes("\0") && !privateMaterial.test(file.content));
       const includedPaths = new Set(eligibleFiles.map((file) => file.path));
@@ -57,7 +58,7 @@ export function createRepomixRepositoryPacker(runCli: RepomixRunCli) {
         sourceTokens += sectionTokens;
         files.push(file);
       }
-      if (files.length === 0) throw new Error("El commit no contiene archivos seguros dentro del presupuesto de revisión.");
+      if (files.length === 0) throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
       const root = await mkdtemp(resolve(tmpdir(), "fragments-review-"));
       const outputFilePath = resolve(root, "repomix-output.txt");
       try {
@@ -65,23 +66,27 @@ export function createRepomixRepositoryPacker(runCli: RepomixRunCli) {
         for (const file of files) {
           const relative = safeRelativePath(file.path);
           const destination = resolve(root, relative);
-          if (destination === root || !destination.startsWith(`${root}${sep}`)) throw new Error("La ruta del archivo sale del árbol temporal.");
+          if (destination === root || !destination.startsWith(`${root}${sep}`)) throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
           await mkdir(dirname(destination), { recursive: true });
           await writeFile(destination, file.content, { flag: "wx", mode: 0o600 });
         }
-        await runCli({
-          cwd: root,
-          outputFilePath,
-          outputFormat: "plain",
-          include: files.map((file) => safeRelativePath(file.path)),
-          maxOutputBytes: budget.maxBytes,
-          maxOutputTokens: budget.maxTokens,
-          disableConfigFile: true,
-          ...(budget.signal ? { signal: budget.signal } : {}),
-        });
+        try {
+          await runCli({
+            cwd: root,
+            outputFilePath,
+            outputFormat: "plain",
+            include: files.map((file) => safeRelativePath(file.path)),
+            maxOutputBytes: budget.maxBytes,
+            maxOutputTokens: budget.maxTokens,
+            disableConfigFile: true,
+            ...(budget.signal ? { signal: budget.signal } : {}),
+          });
+        } catch {
+          throw new ReviewProcessingError("packing", "PACK_RUNNER_FAILED", "manual");
+        }
         budget.signal?.throwIfAborted();
         const outputInfo = await stat(outputFilePath);
-        if (!outputInfo.isFile() || outputInfo.size > budget.maxBytes) throw new Error("La salida Repomix supera el presupuesto de bytes.");
+        if (!outputInfo.isFile() || outputInfo.size > budget.maxBytes) throw new ReviewProcessingError("packing", "PACK_REJECTED", "permanent");
         const text = await readFile(outputFilePath, "utf8");
         return await asPackedResult(text, omittedPaths, budget.maxBytes, budget.maxTokens);
       } finally {

@@ -8,6 +8,7 @@ import {
 } from "@fragments/contracts";
 import type { ReviewContext, ReviewRecord } from "./review.service.js";
 import { reviewIdempotencyKey } from "./review.service.js";
+import type { ReviewFailure, ReviewStage } from "./review-errors.js";
 
 export type ReviewJobStatus = "queued" | "running" | "completed" | "failed";
 export type ReviewJobView = {
@@ -35,6 +36,10 @@ type JobRow = {
   attempts: number;
   lease_owner: string | null;
   lease_until: number | null;
+  last_stage: string | null;
+  last_error_code: string | null;
+  retry_class: "transient" | "permanent" | "manual" | null;
+  next_retry_at: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -52,6 +57,11 @@ type SubmissionRow = {
 
 const jobType = "review";
 const safeFailure = "No se pudo completar la revisión en este momento.";
+export const REVIEW_MAX_ATTEMPTS = 3;
+
+function retryDelayMs(attempt: number): number {
+  return Math.min(5 * 60_000, 30_000 * (2 ** Math.max(0, attempt - 1)));
+}
 
 function parsePayload(raw: string): ReviewPayload {
   const value = JSON.parse(raw) as ReviewPayload;
@@ -130,6 +140,15 @@ export function createSqliteReviewStore(database: DatabaseSync) {
     };
   }
 
+  function closeAttempt(row: JobRow, now: number, input: { finalStatus: "completed" | "failed"; stage: string; errorCode: string | null; retryClass: string | null; durationMs?: number }): void {
+    const attempt = database.prepare("SELECT attempt, started_at FROM review_attempts WHERE job_id=? AND final_status='running' ORDER BY attempt DESC LIMIT 1").get(row.id) as { attempt: number; started_at: number } | undefined;
+    if (!attempt) return;
+    const durationMs = input.durationMs ?? Math.max(0, now - attempt.started_at);
+    database.prepare(`UPDATE review_attempts SET finished_at=?, duration_ms=?, stage=?, error_code=?, retry_class=?, final_status=?
+      WHERE job_id=? AND attempt=? AND final_status='running'`)
+      .run(now, durationMs, input.stage, input.errorCode, input.retryClass, input.finalStatus, row.id, attempt.attempt);
+  }
+
   async function saveSubmission(submission: ReturnType<typeof SubmissionResponseSchema.parse>): Promise<void> {
     const parsed = SubmissionResponseSchema.parse(submission);
     database.prepare(`INSERT INTO submissions
@@ -163,6 +182,122 @@ export function createSqliteReviewStore(database: DatabaseSync) {
       return view(row);
     },
 
+    /** Explicit student retry; no scheduler retries jobs automatically. */
+    retryFailed(id: string, now = Date.now()):
+      | { kind: "queued"; job: ReviewJobView }
+      | { kind: "already_queued"; job: ReviewJobView }
+      | { kind: "completed"; job: ReviewJobView }
+      | { kind: "missing" }
+      | { kind: "not_retryable" }
+      | { kind: "too_early" }
+      | { kind: "exhausted" } {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        let row = rowById(id);
+        if (!row) { database.exec("COMMIT"); return { kind: "missing" }; }
+        if (row.status === "done") {
+          const job = view(row);
+          database.exec("COMMIT");
+          return { kind: "completed", job };
+        }
+        if (row.status === "pending" || row.status === "leased") {
+          const job = view(row);
+          database.exec("COMMIT");
+          return { kind: "already_queued", job };
+        }
+
+        const payload = parsePayload(row.payload_json);
+        if (payload.record) {
+          database.prepare("UPDATE jobs SET status='done', lease_owner=NULL, lease_until=NULL, last_stage=NULL, last_error_code=NULL, retry_class=NULL, next_retry_at=NULL, updated_at=? WHERE id=? AND type=? AND status='failed'")
+            .run(now, id, jobType);
+          row = rowById(id);
+          if (!row) throw new Error("Review row disappeared during idempotent recovery.");
+          database.prepare(`UPDATE review_attempts SET finished_at=?, duration_ms=MAX(0, ? - started_at), stage='result_persistence', error_code=NULL, retry_class=NULL, final_status='completed'
+            WHERE job_id=? AND attempt=?`)
+            .run(now, now, row.id, row.attempts);
+          const job = view(row);
+          database.exec("COMMIT");
+          return { kind: "completed", job };
+        }
+        if (row.attempts >= REVIEW_MAX_ATTEMPTS) { database.exec("COMMIT"); return { kind: "exhausted" }; }
+        if (row.retry_class !== "transient") { database.exec("COMMIT"); return { kind: "not_retryable" }; }
+        if (row.next_retry_at === null || now < row.next_retry_at) { database.exec("COMMIT"); return { kind: "too_early" }; }
+
+        const changed = database.prepare(`UPDATE jobs SET status='pending', lease_owner=NULL, lease_until=NULL,
+          last_stage=NULL, last_error_code=NULL, retry_class=NULL, next_retry_at=NULL, updated_at=?
+          WHERE id=? AND type=? AND status='failed' AND retry_class='transient' AND attempts<? AND next_retry_at<=?`)
+          .run(now, id, jobType, REVIEW_MAX_ATTEMPTS, now).changes;
+        row = rowById(id);
+        database.exec("COMMIT");
+        if (changed !== 1 || !row) return row ? { kind: "already_queued", job: view(row) } : { kind: "missing" };
+        return { kind: "queued", job: view(row) };
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
+
+    setStage(id: string, workerId: string, stage: ReviewStage, now = Date.now()): boolean {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const changed = database.prepare("UPDATE jobs SET last_stage=?, updated_at=? WHERE id=? AND type=? AND status='leased' AND lease_owner=? AND lease_until>?")
+          .run(stage, now, id, jobType, workerId, now).changes;
+        if (changed === 1) {
+          database.prepare("UPDATE review_attempts SET stage=? WHERE job_id=? AND attempt=? AND final_status='running'")
+            .run(stage, id, Number(rowById(id)?.attempts ?? 0));
+        }
+        database.exec("COMMIT");
+        return changed === 1;
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
+
+    reconcileExpiredLeases(now = Date.now()): Array<{ id: string; attempt: number; stage: ReviewStage; errorCode: string | null; finalStatus: "completed" | "failed"; durationMs: number }> {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const staleRows = database.prepare("SELECT * FROM jobs WHERE type=? AND status='leased' AND lease_until<=? ORDER BY created_at")
+          .all(jobType, now) as unknown as JobRow[];
+        const results = [] as Array<{ id: string; attempt: number; stage: ReviewStage; errorCode: string | null; finalStatus: "completed" | "failed"; durationMs: number }>;
+        for (const stale of staleRows) {
+          const payload = parsePayload(stale.payload_json);
+          const attempt = database.prepare("SELECT started_at FROM review_attempts WHERE job_id=? AND attempt=? AND final_status='running'")
+            .get(stale.id, stale.attempts) as { started_at: number } | undefined;
+          const durationMs = Math.max(0, now - (attempt?.started_at ?? stale.created_at));
+          if (payload.record) {
+            database.prepare("UPDATE jobs SET status='done', lease_owner=NULL, lease_until=NULL, last_stage=NULL, last_error_code=NULL, retry_class=NULL, next_retry_at=NULL, updated_at=? WHERE id=? AND type=? AND status='leased' AND lease_until<=?")
+              .run(now, stale.id, jobType, now);
+            closeAttempt(stale, now, { finalStatus: "completed", stage: "result_persistence", errorCode: null, retryClass: null, durationMs });
+            results.push({ id: stale.id, attempt: stale.attempts, stage: "result_persistence", errorCode: null, finalStatus: "completed", durationMs });
+            continue;
+          }
+          const lastStage = stale.last_stage as ReviewStage | null;
+          const beforeAi = lastStage === "repository" || lastStage === "snapshot_validation" || lastStage === "packing";
+          const stage: ReviewStage = lastStage ?? "queue_claim";
+          const errorCode = beforeAi ? "REVIEW_LEASE_EXPIRED" : "AI_OUTCOME_UNCERTAIN";
+          const retryClass = beforeAi ? "transient" : "manual";
+          const retryAt = beforeAi && stale.attempts < REVIEW_MAX_ATTEMPTS ? now + retryDelayMs(stale.attempts) : null;
+          database.prepare(`UPDATE jobs SET status='failed', lease_owner=NULL, lease_until=NULL, last_stage=?, last_error_code=?, retry_class=?, next_retry_at=?,
+            payload_json=?, updated_at=? WHERE id=? AND type=? AND status='leased' AND lease_until<=?`)
+            .run(stage, errorCode, retryClass, retryAt, JSON.stringify({ ...payload, message: safeFailure }), now, stale.id, jobType, now);
+          closeAttempt(stale, now, { finalStatus: "failed", stage, errorCode, retryClass, durationMs });
+          results.push({ id: stale.id, attempt: stale.attempts, stage, errorCode, finalStatus: "failed", durationMs });
+        }
+        database.exec("COMMIT");
+        return results;
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
+
+    getAttemptHistory(id: string) {
+      return database.prepare(`SELECT attempt, started_at AS startedAt, finished_at AS finishedAt, duration_ms AS durationMs,
+        stage, error_code AS errorCode, retry_class AS retryClass, final_status AS finalStatus
+        FROM review_attempts WHERE job_id=? ORDER BY attempt`).all(id) as Array<Record<string, unknown>>;
+    },
+
     getJob(id: string): ReviewJobView | null {
       const row = rowById(id);
       return row ? view(row) : null;
@@ -189,12 +324,13 @@ export function createSqliteReviewStore(database: DatabaseSync) {
     claim(workerId: string, now = Date.now(), leaseDurationMs = 30_000): ClaimedReviewJob | null {
       database.exec("BEGIN IMMEDIATE");
       try {
-        const row = database.prepare(`SELECT * FROM jobs WHERE type = ? AND (status = 'pending' OR (status = 'leased' AND lease_until <= ?))
-          ORDER BY created_at LIMIT 1`).get(jobType, now) as JobRow | undefined;
+        const row = database.prepare("SELECT * FROM jobs WHERE type = ? AND status='pending' ORDER BY created_at LIMIT 1").get(jobType) as JobRow | undefined;
         if (!row) { database.exec("COMMIT"); return null; }
         database.prepare(`UPDATE jobs SET status='leased', attempts=attempts+1, lease_owner=?, lease_until=?, heartbeat_at=?, updated_at=? WHERE id=? AND type=?`)
           .run(workerId, now + leaseDurationMs, now, now, row.id, jobType);
         const claimed = rowById(row.id);
+        database.prepare("INSERT INTO review_attempts(job_id,attempt,started_at,final_status) VALUES(?,?,?,'running')")
+          .run(row.id, Number(row.attempts) + 1, now);
         database.exec("COMMIT");
         if (!claimed) return null;
         const payload = parsePayload(claimed.payload_json);
@@ -215,13 +351,13 @@ export function createSqliteReviewStore(database: DatabaseSync) {
 
     async getByKey(key: string): Promise<ReviewRecord | null> {
       const row = rowByKey(key);
-      if (!row || row.status !== "done") return null;
+      if (!row) return null;
       return parsePayload(row.payload_json).record ?? null;
     },
 
     async getById(id: string): Promise<ReviewRecord | null> {
       const row = rowById(id);
-      if (!row || row.status !== "done") return null;
+      if (!row) return null;
       return parsePayload(row.payload_json).record ?? null;
     },
 
@@ -240,21 +376,36 @@ export function createSqliteReviewStore(database: DatabaseSync) {
     },
 
     complete(id: string, workerId: string, now = Date.now()): boolean {
-      return database.prepare(`UPDATE jobs SET status='done', lease_owner=NULL, lease_until=NULL, updated_at=? WHERE id=? AND type=? AND status='leased' AND lease_owner=? AND lease_until>?`)
-        .run(now, id, jobType, workerId, now).changes === 1;
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const row = rowById(id);
+        const changed = database.prepare(`UPDATE jobs SET status='done', lease_owner=NULL, lease_until=NULL, last_stage=NULL, last_error_code=NULL, retry_class=NULL, next_retry_at=NULL, updated_at=?
+          WHERE id=? AND type=? AND status='leased' AND lease_owner=? AND lease_until>?`)
+          .run(now, id, jobType, workerId, now).changes;
+        if (changed === 1 && row) closeAttempt(row, now, { finalStatus: "completed", stage: "result_persistence", errorCode: null, retryClass: null });
+        database.exec("COMMIT");
+        return changed === 1;
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
     },
 
-    fail(id: string, workerId: string, _message = safeFailure, now = Date.now()): boolean {
+    fail(id: string, workerId: string, failure: ReviewFailure, now = Date.now()): boolean {
       const row = rowById(id);
       if (!row) return false;
       const payload = parsePayload(row.payload_json);
       database.exec("BEGIN IMMEDIATE");
       try {
-        const changed = database.prepare(`UPDATE jobs SET status='failed', payload_json=?, lease_owner=NULL, lease_until=NULL, updated_at=?
+        const retryClass = payload.record ? "manual" : failure.retryClass;
+        const retryAt = retryClass === "transient" && row.attempts < REVIEW_MAX_ATTEMPTS ? now + retryDelayMs(row.attempts) : null;
+        const changed = database.prepare(`UPDATE jobs SET status='failed', payload_json=?, lease_owner=NULL, lease_until=NULL,
+          last_stage=?, last_error_code=?, retry_class=?, next_retry_at=?, updated_at=?
           WHERE id=? AND type=? AND status='leased' AND lease_owner=? AND lease_until>?`)
-          .run(JSON.stringify({ request: payload.request, context: payload.context, message: safeFailure }), now, id, jobType, workerId, now).changes === 1;
+          .run(JSON.stringify({ ...payload, message: safeFailure }), failure.stage, failure.errorCode, retryClass, retryAt, now, id, jobType, workerId, now).changes;
+        if (changed === 1) closeAttempt(row, now, { finalStatus: "failed", stage: failure.stage, errorCode: failure.errorCode, retryClass, durationMs: failure.durationMs });
         database.exec("COMMIT");
-        return changed;
+        return changed === 1;
       } catch (error) {
         database.exec("ROLLBACK");
         throw error;
@@ -270,4 +421,5 @@ export function createSqliteReviewStore(database: DatabaseSync) {
     evaluations: { getByKey: store.getByKey, getById: store.getById, save: store.save },
     submissions: { save: saveSubmission, getByVerificationCode },
   };
+
 }

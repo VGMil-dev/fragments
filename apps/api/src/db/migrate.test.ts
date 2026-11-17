@@ -21,6 +21,7 @@ describe("Mentor control migration", () => {
       CREATE TABLE ai_budget_reservations (id TEXT PRIMARY KEY, request_kind TEXT NOT NULL, reserved_microusd INTEGER NOT NULL, actual_microusd INTEGER, status TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
       CREATE TABLE jobs (id TEXT PRIMARY KEY, type TEXT NOT NULL, payload_json TEXT NOT NULL, idempotency_key TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL, lease_owner TEXT, lease_until INTEGER, heartbeat_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
       INSERT INTO jobs VALUES ('review-old', 'review', '{"reviewId":"preserved"}', 'legacy-review', 'done', 1, NULL, NULL, NULL, 1, 2);
+      INSERT INTO jobs VALUES ('review-failed-old', 'review', '{"reviewId":"preserved"}', 'legacy-review-failed', 'failed', 1, NULL, NULL, NULL, 100, 200);
       CREATE TABLE inspector_challenges (id TEXT PRIMARY KEY, review_id TEXT NOT NULL, project_id TEXT NOT NULL, commit_sha TEXT NOT NULL, challenge_json TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, assigned_to TEXT, assigned_at TEXT, superseded_by_commit_sha TEXT, defense_json TEXT);
       INSERT INTO inspector_challenges VALUES ('inspector-old', 'review-old', 'project-old', 'abc', '{}', 'completed', '2026-01-03T00:00:00.000Z', NULL, NULL, NULL, '{"outcome":"restored"}');
       INSERT INTO proposals VALUES ('proposal-1', 1, '{"title":"Histórica"}', 'legacy-owner-hash', '2026-01-01T00:00:00.000Z');
@@ -35,8 +36,12 @@ describe("Mentor control migration", () => {
     });
     expect(database.prepare("SELECT COUNT(*) AS count FROM mentor_control_versions").get()?.count).toBe(1);
     expect(database.prepare("SELECT payload_json, status FROM jobs WHERE id='review-old'").get()).toEqual({ payload_json: '{"reviewId":"preserved"}', status: "done" });
+    expect(database.prepare("SELECT last_stage, last_error_code, retry_class FROM jobs WHERE id='review-failed-old'").get())
+      .toEqual({ last_stage: "unknown", last_error_code: "LEGACY_UNCLASSIFIED", retry_class: "manual" });
+    expect(database.prepare("SELECT attempt, started_at, finished_at, duration_ms, stage, error_code, retry_class, final_status FROM review_attempts WHERE job_id='review-failed-old'").get())
+      .toEqual({ attempt: 1, started_at: null, finished_at: 200, duration_ms: null, stage: "unknown", error_code: "LEGACY_UNCLASSIFIED", retry_class: "manual", final_status: "failed" });
     expect(database.prepare("SELECT id, status, defense_json FROM inspector_challenges WHERE id='inspector-old'").get()).toEqual({ id: "inspector-old", status: "completed", defense_json: '{"outcome":"restored"}' });
-    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(database.prepare("SELECT COUNT(*) AS count FROM mentor_academic_publications").get()?.count).toBe(0);
     expect(database.prepare("SELECT id, proposal_json, owner_hash, owner_user_id FROM proposals").get()).toEqual({ id: "proposal-1", proposal_json: '{"title":"Histórica"}', owner_hash: "legacy-owner-hash", owner_user_id: null });
     expect(database.prepare("SELECT proposal_id, version, proposal_json FROM proposal_revisions").get()).toEqual({ proposal_id: "proposal-1", version: 1, proposal_json: '{"title":"Histórica"}' });

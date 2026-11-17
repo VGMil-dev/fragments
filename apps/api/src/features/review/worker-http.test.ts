@@ -61,6 +61,92 @@ describe("Review queue worker and feature HTTP handler", () => {
     f.database.close();
   });
 
+  it("accepts one explicit retry for a transient failure and reuses the same idempotent job", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request, context });
+    const failedAt = Date.now() - 120_000;
+    f.store.claim("worker-first", failedAt, 1_000);
+    f.store.fail(job.id, "worker-first", { stage: "repository", errorCode: "GITHUB_RATE_LIMITED", retryClass: "transient", durationMs: 120 }, failedAt + 500);
+    const handler = createReviewHttp({ store: f.store, service: f.service, resolveContext: async () => context });
+
+    await serve(handler, async (baseUrl) => {
+      const retried = await fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" });
+      expect(retried.status).toBe(202);
+      expect(await retried.json()).toMatchObject({ ok: true, data: { id: job.id, status: "queued" } });
+    });
+
+    await createReviewWorker({ store: f.store, service: f.service, workerId: "worker-retry" }).runOnce();
+    expect(f.store.getJob(job.id)).toMatchObject({ id: job.id, status: "completed" });
+    expect(f.store.getAttemptHistory(job.id)).toMatchObject([
+      { attempt: 1, finalStatus: "failed", errorCode: "GITHUB_RATE_LIMITED" },
+      { attempt: 2, finalStatus: "completed", errorCode: null },
+    ]);
+    f.database.close();
+  });
+
+  it("emits normalized diagnostics without exception text", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request, context });
+    const events: Array<Record<string, unknown>> = [];
+    const worker = createReviewWorker({
+      store: f.store,
+      service: { review: async () => { throw new Error("provider-secret-raw-error"); } } as never,
+      workerId: "worker-failure",
+      logEvent: (event) => events.push(event),
+    });
+    await worker.runOnce();
+
+    expect(f.store.getJob(job.id)).toMatchObject({ status: "failed", message: "No se pudo completar la revisión en este momento." });
+    expect(f.store.getAttemptHistory(job.id)).toMatchObject([{ stage: "repository", errorCode: "GITHUB_UNAVAILABLE", retryClass: "manual", finalStatus: "failed" }]);
+    expect(events).toMatchObject([{
+      event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "repository",
+      errorCode: "GITHUB_UNAVAILABLE", attempt: 1, finalStatus: "failed",
+    }]);
+    expect(JSON.stringify(events)).not.toContain("provider-secret-raw-error");
+    expect(f.store.retryFailed(job.id, Date.now() + 1_000_000).kind).toBe("not_retryable");
+    f.database.close();
+  });
+
+  it("does not falsely report an existing failed idempotent job as queued or retry an ambiguous AI result", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request, context });
+    const failedAt = Date.now();
+    f.store.claim("worker-manual", failedAt, 30_000);
+    f.store.fail(job.id, "worker-manual", { stage: "ai_dispatch", errorCode: "AI_OUTCOME_UNCERTAIN", retryClass: "manual", durationMs: 5 }, failedAt + 5);
+    const handler = createReviewHttp({ store: f.store, service: f.service, resolveContext: async () => context });
+
+    await serve(handler, async (baseUrl) => {
+      const duplicate = await fetch(`${baseUrl}/api/reviews`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request),
+      });
+      expect(duplicate.status).toBe(409);
+      expect(await duplicate.json()).toMatchObject({ ok: false, error: { code: "REVIEW_RETRY_REQUIRED" } });
+
+      const retry = await fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" });
+      expect(retry.status).toBe(409);
+      expect(await retry.json()).toMatchObject({ ok: false, error: { code: "REVIEW_RETRY_UNAVAILABLE" } });
+    });
+    expect(f.store.getAttemptHistory(job.id)).toHaveLength(1);
+    f.database.close();
+  });
+
+  it("only lets the student who still resolves to the original review context request a retry", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request, context });
+    const failedAt = Date.now();
+    f.store.claim("worker-authz", failedAt, 30_000);
+    f.store.fail(job.id, "worker-authz", { stage: "repository", errorCode: "GITHUB_RATE_LIMITED", retryClass: "transient", durationMs: 5 }, failedAt + 500);
+    const handler = createReviewHttp({ store: f.store, service: f.service, resolveContext: async () => ({ ...context, projectId: "different-project" }) });
+
+    await serve(handler, async (baseUrl) => {
+      const retry = await fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" });
+      expect(retry.status).toBe(404);
+      expect(await retry.json()).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+    });
+    expect(f.store.getJob(job.id)).toMatchObject({ status: "failed" });
+    f.database.close();
+  });
+
   it("returns queued jobs and exposes only stored status through the feature routes", async () => {
     const f = await fixture();
     const handler = createReviewHttp({ store: f.store, service: f.service, resolveContext: async () => context });
