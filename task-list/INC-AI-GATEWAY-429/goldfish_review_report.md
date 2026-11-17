@@ -76,3 +76,5 @@ Hallazgos:
 - **Nit (Zoom Out):** la evidencia y TASKS aún no tenían CI/Goldfish del SHA R3 bajo revisión.
 
 Remediación local posterior a R3: el wrapper ahora copia `providerDispatchPossible`; una prueba de política→ledger demuestra que el 429 ambiguo produce una sola llamada y conserva la reserva `uncertain`/bloqueante. La prueba se ejecutó en rojo antes del arreglo y en verde después (suite focalizada 7/7). `spec.md` ahora enumera ambos paths de prueba. La rama requiere además sincronización normal con el `origin/main` que avanzó a `35546eb`; CI/Goldfish del SHA siguiente siguen pendientes y no se atribuyen a R3.
+
+La sincronización se completó después de R3 con merge normal de `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf` en commit `7ea1d43cfd0a7c4bf0422c628bf20f38674f1f8e`. La suite local tras el merge pasó 10/10 tareas (API 152, contratos 19, web 97; typecheck/lint/build). Ese merge y esta actualización de evidencia aún requieren push, CI y Goldfish exactos; no se infieren resultados anteriores para el próximo SHA.
