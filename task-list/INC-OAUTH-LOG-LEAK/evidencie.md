@@ -16,7 +16,10 @@
 - No hay evidencia retenida de `code`, token o cookie de sesión reales; no se recomienda invalidar sesiones ni rotar credenciales por esta sonda. Los valores de `state` y `code` OAuth son de corta vida y no se guardaron. Se mantiene como límite que logs previos de v0.4.7 con formato Nginx antiguo pudieron incluir URI/Referer; su contenido histórico ya no está en el conjunto Docker activo revisado.
 - Release: `v0.4.8` es el último release y `v0.4.9` aún no existe (ni tag ni release al consultar GitHub).
 - No se modificaron producción, F16.5, pipeline, ledger de IA ni revisiones históricas.
+- Commit local del hotfix: `0a14b2a54ec322f1d975f0d2d243f0900c54510a`.
+- PR [#44](https://github.com/VGMil-dev/fragments/pull/44), abierto contra `main` SHA `e25bacf1d4a3c32ca31fd510bbcb5d0a8b90cdb6`; GitHub Actions run `44011397132` — SUCCESS para el HEAD `0a14b2a54ec322f1d975f0d2d243f0900c54510a`. CI reporta warning no bloqueante deprecación Node.js 20 en acciones existentes; este incidente no modifica CI.
+- Dictamen de despliegue: NO-GO por ahora. El hotfix no está integrado ni desplegado, y falta confirmar que el runner self-hosted con acceso al socket Docker pertenece al perímetro de operadores autorizados. No se fusionó ni se publicó release/tag.
 
 ## Pendiente
 
-Pendiente de registrar SHA de commit y URL/estado del PR. No se ha hecho merge, release, tag ni despliegue.
+No se ha hecho merge, release, tag ni despliegue.
