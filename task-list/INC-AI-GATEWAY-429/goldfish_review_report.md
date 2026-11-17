@@ -230,3 +230,9 @@ Codebase 0/0/1, Readiness 0/1/0 y Zoom Out 0/0/1 (Blocker/Major/Nit) sobre `e8ad
 El Major de Readiness fue que TASKS/evidencia no identificaban el ciclo actual ni SHA exacto; se corrige en este commit registrando R20 y su CI. Codebase también detectó que el resumen superior aún describía migración v12 como actual; se reemplaza con el estado v12–v14, la regla de 429 ambiguo y el límite de dos slots. Zoom Out dejó Nit sobre la especificación byte-level del snapshot, sin bloquear. R20 no fue limpia por el Major de trazabilidad; el HEAD documental nuevo requiere CI y dos ciclos limpios.
 
 El commit documental posterior `919df21803c8a32d04e41d7313d115e4e9ad6af7` recibió CI #90 (`44026736806`) `success`. El siguiente commit conserva la evidencia de R20/CI90 y queda pendiente de ciclos R21/R22 sobre el mismo HEAD candidato.
+
+## Revisión fresca R21 — `6959f31`
+
+Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/1 (Blocker/Major/Nit) sobre `6959f318966fd592e303aa88c9feeed61638ddc0`; CI #91 (`44026920565`) pasó sobre ese SHA. Codebase confirmó los caminos 429/timeout/no-charge; Zoom Out dejó un Nit de mantenimiento por la especificación detallada del snapshot.
+
+Readiness encontró un Major de trazabilidad porque el registro aún no nombraba el SHA exacto auditado. Esta actualización agrega el resultado con SHA completo y explicita el procedimiento para comparar el HEAD remoto con `git rev-parse`, `head_sha` de GitHub y CI. R21 no fue limpia; el siguiente HEAD debe pasar R22 y R23 limpias sobre el mismo SHA.
