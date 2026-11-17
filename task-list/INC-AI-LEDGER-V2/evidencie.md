@@ -1,7 +1,7 @@
 # INC-AI-LEDGER-V2 — Evidencia
 
 ## Estado
-Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`). Commit de implementación: `c9d06d37129d52157bca6da99324917032c27dc9`. PR #43 y #45 estaban abiertos al inicio; el PR nuevo y su CI están pendientes.
+Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`). Commit de implementación: `c9d06d37129d52157bca6da99324917032c27dc9`; commit de evidencia: `9c40ff4ef535dbe1bac6f5ae26f7df7a81120ba0`. PR #46 abierto: https://github.com/VGMil-dev/fragments/pull/46. Los PR #43 y #45 se cerraron después de agregar a cada uno un comentario que los enlaza al #46. CI de #46 aún no reporta checks.
 
 ## Trabajo y límites
 - Se aisló la identidad financiera por operación; las migraciones SQLite v12/v13 guardan claves nuevas del ledger y de Inspector sin reasignar reservas ni retos antiguos.
@@ -15,7 +15,9 @@ Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546
 - Salida fresca del 2026-11-17: `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas exitosas; contratos 19/19, API 148/148, web 95/95; typecheck, lint y build completados. Solo advertencias de empaquetado preexistentes de `use client` en `lucide-react` y hash de Turbo en árbol modificado.
 - Salida fresca: `git diff --check` — limpia.
 - API focal Inspector/ledger — 28/28 pruebas exitosas; typecheck API exitoso.
-- Sin operaciones externas de producción ni invocaciones pagadas. CI del PR aún pendiente.
+- `git push -u origin codex/ledger-v2` — PASS; rama publicada sin force push.
+- PR #46 creado contra `main`; PR #43 y #45 cerrados con referencia al reemplazo.
+- Sin operaciones externas de producción ni invocaciones pagadas. CI del PR aún pendiente; no se fusionó.
 
 ## Restricciones
 Sin cambios de producción/SQLite productiva, sin release, sin gasto IA, sin liberación de la reserva de 870 microUSD y sin reproceso de las seis revisiones.
