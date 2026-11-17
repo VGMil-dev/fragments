@@ -1,0 +1,74 @@
+[
+  {
+    "audience": "Público",
+    "breakpoint": "Desktop ≥1024",
+    "navigation": "Header top 72px",
+    "main": "Hero 44/56 texto/arte",
+    "spacing": "Max-width 1280; secciones ancho contenido",
+    "cards": "Cards 2–4 cols por contenido",
+    "notes": "Ilustración 2x/nearest-neighbor solo si fuente pixel real"
+  },
+  {
+    "audience": "Público",
+    "breakpoint": "Tablet 768–1023",
+    "navigation": "Header responsivo",
+    "main": "Hero 50/50 o stack si rompe",
+    "spacing": "Gutter 24",
+    "cards": "Cards 2 cols",
+    "notes": "Mantener CTAs visibles"
+  },
+  {
+    "audience": "Público",
+    "breakpoint": "Mobile <768",
+    "navigation": "Header + menú accesible",
+    "main": "Hero stack copy→art",
+    "spacing": "Gutter 16–20",
+    "cards": "Cards 1 col",
+    "notes": "No ocultar rutas críticas"
+  },
+  {
+    "audience": "Estudiante",
+    "breakpoint": "Desktop ≥1024",
+    "navigation": "Sidebar 248px + topbar",
+    "main": "Content 1280 max",
+    "spacing": "Sidebar fija si no tapa; scroll en contenido",
+    "cards": "Cards fluidas",
+    "notes": "Estados loading/empty/error"
+  },
+  {
+    "audience": "Estudiante",
+    "breakpoint": "Tablet 768–1023",
+    "navigation": "Sidebar compacta o drawer",
+    "main": "Topbar estable",
+    "spacing": "Content 100%",
+    "cards": "Cards 2 cols",
+    "notes": "Navegación teclado"
+  },
+  {
+    "audience": "Estudiante",
+    "breakpoint": "Mobile <768",
+    "navigation": "Topbar + navegación colapsable",
+    "main": "Una columna",
+    "spacing": "Acciones sticky solo si no tapan",
+    "cards": "Cards 1 col",
+    "notes": "No perder progreso de formularios"
+  },
+  {
+    "audience": "Docente",
+    "breakpoint": "Desktop ≥1024",
+    "navigation": "Sidebar + barra contexto",
+    "main": "Tablas/datos prioridad",
+    "spacing": "Panel lateral detalle",
+    "cards": "Tabla overflow manejable",
+    "notes": "Filtros y paginación existentes"
+  },
+  {
+    "audience": "Docente",
+    "breakpoint": "Mobile <768",
+    "navigation": "Menú / barra inferior según uso",
+    "main": "Datos apilados semánticamente",
+    "spacing": "Drawer full-screen",
+    "cards": "Cards en lugar de tablas si aporta",
+    "notes": "No ocultar acciones administrativas"
+  }
+]

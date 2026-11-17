@@ -5,7 +5,7 @@
   justify-items: center;
   gap: 3rem;
   padding: clamp(1.25rem, 5vw, 4rem);
-  background: #fcf9f1;
+  background: #030407;
 }
 
 .identity-screen > .brand { justify-self: start; }
@@ -15,11 +15,11 @@
   display: grid;
   gap: 1rem;
   padding: clamp(1.5rem, 5vw, 3rem);
-  border: 1px solid #afc4d9;
+  border: 1px solid #6682AC;
   border-radius: 1.25rem;
-  background: #fffdf8;
+  background: #121C32;
 }
 
 .identity-card h1, .identity-card p { margin: 0; }
-.identity-card__privacy { color: #526782; font-size: 0.9rem; }
-.identity-card a { color: #315f92; }
+.identity-card__privacy { color: #ADBBD3; font-size: 0.9rem; }
+.identity-card a { color: #1558C9; }

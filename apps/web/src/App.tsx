@@ -1,5 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
+import { Lightbulb, Rocket, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, ProposalResponse, StudentMe, UpdateProposalRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
@@ -14,10 +15,13 @@ import { createTrainerApi } from "./lib/api/trainer-api";
 import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
+import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
+import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
+import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const inspectorApi = createInspectorApi(createApiClient());
@@ -116,6 +120,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
           <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
         </nav>
+        <span className="student-workspace__nav-hint" aria-hidden="true">Secciones de estudiante</span>
         <div className="student-workspace__account">{student ? <>{student.profileUrl && student.githubLogin ? <a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a> : <span>Cuenta GitHub</span>}<button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
       </header>
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
@@ -219,33 +224,52 @@ export function App() {
 
   return (
     <>
+      <div className="f162-landing">
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
-      <header className="site-header">
+      <header className="f162-header">
         <a className="brand" href="#inicio" aria-label="Fragments, ir al inicio">
-          <BrandMark className="brand__icon" />
-          <span className="brand__name">fragments<span className="brand__period">.</span></span>
+          <img className="brand__icon f162-isotipo" src="/brand/fragments-isotipo-recto.svg" alt="" width={40} height={32} />
+          <span className="brand__name">Fragments<span className="brand__period">.</span></span>
         </a>
-        <nav className="site-nav" aria-label="Navegación principal">
-          <a href="#como-funciona">Cómo funciona</a>
-          <a href="#para-quien">Para estudiantes</a>
+        <nav className="f162-auth" aria-label="Acceso">
+          <a className="f162-login" href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Iniciar sesión</a>
+          <a className="f162-signup" href="/student/login" aria-label="Crear cuenta; continuar con GitHub" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Crear cuenta</a>
         </nav>
-        <a className="header-link" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Empezar <span aria-hidden="true">↗</span></a>
       </header>
 
       <main id="contenido">
-        <section className="hero" id="inicio" aria-labelledby="hero-title">
-          <div className="hero__copy">
-            <p className="eyebrow"><span className="eyebrow__dot" aria-hidden="true" />TU ESPACIO PARA APRENDER HACIENDO</p>
-            <h1 id="hero-title">Una idea.<br />Muchos <span className="highlight">fragmentos.</span></h1>
-            <p className="hero__lead">Aprende programación construyendo proyectos propios, paso a paso y con guía en el camino.</p>
-            <a className="button button--primary" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
-            <p className="hero__note"><img src="/flower.svg" alt="" width="24" height="36" />Imagina. Construye. Demuestra.</p>
+        <section className="f162-hero" id="inicio" aria-labelledby="f162-title">
+          <LandingHeroMedia />
+          <div className="f162-intro">
+            <h1 id="f162-title">Fragments</h1>
+            <p className="f162-tagline">Sueña · Crea · Conecta</p>
+            <p className="f162-description">Un lugar para imaginar, aprender y construir proyectos a tu ritmo.</p>
           </div>
-          <div className="hero__art" aria-label="Ilustración de una computadora rodeada de plantas y piezas de código" role="img">
-            <div className="art-frame"><img src="/hero-fragments.webp" alt="" fetchPriority="high" width="1774" height="944" /></div>
-            <span className="art-label"><span aria-hidden="true">✳</span>ideas en proceso</span>
-          </div>
-          <div className="hero__footnote"><span>01</span>APRENDER CON PROYECTOS REALES</div>
+          <section className="f162-dock" aria-label="Descubre Fragments">
+            <div className="f162-dock-inner">
+              <ul className="f162-benefits" aria-label="Lo que encontrarás en Fragments">
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><Rocket size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
+                  <span className="f162-benefit-full">Desarrollo sin límites</span><span aria-hidden="true" className="f162-benefit-short">Desarrollo</span>
+                </li>
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><Lightbulb size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
+                  <span className="f162-benefit-full">Ideas que inspiran</span><span aria-hidden="true" className="f162-benefit-short">Ideas</span>
+                </li>
+                <li>
+                  <span aria-hidden="true" className="f162-benefit-icon"><UsersRound size={22} strokeWidth={1.8} aria-hidden="true" focusable="false" /></span>
+                  <span className="f162-benefit-full">Comunidad unida</span><span aria-hidden="true" className="f162-benefit-short">Comunidad</span>
+                </li>
+              </ul>
+              <div className="f162-action">
+                <p>Un nuevo capítulo comienza...</p>
+                <a className="f162-start" href="/student/login" aria-label="Comenzar; continuar con GitHub" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>
+                  <span>Comenzar</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>
+                </a>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section className="intro" id="para-quien" aria-labelledby="intro-title">
@@ -268,13 +292,6 @@ export function App() {
           </ol>
         </section>
 
-        <section className="closing" aria-labelledby="closing-title">
-          <div className="closing__ornament" aria-hidden="true"><span>✳</span><span>✳</span><span>✳</span></div>
-          <p className="eyebrow">TU SIGUIENTE PROYECTO TE ESPERA</p>
-          <h2 id="closing-title">¿Qué te gustaría<br />hacer realidad?</h2>
-          <a className="button button--light" href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Descubrir cómo empezar <span className="button__arrow" aria-hidden="true">→</span></a>
-          <p className="closing__caption">Una idea a la vez. Un fragmento a la vez.</p>
-        </section>
       </main>
 
       <footer className="site-footer">
@@ -286,6 +303,7 @@ export function App() {
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
         <BuildVersion />
       </footer>
+      </div>
     </>
   );
 }

@@ -66,15 +66,15 @@ export function GalleryScreen({ state, onChoose, selected, detailLoading = false
               <li className="gallery-list__item" key={entry.id}>
                 <article className="gallery-entry">
                   <div className="gallery-entry__copy">
-                    <h2>{entry.title}</h2>
+                    <div className="gallery-entry__title-row"><h2>{entry.title}</h2><span className="gallery-entry__status">{entry.academicStatus}</span></div>
                     <p>{entry.summary}</p>
                     <p className="gallery-entry__author"><a href={entry.author.profileUrl} target="_blank" rel="noreferrer">{entry.author.avatarUrl ? <img src={entry.author.avatarUrl} alt="" loading="lazy" /> : null}@{entry.author.login}</a> · {entry.subject} / {entry.theme}</p>
                     <ul className="gallery-entry__tags" aria-label={`Habilidades y temas de ${entry.title}`}>
                       {entry.skills.map((skill) => <li key={`skill-${skill}`}>{skill}</li>)}
                       {entry.tags.map((tag) => <li key={`tag-${tag}`}>{tag}</li>)}
                     </ul>
-                    <p className="gallery-entry__context">Consigna: {entry.assignment}</p>
-                    <p className="gallery-entry__context">Revisión {entry.proposalVersion} · rúbrica {entry.rubricTitle} (v{entry.rubricVersion}) · {entry.academicStatus}</p>
+                    <p className="gallery-entry__assignment">Consigna: {entry.assignment}</p>
+                    <p className="gallery-entry__context">Revisión {entry.proposalVersion} · rúbrica {entry.rubricTitle} (v{entry.rubricVersion})</p>
                   </div>
                   <button
                     className="gallery-entry__action"

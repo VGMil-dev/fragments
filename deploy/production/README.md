@@ -38,8 +38,20 @@ GitHub Actions usa runners hospedados ARM64 y construye las imágenes desde el S
 
 En la VPS, `fragments-release-poll.timer` consulta los Releases públicos cada cinco minutos con la cuenta sin login `fragments-release`. Esa cuenta no recibe `sudo`, Docker, LXD ni acceso a otros servicios; solo puede crear un archivo de solicitud fijo. `fragments-release-apply.path` despierta un servicio root endurecido, que valida de nuevo el release, la ejecución aprobada, la tag y el SHA contra GitHub, la atestación, el paquete ARM64 y las etiquetas de ambas imágenes. El socket Docker solo queda disponible a ese servicio fijo. Se recrean únicamente `api` y `web` de Fragments.
 
-Antes del cambio se ejecuta el servicio existente `fragments-backup.service`; se comprueban propietario, permisos y `PRAGMA integrity_check=ok` del snapshot, cuyo SHA-256 se registra en el ledger privado. El agente comprueba que el volumen SQLite y los contenedores vecinos no cambian. Si falla el healthcheck, revierte las referencias de imagen anteriores sin restaurar la base. El ledger persistente registra tag, objeto, SHA, imágenes anteriores, backup y resultado; bloquea repetir tag, SHA o ID de release. No se borran tags para reintentar.
+Antes del cambio se ejecuta el servicio existente `fragments-backup.service`; se comprueban propietario, permisos y `PRAGMA integrity_check=ok` del snapshot, cuyo SHA-256 se registra en el ledger privado. El agente comprueba que el volumen SQLite y los contenedores vecinos no cambian. Si falla el healthcheck, revierte las referencias de imagen anteriores sin restaurar la base. El ledger persistente registra tag, objeto, SHA, imágenes anteriores, backup y resultado; rechaza duplicados terminales y actualiza solo el único registro `deploying` con la misma tag/SHA/ID de release. Los fallos remotos conservan el registro no terminal para volver a validar esa misma tag; no se borran tags ni se crea otra para reintentar.
 
+#### Reintento tras fallo remoto de GitHub
+
+Los timeouts o códigos no cero de `git fetch` y `gh attestation trusted-root` quedan en reintento no terminal cada cinco minutos; no mutan Docker ni requieren una tag nueva. Para corregir red/configuración/acceso con seguridad:
+
+```sh
+sudo systemctl stop fragments-release-poll.timer fragments-release-apply.path
+sudo systemctl is-active fragments-release-apply.service  # esperar hasta que indique inactive
+# Corregir red/configuración/acceso sin mostrar ni copiar secretos
+sudo systemctl start fragments-release-apply.path fragments-release-poll.timer
+```
+
+No detengas a la fuerza un apply activo: dejarlo terminar evita interrumpir una transacción. Si no termina, o el ledger queda en `recovery_required`, conserva el ledger y solicita diagnóstico operativo; no reinicies poll/apply ni ejecutes Docker hasta clasificar el estado. Si el evento `release_retry` persiste por un problema remoto, inspecciona solo `release_id`, `tag` y `code`; tras corregir la causa, el siguiente poll revalida la misma tag. No elimines el release ni crees otra tag.
 ### Publicar la siguiente versión
 
 Desde una copia limpia y actualizada, integra primero los cambios en `main`. Después, para publicar `v0.4.0`, fija la tag a ese commit exacto y envíala como la única acción que inicia el release:
@@ -59,13 +71,22 @@ git push origin refs/tags/v0.4.0
 
 Confirma que el árbol esté limpio, que `git cat-file` devuelva `tag` y que el SHA pelado sea el `HEAD` que se decidió publicar. El workflow verifica, prueba y construye; después espera la aprobación manual de `fragments-production`. Al aprobar, publica los assets; el agente pull verifica y despliega. No uses `workflow_dispatch`, la UI de GitHub Releases ni un push a una rama para iniciar este recorrido.
 
-Para revertir manualmente solo el código si el rollback automático no terminó, entra por SSH con el procedimiento operativo vigente y ejecuta como administrador:
+Para revertir intencionalmente el código de un release conocido, o reintentar un rollback que dejó un ledger `rollback_failed` y cuyo estado Docker fue diagnosticado como seguro, entra por SSH con el procedimiento operativo vigente. No ejecutes este comando con `recovery_required`, con una transacción `deploying` sin reconciliar, ni con imágenes/volumen/vecinos desconocidos. Primero pausa nuevas activaciones y espera que apply termine:
+
+Antes de corregir configuración o ejecutar el rollback manual, detén el timer y el path para impedir activaciones nuevas, pero deja que el oneshot en curso termine:
+
+```sh
+sudo systemctl stop fragments-release-poll.timer fragments-release-apply.path
+sudo systemctl is-active fragments-release-apply.service  # esperar hasta que indique inactive
+```
+
+No mates un apply activo. Espera hasta que informe `inactive`; si no termina, conserva el ledger y solicita diagnóstico operativo. Ejecuta el comando manual solo cuando la última entrada del ledger (sin buscar releases anteriores) sea `deployed` o `rollback_failed`, las imágenes `.Image` coincidan exactamente con `targetImageIds`, y volumen/vecinos coincidan con el baseline, y ambos contenedores estén sanos antes de ejecutar el rollback. Para `recovery_required`, estado `deploying` sin reconciliar o imagen mixta/desconocida, no lo ejecutes: conserva el ledger y solicita intervención.
 
 ```sh
 sudo /usr/bin/python3 /usr/local/libexec/fragments-release-agent.py --rollback-latest
 ```
 
-El comando usa las imágenes anteriores registradas, valida salud y deja la base SQLite sin cambios. Si el endpoint o el ledger indican que el rollback también falló, detén los servicios `fragments-release-poll.timer` y `fragments-release-apply.path`, conserva el ledger y solicita recuperación operativa; no restaures SQLite automáticamente. Para pausar releases sin desplegar, detén únicamente esos dos units de Fragments; no detengas el runner compartido ni otros servicios.
+El comando usa las imágenes anteriores registradas, valida salud y deja la base SQLite sin cambios. Si el endpoint o el ledger indican que el rollback también falló, detén `fragments-release-poll.timer` y `fragments-release-apply.path`, deja terminar apply y confirma que `systemctl is-active fragments-release-apply.service` devuelva `inactive`, conserva el ledger y solicita recuperación operativa; no restaures SQLite automáticamente. Para pausar releases sin desplegar, detén `fragments-release-poll.timer` y `fragments-release-apply.path`; deja terminar apply y confirma que el servicio esté `inactive`; no detengas el runner compartido ni otros servicios.
 
 ## Túnel
 
