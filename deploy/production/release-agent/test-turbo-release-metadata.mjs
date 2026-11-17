@@ -58,7 +58,8 @@ test("Turbo passes exact release metadata into the Vite bundle", { timeout: 600_
     }
     await run("git", ["add", "--", ...overlayFiles], isolatedRepo);
     const stagedFiles = await run("git", ["diff", "--cached", "--name-only"], isolatedRepo);
-    if (stagedFiles.trim()) {
+    const stagedOverlay = stagedFiles.split(/\r?\n/).some((file) => overlayFiles.includes(file.trim()));
+    if (stagedOverlay) {
       await run("git", [
         "-c", "user.name=Fragments Release Test",
         "-c", "user.email=release-test@example.invalid",
