@@ -174,3 +174,9 @@ Goldfish auditó `2af4d4066a7fbfe74627bbdd6786bbd2aa6d7636` contra la base `3554
 | Zoom Out | 0 | 1 | 0 |
 
 El Major y ambos Nits correspondieron a trazabilidad/completitud: `[x]` se había marcado por resultados en `fc17c4f`, mientras `2af4d40` era un cambio documental posterior y aún no tenía CI/Goldfish exactos en la evidencia. El CI #77 terminó `success` sobre `2af4d40` después de la revisión. La casilla se reabrió en esta actualización y queda `[ ]` hasta que CI y Goldfish evalúen el HEAD que contiene la corrección.
+
+## Revisión fresca R12 — `a0b3b68`
+
+Tres revisores Goldfish frescos inspeccionaron el HEAD `a0b3b68d94cf0dd567858238a897f69614866afd` en modo solo lectura. Codebase Details encontró 0 Blockers, 0 Majors y 0 Nits; Zoom Out encontró 0/0/0. Implementation Readiness encontró un Major: `recovery-plan.md` exigía verificar la compatibilidad de la imagen API previa con SQLite v14 pero no detallaba procedimiento, resultado esperado ni criterio de parada.
+
+El hallazgo se acepta y se resuelve en `recovery-plan.md`: prueba aislada con imagen fijada por digest, base sintética saneada v14, egress bloqueado, chequeos concretos de salud/esquema/integridad/reserva incierta y cancelación del release ante cualquier diferencia. El R12 agregado no fue limpio. Los siguientes ciclos deben revisar un SHA final sin cambios entre rondas; no se ejecutará el procedimiento de compatibilidad como parte de este PR.
