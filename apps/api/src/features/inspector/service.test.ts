@@ -10,6 +10,7 @@ import { createInMemoryInspectorStore, createInspectorService, type ReviewEviden
 
 const commitA = "a".repeat(40);
 const commitB = "b".repeat(40);
+const requestId = (value: number) => `00000000-0000-4000-8000-${value.toString(16).padStart(12, "0")}`;
 const repositoryContent = {
   owner: "student",
   repo: "demo",
@@ -43,13 +44,15 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
   let currentCommit = options.commitSha ?? commitA;
   const review = options.review === undefined ? await makeReview() : options.review;
   let nextId = 0;
+  let providerCalls = 0;
   let receivedEvidenceExcerpt = "";
   let receivedPracticedFeatures: string[] = [];
   const provider = {
-    async createChallenge(input: { evidenceExcerpt: string; practicedFeatures?: string[] }) {
+    async createChallenge(input: { evidenceExcerpt: string; practicedFeatures?: string[]; onReceipt?: (draft: { precondition: string; mutation: string; demonstration: string; restoration: string; estimatedMinutes: number; teacherHint: string }) => void | Promise<void> }) {
+      providerCalls += 1;
       receivedEvidenceExcerpt = input.evidenceExcerpt;
       receivedPracticedFeatures = input.practicedFeatures ?? [];
-      return {
+      const draft = {
         precondition: "La función suma la lista recibida.",
         mutation: "Explica qué cambiarías para invertir temporalmente la condición del bucle.",
         demonstration: "Señala un ejemplo pequeño que muestre el cambio de comportamiento.",
@@ -57,6 +60,8 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
         estimatedMinutes: 12,
         teacherHint: "Observa el acumulador sin mostrar esta nota al estudiante.",
       };
+      await input.onReceipt?.(draft);
+      return draft;
     },
   };
   const store = createInMemoryInspectorStore();
@@ -72,13 +77,13 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
     now: () => new Date("2026-11-04T12:00:00.000Z"),
     createId: () => `challenge-${++nextId}`,
   });
-  return { service, changeCommit(sha: string) { currentCommit = sha; }, getEvidenceExcerpt() { return receivedEvidenceExcerpt; }, getPracticedFeatures() { return receivedPracticedFeatures; } };
+  return { service, changeCommit(sha: string) { currentCommit = sha; }, getEvidenceExcerpt() { return receivedEvidenceExcerpt; }, getPracticedFeatures() { return receivedPracticedFeatures; }, getProviderCalls() { return providerCalls; } };
 }
 
 describe("Inspector service", () => {
   it("creates a challenge from evidence on the exact reviewed commit and hides the teacher hint from students", async () => {
     const { service, getEvidenceExcerpt, getPracticedFeatures } = await fixture();
-    const created = await service.createChallenge("review-1");
+    const created = await service.createChallenge("review-1", requestId(1));
 
     expect(created.commitSha).toBe(commitA);
     expect(InspectorChallengeSchema.safeParse(created.challenge).success).toBe(true);
@@ -94,12 +99,22 @@ describe("Inspector service", () => {
     expect(InspectorChallengePublicSchema.safeParse(created.challenge).success).toBe(false);
   });
 
+  it("recovers the persisted result for the same operation without another provider dispatch", async () => {
+    const { service, getProviderCalls } = await fixture();
+    const first = await service.createChallenge("review-1", requestId(10));
+    const recovered = await service.createChallenge("review-1", requestId(10));
+
+    expect(recovered).toEqual(first);
+    expect(getProviderCalls()).toBe(1);
+    expect(first.aiOperationKey).toMatch(/^[a-f0-9]{64}$/);
+  });
+
   it("rejects missing reviews, unrelated latest commits, and reviews without verified repository evidence", async () => {
     const missing = await fixture({ review: null });
-    await expect(missing.service.createChallenge("review-1")).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
+    await expect(missing.service.createChallenge("review-1", requestId(11))).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
 
     const stale = await fixture({ commitSha: commitB });
-    await expect(stale.service.createChallenge("review-1")).rejects.toMatchObject({ code: "REVIEW_STALE" });
+    await expect(stale.service.createChallenge("review-1", requestId(12))).rejects.toMatchObject({ code: "REVIEW_STALE" });
 
     const validReview = await makeReview();
     const validFinding = validReview.analysis.findings[0]!;
@@ -107,33 +122,33 @@ describe("Inspector service", () => {
       ...validFinding,
       status: "not_verified",
     }] } } });
-    await expect(noEvidence.service.createChallenge("review-1")).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
+    await expect(noEvidence.service.createChallenge("review-1", requestId(13))).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
 
     const inventedPath = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, path: "src/missing.ts" }],
     }] } } });
-    await expect(inventedPath.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(inventedPath.service.createChallenge("review-1", requestId(14))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
 
     const outOfRange = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, lines: [1, 2] }],
     }] } } });
-    await expect(outOfRange.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(outOfRange.service.createChallenge("review-1", requestId(15))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
 
     const badEvidenceDigest = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, digest: "f".repeat(64) }],
     }] } } });
-    await expect(badEvidenceDigest.service.createChallenge("review-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(badEvidenceDigest.service.createChallenge("review-1", requestId(16))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
   });
 
   it("marks pending challenges obsolete, freezes assigned challenges, and preserves recorded defenses after a new commit", async () => {
     const { service, changeCommit } = await fixture();
-    const pending = await service.createChallenge("review-1");
-    const assigned = await service.createChallenge("review-1");
+    const pending = await service.createChallenge("review-1", requestId(20));
+    const assigned = await service.createChallenge("review-1", requestId(21));
     await service.assignChallenge(assigned.id, "teacher-1");
-    const completed = await service.createChallenge("review-1");
+    const completed = await service.createChallenge("review-1", requestId(22));
     await service.assignChallenge(completed.id, "teacher-1");
     await service.recordDefense(completed.id, "teacher-1", {
       mutationObserved: true,
@@ -153,7 +168,7 @@ describe("Inspector service", () => {
 
   it("requires teacher assignment before recording, binds the teacher, and rejects unsafe record fields", async () => {
     const { service } = await fixture();
-    const created = await service.createChallenge("review-1");
+    const created = await service.createChallenge("review-1", requestId(30));
     await expect(service.recordDefense(created.id, "teacher-1", {
       mutationObserved: true,
       restorationConfirmed: true,

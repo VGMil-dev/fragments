@@ -34,6 +34,7 @@ const evaluationInput = {
   proposalDigest: "a".repeat(64),
   config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] },
   contextVersion: 2,
+  operationKey: "f".repeat(64),
 };
 
 describe("Gateway Mentor evaluator (labelled offline generation)", () => {
@@ -42,6 +43,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
+      providerOnly: "fixture-provider",
       gatewayKeyConfigured: true,
       rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 },
       ledger,
@@ -61,7 +63,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     expect(ledger.summary()).toMatchObject({ settledMicroUsd: 400, blocked: false });
   });
 
-  it("blocks provider dispatch when a previous dispatch has uncertain cost", async () => {
+  it("allows an independent operation while preserving a legacy uncertain reservation", async () => {
     const generate = vi.fn(async () => ({ value: generated, costUsd: 0.0004 }));
     const ledger = makeLedger(1_000);
     const database = databases.at(-1)!;
@@ -71,6 +73,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       .run("uncertain-mentor", "mentor", 200, Date.now(), Date.now());
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
+      providerOnly: "fixture-provider",
       gatewayKeyConfigured: true,
       rates: { inputUsdPerMillion: 0.03, outputUsdPerMillion: 0.13 },
       ledger,
@@ -80,10 +83,9 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     let failure: unknown;
     try { await evaluator.evaluate(evaluationInput); } catch (error) { failure = error; }
 
-    expect(failure).toBeInstanceOf(MentorEvaluationFailure);
-    expect(failure).toMatchObject({ stage: "budget_reservation", errorType: "AiBudgetUnavailableError", providerHttpStatus: null });
-    expect(generate).not.toHaveBeenCalled();
-    expect(ledger.summary()).toMatchObject({ reservedMicroUsd: 200, blocked: true });
+    expect(failure).toBeUndefined();
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ reservedMicroUsd: 200, settledMicroUsd: 400, blocked: true });
   });
 
   it("captures safe provider status and Retry-After, then refuses a duplicate dispatch after an uncertain result", async () => {
@@ -100,6 +102,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
+      providerOnly: "fixture-provider",
       gatewayKeyConfigured: true,
       rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 },
       ledger,
@@ -112,7 +115,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     try { await evaluator.evaluate(evaluationInput); } catch (error) { retryFailure = error; }
 
     expect(firstFailure).toMatchObject({ stage: "provider_request", providerHttpStatus: 429, providerCode: "rate_limited", retryAfterMs: 2_000 });
-    expect(retryFailure).toMatchObject({ stage: "budget_reservation", errorType: "AiBudgetUnavailableError" });
+    expect(retryFailure).toMatchObject({ stage: "budget_reservation", errorType: "AiEvaluationInProgressError" });
     expect(generate).toHaveBeenCalledOnce();
     expect(ledger.summary().blocked).toBe(true);
     expect(JSON.stringify(firstFailure)).not.toContain("private request context");
@@ -120,12 +123,27 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     expect(JSON.stringify(firstFailure)).not.toContain("private provider detail");
   });
 
-  it("uses the minimum ledger reservation when model pricing is unavailable", async () => {
+  it("blocks before dispatch when model pricing is unavailable", async () => {
     const generate = vi.fn(async () => ({ value: generated, costUsd: 0 }));
     const ledger = makeLedger();
-    const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger, generate });
-    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1 })).resolves.toMatchObject({ modelId: "fixture/model" });
-    expect(generate).toHaveBeenCalledOnce();
+    const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, ledger, generate });
+    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1, operationKey: "b".repeat(64) })).rejects.toMatchObject({ stage: "configuration", errorType: "MissingGatewayConfiguration" });
+    expect(generate).not.toHaveBeenCalled();
     expect(ledger.summary()).toMatchObject({ settledMicroUsd: 0, reservedMicroUsd: 0, blocked: false });
+  });
+
+  it("reuses the operation identity to prevent another dispatch after an ambiguous Gateway 429", async () => {
+    const error = Object.assign(new Error("rate limited"), {
+      name: "GatewayError", statusCode: 429, type: "rate_limit_exceeded",
+      cause: Object.assign(new Error("upstream failure"), { name: "APICallError", statusCode: 503, responseBody: "{}" }),
+    });
+    const generate = vi.fn(async () => { throw error; });
+    const evaluator = createGatewayMentorEvaluator({
+      modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true,
+      rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 }, ledger: makeLedger(), generate,
+    });
+    await expect(evaluator.evaluate(evaluationInput)).rejects.toMatchObject({ gatewayHttpStatus: 429, providerHttpStatus: 503 });
+    await expect(evaluator.evaluate(evaluationInput)).rejects.toMatchObject({ stage: "budget_reservation", errorType: "AiEvaluationInProgressError" });
+    expect(generate).toHaveBeenCalledOnce();
   });
 });

@@ -12,6 +12,7 @@ import {
   type InspectorChallengePublic,
   type RepositorySnapshot,
 } from "@fragments/contracts";
+import { createHash } from "node:crypto";
 
 export type ReviewEvidence = {
   id: string;
@@ -39,6 +40,7 @@ export type DefenseRecord = {
 
 export type InspectorRecord = {
   id: string;
+  aiOperationKey?: string;
   reviewId: string;
   projectId: string;
   commitSha: string;
@@ -66,11 +68,13 @@ export interface InspectorDependencies {
   provider: {
     createChallenge(input: {
       reviewId: string;
+      operationKey: string;
       commitSha: string;
       evidence: EvidenceReference;
       findingReason: string;
       evidenceExcerpt: string;
       practicedFeatures?: string[];
+      onReceipt?: (draft: ChallengeDraft) => void | Promise<void>;
     }): Promise<ChallengeDraft>;
   };
   practicedFeatures?: (reviewId: string) => Promise<string[]>;
@@ -167,7 +171,10 @@ export function createInspectorService(dependencies: InspectorDependencies) {
   }
 
   return {
-    async createChallenge(reviewId: string): Promise<InspectorRecord> {
+    async createChallenge(reviewId: string, requestId: string): Promise<InspectorRecord> {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+        throw error("INVALID_IDEMPOTENCY_KEY", "La solicitud de creación debe tener un identificador válido.");
+      }
       const review = await requireReview(reviewId);
       const latestCommit = await dependencies.reviews.getLatestCommit(review.projectId);
       if (!latestCommit || latestCommit.toLowerCase() !== review.commitSha.toLowerCase()) {
@@ -176,29 +183,37 @@ export function createInspectorService(dependencies: InspectorDependencies) {
       }
       const { evidence, findingReason, evidenceExcerpt } = verifiedEvidence(review);
       const practicedFeatures = (await dependencies.practicedFeatures?.(review.id) ?? []).slice(0, 20).map((feature) => feature.slice(0, 300));
+      const operationKey = createHash("sha256").update(JSON.stringify({
+        requestId: requestId.toLowerCase(), reviewId: review.id, commitSha: review.commitSha.toLowerCase(), evidence, findingReason, evidenceExcerpt, practicedFeatures,
+      })).digest("hex");
+      const existing = (await dependencies.store.listByReview(review.id)).find((record) => record.aiOperationKey === operationKey);
+      if (existing) return existing;
+      let persistedRecord: InspectorRecord | undefined;
+      const persistChallenge = async (draft: ChallengeDraft) => {
+        const challenge = InspectorChallengeSchema.parse({
+          evaluationId: review.id,
+          sourceEvidence: [evidence],
+          ...draft,
+        });
+        const record: InspectorRecord = {
+          id: createId(), aiOperationKey: operationKey, reviewId: review.id, projectId: review.projectId,
+          commitSha: review.commitSha, challenge, status: "pending", createdAt: now().toISOString(),
+        };
+        persistedRecord = await dependencies.store.create(record);
+      };
       const draft = await dependencies.provider.createChallenge({
         reviewId: review.id,
+        operationKey,
         commitSha: review.commitSha,
         evidence,
         findingReason,
         evidenceExcerpt,
         practicedFeatures,
+        onReceipt: persistChallenge,
       });
-      const challenge = InspectorChallengeSchema.parse({
-        evaluationId: review.id,
-        sourceEvidence: [evidence],
-        ...draft,
-      });
-      const record: InspectorRecord = {
-        id: createId(),
-        reviewId: review.id,
-        projectId: review.projectId,
-        commitSha: review.commitSha,
-        challenge,
-        status: "pending",
-        createdAt: now().toISOString(),
-      };
-      return dependencies.store.create(record);
+      if (persistedRecord) return persistedRecord;
+      await persistChallenge(draft);
+      return persistedRecord!;
     },
 
     async listForTeacher(reviewId: string): Promise<InspectorRecord[]> {

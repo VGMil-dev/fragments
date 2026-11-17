@@ -11,6 +11,7 @@ const challenge = {
   },
   status: "pending", createdAt: "2026-11-04T12:00:00.000Z",
 };
+const requestId = "00000000-0000-4000-8000-000000000001";
 
 describe("createInspectorApi", () => {
   it("loads, creates, assigns and records using the private teacher contracts", async () => {
@@ -19,7 +20,7 @@ describe("createInspectorApi", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: challenge }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: challenge }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: challenge }), { status: 200 }));
-    const api = createInspectorApi(createApiClient({ fetcher }));
+    const api = createInspectorApi(createApiClient({ fetcher }), () => requestId);
 
     await expect(api.list("review-1")).resolves.toMatchObject({ ok: true, data: [challenge] });
     await api.create("review-1");
@@ -32,14 +33,16 @@ describe("createInspectorApi", () => {
       ["/api/inspector/challenges/challenge-1/assign", "POST"],
       ["/api/inspector/challenges/challenge-1/record", "POST"],
     ]);
+    expect(new Headers(fetcher.mock.calls[1]?.[1]?.headers).get("idempotency-key")).toBe(requestId);
     expect(JSON.parse(String(fetcher.mock.calls[3]?.[1]?.body))).toEqual({ mutationObserved: true, restorationConfirmed: true, notes: "Listo." });
   });
 
   it("rejects blank identifiers and invalid defense notes before sending", async () => {
     const fetcher = vi.fn<typeof fetch>();
-    const api = createInspectorApi(createApiClient({ fetcher }));
+    const api = createInspectorApi(createApiClient({ fetcher }), () => requestId);
 
     expect((await api.create("  ")).ok).toBe(false);
+    expect((await api.create("review-1", "invalid-key")).ok).toBe(false);
     expect((await api.record("challenge-1", { mutationObserved: true, restorationConfirmed: true, notes: "x".repeat(2001) })).ok).toBe(false);
     expect(fetcher).not.toHaveBeenCalled();
   });

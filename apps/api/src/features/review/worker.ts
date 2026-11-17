@@ -98,6 +98,7 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
           logEvent({
             event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: failure.stage,
             errorCode: failure.errorCode, durationMs: failure.durationMs, attempt: job.attempts,
+            ...(failure.gatewayFailure ? { gatewayFailure: failure.gatewayFailure } : {}),
             finalStatus: failed && failure.retryClass === "transient" && job.attempts < 3 ? "retry_wait" : failed ? "failed" : "lease_lost",
           });
         } catch {

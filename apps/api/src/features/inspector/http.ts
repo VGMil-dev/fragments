@@ -24,6 +24,11 @@ function sendError(response: ServerResponse, status: number, code: string, messa
   sendJson(response, status, { ok: false, error: { code, message } });
 }
 
+function toPublicRecord(record: Awaited<ReturnType<InspectorService["createChallenge"]>>) {
+  const { aiOperationKey: _aiOperationKey, ...publicRecord } = record;
+  return InspectorChallengeRecordResponseSchema.parse(publicRecord);
+}
+
 async function readJson(request: IncomingMessage, response: ServerResponse): Promise<unknown | undefined> {
   let raw = "";
   for await (const chunk of request) {
@@ -72,12 +77,17 @@ export function createInspectorHttp(service: InspectorService, auth?: FragmentsA
     try {
       if (listMatch && request.method === "GET") {
         const records = await service.listForTeacher(listMatch[1]!);
-        sendJson(response, 200, { ok: true, data: InspectorChallengeRecordsResponseSchema.parse(records) });
+        sendJson(response, 200, { ok: true, data: InspectorChallengeRecordsResponseSchema.parse(records.map(toPublicRecord)) });
         return "handled";
       }
       if (listMatch && request.method === "POST") {
-        const record = await service.createChallenge(listMatch[1]!);
-        sendJson(response, 201, { ok: true, data: InspectorChallengeRecordResponseSchema.parse(record) });
+        const idempotencyKey = request.headers["idempotency-key"];
+        if (typeof idempotencyKey !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+          sendError(response, 400, "INVALID_IDEMPOTENCY_KEY", "No se pudo identificar esta solicitud de creación.");
+          return "handled";
+        }
+        const record = await service.createChallenge(listMatch[1]!, idempotencyKey);
+        sendJson(response, 201, { ok: true, data: toPublicRecord(record) });
         return "handled";
       }
       if (assignMatch && request.method === "POST") {
@@ -89,7 +99,7 @@ export function createInspectorHttp(service: InspectorService, auth?: FragmentsA
           return "handled";
         }
         const record = await service.assignChallenge(assignMatch[1]!, teacherId);
-        sendJson(response, 200, { ok: true, data: InspectorChallengeRecordResponseSchema.parse(record) });
+        sendJson(response, 200, { ok: true, data: toPublicRecord(record) });
         return "handled";
       }
       if (recordMatch && request.method === "POST") {
@@ -101,7 +111,7 @@ export function createInspectorHttp(service: InspectorService, auth?: FragmentsA
           return "handled";
         }
         const record = await service.recordDefense(recordMatch[1]!, teacherId, body.data);
-        sendJson(response, 200, { ok: true, data: InspectorChallengeRecordResponseSchema.parse(record) });
+        sendJson(response, 200, { ok: true, data: toPublicRecord(record) });
         return "handled";
       }
       sendError(response, 405, "METHOD_NOT_ALLOWED", "El método no está disponible para esta ruta.");

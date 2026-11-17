@@ -216,6 +216,18 @@ const migrations = [
       SELECT id, attempts, NULL, updated_at, NULL, 'unknown', 'LEGACY_UNCLASSIFIED', 'manual', 'failed'
       FROM jobs WHERE type='review' AND status='failed' AND attempts > 0;`,
   },
+  {
+    version: 12,
+    sql: `ALTER TABLE ai_budget_reservations ADD COLUMN operation_key TEXT;
+    CREATE INDEX ai_budget_reservations_operation ON ai_budget_reservations(operation_key, created_at DESC)
+      WHERE operation_key IS NOT NULL;`,
+  },
+  {
+    version: 13,
+    sql: `ALTER TABLE inspector_challenges ADD COLUMN ai_operation_key TEXT;
+    CREATE UNIQUE INDEX inspector_challenges_ai_operation ON inspector_challenges(ai_operation_key)
+      WHERE ai_operation_key IS NOT NULL;`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

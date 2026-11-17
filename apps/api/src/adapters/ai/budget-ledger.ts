@@ -15,10 +15,19 @@ export function parseGatewayCostUsd(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** Conservative character-based estimate for the complete prompt, including system instructions. */
+export function estimateAiInputTokens(prompt: string): number {
+  return Math.ceil(new TextEncoder().encode(prompt).byteLength / 4);
+}
+
 export type AiBudgetSummary = { limitMicroUsd: number; settledMicroUsd: number; reservedMicroUsd: number; availableMicroUsd: number; blocked: boolean };
 
 export class AiBudgetUnavailableError extends Error {
   constructor(message = "La barrera de consumo de IA no puede garantizar una reserva válida.") { super(message); this.name = "AiBudgetUnavailableError"; }
+}
+
+export class AiEvaluationInProgressError extends Error {
+  constructor() { super("Esta operación de IA ya tiene un resultado, una reserva activa o un costo incierto."); this.name = "AiEvaluationInProgressError"; }
 }
 
 function toMicroUsd(costUsd: number): number {
@@ -32,7 +41,7 @@ export function estimateAiCallCostMicroUsd(input: { inputTokens: number; outputT
   if (!rates || !Number.isFinite(rates.inputUsdPerMillion) || !Number.isFinite(rates.outputUsdPerMillion)
     || rates.inputUsdPerMillion <= 0 || rates.outputUsdPerMillion <= 0
     || !Number.isSafeInteger(input.inputTokens) || input.inputTokens < 1
-    || !Number.isSafeInteger(input.outputTokens) || input.outputTokens < 1) return 1;
+    || !Number.isSafeInteger(input.outputTokens) || input.outputTokens < 1) throw new AiBudgetUnavailableError("Falta una tarifa verificada o un límite de tokens válido para estimar la solicitud.");
   const estimatedUsd = ((input.inputTokens * rates.inputUsdPerMillion) + (input.outputTokens * rates.outputUsdPerMillion)) / 1_000_000;
   return Math.max(1, toMicroUsd(estimatedUsd * RESERVATION_MARGIN));
 }
@@ -42,27 +51,32 @@ export class SqliteAiBudgetLedger {
     if (!Number.isSafeInteger(limitMicroUsd) || limitMicroUsd < 1) throw new Error("El límite local de IA debe ser un entero positivo en microdólares.");
   }
 
-  reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; now?: number }): string {
+  reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; operationKey: string; now?: number }): string {
     const id = input.id ?? randomUUID();
     const now = input.now ?? Date.now();
     if (!/^[a-z][a-z0-9_-]{0,39}$/i.test(input.requestKind) || !Number.isSafeInteger(input.estimateMicroUsd)
-      || input.estimateMicroUsd < 1) throw new AiBudgetUnavailableError();
+      || input.estimateMicroUsd < 1 || !/^[a-f0-9]{64}$/.test(input.operationKey)) throw new AiBudgetUnavailableError();
     this.database.exec("BEGIN IMMEDIATE");
     let committed = false;
     try {
       // Long-lived reservations are ambiguous after a process crash; never release or reuse them automatically.
       this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE status='reserved' AND updated_at<=?")
         .run(now, now - STALE_RESERVATION_MS);
-      const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
-      if (uncertain) {
-        this.database.exec("COMMIT");
-        committed = true;
-        throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
+      const previous = this.database.prepare(`SELECT status FROM ai_budget_reservations
+        WHERE operation_key=? ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(input.operationKey) as { status: string } | undefined;
+      if (previous && previous.status !== "released") {
+        throw new AiEvaluationInProgressError();
+      }
+      const committedCosts = this.database.prepare(`SELECT
+        COALESCE(SUM(CASE WHEN status='settled' THEN actual_microusd ELSE reserved_microusd END),0) AS total
+        FROM ai_budget_reservations WHERE status IN ('reserved','uncertain','settled')`).get() as { total: number };
+      if (Number(committedCosts.total) + input.estimateMicroUsd > this.limitMicroUsd) {
+        throw new AiBudgetUnavailableError("El costo reservado supera el límite disponible para IA.");
       }
       this.database.prepare(`INSERT INTO ai_budget_reservations
-        (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
-        VALUES (?, ?, ?, NULL, 'reserved', ?, ?)`)
-        .run(id, input.requestKind, input.estimateMicroUsd, now, now);
+        (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at, operation_key)
+        VALUES (?, ?, ?, NULL, 'reserved', ?, ?, ?)`)
+        .run(id, input.requestKind, input.estimateMicroUsd, now, now, input.operationKey);
       this.database.exec("COMMIT");
       return id;
     } catch (error) {
@@ -105,17 +119,30 @@ export class SqliteAiBudgetLedger {
     };
   }
 
-  async run<T>(input: { requestKind: string; inputTokens: number; outputTokens: number; rates?: AiGatewayRateCard; invoke: () => Promise<CostReceipt<T>> }): Promise<T> {
+  async run<T>(input: {
+    requestKind: string;
+    inputTokens: number;
+    outputTokens: number;
+    rates?: AiGatewayRateCard;
+    operationKey: string;
+    isConfirmedNoCharge?: (error: unknown) => boolean;
+    onReceipt?: (value: T) => void | Promise<void>;
+    invoke: () => Promise<CostReceipt<T>>;
+  }): Promise<T> {
     const estimateMicroUsd = estimateAiCallCostMicroUsd({ inputTokens: input.inputTokens, outputTokens: input.outputTokens, ...(input.rates ? { rates: input.rates } : {}) });
-    const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd });
+    const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd, operationKey: input.operationKey });
     try {
       const receipt = await input.invoke();
+      await input.onReceipt?.(receipt.value);
       const settlement = this.settle(reservationId, receipt.costUsd ?? null);
       if (settlement === "uncertain") throw new AiBudgetUnavailableError("El proveedor no confirmó el costo de la solicitud.");
       return receipt.value;
     } catch (error) {
       const row = this.database.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservationId) as { status: string } | undefined;
-      if (row?.status === "reserved") this.settle(reservationId, null);
+      if (row?.status === "reserved") {
+        if (input.isConfirmedNoCharge?.(error)) this.releaseBeforeDispatch(reservationId);
+        else this.settle(reservationId, null);
+      }
       throw error;
     }
   }
