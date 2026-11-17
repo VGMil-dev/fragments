@@ -75,3 +75,12 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - `spec.md` ahora documenta esta regla y el criterio de aceptación. El fix quedó en `6c9a9418a814f3d9fd0a996d24d2cd6a5e0ab8ae` y se publicó. CI #75 (`44017230569`), job `verify` `133817959462`, pasó sobre ese SHA.
 - Goldfish R6 sobre ese SHA encontró 1 Major de readiness (faltaban fases/checkpoints de implementación en la spec) y 1 Nit de estado (el texto decía que faltaba commit/push, pese a que `6c9a941` ya estaba publicado); Codebase y Zoom Out encontraron 0 Blockers/Majors/Nits. Las fases se añadieron y el estado se corrigió en esta actualización documental. Esta actualización requiere sus propios CI/Goldfish antes de cerrar; TASKS permanece `[ ]`.
 - No se tocó producción, no se liberó reserva, no se invocó IA, ni se hizo merge/deploy.
+
+## Verificación R7 — SHA sincronizado actual
+
+- HEAD de código/spec `fc17c4f364c3a09f27f2484ae8026f50a79cd21e`, base exacta `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; merge-base coincide y `git status` limpio. PR #43 abierto y mergeable.
+- CI `Fragments CI` #76 (`44017680286`), job obligatorio `verify` `133819432182`, terminó `success` sobre ese SHA. Pasaron scripts de release, test, typecheck, lint y build.
+- Goldfish R7 sobre el mismo HEAD: Codebase Details 0/0/0, Implementation Readiness 0/0/0, Zoom Out 0/0/0 (Blocker/Major/Nit). Revisaron allowlist, fases/checkpoints, migración v12 y política de certeza del Gateway. Los reviewers no ejecutaron pruebas ni modificaron archivos.
+- La protección activa `Fragments main via pull request` requiere PR+`verify`, cero aprobaciones humanas, resolución de hilos, merge commit y no permite bypass. El usuario indicó que la revisión Goldfish independiente satisface el control técnico si no quedan Blockers/Majors; el resultado R7 cumple. No hay aprobación humana obligatoria.
+- Riesgo operativo explícito: el SDK Gateway 4.0.136 no aporta evidencia afirmativa de cero intentos upstream en un 429 ordinario. Ese caso se mantiene como rate limit en la interfaz, no se reintenta automáticamente y conserva holdback `uncertain`, bloqueando despachos hasta conciliación. Los retries solo se ejercitan con señal sintética confiable de no despacho. En producción, la reserva 870 microUSD sigue intacta sin ID común ni conciliación.
+- Este informe es un cambio documental posterior a la verificación R7; requiere CI/Goldfish propios sobre su SHA actualizado. No se hizo merge, release, tag, conciliación, evaluación IA ni despliegue.

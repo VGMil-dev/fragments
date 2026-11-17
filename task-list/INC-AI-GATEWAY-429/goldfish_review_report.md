@@ -122,3 +122,17 @@ Goldfish R6 revisó el SHA `6c9a9418a814f3d9fd0a996d24d2cd6a5e0ab8ae` contra `or
 **Major de readiness:** faltaba definir fases de implementación con checkpoints buildable/testable. **Nit documental:** el estado decía commit/push pendientes aunque `6c9a941` ya estaba en remoto. La spec ahora define cuatro fases (ledger/migración; clasificación/policy; integración Mentor/UI; verificación integrada) con paths y resultados verificables. La evidencia ya identifica `6c9a941`, CI #75 PASS y el SHA documental siguiente pendiente; el Nit no se aplica al nuevo estado.
 
 La revisión reconfirmó que la rama no reintenta un 429 SDK desnudo por falta de evidencia positiva: conserva el holdback incierto. Esa limitación funcional debe comunicarse con claridad; no afirmar que el SDK normal permite retry de 429. La migración anterior API/v12 sigue como puerta pre-release separada. Los cambios documentales que remedian R6 requieren CI y Goldfish sobre su nuevo HEAD.
+
+## Revisión fresca R7 y dictamen del código actual
+
+Goldfish revisó `fc17c4f364c3a09f27f2484ae8026f50a79cd21e` contra `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; el merge-base coincide y el árbol estaba limpio.
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 0 |
+| Implementation Readiness | 0 | 0 | 0 |
+| Zoom Out | 0 | 0 | 0 |
+
+Las tres perspectivas confirmaron las fases/checkpoints de la spec, el allowlist de 22 paths, el esquema SQLite v12, y el comportamiento conservador de 429: sin evidencia afirmativa de no despacho, no reintenta ni libera y el ledger permanece `uncertain`. Este dictamen aplica al SHA citado.
+
+CI `Fragments CI` #76 (`44017680286`), job requerido `verify` `133819432182`, finalizó `success` en ese mismo SHA. La evidencia identifica explícitamente el cambio posterior como documental y pendiente de su propia verificación para evitar atribuirle este resultado R7.
