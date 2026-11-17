@@ -27,6 +27,7 @@ Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546
 - Se añadió una regresión que asienta más de USD 1, conserva una reserva incierta y permite reservar una operación distinta; el estado histórico no se libera ni se modifica.
 - El límite de USD 0,05 solo rige como autorización operativa de una futura prueba sintética aislada según los pasos anteriores; no es un límite local de ejecución ni garantiza el costo final.
 - Verificación fresca posterior al ajuste, 2026-11-17: 4 archivos focales, 29/29 pruebas; suite completa `pnpm exec turbo run test typecheck lint build --force`, 10/10 tareas, API 148/148, web 95/95, contratos 19/19 y typecheck/lint/build PASS.
+- Commit del ajuste: `5b4364276e301ebf8656f3b72d99e29bc1a03c09`. CI `verify` para ese head — SUCCESS; única anotación: warning deprecación Node.js 20 en actions de GitHub, forzadas a Node.js 24. PR #46 actualizado; sin merge ni despliegue.
 
 ## Restricciones
 Sin cambios de producción/SQLite productiva, sin release, sin gasto IA, sin liberación de la reserva de 870 microUSD y sin reproceso de las seis revisiones.
