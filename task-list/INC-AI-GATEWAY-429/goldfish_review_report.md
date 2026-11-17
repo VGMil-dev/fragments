@@ -214,3 +214,11 @@ Nits aceptados y corregidos después: la implementación activa cooldown compart
 Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/0 (Blocker/Major/Nit) sobre `57424951929c40e413c0272403dfbd8030e1d149`; CI #86 (`44025561745`) fue `success` en el mismo SHA. R17 encontró un Major en la reproducibilidad del snapshot: la sección de `table_info` unía cuatro tablas sin identificar el origen de cada fila ni fijar orden global de columnas.
 
 El runbook lo corrige añadiendo `table_name` a la proyección y orden binario `(table_name,cid)`. R17 no fue limpio; el SHA que contenga la corrección debe obtener CI y dos nuevas rondas limpias.
+
+## Revisión fresca R18 — `a24aaa3`
+
+Codebase 0/0/0, Readiness 0/0/1 y Zoom Out 0/0/1 (Blocker/Major/Nit) en `a24aaa3483b58ef36f1a525d75d9ef3de0ffcc80`. CI #88 (`44025966049`) pasó en el mismo SHA. R18 fue limpia con 0 Blockers/Majors. Readiness dejó un Nit de trazabilidad (registrar el resultado exacto en el próximo ciclo); Zoom Out observó oportunidad de simplificar un runbook operativo muy detallado, sin Major.
+
+## Revisión fresca R19 — `a24aaa3`
+
+Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/0. El Major fue que el registro autoritativo aún mostraba R17/CI #86 como estado más reciente, pese a los resultados R18/R19 y CI #88 del HEAD revisado. El hallazgo queda resuelto en el commit documental que añade ambos resultados, verifica PR/ruleset vigentes y mantiene el estado abierto mientras se audita el SHA documental final. R19 no fue limpia por trazabilidad; el nuevo SHA requiere CI y dos nuevas rondas Goldfish idénticas.
