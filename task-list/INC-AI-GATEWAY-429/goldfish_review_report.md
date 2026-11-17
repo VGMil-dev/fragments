@@ -92,3 +92,19 @@ Goldfish revisó el HEAD `0d4cb781a62b33ed40de31b092fe3cc7a428a63e`, ya basado e
 Codebase y Readiness confirmaron que `providerDispatchPossible` sobrevive la envoltura del 429 ambiguo y la reserva sigue en `uncertain`; los 4 intentos confirmados sin cargo terminan liberando una sola reserva. La spec enumera los paths del diff y el esquema v12.
 
 El único Nit fue documental: `TASKS.md` y evidencia decían que faltaba publicar el commit, aunque `0d4cb78` ya estaba en el branch remoto. Se corrigió en esta actualización. CI #73 (`44015643394`), job `verify`, terminó `success` sobre `0d4cb78`. Readiness mantiene como puerta de release la prueba de compatibilidad entre la imagen API anterior y SQLite v12; sigue separada de la aprobación de merge.
+
+## Revisión fresca R5: 429 desnudo y certeza de despacho
+
+Goldfish auditó el HEAD `57ca4621b3d210656b692c4c2a538fe8cdc56317` contra `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 1 | 1 |
+| Implementation Readiness | 0 | 0 | 1 |
+| Zoom Out | 0 | 0 | 0 |
+
+**Major financiero (Codebase Details):** `gateway-error.ts` infería `providerDispatchPossible=false` para un Gateway 429 solo porque no traía status upstream ni generación. `hasConfirmedNoChargeGatewayRejection` trataba esa ausencia como prueba positiva y la política podía reintentar/liberar la reserva. R5 confirmó que el SDK instalado no expone en `GatewayRateLimitError` el número/resultado de intentos de proveedor; el propio Vercel documenta que 429 puede proceder del Gateway o upstream.
+
+**Nits:** R5 readiness detectó que la evidencia `[x]` de `TASKS.md` citaba CI/Goldfish para `0d4cb78`, no el SHA R5 `57ca462`; Codebase anotó que la ausencia de metadatos de proveedor no es prueba de no despacho. La tarea se reabrió y se está corrigiendo la regla antes de cualquier cierre.
+
+Remediación local posterior a R5: la falta de datos ahora clasifica el posible despacho como verdadero. Solo un indicador explícito y confiable `providerDispatchPossible=false` habilita retry/release de un 429 sin upstream; el SDK normal actual no provee esa señal, de modo que un 429 ordinario se queda incierto y no se reintenta automáticamente. Gateway 402 con código `quota_for_entity_exceeded` sigue siendo un rechazo sin despacho, salvo evidencia upstream contraria. Las regresiones nuevas fallaron antes del fix (2 fallos del clasificador/política) y pasaron después; suite focalizada 16/16, suite completa local 10/10 tareas (API 154, contratos 19, web 97; typecheck/lint/build). Este estado corregido todavía requiere commit, CI y Goldfish exactos antes de volver a declarar el PR listo.

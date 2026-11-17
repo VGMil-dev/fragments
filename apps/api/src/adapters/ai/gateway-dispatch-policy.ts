@@ -32,7 +32,7 @@ class GatewayRetryExhaustedError extends Error {
 
   constructor(original: unknown, retryAfterMs: number, safeNoCharge: boolean) {
     const details = classifyGatewayFailure(original);
-    super("AI Gateway rate limit persisted after bounded retries.", { cause: original });
+    super("AI Gateway rate limit response could not be safely retried or exceeded the retry bound.", { cause: original });
     this.name = "GatewayRateLimitError";
     this.safeNoCharge = safeNoCharge;
     this.retryAfterMs = retryAfterMs;

@@ -35,7 +35,7 @@ describe("safe AI Gateway error classification", () => {
     expect(JSON.stringify(classifyGatewayFailure(error))).not.toMatch(/private|detail/);
   });
 
-  it("recognizes a Gateway-side 429 with no provider response as a bounded retry candidate", () => {
+  it("keeps a bare Gateway 429 ambiguous without positive no-dispatch evidence", () => {
     const error = gatewayError({
       name: "GatewayRateLimitError",
       type: "rate_limit_exceeded",
@@ -47,8 +47,18 @@ describe("safe AI Gateway error classification", () => {
       gatewayHttpStatus: 429,
       providerHttpStatus: null,
       retryable: true,
-      providerDispatchPossible: false,
+      providerDispatchPossible: true,
     });
+    expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
+  });
+
+  it("accepts an explicit pre-provider rejection signal as confirmed no-charge", () => {
+    const error = gatewayError({
+      name: "GatewayRateLimitError", type: "rate_limit_exceeded", statusCode: 429,
+      providerDispatchPossible: false, isRetryable: true,
+    });
+
+    expect(classifyGatewayFailure(error)).toMatchObject({ gatewayHttpStatus: 429, providerDispatchPossible: false });
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(true);
   });
 

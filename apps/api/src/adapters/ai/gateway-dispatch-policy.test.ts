@@ -14,12 +14,13 @@ function makeLedger() {
 }
 afterEach(() => { for (const database of databases.splice(0)) database.close(); });
 
-function rateLimitError(cause?: unknown, generation = true) {
+function rateLimitError(cause?: unknown, generation = true, providerDispatchPossible?: boolean) {
   return Object.assign(new Error("private gateway response"), {
     name: "GatewayRateLimitError",
     type: "rate_limit_exceeded",
     statusCode: 429,
     ...(generation ? { generationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7" } : {}),
+    ...(providerDispatchPossible !== undefined ? { providerDispatchPossible } : {}),
     isRetryable: true,
     ...(cause ? { cause } : {}),
   });
@@ -29,7 +30,7 @@ describe("bounded shared Gateway dispatch policy", () => {
   it("stops after four confirmed no-charge rate limits and releases one reservation", async () => {
     const ledger = makeLedger();
     const operationKey = "9".repeat(64);
-    const generate = vi.fn(async () => { throw rateLimitError(undefined, false); });
+    const generate = vi.fn(async () => { throw rateLimitError(undefined, false, false); });
     const sleeps: number[] = [];
     let now = 1_000;
 
@@ -78,15 +79,34 @@ describe("bounded shared Gateway dispatch policy", () => {
     expect(databases[0]!.prepare("SELECT status FROM ai_budget_reservations WHERE operation_key=?").get("8".repeat(64))).toEqual({ status: "uncertain" });
   });
 
+  it("does not retry or release a bare 429 without affirmative pre-provider evidence", async () => {
+    const ledger = makeLedger();
+    const generate = vi.fn(async () => { throw rateLimitError(undefined, false); });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000,
+      operationKey: "7".repeat(64),
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
+        sleep: async () => { throw new Error("unconfirmed 429 must not be retried"); },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", safeNoCharge: false, providerDispatchPossible: true });
+    expect(classifyGatewayFailure(failure)).toMatchObject({ gatewayHttpStatus: 429, providerDispatchPossible: true });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, settledMicroUsd: 0, reservedMicroUsd: 1 });
+    expect(databases[0]!.prepare("SELECT status FROM ai_budget_reservations WHERE operation_key=?").get("7".repeat(64))).toEqual({ status: "uncertain" });
+  });
+
   it("backs off with jitter, honors Retry-After, and settles one logical evaluation after recovery", async () => {
     const ledger = makeLedger();
     let now = 1_000;
     const sleeps: number[] = [];
     const generate = vi.fn(async () => {
       if (generate.mock.calls.length === 1) {
-        throw Object.assign(rateLimitError(undefined, false), { responseHeaders: { "Retry-After": "2" } });
+        throw Object.assign(rateLimitError(undefined, false, false), { responseHeaders: { "Retry-After": "2" } });
       }
-      if (generate.mock.calls.length <= 3) throw rateLimitError(undefined, false);
+      if (generate.mock.calls.length <= 3) throw rateLimitError(undefined, false, false);
       return { value: "ok", costUsd: 0.0001 };
     });
 

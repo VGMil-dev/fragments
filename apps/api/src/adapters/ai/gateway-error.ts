@@ -90,6 +90,13 @@ export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
   const generationId = typeof rawGenerationId === "string" && safeGenerationIdPattern.test(rawGenerationId)
     ? rawGenerationId
     : null;
+  const providerDispatchPossible = typeof root?.providerDispatchPossible === "boolean"
+    ? root.providerDispatchPossible
+    : root?.safeNoCharge === true
+      ? false
+      : isGatewayError && gatewayStatus === 402 && gatewayType === "quota_for_entity_exceeded" && providerStatus === null
+        ? false
+        : true;
 
   return {
     gatewayHttpStatus: gatewayStatus,
@@ -101,15 +108,15 @@ export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
       ? root.retryAfterMs
       : (isGatewayError ? retryAfterMs(root) : null) ?? retryAfterMs(causeHasStatus ? cause : upstreamCall),
     retryable: root?.isRetryable === true || gatewayStatus === 429 || providerStatus === 429 || providerStatus === 503,
-    providerDispatchPossible: typeof root?.providerDispatchPossible === "boolean" ? root.providerDispatchPossible : root?.safeNoCharge === true ? false : isGatewayError
-      ? Boolean(gatewayStatus !== 402 && (providerStatus !== null || gatewayStatus !== 429 || generationId !== null))
-      : true,
+    providerDispatchPossible,
   };
 }
 
 export function hasConfirmedNoChargeGatewayRejection(error: unknown): boolean {
-  if (record(error)?.safeNoCharge === true) return true;
+  const root = record(error);
+  if (root?.safeNoCharge === true) return true;
   const details = classifyGatewayFailure(error);
   if (details.providerDispatchPossible || details.providerHttpStatus !== null) return false;
-  return details.gatewayHttpStatus === 402 || details.gatewayHttpStatus === 429;
+  if (details.gatewayHttpStatus === 429) return root?.providerDispatchPossible === false;
+  return details.gatewayHttpStatus === 402 && details.gatewayCode === "quota_for_entity_exceeded";
 }

@@ -28,7 +28,7 @@ No modificar `packages/contracts`, configuración raíz/workspace, configuració
 
 - Una sola operación por clave idempotente lógica; almacenar únicamente SHA-256 de la clave.
 - Un lease compartido en SQLite limita el despacho concurrente entre workers.
-- Reintentar como máximo tres veces (hasta cuatro despachos) dentro de la misma operación solo si Gateway confirma un 429 previo al proveedor y no hay ID de generación ni respuesta del proveedor.
+- Reintentar como máximo tres veces (hasta cuatro despachos) dentro de la misma operación solo con evidencia afirmativa y confiable de que Gateway rechazó antes de intentar con un proveedor (por ejemplo `providerDispatchPossible=false` de una fuente confiable), y sin status/cuerpo de respuesta upstream ni evidencia contraria. La ausencia de ID de generación o de respuesta upstream, por sí sola, no confirma un rechazo previo. El `GatewayRateLimitError` disponible en el SDK actual no expone un contador/resultado de intentos de proveedor; por eso un 429 simple del SDK es ambiguo, no se reintenta y conserva la reserva incierta hasta conciliación.
 - Un timeout se reintenta de forma acotada solo si el wrapper `fetch` demuestra que la solicitud HTTP aún no comenzó; después de entrar a `fetch`, el resultado es ambiguo y queda incierto.
 - Aplicar backoff exponencial con jitter y respetar `Retry-After`; el cooldown se comparte entre workers.
 - Ningún reintento automático cuando el resultado financiero sea incierto.
@@ -43,7 +43,9 @@ No modificar `packages/contracts`, configuración raíz/workspace, configuració
 
 ## Aceptación GIVEN / WHEN / THEN
 
-- GIVEN Gateway 429 inequívoco y sin respuesta upstream WHEN se ejecuta la evaluación THEN respeta backoff, intenta hasta el máximo establecido y contabiliza una sola operación.
+- GIVEN Gateway 429 con evidencia afirmativa de que no se intentó despacho al proveedor WHEN se ejecuta la evaluación THEN respeta backoff, intenta hasta el máximo establecido y contabiliza una sola operación.
+- GIVEN Gateway 429 sin evidencia afirmativa de que no despachó al proveedor WHEN falla la evaluación THEN no reintenta ni libera la reserva; la marca incierta aunque falten ID de generación y status upstream.
+- GIVEN una señal explícita y confiable `providerDispatchPossible=false` para un Gateway 429 WHEN se ejecuta la evaluación THEN permite hasta tres reintentos con backoff/jitter, conserva una sola reserva y la libera solo al confirmarse sin cargo.
 - GIVEN el adaptador normaliza la excepción del SDK WHEN la política recibe ese error THEN conserva la clasificación Gateway y ejecuta los mismos reintentos seguros.
 - GIVEN respuesta del proveedor, ID de generación o timeout después de despacho WHEN el intento falla THEN no reintenta automáticamente y conserva el holdback para revisión.
 - GIVEN Gateway 402 confirmado WHEN el intento falla THEN responde como limitación presupuestaria/pago sin llamarlo rate limit.
