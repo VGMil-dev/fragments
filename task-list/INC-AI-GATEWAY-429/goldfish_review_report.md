@@ -208,3 +208,9 @@ La remediación del siguiente cambio exige `providerDispatchPossible=false` para
 Codebase 0/0/1, Readiness 0/0/2, Zoom Out 0/0/0 (Blocker/Major/Nit) sobre `42ee4c6f4f4974796e82fecc4ab6271006d053d9`; CI #85 (`44025280574`) terminó `success` en el mismo SHA. R16 fue limpia, con 0 Blockers y 0 Majors.
 
 Nits aceptados y corregidos después: la implementación activa cooldown compartido ante todo Gateway 429, incluido el ambiguo, mientras la spec solo mencionaba no-cargo confirmado; y el runbook necesitaba gramática exacta del snapshot para secciones sin filas. También se pidió actualizar la trazabilidad desde R15. El siguiente commit aclara estas reglas; sus resultados R16 no se atribuyen al SHA posterior.
+
+## Revisión fresca R17 — `5742495`
+
+Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/0 (Blocker/Major/Nit) sobre `57424951929c40e413c0272403dfbd8030e1d149`; CI #86 (`44025561745`) fue `success` en el mismo SHA. R17 encontró un Major en la reproducibilidad del snapshot: la sección de `table_info` unía cuatro tablas sin identificar el origen de cada fila ni fijar orden global de columnas.
+
+El runbook lo corrige añadiendo `table_name` a la proyección y orden binario `(table_name,cid)`. R17 no fue limpio; el SHA que contenga la corrección debe obtener CI y dos nuevas rondas limpias.
