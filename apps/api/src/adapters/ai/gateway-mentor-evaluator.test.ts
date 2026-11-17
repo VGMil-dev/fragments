@@ -38,7 +38,7 @@ const evaluationInput = {
 
 describe("Gateway Mentor evaluator (labelled offline generation)", () => {
   it("validates structured feedback, adds local evidence digest, and settles the cost receipt", async () => {
-    const generate = vi.fn(async ({ modelId }: { modelId: string }) => ({ value: generated, costUsd: 0.0004 }));
+    const generate = vi.fn(async ({ modelId, onDispatch }: { modelId: string; onDispatch: () => void }) => { onDispatch(); return { value: generated, costUsd: 0.0004 }; });
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
@@ -96,7 +96,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       responseBody: JSON.stringify({ error: { code: "rate_limited", message: "private provider detail" } }),
       isRetryable: true,
     });
-    const generate = vi.fn(async () => { throw providerError; });
+    const generate = vi.fn(async ({ onDispatch }: { onDispatch: () => void }) => { onDispatch(); throw providerError; });
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
@@ -121,7 +121,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
   });
 
   it("uses the minimum ledger reservation when model pricing is unavailable", async () => {
-    const generate = vi.fn(async () => ({ value: generated, costUsd: 0 }));
+    const generate = vi.fn(async ({ onDispatch }: { onDispatch: () => void }) => { onDispatch(); return { value: generated, costUsd: 0 }; });
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger, generate });
     await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1 })).resolves.toMatchObject({ modelId: "fixture/model" });

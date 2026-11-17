@@ -8,7 +8,7 @@ import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./
 
 type DispatchSignals = { reservationId: string; onDispatch: () => void; onConfirmedNoCharge: () => void };
 type PolicyOptions = {
-  maxAttempts?: number;
+  maxRetries?: number;
   maxDispatchWaitMs?: number;
   maxRetryWaitMs?: number;
   leaseMs?: number;
@@ -41,15 +41,38 @@ class GatewayRetryExhaustedError extends Error {
   }
 }
 
+class GatewayPreDispatchTimeoutError extends Error {
+  readonly safeNoCharge = true;
+  readonly isRetryable = true;
+  readonly retryAfterMs: number;
+  constructor(original: unknown, retryAfterMs: number) {
+    super("AI Gateway request timed out before network dispatch.", { cause: original });
+    this.name = "TimeoutError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+function isTimeoutFailure(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!current || typeof current !== "object") return false;
+    const item = current as { name?: unknown; cause?: unknown };
+    if (item.name === "TimeoutError" || item.name === "AbortError") return true;
+    if (!item.cause || item.cause === current) return false;
+    current = item.cause;
+  }
+  return false;
+}
+
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function executeWithGatewayPolicy<T>(
   ledger: SqliteAiBudgetLedger,
   signals: DispatchSignals,
-  invoke: () => Promise<CostReceipt<T>>,
+  invoke: (onDispatch: () => void) => Promise<CostReceipt<T>>,
   options: PolicyOptions = {},
 ): Promise<CostReceipt<T>> {
-  const maxAttempts = options.maxAttempts ?? 3;
+  const maxAttempts = (options.maxRetries ?? 3) + 1;
   const maxDispatchWaitMs = options.maxDispatchWaitMs ?? 30_000;
   const maxRetryWaitMs = options.maxRetryWaitMs ?? 30_000;
   const leaseMs = options.leaseMs ?? 35_000;
@@ -71,17 +94,30 @@ export async function executeWithGatewayPolicy<T>(
     }
 
     attempt += 1;
+    let dispatched = false;
     try {
-      signals.onDispatch();
-      const result = await invoke();
+      const result = await invoke(() => {
+        if (dispatched) return;
+        dispatched = true;
+        signals.onDispatch();
+      });
       ledger.releaseDispatchSlot(acquired.leaseId, { now: now(), success: true });
       return result;
     } catch (error) {
       const details = classifyGatewayFailure(error);
-      const safeNoCharge = hasConfirmedNoChargeGatewayRejection(error);
+      const preDispatchTimeout = !dispatched && isTimeoutFailure(error);
+      const safeNoCharge = !dispatched || hasConfirmedNoChargeGatewayRejection(error);
       if (safeNoCharge) signals.onConfirmedNoCharge();
       if (details.gatewayHttpStatus !== 429) {
-        ledger.releaseDispatchSlot(acquired.leaseId, { now: now() });
+        const delay = ledger.releaseDispatchSlot(acquired.leaseId, {
+          now: now(), ...(preDispatchTimeout ? { transientFailure: true, random } : {}),
+        });
+        if (preDispatchTimeout && attempt < maxAttempts && delay <= maxRetryWaitMs
+          && now() - startedAt + delay <= maxDispatchWaitMs + maxRetryWaitMs) {
+          await sleep(delay);
+          continue;
+        }
+        if (preDispatchTimeout) throw new GatewayPreDispatchTimeoutError(error, delay);
         throw error;
       }
 

@@ -34,7 +34,7 @@ describe("bounded shared Gateway dispatch policy", () => {
       if (generate.mock.calls.length === 1) {
         throw Object.assign(rateLimitError(undefined, false), { responseHeaders: { "Retry-After": "2" } });
       }
-      if (generate.mock.calls.length === 2) throw rateLimitError(undefined, false);
+      if (generate.mock.calls.length <= 3) throw rateLimitError(undefined, false);
       return { value: "ok", costUsd: 0.0001 };
     });
 
@@ -45,7 +45,7 @@ describe("bounded shared Gateway dispatch policy", () => {
       operationKey: "b".repeat(64),
       rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 1 },
       isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
-      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, generate, {
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
         now: () => now,
         random: () => 0.5,
         sleep: async (ms) => { sleeps.push(ms); now += ms; },
@@ -53,7 +53,7 @@ describe("bounded shared Gateway dispatch policy", () => {
     });
 
     expect(result).toBe("ok");
-    expect(generate).toHaveBeenCalledTimes(3);
+    expect(generate).toHaveBeenCalledTimes(4);
     expect(sleeps[0]).toBeGreaterThanOrEqual(2_000);
     expect(ledger.summary()).toMatchObject({ settledMicroUsd: 100, reservedMicroUsd: 0, blocked: false });
     expect(databases[0]!.prepare("SELECT COUNT(*) AS count FROM ai_budget_reservations WHERE operation_key=?").get("b".repeat(64))).toEqual({ count: 1 });
@@ -70,7 +70,7 @@ describe("bounded shared Gateway dispatch policy", () => {
       inputTokens: 1_000,
       outputTokens: 1_000,
       operationKey: "c".repeat(64),
-      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, generate, { sleep: async () => undefined }),
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, { sleep: async () => undefined }),
     }).catch((error: unknown) => error);
     expect(classifyGatewayFailure(failure)).toMatchObject({ gatewayHttpStatus: 429, providerHttpStatus: 503 });
 
@@ -91,10 +91,48 @@ describe("bounded shared Gateway dispatch policy", () => {
       outputTokens: 1,
       operationKey: "d".repeat(64),
       isConfirmedNoCharge: (value) => (value as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
-      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, generate),
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }),
     })).rejects.toMatchObject({ statusCode: 402 });
 
     expect(generate).toHaveBeenCalledOnce();
     expect(ledger.summary()).toMatchObject({ blocked: false, settledMicroUsd: 0, reservedMicroUsd: 0 });
+  });
+
+  it("retries a timeout only when the fetch boundary was never reached", async () => {
+    const ledger = makeLedger();
+    let now = 5_000;
+    const sleeps: number[] = [];
+    const invoke = vi.fn(async (onDispatch: () => void) => {
+      if (invoke.mock.calls.length === 1) throw Object.assign(new Error("offline timeout"), { name: "TimeoutError" });
+      onDispatch();
+      return { value: "recovered", costUsd: 0.0001 };
+    });
+
+    await expect(ledger.run({
+      requestKind: "mentor", inputTokens: 100, outputTokens: 100, operationKey: "f".repeat(64),
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, invoke, {
+        now: () => now, random: () => 0.5, sleep: async (ms) => { sleeps.push(ms); now += ms; },
+      }),
+    })).resolves.toBe("recovered");
+
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(sleeps[0]).toBeGreaterThanOrEqual(100);
+    expect(ledger.summary()).toMatchObject({ blocked: false, settledMicroUsd: 100, reservedMicroUsd: 0 });
+  });
+
+  it("does not retry a timeout after the fetch boundary was reached", async () => {
+    const ledger = makeLedger();
+    const invoke = vi.fn(async (onDispatch: () => void) => {
+      onDispatch();
+      throw Object.assign(new Error("offline timeout"), { name: "TimeoutError" });
+    });
+
+    await expect(ledger.run({
+      requestKind: "mentor", inputTokens: 100, outputTokens: 100,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, invoke),
+    })).rejects.toMatchObject({ name: "TimeoutError" });
+
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
   });
 });

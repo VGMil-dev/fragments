@@ -227,7 +227,7 @@ const migrations = [
       reservation_id TEXT,
       lease_until INTEGER NOT NULL DEFAULT 0,
       cooldown_until INTEGER NOT NULL DEFAULT 0,
-      rate_limit_streak INTEGER NOT NULL DEFAULT 0,
+      transient_failure_streak INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL DEFAULT 0
     );
     INSERT OR IGNORE INTO ai_gateway_dispatch_control(id) VALUES (1);`,

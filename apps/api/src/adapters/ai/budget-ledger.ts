@@ -130,32 +130,32 @@ export class SqliteAiBudgetLedger {
     }
   }
 
-  releaseDispatchSlot(leaseId: string, input: { now?: number; success?: boolean; rateLimitRetryAfterMs?: number | null; random?: () => number } = {}): number {
+  releaseDispatchSlot(leaseId: string, input: { now?: number; success?: boolean; rateLimitRetryAfterMs?: number | null; transientFailure?: boolean; random?: () => number } = {}): number {
     const now = input.now ?? Date.now();
     this.database.exec("BEGIN IMMEDIATE");
     try {
-      const row = this.database.prepare("SELECT rate_limit_streak FROM ai_gateway_dispatch_control WHERE id=1 AND lease_id=?")
-        .get(leaseId) as { rate_limit_streak: number } | undefined;
+      const row = this.database.prepare("SELECT transient_failure_streak FROM ai_gateway_dispatch_control WHERE id=1 AND lease_id=?")
+        .get(leaseId) as { transient_failure_streak: number } | undefined;
       if (!row) {
         this.database.exec("COMMIT");
         return 0;
       }
       if (input.success) {
         this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
-          cooldown_until=0, rate_limit_streak=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
+          cooldown_until=0, transient_failure_streak=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
         this.database.exec("COMMIT");
         return 0;
       }
-      if (input.rateLimitRetryAfterMs !== undefined) {
-        const streak = Number(row.rate_limit_streak) + 1;
+      if (input.rateLimitRetryAfterMs !== undefined || input.transientFailure === true) {
+        const streak = Number(row.transient_failure_streak) + 1;
         const exponentialCap = Math.min(30_000, 1_000 * 2 ** Math.min(streak - 1, 5));
         const jitter = Math.round(Math.max(0, Math.min(1, (input.random ?? Math.random)())) * exponentialCap);
-        const retryAfterMs = Number.isFinite(input.rateLimitRetryAfterMs) && input.rateLimitRetryAfterMs !== null
+        const retryAfterMs = typeof input.rateLimitRetryAfterMs === "number" && Number.isFinite(input.rateLimitRetryAfterMs)
           ? Math.max(0, Math.min(input.rateLimitRetryAfterMs, 86_400_000))
           : 0;
         const delayMs = Math.max(100, retryAfterMs, jitter);
         this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
-          cooldown_until=MAX(cooldown_until, ?), rate_limit_streak=?, updated_at=? WHERE id=1 AND lease_id=?`)
+          cooldown_until=MAX(cooldown_until, ?), transient_failure_streak=?, updated_at=? WHERE id=1 AND lease_id=?`)
           .run(now + delayMs, streak, now, leaseId);
         this.database.exec("COMMIT");
         return delayMs;

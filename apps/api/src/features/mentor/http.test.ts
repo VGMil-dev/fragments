@@ -167,16 +167,19 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
   });
 
-  it("returns Gateway 429 and preserves a bounded Retry-After header", async () => {
+  it("returns Gateway 429, preserves Retry-After, and logs only safe identifiers", async () => {
+    const diagnostics: Record<string, unknown>[] = [];
     const evaluator: MentorEvaluator = {
-      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "GatewayRateLimitError", gatewayHttpStatus: 429, gatewayCode: "rate_limit_exceeded", gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", retryAfterMs: 2_500, kind: "rate_limit" }); },
+      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "GatewayRateLimitError", gatewayHttpStatus: 429, gatewayCode: "rate_limit_exceeded", gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", providerHttpStatus: 503, providerCode: "service_unavailable", retryAfterMs: 2_500, kind: "rate_limit" }); },
     };
-    const base = await start(evaluator);
+    const base = await start(evaluator, (entry) => diagnostics.push(entry));
     const proposal = await createProposal(base);
     const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("3");
     expect((await response.json() as { error: { code: string } }).error.code).toBe("AI_RATE_LIMITED");
+    expect(diagnostics[0]).toMatchObject({ http_status: 429, gateway_http_status: 429, gateway_code: "rate_limit_exceeded", gateway_generation_id: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", provider_http_status: 503, provider_code: "service_unavailable", retry_after_ms: 2_500 });
+    expect(JSON.stringify(diagnostics)).not.toMatch(/Huerto de aula|private|prompt|response|token|secret/i);
   });
 
   it("recovers the latest persisted evaluation without evaluating again", async () => {

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. No se desplegó ni publicó. No se llamó al modelo.
+Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. No se desplegó ni publicó. No se llamó al modelo. El PR aún debe abrirse y ejecutar CI sobre su HEAD final.
 
 ## Diagnóstico de producción
 
@@ -17,29 +17,27 @@ Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y s
 ## Cambios y verificación
 
 - `apps/api/src/adapters/ai/gateway-error.ts` y `.test.ts`: clasifica por separado status/código de Gateway y del proveedor, valida IDs, interpreta `Retry-After` sin guardar cuerpos/mensajes, distingue rechazo sin cargo de despacho ambiguo.
-- `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `.test.ts`: máximo de tres intentos, backoff exponencial con jitter, `Retry-After`, un lease/cooldown SQLite compartido y sin reintento tras una respuesta/posible despacho del proveedor.
+- `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `.test.ts`: máximo de tres reintentos (cuatro intentos totales), backoff exponencial con jitter, `Retry-After`, un lease/cooldown SQLite compartido. El timeout solo se reintenta si el wrapper confirma que `fetch` no comenzó; cualquier timeout después del límite de despacho queda incierto y no se reintenta.
 - `apps/api/src/adapters/ai/budget-ledger.ts`, pruebas y migración 12: clave idempotente hasheada, sin duplicar operación terminada aunque el costo sea cero, libera solo si no hubo despacho o Vercel confirma rechazo sin cargo. Lease vencido se marca incierto. Se conserva la migración Review v11 incorporada desde el remoto.
 - `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts`, `apps/api/src/features/mentor/{service,http}.ts` y pruebas: preserva los estados/IDs de diagnóstico permitidos; HTTP 429 lleva `Retry-After`, Gateway 402 es distinto de provider 402, no afirma que un holdback signifique presupuesto agotado.
 - `apps/web/src/features/mentor/mentor-screen.tsx` y prueba: presenta rate limit y proveedor no disponible sin iniciar recuperación automática.
 - La rama se actualizó por fetch y merge normal contra `origin/main` `e25bacf` (tag `v0.4.8`); la migración resultante conserva Review v11 y agrega Gateway v12. No cambia contratos compartidos.
 
-Salidas frescas:
+Salidas frescas del HEAD local antes de publicar el PR:
 
-- `pnpm --filter @fragments/api test` — PASS después de sincronizar, 31 archivos, 142 pruebas.
-- `pnpm --filter @fragments/api typecheck` — PASS.
-- `pnpm --filter @fragments/api build` — PASS.
-- `pnpm --filter @fragments/web test` — PASS después de sincronizar, 22 archivos, 97 pruebas.
-- `pnpm --filter @fragments/web typecheck` — PASS.
-- `pnpm --filter @fragments/web build` — PASS; el bundler informó avisos `MODULE_LEVEL_DIRECTIVE` de `lucide-react` (`use client`), sin fallo.
-- `git diff --check` — PASS.
-- `pnpm --filter @fragments/web build` — PASS; aviso no bloqueante del bundler `MODULE_LEVEL_DIRECTIVE` para `lucide-react`.
-- `git diff --check` — PASS.
-- Commit de implementación/documentación inicial: `d0c258399407b901f2ec7bb78e1ce223a63486d3`.
-- Merge local de sincronización: `24802c15f88c8cda433abac4304678a3a037b903`.
-- La fila incierta productiva continúa sin modificar. La reserva no queda reconciliada por esta rama; requiere correlación de ID o revisión manual.
+- `pnpm exec turbo run test typecheck lint build --force` — PASS, 10 tareas; contratos 19/19, API 144/144 (31 archivos), web 97/97 (22 archivos); typecheck, lint y build PASS. Build web conserva avisos no bloqueantes `MODULE_LEVEL_DIRECTIVE` de `lucide-react` (`use client`).
+- `node --test deploy/production/release-agent/test-release-agent-scripts.mjs deploy/production/release-agent/test-backup-script.mjs` — PASS, 10/10.
+- `py -3 -m unittest discover -s deploy/production/release-agent -p 'test_*.py'` — PASS, 41 pruebas, 1 omitida.
+- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs` — PASS, 1/1 con metadatos sintéticos. En esta unidad local exFAT se usaron opciones Git solo en el proceso para `safe.directory` y desactivar `core.commitGraph`; no se cambió configuración global ni del repositorio.
+- `git diff --check` — PASS antes del commit de cierre.
+- Revisión manual: cambios limitados al incidente, sin secretos, valores `.env`, prompts, respuestas o datos privados. No hay workflow/herramienta de análisis de seguridad automatizado disponible en el repositorio; pruebas específicas cubren redacción de logs, IDs permitidos, idempotencia, concurrencia y no reintento de resultado incierto. La revisión automatizada remota queda pendiente del CI del PR.
+- Commits existentes: implementación inicial `d0c258399407b901f2ec7bb78e1ce223a63486d3`; sincronización normal `24802c15f88c8cda433abac4304678a3a037b903`; documentación `da8270d205ee18803234bbefd3928703c52ace9d`. Registrar debajo el commit de cierre tras crearlo.
+- Rama local en preparación; URL del PR y resultados CI pendientes de registrar al abrirlo. Sin merge, tag, publicación ni despliegue.
+- Plan operativo concreto, no ejecutado: `recovery-plan.md`. Como no existe endpoint ni CLI administrativa auditada para conciliar, cualquier modificación de la fila productiva sigue NO-GO sin correlación inequívoca, autorización y revisión doble.
+- La fila incierta productiva sigue sin modificar. No se ejecutó evaluación, reconciliación ni llamada al proveedor.
 
 ## Límites y riesgo restante
 
 - La producción continúa bloqueada por la reserva incierta hasta correlacionar con ID compartido o revisión manual autorizada.
-- La recuperación de software está preparada en la rama, pero requiere revisión, integración y despliegue autorizado para afectar producción. Antes del commit documental final, la rama quedó 2 commits por delante de `origin/main`.
+- La recuperación de software está preparada en la rama, pero requiere revisión, integración y despliegue autorizado para afectar producción. La conciliación sigue bloqueada por falta de ID compartido y de mecanismo administrativo auditado.
 - No se ha validado gasto con un nuevo llamado facturable y no debe inferirse un resultado de producción posterior.

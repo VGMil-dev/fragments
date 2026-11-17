@@ -12,7 +12,8 @@
 
 - Una sola operación por clave idempotente lógica; almacenar únicamente SHA-256 de la clave.
 - Un lease compartido en SQLite limita el despacho concurrente entre workers.
-- Reintentar como máximo tres intentos dentro de la misma operación, solo si Gateway confirma un 429 previo al proveedor y no hay ID de generación ni respuesta del proveedor.
+- Reintentar como máximo tres veces (hasta cuatro despachos) dentro de la misma operación solo si Gateway confirma un 429 previo al proveedor y no hay ID de generación ni respuesta del proveedor.
+- Un timeout se reintenta de forma acotada solo si el wrapper `fetch` demuestra que la solicitud HTTP aún no comenzó; después de entrar a `fetch`, el resultado es ambiguo y queda incierto.
 - Aplicar backoff exponencial con jitter y respetar `Retry-After`; el cooldown se comparte entre workers.
 - Ningún reintento automático cuando el resultado financiero sea incierto.
 - Sin solicitud nueva al proveedor para validación.
@@ -35,3 +36,5 @@
 ## Datos y UI
 
 Migración SQLite aditiva para clave de operación y control compartido de despacho/cooldown. UI Mentor distingue límite temporal y proveedor indisponible. No cambia contratos compartidos.
+
+El procedimiento autorizado de backup, conciliación, smoke test y rollback está en `recovery-plan.md`; no se ejecuta durante esta tarea.
