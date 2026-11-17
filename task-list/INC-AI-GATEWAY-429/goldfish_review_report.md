@@ -77,4 +77,18 @@ Hallazgos:
 
 Remediación local posterior a R3: el wrapper ahora copia `providerDispatchPossible`; una prueba de política→ledger demuestra que el 429 ambiguo produce una sola llamada y conserva la reserva `uncertain`/bloqueante. La prueba se ejecutó en rojo antes del arreglo y en verde después (suite focalizada 7/7). `spec.md` ahora enumera ambos paths de prueba. La rama requiere además sincronización normal con el `origin/main` que avanzó a `35546eb`; CI/Goldfish del SHA siguiente siguen pendientes y no se atribuyen a R3.
 
-La sincronización se completó después de R3 con merge normal de `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf` en commit `7ea1d43cfd0a7c4bf0422c628bf20f38674f1f8e`. La suite local tras el merge pasó 10/10 tareas (API 152, contratos 19, web 97; typecheck/lint/build). Ese merge y esta actualización de evidencia aún requieren push, CI y Goldfish exactos; no se infieren resultados anteriores para el próximo SHA.
+La sincronización se completó después de R3 con merge normal de `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf` en commit `7ea1d43cfd0a7c4bf0422c628bf20f38674f1f8e`. La suite local tras el merge pasó 10/10 tareas (API 152, contratos 19, web 97; typecheck/lint/build). Al cierre de R3 ese merge y la actualización documental aún requerían push y checks; después se publicó `0d4cb78`, que recibió la revisión R4 descrita a continuación. No se infieren resultados anteriores para SHA distintos.
+
+## Revisión fresca R4 y ajuste de trazabilidad
+
+Goldfish revisó el HEAD `0d4cb781a62b33ed40de31b092fe3cc7a428a63e`, ya basado en `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`. Resultados:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 0 |
+| Implementation Readiness | 0 | 0 | 1 |
+| Zoom Out | 0 | 0 | 0 |
+
+Codebase y Readiness confirmaron que `providerDispatchPossible` sobrevive la envoltura del 429 ambiguo y la reserva sigue en `uncertain`; los 4 intentos confirmados sin cargo terminan liberando una sola reserva. La spec enumera los paths del diff y el esquema v12.
+
+El único Nit fue documental: `TASKS.md` y evidencia decían que faltaba publicar el commit, aunque `0d4cb78` ya estaba en el branch remoto. Se corrigió en esta actualización. CI #73 (`44015643394`), job `verify`, terminó `success` sobre `0d4cb78`. Readiness mantiene como puerta de release la prueba de compatibilidad entre la imagen API anterior y SQLite v12; sigue separada de la aprobación de merge.
