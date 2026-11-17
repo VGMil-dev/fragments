@@ -13,7 +13,8 @@ Determinar la causa con evidencia técnica, evitar conciliaciones financieras si
 - No ejecutar solicitudes nuevas al proveedor de IA.
 - No liberar ni liquidar una reserva productiva ambigua.
 - No cambiar secretos, límites o configuración de producción.
-- No desplegar ni publicar la rama.
+- No desplegar ni fusionar a `main` sin autorización.
+- Publicar únicamente la rama propia por push normal y abrir PR hacia `main`, como ya se autorizó en el objetivo.
 
 ## Owner y criterios
 

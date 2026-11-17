@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. No se desplegó ni publicó. No se llamó al modelo. El PR aún debe abrirse y ejecutar CI sobre su HEAD final.
+Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. Rama publicada por push normal y PR #43 abierto hacia `main`; no se fusionó ni desplegó. No se llamó al modelo.
 
 ## Diagnóstico de producción
 
@@ -32,7 +32,9 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - `git diff --check` — PASS antes del commit de cierre.
 - Revisión manual: cambios limitados al incidente, sin secretos, valores `.env`, prompts, respuestas o datos privados. No hay workflow/herramienta de análisis de seguridad automatizado disponible en el repositorio; pruebas específicas cubren redacción de logs, IDs permitidos, idempotencia, concurrencia y no reintento de resultado incierto. La revisión automatizada remota queda pendiente del CI del PR.
 - Commits existentes: implementación inicial `d0c258399407b901f2ec7bb78e1ce223a63486d3`; sincronización normal `24802c15f88c8cda433abac4304678a3a037b903`; documentación `da8270d205ee18803234bbefd3928703c52ace9d`. Commit de cierre de código y plan: `568812337ff1a38cae5207745fd160c2249fa6f3`.
-- Rama local en preparación; URL del PR y resultados CI pendientes de registrar al abrirlo. Sin merge, tag, publicación ni despliegue.
+- PR: https://github.com/VGMil-dev/fragments/pull/43; HEAD comprobado `83061afdfa5e76efabc761ea886ddfacfed9a017`; PR abierto y mergeable. GitHub Actions `Fragments CI`, run `44008965340` (#61), terminó `success`; job `verify` y sus pasos concluyeron en verde. La documentación de cierre que registra este resultado requiere un último CI sobre su nuevo HEAD.
+- No hay revisión humana ni análisis de seguridad automatizado de repositorio configurado. Revisiones existentes de PR recientes no mostraron revisores y no hay CODEOWNERS; la revisión manual del diff y las pruebas focalizadas están registradas arriba. Mantener la tarea abierta hasta obtener revisión independiente y CI verde del HEAD final.
+- Sin merge, tag ni despliegue.
 - Plan operativo concreto, no ejecutado: `recovery-plan.md`. Como no existe endpoint ni CLI administrativa auditada para conciliar, cualquier modificación de la fila productiva sigue NO-GO sin correlación inequívoca, autorización y revisión doble.
 - La fila incierta productiva sigue sin modificar. No se ejecutó evaluación, reconciliación ni llamada al proveedor.
 
