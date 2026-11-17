@@ -45,3 +45,15 @@ La revisión fresca posterior sobre HEAD `d29d0649a883113d0c5898d217e0cf279016c1
 - **Nit — alcance del informe:** los cero hallazgos originales correspondían solo a `5ce6ab6`, no a `d29d064`.
 
 Remediación implementada localmente: se añadió una prueba de agotamiento que exige cuatro llamadas, tres esperas, error 429, una única fila idempotente liberada, cero reserva/cargo y ledger desbloqueado. `TASKS.md` quedó pendiente hasta que el nuevo commit tenga CI y Goldfish exactos; la revisión R1 se conserva explícitamente limitada a su SHA. La revisión Goldfish final del nuevo HEAD y su CI remoto quedan pendientes de publicación.
+
+La revisión R2 finalizó sobre `a71ef7a1cf050b43c496bb159fc7371ea9d819d6` y encontró además un Major de readiness: `spec.md` no enumeraba los paths autorizados ni las columnas e índice de la migración v12. Encontró un Nit en la trazabilidad: evidencia y task list describían como pendientes el commit y el CI aunque `a71ef7a` ya estaba publicado y verificado. La especificación ahora enumera paths permitidos, esquema SQL lógico exacto, índice parcial y comportamiento del singleton; la evidencia registra commit/CI #71 y deja pendientes solo los checks del siguiente cambio documental. Estos cambios documentales requieren CI y Goldfish sobre su propio HEAD antes de cerrar la tarea.
+
+Resultados agregados R2 para `a71ef7a1cf050b43c496bb159fc7371ea9d819d6`:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 0 |
+| Implementation Readiness | 0 | 1 | 1 |
+| Zoom Out | 0 | 0 | 1 |
+
+El Major de readiness se remedia con el alcance/esquema añadido arriba. Los Nits eran de trazabilidad en evidencia y spec de readiness; ahora se registra el SHA, commit y CI ya confirmados, y se deja explícito que la revisión del siguiente HEAD documental queda pendiente. La puerta de compatibilidad de la imagen API previa con esquema v12 sigue como condición de release en `recovery-plan.md`, no como Blocker/Major de merge.

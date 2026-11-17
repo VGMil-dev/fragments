@@ -1,5 +1,20 @@
 # Especificación — INC-AI-GATEWAY-429
 
+## Alcance de archivos
+
+La implementación y sus pruebas se limitan a estos paths:
+
+- `apps/api/src/adapters/ai/budget-ledger.ts` y `budget-ledger.test.ts`: reservas, idempotencia, conciliación del estado lógico y slot/cooldown compartido.
+- `apps/api/src/adapters/ai/gateway-error.ts` y `gateway-error.test.ts`: clasificación redactada del error y extracción segura de Retry-After/IDs.
+- `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `gateway-dispatch-policy.test.ts`: política de despacho, backoff, límites y resultado financiero de reintentos.
+- `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts` y `gateway-mentor-evaluator.test.ts`: adaptación del SDK y preservación de estado/certeza de despacho.
+- `apps/api/src/features/mentor/service.ts`, `http.ts` y sus pruebas correspondientes: traducción del error a la interfaz Mentor.
+- `apps/api/src/db/migrate.ts`, `migrate.test.ts` y `open.test.ts`: migración aditiva y compatibilidad al abrir la base.
+- `apps/web/src/features/mentor/mentor-screen.tsx` y `mentor-screen.test.tsx`: presentación del rate limit/indisponibilidad sin reintento automático.
+- `task-list/INC-AI-GATEWAY-429/{intent.md,spec.md,evidencie.md,recovery-plan.md,goldfish_review_report.md}` y `task-list/TASKS.md`: alcance, evidencia y procedimiento operativo de este incidente.
+
+No modificar `packages/contracts`, configuración raíz/workspace, configuración TypeScript compartida ni rutas no listadas. Si aparece una dependencia que requiere uno de esos cambios, proponerla al planner antes de editarla.
+
 ## Entradas y clasificación
 
 - Gateway 429: límite temporal; respuesta HTTP 429, código/ID seguros y `Retry-After` cuando estén presentes.
@@ -37,6 +52,15 @@
 
 ## Datos y UI
 
-Migración SQLite aditiva para clave de operación y control compartido de despacho/cooldown. UI Mentor distingue límite temporal y proveedor indisponible. No cambia contratos compartidos.
+Migración SQLite aditiva v12 en `apps/api/src/db/migrate.ts`:
+
+- Agregar `ai_budget_reservations.operation_key TEXT` nullable. No modificar ni backfill de las filas existentes.
+- Crear índice único parcial `ai_budget_operation_active(operation_key)` cuando `operation_key IS NOT NULL AND status IN ('reserved','uncertain','settled')`. Las filas `released` no impiden una repetición segura de la misma clave; cualquier estado activo/ambiguo/liquidado conserva unicidad.
+- Crear singleton `ai_gateway_dispatch_control`: `id INTEGER PRIMARY KEY CHECK (id = 1)`, `lease_id TEXT`, `reservation_id TEXT`, `lease_until INTEGER NOT NULL DEFAULT 0`, `cooldown_until INTEGER NOT NULL DEFAULT 0`, `transient_failure_streak INTEGER NOT NULL DEFAULT 0`, `updated_at INTEGER NOT NULL DEFAULT 0`; insertar id 1 con `INSERT OR IGNORE`.
+- Mantener los cambios aditivos y preservar migraciones anteriores, en particular Review v11. No añadir índices/tablas distintos a los descritos sin proponer un cambio de especificación.
+
+La tabla singleton serializa el despacho global entre workers: lease activo devuelve espera; vencimiento con reserva activa la hace incierta y bloquea; cooldown vigente devuelve espera; solo en otro caso se adquiere el lease. Liberar después de éxito, rechazo confirmado o error. Para 429 respetar `Retry-After` y el backoff con jitter compartido; reiniciar la racha tras éxito.
+
+UI Mentor distingue límite temporal y proveedor indisponible. No cambia contratos compartidos.
 
 El procedimiento autorizado de backup, conciliación, smoke test y rollback está en `recovery-plan.md`; no se ejecuta durante esta tarea.
