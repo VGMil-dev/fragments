@@ -47,3 +47,11 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - La producción continúa bloqueada por la reserva incierta hasta correlacionar con ID compartido o revisión manual autorizada.
 - La recuperación de software está preparada en la rama, pero requiere revisión, integración y despliegue autorizado para afectar producción. La conciliación sigue bloqueada por falta de ID compartido y de mecanismo administrativo auditado.
 - No se ha validado gasto con un nuevo llamado facturable y no debe inferirse un resultado de producción posterior.
+
+## Revalidación tras Goldfish R2
+
+- Goldfish revisó el HEAD `d29d0649a883113d0c5898d217e0cf279016c1e4` y encontró dos Majors: faltaba el caso de agotamiento de cuatro intentos confirmados sin cargo, y el estado de tarea/evidencia citaba CI de un HEAD anterior mientras afirmaba completitud. También dejó un Nit sobre el alcance SHA del informe previo. Ver `goldfish_review_report.md`; los ceros de R1 aplican solo a `5ce6ab6`.
+- Se añadió en `apps/api/src/adapters/ai/gateway-dispatch-policy.test.ts` una regresión que comprueba cuatro llamadas como máximo, tres esperas, HTTP 429 final, una reserva idempotente liberada, cero monto liquidado/reservado y ledger no bloqueado.
+- Verificación local fresca: prueba focalizada `pnpm --filter @fragments/api exec vitest run src/adapters/ai/gateway-dispatch-policy.test.ts --pool=forks --maxWorkers=1 --reporter=verbose` — PASS, 6/6. (El runner predeterminado quedó sin salida; se interrumpió y se ejecutó explícitamente con pool forks.)
+- `pnpm exec turbo run test typecheck lint build --force` — PASS, 10/10 tareas; contratos 19/19, API 148/148, web 97/97; typecheck, lint y build PASS. El build mantiene avisos no bloqueantes `MODULE_LEVEL_DIRECTIVE` de `lucide-react`.
+- `TASKS.md` se dejó `[ ]` hasta que commit publicado tenga CI y revisión Goldfish frescos sobre SHA idéntico. Estos resultados son locales; commit, push, CI remoto y revisión final Goldfish quedan pendientes. La reserva productiva sigue intacta; sin llamada IA, conciliación, merge ni despliegue.

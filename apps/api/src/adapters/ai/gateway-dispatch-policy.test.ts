@@ -26,6 +26,35 @@ function rateLimitError(cause?: unknown, generation = true) {
 }
 
 describe("bounded shared Gateway dispatch policy", () => {
+  it("stops after four confirmed no-charge rate limits and releases one reservation", async () => {
+    const ledger = makeLedger();
+    const operationKey = "9".repeat(64);
+    const generate = vi.fn(async () => { throw rateLimitError(undefined, false); });
+    const sleeps: number[] = [];
+    let now = 1_000;
+
+    const failure = await ledger.run({
+      requestKind: "mentor",
+      inputTokens: 1_000,
+      outputTokens: 1_000,
+      operationKey,
+      rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 1 },
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
+        now: () => now,
+        random: () => 0.5,
+        sleep: async (ms) => { sleeps.push(ms); now += ms; },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", statusCode: 429, safeNoCharge: true });
+    expect(generate).toHaveBeenCalledTimes(4);
+    expect(sleeps).toHaveLength(3);
+    expect(ledger.summary()).toMatchObject({ blocked: false, settledMicroUsd: 0, reservedMicroUsd: 0 });
+    expect(databases[0]!.prepare("SELECT status FROM ai_budget_reservations WHERE operation_key=?").get(operationKey)).toEqual({ status: "released" });
+    expect(databases[0]!.prepare("SELECT COUNT(*) AS count FROM ai_budget_reservations WHERE operation_key=?").get(operationKey)).toEqual({ count: 1 });
+  });
+
   it("backs off with jitter, honors Retry-After, and settles one logical evaluation after recovery", async () => {
     const ledger = makeLedger();
     let now = 1_000;

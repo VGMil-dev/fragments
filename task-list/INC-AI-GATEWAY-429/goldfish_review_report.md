@@ -35,3 +35,13 @@
 ## Dictamen
 
 El review satisface el control Goldfish para el HEAD auditado: cero Blockers y cero Majors. R1 del review se limita al commit indicado; un runbook de release conserva la condición de compatibilidad API previa/v12. El PR no fue fusionado ni desplegado.
+
+## Revisión fresca R2 y remediación
+
+La revisión fresca posterior sobre HEAD `d29d0649a883113d0c5898d217e0cf279016c1e4` encontró dos Majors y un Nit; por ello el resultado R1 anterior no se considera dictamen del HEAD actual:
+
+- **Major — agotamiento no probado:** faltaba demostrar el límite de cuatro despachos totales cuando cada respuesta era un HTTP 429 confirmado sin cargo, incluyendo el error final y el estado financiero del ledger.
+- **Major — evidencia stale:** `TASKS.md` y la evidencia marcaban la tarea completa citando CI de un HEAD previo, aunque la evidencia decía que el siguiente commit aún necesitaba CI.
+- **Nit — alcance del informe:** los cero hallazgos originales correspondían solo a `5ce6ab6`, no a `d29d064`.
+
+Remediación implementada localmente: se añadió una prueba de agotamiento que exige cuatro llamadas, tres esperas, error 429, una única fila idempotente liberada, cero reserva/cargo y ledger desbloqueado. `TASKS.md` quedó pendiente hasta que el nuevo commit tenga CI y Goldfish exactos; la revisión R1 se conserva explícitamente limitada a su SHA. La revisión Goldfish final del nuevo HEAD y su CI remoto quedan pendientes de publicación.
