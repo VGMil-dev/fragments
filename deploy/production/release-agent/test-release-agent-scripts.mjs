@@ -73,11 +73,11 @@ test("bundle verifier accepts only the expected tag and exact built SHA", async 
 });
 
 const approvedPins = new Map([
-  ["actions/checkout", "11bd71901bbe5b1630ceea73d27597364c9af683"],
-  ["pnpm/action-setup", "b906affcce14559ad1aafd4ab0e942779e9f58b1"],
-  ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
-  ["actions/upload-artifact", "ea165f8d65b6e75b540449e92b4886f43607fa02"],
-  ["actions/download-artifact", "d3f86a106a0bac45b974a628896c90dbdf5c8093"],
+  ["actions/checkout", "fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"],
+  ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
+  ["actions/setup-node", "a0853c24544627f65ddf259abe73b1d18a591444"],
+  ["actions/upload-artifact", "b7c566a772e6b6bfb58ed0dc250532a479d7789f"],
+  ["actions/download-artifact", "37930b1c2abaa49bbe596cd826c3c89aef350131"],
   ["actions/attest", "1e69f48acb82d1966a394da916b4c1698aa569d6"],
 ]);
 const allowedRunners = new Set(["ubuntu-24.04", "ubuntu-24.04-arm", "ubuntu-latest"]);

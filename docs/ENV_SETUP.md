@@ -24,7 +24,7 @@ Para comprobar configuración local sin mostrar valores, consulta únicamente lo
 
 Si falta la configuración completa del Gateway, Mentor usa una evaluación demostrativa `fake/local-heuristic-v1` con `limitations` explícitas. Con modelo, proveedor, tarifas y clave configurados, Mentor usa el Gateway y el ledger SQLite compartido. Los PDF y README se generan bajo demanda y no se persisten.
 
-Las tarifas deben volver a verificarse antes de cambiar el modelo o proveedor. Para la configuración actual, el catálogo de [Qwen 3.7 Flash en Vercel AI Gateway](https://vercel.com/ai-gateway/models/qwen3.7-flash) indica USD 0.03/M de entrada y USD 0.13/M de salida para Alibaba Cloud. El código fija ese proveedor con `AI_GATEWAY_PROVIDER_ONLY=alibaba`; los máximos se aplican con la reserva SQLite acumulada de USD 1.
+Las tarifas deben volver a verificarse antes de cambiar el modelo o proveedor. Para la configuración documentada, el catálogo de [Qwen 3.7 Flash en Vercel AI Gateway](https://vercel.com/ai-gateway/models/qwen3.7-flash) indica USD 0.03/M de entrada y USD 0.13/M de salida para Alibaba Cloud. El código fija el proveedor con `AI_GATEWAY_PROVIDER_ONLY=alibaba` y valida una reserva estimada por operación; SQLite conserva costos y estados históricos para auditoría, sin imponer un tope acumulado local. Los presupuestos globales se administran en Vercel AI Gateway.
 
 ### Acceso docente local
 
@@ -38,9 +38,9 @@ La configuración de producción documenta `https://fragments.gavanti.org` como 
 
 En producción, configura `BETTER_AUTH_URL=https://fragments.gavanti.org` y `PUBLIC_APP_URL=https://fragments.gavanti.org`. En desarrollo local, usa `BETTER_AUTH_URL=http://localhost:3000` y `PUBLIC_APP_URL=http://localhost:5173`; el callback local es `http://localhost:3000/api/auth/callback/github`. Better Auth confía solo en esos orígenes normalizados. La interfaz solo manda destinos de callback relativos y fijos.
 
-### Límite local de IA
+### Registro de costos de IA
 
-La aplicación conserva un ledger SQLite con coste estimado, coste reportado por Gateway y reservas activas. Una solicitud se rechaza si falta una tarifa máxima configurada, no puede reservarse el límite, hay un coste anterior desconocido o Gateway no devuelve un recibo de coste. Una reserva no resuelta después de un reinicio bloquea nuevas llamadas hasta revisión manual. Este mecanismo contiene concurrencia y errores de reporte; no sustituye una garantía del proveedor. Vercel describe sus presupuestos como límites blandos: una petición que cruza el límite puede completarse y el gasto puede superarlo; además, el gasto BYOK queda fuera de esos presupuestos. La aplicación persiste costes, no el desglose de tokens.
+La aplicación conserva en SQLite el costo estimado, el costo informado por Gateway y las reservas por operación. Antes del despacho exige modelo, proveedor fijado y tarifas válidas. Una operación `reserved`, `uncertain` o `settled` impide repetir su misma clave idempotente; una reserva `uncertain` diferente permanece registrada y no bloquea operaciones independientes. Este registro brinda trazabilidad, no es un presupuesto global: los presupuestos de gasto se configuran en Vercel AI Gateway. Vercel los describe como soft caps: la petición que cruza el umbral puede completarse y excederlo; además, el gasto BYOK queda fuera de esos presupuestos. La aplicación persiste costes, no el desglose de tokens.
 
 No exponer `AI_GATEWAY_API_KEY`, `GITHUB_TOKEN`, `BETTER_AUTH_SECRET` o contraseñas mediante `VITE_*` ni respuestas HTTP. En Docker Compose, las variables llegan al contenedor en runtime y no se incorporan a la imagen.
 

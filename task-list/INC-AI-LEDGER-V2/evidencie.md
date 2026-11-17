@@ -34,3 +34,8 @@ Sin cambios de producción/SQLite productiva, sin release, sin gasto IA, sin lib
 
 ## Configuración de agentes
 El entorno no expone selección/verificación del perfil del agente principal. Se informó esa limitación y no se afirma que el agente principal corriera con Luna Medium. Para el Goldfish solicitado, se eligió explícitamente `gpt-6-luna` y `medium`.
+
+## Actualización — estado remoto 2026-11-17
+- GitHub confirma PR #46 merged; commit de merge `2877be6cd2899a0642298070bd46eab12d6323d1`, también `HEAD` de `origin/main` al iniciar la preparación de v0.4.10.
+- La release más reciente consultada es `v0.4.9`; `refs/tags/v0.4.10` devuelve 404. No se creó tag ni se ejecutó despliegue en esta actualización.
+- La evidencia histórica anterior que indica PR abierto describe el estado antes del merge y queda reemplazada por este registro.
