@@ -222,3 +222,9 @@ Codebase 0/0/0, Readiness 0/0/1 y Zoom Out 0/0/1 (Blocker/Major/Nit) en `a24aaa3
 ## Revisión fresca R19 — `a24aaa3`
 
 Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/0. El Major fue que el registro autoritativo aún mostraba R17/CI #86 como estado más reciente, pese a los resultados R18/R19 y CI #88 del HEAD revisado. El hallazgo queda resuelto en el commit documental que añade ambos resultados, verifica PR/ruleset vigentes y mantiene el estado abierto mientras se audita el SHA documental final. R19 no fue limpia por trazabilidad; el nuevo SHA requiere CI y dos nuevas rondas Goldfish idénticas.
+
+## Revisión fresca R20 — `e8adc88`
+
+Codebase 0/0/1, Readiness 0/1/0 y Zoom Out 0/0/1 (Blocker/Major/Nit) sobre `e8adc88d1fdffeeac517c7723f59d245840887ce`; CI #89 (`44026424321`) terminó `success` en ese mismo SHA. No se encontraron fallos de comportamiento financiero.
+
+El Major de Readiness fue que TASKS/evidencia no identificaban el ciclo actual ni SHA exacto; se corrige en este commit registrando R20 y su CI. Codebase también detectó que el resumen superior aún describía migración v12 como actual; se reemplaza con el estado v12–v14, la regla de 429 ambiguo y el límite de dos slots. Zoom Out dejó Nit sobre la especificación byte-level del snapshot, sin bloquear. R20 no fue limpia por el Major de trazabilidad; el HEAD documental nuevo requiere CI y dos ciclos limpios.

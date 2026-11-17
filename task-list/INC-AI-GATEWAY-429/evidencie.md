@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. Rama publicada por push normal y PR #43 abierto hacia `main`; no se fusionó ni desplegó. No se llamó al modelo.
+Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada en `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`. Rama publicada por push normal y PR #43 abierto hacia `main`; no se fusionó ni desplegó. No se llamó al modelo.
 
 ## Diagnóstico de producción
 
@@ -17,11 +17,11 @@ Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y s
 ## Cambios y verificación
 
 - `apps/api/src/adapters/ai/gateway-error.ts` y `.test.ts`: clasifica por separado status/código de Gateway y del proveedor, valida IDs, interpreta `Retry-After` sin guardar cuerpos/mensajes, distingue rechazo sin cargo de despacho ambiguo.
-- `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `.test.ts`: máximo de tres reintentos (cuatro intentos totales), backoff exponencial con jitter, `Retry-After`, un lease/cooldown SQLite compartido. El timeout solo se reintenta si el wrapper confirma que `fetch` no comenzó; cualquier timeout después del límite de despacho queda incierto y no se reintenta.
-- `apps/api/src/adapters/ai/budget-ledger.ts`, pruebas y migración 12: clave idempotente hasheada, sin duplicar operación terminada aunque el costo sea cero, libera solo si no hubo despacho o Vercel confirma rechazo sin cargo. Lease vencido se marca incierto. Se conserva la migración Review v11 incorporada desde el remoto.
+- `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `.test.ts`: máximo tres reintentos (cuatro intentos totales) solo tras evidencia explícita de rechazo Gateway previo a proveedor y sin evidencia contradictoria; usa backoff/jitter, `Retry-After`, slots y cooldown SQLite compartidos. Un Gateway 429 sin señal afirmativa de no despacho, aun si no corrió el callback, se considera posible despacho y queda incierto; timeout solo se reintenta si el wrapper confirma que `fetch` no comenzó.
+- `apps/api/src/adapters/ai/budget-ledger.ts`, pruebas y migraciones v12–v14: clave idempotente hasheada, sin duplicar operación terminada aunque el costo sea cero; reserva solo se libera con evidencia de no despacho/no cargo; hasta dos slots saludables, un sondeo global tras cooldown y vencimientos convertidos a inciertos. Se conserva la migración Review v11.
 - `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts`, `apps/api/src/features/mentor/{service,http}.ts` y pruebas: preserva los estados/IDs de diagnóstico permitidos; HTTP 429 lleva `Retry-After`, Gateway 402 es distinto de provider 402, no afirma que un holdback signifique presupuesto agotado. Una auditoría final encontró que el adaptador perdía la categoría 429 al envolver la excepción SDK antes de que la política la viera; el fix preserva código, status, generación y posibilidad de despacho, con prueba que atraviesa el adaptador de producción usando `generateText` falso etiquetado.
 - `apps/web/src/features/mentor/mentor-screen.tsx` y prueba: presenta rate limit y proveedor no disponible sin iniciar recuperación automática.
-- La rama se actualizó por fetch y merge normal contra `origin/main` `e25bacf` (tag `v0.4.8`); la migración resultante conserva Review v11 y agrega Gateway v12. No cambia contratos compartidos.
+- La rama se sincronizó mediante merge normal con `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; no cambia contratos compartidos.
 
 Salidas frescas del HEAD local antes de publicar el PR:
 
@@ -133,6 +133,8 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - Los Nits R16 se resuelven en este cambio documental: spec aclara activación y función del cooldown; recovery plan fija línea marcador, cabecera, filas, secciones vacías, codificación, orden y NULL. Se actualizarán referencias a R16 y el nuevo SHA antes de revisiones finales.
 - R17 auditó `57424951929c40e413c0272403dfbd8030e1d149`: Codebase 0/0/0, Zoom Out 0/0/0 y Readiness 0 Blockers, 1 Major, 0 Nits. El Major de Readiness encontró que `table_info` combinaba PRAGMA de cuatro tablas sin incluir identificador de tabla ni orden entre tablas. El runbook agrega `table_name` y orden binario `(table_name,cid)`. R17 no fue limpia; el SHA siguiente requiere CI y dos rondas Goldfish limpias nuevas.
 - CI #86 `44025561745` terminó `success` en `5742495`; corresponde al SHA anterior y a código sin cambios de esta actualización documental.
+- R18/R19 se registran arriba. R20 auditó `e8adc88d1fdffeeac517c7723f59d245840887ce`: Codebase 0/0/1, Readiness 0/1/0, Zoom Out 0/0/1. Codebase encontró resumen inicial obsoleto de migración v12; Readiness halló falta de ciclo exacto en la trazabilidad; Zoom Out consideró que los detalles byte-level del snapshot podrían abstraerse. No se encontraron fallos de comportamiento. CI #89 (`44026424321`) pasó sobre ese SHA.
+- El resumen inicial se actualiza para reflejar v12–v14, reglas exactas de 429 y concurrencia. R20 no fue limpia por un Major de trazabilidad; el siguiente SHA documental requiere CI y dos rondas Goldfish limpias consecutivas sobre el mismo HEAD. No hubo llamada IA, reconciliación, modificación de la reserva, merge, tag ni despliegue.
 - Goldfish R18 revisó `a24aaa3483b58ef36f1a525d75d9ef3de0ffcc80`: Codebase 0/0/0, Readiness 0/0/1, Zoom Out 0/0/1. R18 fue limpia: 0 Blockers/Majors; los dos Nits fueron de trazabilidad y simplificación del runbook. CI #88 (`44025966049`) pasó sobre el mismo SHA.
 - Goldfish R19 también revisó `a24aaa3`: Codebase 0/0/0, Readiness 0/1/0, Zoom Out 0/0/0. El único Major de Readiness fue que TASKS/evidencia no habían registrado R18/R19 y CI #88; se acepta y se cierra con esta actualización documental. Los resultados técnicos de R19 no añaden fallos de código, seguridad ni preparación operativa. R19 no fue limpia por ese Major de trazabilidad.
 - Verificación exacta del PR al cierre de R19: PR #43 abierto, no fusionado, `mergeable=true`, HEAD `a24aaa3`; CI obligatorio `verify`/#88 success. Ruleset activo `Fragments main via pull request` (27138875) requiere PR, `verify` estricto y resolución de hilos; `required_approving_review_count=0`, sin code-owner/último-push approval, merge commit único, sin bypass (`current_user_can_bypass=never`). Por tanto no bloquea la revisión Goldfish por aprobación humana. No se alteró el ruleset.
