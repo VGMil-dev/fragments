@@ -24,6 +24,10 @@ export type MentorEvaluationDiagnostic = {
   error_type: string;
   duration_ms: number;
   http_status: number;
+  gateway_http_status: number | null;
+  gateway_code: string | null;
+  gateway_generation_id: string | null;
+  failure_kind: string | null;
   provider_http_status: number | null;
   provider_code: string | null;
   retry_after_ms: number | null;
@@ -133,7 +137,7 @@ export function createMentorHttp(
           let work = pending.get(cacheKey);
           if (!work) {
             work = (async () => {
-              const result = await service.evaluate(proposal.proposal, repository.listGallery(), { config: active.config, version: active.version });
+              const result = await service.evaluate(proposal.proposal, repository.listGallery(), { config: active.config, version: active.version }, cacheKey);
               const evaluatedAt = new Date().toISOString();
               const evaluationId = randomUUID();
               repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, inputDigest, active.version, new Date(evaluatedAt));
@@ -154,16 +158,27 @@ export function createMentorHttp(
           stage: failure?.stage ?? (error instanceof MentorInputError ? "input_validation" : "evaluation"),
           error_type: /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(errorType) ? errorType : "UnknownError",
           duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
-          http_status: failure?.providerHttpStatus === 402 ? 402 : 503,
+          http_status: failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429 ? 429
+            : failure?.gatewayHttpStatus === 402 ? 402 : 503,
+          gateway_http_status: failure?.gatewayHttpStatus ?? null,
+          gateway_code: failure?.gatewayCode ?? null,
+          gateway_generation_id: failure?.gatewayGenerationId ?? null,
+          failure_kind: failure?.kind ?? null,
           provider_http_status: failure?.providerHttpStatus ?? null,
           provider_code: failure?.providerCode ?? null,
           retry_after_ms: failure?.retryAfterMs ?? null,
         };
         try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
-        if (failure?.providerHttpStatus === 402) {
-          sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto.");
+        if (failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429) {
+          sendError(response, 429, "AI_RATE_LIMITED", "El servicio de evaluación recibió demasiadas solicitudes. Intenta más tarde.", failure.retryAfterMs);
+        } else if (failure?.gatewayHttpStatus === 402) {
+          sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible por una restricción de presupuesto o pago en AI Gateway.");
+        } else if (failure?.providerHttpStatus === 402) {
+          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.");
+        } else if (failure?.gatewayHttpStatus === 503 || failure?.providerHttpStatus === 503) {
+          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.");
         } else if (diagnostic.stage === "budget_reservation") {
-          sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.");
+          sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación está temporalmente bloqueada mientras se concilia una solicitud anterior o se recupera la reserva local; no confirma que el presupuesto esté agotado.");
         } else {
           sendError(response, 503, "EVALUATION_UNAVAILABLE", "No se pudo evaluar la propuesta en este momento.");
         }
@@ -286,8 +301,10 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(JSON.stringify(body));
 }
 
-function sendError(response: ServerResponse, status: number, code: string, message: string): void {
+function sendError(response: ServerResponse, status: number, code: string, message: string, retryAfterMs?: number | null): void {
   const body = { ok: false as const, error: { code, message } };
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" });
+  const headers: Record<string, string> = { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" };
+  if (retryAfterMs !== undefined && retryAfterMs !== null) headers["retry-after"] = String(Math.max(1, Math.ceil(retryAfterMs / 1_000)));
+  response.writeHead(status, headers);
   response.end(JSON.stringify(body));
 }

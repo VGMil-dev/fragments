@@ -191,6 +191,22 @@ const migrations = [
       withdrawn_at TEXT NOT NULL
     );`,
   },
+  {
+    version: 11,
+    sql: `ALTER TABLE ai_budget_reservations ADD COLUMN operation_key TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS ai_budget_operation_active ON ai_budget_reservations(operation_key)
+      WHERE operation_key IS NOT NULL AND status IN ('reserved', 'uncertain', 'settled');
+    CREATE TABLE IF NOT EXISTS ai_gateway_dispatch_control (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      lease_id TEXT,
+      reservation_id TEXT,
+      lease_until INTEGER NOT NULL DEFAULT 0,
+      cooldown_until INTEGER NOT NULL DEFAULT 0,
+      rate_limit_streak INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0
+    );
+    INSERT OR IGNORE INTO ai_gateway_dispatch_control(id) VALUES (1);`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

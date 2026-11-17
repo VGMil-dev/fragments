@@ -5,7 +5,7 @@ const DEFAULT_LIMIT_MICROUSD = 1_000_000;
 const RESERVATION_MARGIN = 2;
 
 export type AiGatewayRateCard = { inputUsdPerMillion: number; outputUsdPerMillion: number };
-type CostReceipt<T> = { value: T; costUsd?: number };
+export type CostReceipt<T> = { value: T; costUsd?: number };
 
 export function parseGatewayCostUsd(value: unknown): number | undefined {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : undefined;
@@ -19,6 +19,17 @@ export type AiBudgetSummary = { limitMicroUsd: number; settledMicroUsd: number; 
 export class AiBudgetUnavailableError extends Error {
   constructor(message = "La barrera de consumo de IA no puede garantizar una reserva válida.") { super(message); this.name = "AiBudgetUnavailableError"; }
 }
+
+export class AiEvaluationInProgressError extends Error {
+  constructor() { super("La evaluación ya tiene una operación activa o un costo confirmado pendiente de recuperación."); this.name = "AiEvaluationInProgressError"; }
+}
+
+export class AiDispatchUnavailableError extends Error {
+  readonly retryAfterMs: number;
+  constructor(retryAfterMs: number) { super("No hay un turno disponible para iniciar la evaluación."); this.name = "AiDispatchUnavailableError"; this.retryAfterMs = retryAfterMs; }
+}
+
+export type DispatchSlotResult = { leaseId: string } | { waitMs: number } | { blocked: true };
 
 function toMicroUsd(costUsd: number): number {
   const microUsd = Math.ceil(costUsd * 1_000_000);
@@ -41,21 +52,109 @@ export class SqliteAiBudgetLedger {
     if (!Number.isSafeInteger(limitMicroUsd) || limitMicroUsd < 1) throw new Error("El límite local de IA debe ser un entero positivo en microdólares.");
   }
 
-  reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; now?: number }): string {
+  reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; operationKey?: string; now?: number }): string {
     const id = input.id ?? randomUUID();
     const now = input.now ?? Date.now();
     if (!/^[a-z][a-z0-9_-]{0,39}$/i.test(input.requestKind) || !Number.isSafeInteger(input.estimateMicroUsd)
       || input.estimateMicroUsd < 1) throw new AiBudgetUnavailableError();
+    if (input.operationKey !== undefined && !/^[a-f0-9]{64}$/.test(input.operationKey)) throw new AiBudgetUnavailableError();
     this.database.exec("BEGIN IMMEDIATE");
     try {
       const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
       if (uncertain) throw new AiBudgetUnavailableError("Hay un despacho de IA con costo incierto; no se enviarán solicitudes facturables hasta reconciliarlo.");
+      if (input.operationKey) {
+        const previous = this.database.prepare(`SELECT status FROM ai_budget_reservations
+          WHERE operation_key=? ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(input.operationKey) as { status: string } | undefined;
+        if (previous && (previous.status === "reserved" || previous.status === "uncertain"
+          || previous.status === "settled")) {
+          throw new AiEvaluationInProgressError();
+        }
+      }
       this.database.prepare(`INSERT INTO ai_budget_reservations
-        (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
-        VALUES (?, ?, ?, NULL, 'reserved', ?, ?)`)
-        .run(id, input.requestKind, input.estimateMicroUsd, now, now);
+        (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at, operation_key)
+        VALUES (?, ?, ?, NULL, 'reserved', ?, ?, ?)`)
+        .run(id, input.requestKind, input.estimateMicroUsd, now, now, input.operationKey ?? null);
       this.database.exec("COMMIT");
       return id;
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  acquireDispatchSlot(reservationId: string, input: { now?: number; leaseMs?: number } = {}): DispatchSlotResult {
+    const now = input.now ?? Date.now();
+    const leaseMs = input.leaseMs ?? 35_000;
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const uncertain = this.database.prepare("SELECT 1 FROM ai_budget_reservations WHERE status='uncertain' LIMIT 1").get();
+      if (uncertain) {
+        this.database.exec("COMMIT");
+        return { blocked: true };
+      }
+      const row = this.database.prepare(`SELECT lease_id, reservation_id, lease_until, cooldown_until
+        FROM ai_gateway_dispatch_control WHERE id=1`).get() as { lease_id: string | null; reservation_id: string | null; lease_until: number; cooldown_until: number };
+      if (row.lease_id && row.lease_until > now) {
+        this.database.exec("COMMIT");
+        return { waitMs: Math.max(1, Number(row.lease_until) - now) };
+      }
+      if (row.lease_id && row.lease_until <= now && row.reservation_id) {
+        this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE id=? AND status='reserved'")
+          .run(now, row.reservation_id);
+        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL,
+          lease_until=0, updated_at=? WHERE id=1`).run(now);
+        this.database.exec("COMMIT");
+        return { blocked: true };
+      }
+      if (row.cooldown_until > now) {
+        this.database.exec("COMMIT");
+        return { waitMs: Math.max(1, Number(row.cooldown_until) - now) };
+      }
+      const leaseId = randomUUID();
+      this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=?, reservation_id=?, lease_until=?, updated_at=? WHERE id=1`)
+        .run(leaseId, reservationId, now + leaseMs, now);
+      this.database.exec("COMMIT");
+      return { leaseId };
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  releaseDispatchSlot(leaseId: string, input: { now?: number; success?: boolean; rateLimitRetryAfterMs?: number | null; random?: () => number } = {}): number {
+    const now = input.now ?? Date.now();
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.database.prepare("SELECT rate_limit_streak FROM ai_gateway_dispatch_control WHERE id=1 AND lease_id=?")
+        .get(leaseId) as { rate_limit_streak: number } | undefined;
+      if (!row) {
+        this.database.exec("COMMIT");
+        return 0;
+      }
+      if (input.success) {
+        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
+          cooldown_until=0, rate_limit_streak=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
+        this.database.exec("COMMIT");
+        return 0;
+      }
+      if (input.rateLimitRetryAfterMs !== undefined) {
+        const streak = Number(row.rate_limit_streak) + 1;
+        const exponentialCap = Math.min(30_000, 1_000 * 2 ** Math.min(streak - 1, 5));
+        const jitter = Math.round(Math.max(0, Math.min(1, (input.random ?? Math.random)())) * exponentialCap);
+        const retryAfterMs = Number.isFinite(input.rateLimitRetryAfterMs) && input.rateLimitRetryAfterMs !== null
+          ? Math.max(0, Math.min(input.rateLimitRetryAfterMs, 86_400_000))
+          : 0;
+        const delayMs = Math.max(100, retryAfterMs, jitter);
+        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
+          cooldown_until=MAX(cooldown_until, ?), rate_limit_streak=?, updated_at=? WHERE id=1 AND lease_id=?`)
+          .run(now + delayMs, streak, now, leaseId);
+        this.database.exec("COMMIT");
+        return delayMs;
+      }
+      this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0, updated_at=?
+        WHERE id=1 AND lease_id=?`).run(now, leaseId);
+      this.database.exec("COMMIT");
+      return 0;
     } catch (error) {
       this.database.exec("ROLLBACK");
       throw error;
@@ -96,17 +195,29 @@ export class SqliteAiBudgetLedger {
     };
   }
 
-  async run<T>(input: { requestKind: string; inputTokens: number; outputTokens: number; rates?: AiGatewayRateCard; invoke: () => Promise<CostReceipt<T>> }): Promise<T> {
+  async run<T>(input: {
+    requestKind: string;
+    inputTokens: number;
+    outputTokens: number;
+    rates?: AiGatewayRateCard;
+    operationKey?: string;
+    isConfirmedNoCharge?: (error: unknown) => boolean;
+    invoke: (signals: { reservationId: string; onDispatch: () => void; onConfirmedNoCharge: () => void }) => Promise<CostReceipt<T>>;
+  }): Promise<T> {
     const estimateMicroUsd = estimateAiCallCostMicroUsd({ inputTokens: input.inputTokens, outputTokens: input.outputTokens, ...(input.rates ? { rates: input.rates } : {}) });
-    const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd });
+    const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd, ...(input.operationKey ? { operationKey: input.operationKey } : {}) });
+    let dispatchPossible = false;
     try {
-      const receipt = await input.invoke();
+      const receipt = await input.invoke({ reservationId, onDispatch: () => { dispatchPossible = true; }, onConfirmedNoCharge: () => { dispatchPossible = false; } });
       const settlement = this.settle(reservationId, receipt.costUsd ?? null);
       if (settlement === "uncertain") throw new AiBudgetUnavailableError("El proveedor no confirmó el costo de la solicitud.");
       return receipt.value;
     } catch (error) {
       const row = this.database.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservationId) as { status: string } | undefined;
-      if (row?.status === "reserved") this.settle(reservationId, null);
+      if (row?.status === "reserved") {
+        if (!dispatchPossible || input.isConfirmedNoCharge?.(error)) this.releaseBeforeDispatch(reservationId);
+        else this.settle(reservationId, null);
+      }
       throw error;
     }
   }

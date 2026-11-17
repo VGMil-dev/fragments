@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { migrate } from "../../db/migrate.js";
-import { AiBudgetUnavailableError, estimateAiCallCostMicroUsd, parseGatewayCostUsd, SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { AiBudgetUnavailableError, AiEvaluationInProgressError, estimateAiCallCostMicroUsd, parseGatewayCostUsd, SqliteAiBudgetLedger } from "./budget-ledger.js";
 
 const databases: DatabaseSync[] = [];
 function ledger(limit = 1_000_000) { const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db); return new SqliteAiBudgetLedger(db, limit); }
@@ -62,5 +62,41 @@ describe("SqliteAiBudgetLedger", () => {
     await expect(budget.run({ requestKind: "mentor", inputTokens: 1, outputTokens: 1, rates, invoke: async () => ({ value: null, costUsd: 1.1 }) })).resolves.toBeNull();
     expect(budget.summary()).toMatchObject({ settledMicroUsd: 1_100_000, availableMicroUsd: 0 });
     expect(() => budget.reserve({ requestKind: "review", estimateMicroUsd: 1 })).not.toThrow();
+  });
+
+  it("prevents duplicate cross-worker dispatches and retries only after a confirmed no-charge release", () => {
+    const firstWorker = ledger();
+    const secondWorker = new SqliteAiBudgetLedger(databases.at(-1)!);
+    const operationKey = "a".repeat(64);
+    const reservation = firstWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 870, operationKey });
+
+    expect(() => secondWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 870, operationKey })).toThrow(AiEvaluationInProgressError);
+    firstWorker.releaseBeforeDispatch(reservation, 20);
+    const retry = secondWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 870, operationKey, now: 30 });
+    expect(retry).not.toBe(reservation);
+    expect(secondWorker.summary()).toMatchObject({ settledMicroUsd: 0, reservedMicroUsd: 870, blocked: false });
+  });
+
+  it("does not repeat a completed logical evaluation even when its actual cost was zero", () => {
+    const firstWorker = ledger();
+    const operationKey = "e".repeat(64);
+    const reservation = firstWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 1, operationKey });
+    firstWorker.settle(reservation, 0, 20);
+    expect(() => firstWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 1, operationKey, now: 30 })).toThrow(AiEvaluationInProgressError);
+  });
+
+  it("shares one dispatch lease and a Retry-After cooldown across ledger instances", () => {
+    const firstWorker = ledger();
+    const secondWorker = new SqliteAiBudgetLedger(databases.at(-1)!);
+    const first = firstWorker.acquireDispatchSlot("reservation-a", { now: 1_000, leaseMs: 10_000 });
+    expect(first).toHaveProperty("leaseId");
+    const blocked = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_001, leaseMs: 10_000 });
+    expect(blocked).toEqual({ waitMs: 9_999 });
+
+    const cooldown = firstWorker.releaseDispatchSlot(first.leaseId, { now: 1_002, rateLimitRetryAfterMs: 2_000, random: () => 0.5 });
+    expect(cooldown).toBeGreaterThanOrEqual(2_000);
+    expect(secondWorker.acquireDispatchSlot("reservation-b", { now: 1_003, leaseMs: 10_000 })).toEqual({ waitMs: cooldown - 1 });
+    const acquired = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_002 + cooldown, leaseMs: 10_000 });
+    expect(acquired).toHaveProperty("leaseId");
   });
 });

@@ -207,14 +207,16 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).toContain("72/100");
   });
 
-  it.each(["AI_BUDGET_UNAVAILABLE", "AI_GATEWAY_BUDGET_EXCEEDED"] as const)("shows %s directly instead of replacing it with a recovery 404", async (code) => {
+  it.each(["AI_BUDGET_UNAVAILABLE", "AI_GATEWAY_BUDGET_EXCEEDED", "AI_RATE_LIMITED", "AI_PROVIDER_UNAVAILABLE"] as const)("shows %s directly instead of replacing it with a recovery 404", async (code) => {
     const evaluate = vi.fn(async () => ({
       ok: false as const,
       error: {
         code,
         message: code === "AI_GATEWAY_BUDGET_EXCEEDED"
-          ? "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto."
-          : "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.",
+          ? "La evaluación no está disponible por una restricción de presupuesto o pago en AI Gateway."
+          : code === "AI_RATE_LIMITED" ? "El servicio recibió demasiadas solicitudes."
+            : code === "AI_PROVIDER_UNAVAILABLE" ? "El proveedor no está disponible."
+              : "La evaluación está temporalmente bloqueada mientras se concilia una solicitud anterior.",
       },
     }));
     const recover = vi.fn(async () => ({
@@ -235,7 +237,7 @@ describe("MentorScreen", () => {
 
     expect(evaluate).toHaveBeenCalledOnce();
     expect(recover).not.toHaveBeenCalled();
-    expect(mountedContainer.textContent).toContain(code === "AI_GATEWAY_BUDGET_EXCEEDED" ? "Vercel AI Gateway alcanzó su presupuesto" : "se agotó el presupuesto de IA configurado");
-    expect(mountedContainer.textContent).toContain("Volver a intentar");
+    expect(mountedContainer.textContent).toContain(code === "AI_GATEWAY_BUDGET_EXCEEDED" ? "restricción de presupuesto o pago" : code === "AI_RATE_LIMITED" ? "demasiadas solicitudes" : code === "AI_PROVIDER_UNAVAILABLE" ? "no está disponible" : "temporalmente bloqueada");
+    expect(mountedContainer.textContent).toContain(code === "AI_RATE_LIMITED" ? "Intentar más tarde" : "Volver a intentar");
   });
 });

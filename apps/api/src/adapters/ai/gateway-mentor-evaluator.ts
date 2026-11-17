@@ -1,7 +1,10 @@
-import { APICallError, generateText, Output } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { MentorEvaluationFailure, type MentorEvaluationFailureStage, type MentorEvaluator, type Proposal } from "../../features/mentor/service.js";
 import { AiBudgetUnavailableError, parseGatewayCostUsd, SqliteAiBudgetLedger, type AiGatewayRateCard } from "./budget-ledger.js";
+import { executeWithGatewayPolicy } from "./gateway-dispatch-policy.js";
+import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
+import { createHash } from "node:crypto";
 
 const mentorOutputSchema = z.object({
   findings: z.array(z.object({
@@ -28,41 +31,26 @@ function safeCode(value: unknown): string | null {
   return typeof value === "string" && /^[A-Za-z0-9_.:-]{1,80}$/.test(value) ? value : null;
 }
 
-function providerCode(error: APICallError | null): string | null {
-  if (!error) return null;
-  const record = (value: unknown): Record<string, unknown> | null =>
-    value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
-  let body: Record<string, unknown> | null = record(error.data);
-  if (!body && error.responseBody) {
-    try { body = record(JSON.parse(error.responseBody)); } catch { body = null; }
-  }
-  const nested = record(body?.error);
-  return safeCode(nested?.code) ?? safeCode(body?.code) ?? safeCode(nested?.type) ?? safeCode(body?.type);
-}
-
-function retryAfterMs(error: APICallError | null, now = Date.now()): number | null {
-  const raw = error?.responseHeaders
-    ? Object.entries(error.responseHeaders).find(([name]) => name.toLowerCase() === "retry-after")?.[1]
-    : undefined;
-  if (!raw) return null;
-  const seconds = Number(raw);
-  const delay = Number.isFinite(seconds) && seconds >= 0 ? Math.round(seconds * 1000) : Date.parse(raw) - now;
-  return Number.isFinite(delay) && delay >= 0 ? Math.min(delay, 86_400_000) : null;
-}
-
 function errorType(error: unknown): string {
   const name = error instanceof Error ? error.name : "UnknownError";
   return /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(name) ? name : "UnknownError";
 }
 
 function evaluationFailure(error: unknown, stage: MentorEvaluationFailureStage): MentorEvaluationFailure {
-  const apiError = APICallError.isInstance(error) ? error : null;
+  const details = classifyGatewayFailure(error);
+  const kind = details.gatewayHttpStatus === 429 ? "rate_limit" : details.gatewayHttpStatus === 402 ? "budget" :
+    details.gatewayHttpStatus === 503 || details.providerHttpStatus === 503 ? "unavailable" :
+      details.providerDispatchPossible ? "ambiguous" : "other";
   return new MentorEvaluationFailure({
     stage,
     errorType: errorType(error),
-    providerHttpStatus: apiError?.statusCode ?? null,
-    providerCode: providerCode(apiError),
-    retryAfterMs: retryAfterMs(apiError),
+    providerHttpStatus: details.providerHttpStatus,
+    providerCode: details.providerCode,
+    retryAfterMs: details.retryAfterMs,
+    kind,
+    gatewayHttpStatus: details.gatewayHttpStatus,
+    gatewayCode: details.gatewayCode,
+    gatewayGenerationId: details.gatewayGenerationId,
   });
 }
 
@@ -130,7 +118,9 @@ export function createGatewayMentorEvaluator(options: {
           inputTokens: maxInputTokens,
           outputTokens: maxOutputTokens,
           ...(options.rates ? { rates: options.rates } : {}),
-          invoke: () => {
+          ...(input.idempotencyKey ? { operationKey: createHash("sha256").update(input.idempotencyKey).digest("hex") } : {}),
+          isConfirmedNoCharge: hasConfirmedNoChargeGatewayRejection,
+          invoke: (signals) => executeWithGatewayPolicy(options.ledger, signals, () => {
             providerInvoked = true;
             return generate({
               modelId: options.modelId!,
@@ -139,7 +129,7 @@ export function createGatewayMentorEvaluator(options: {
               maxOutputTokens,
               signal: controller.signal,
             });
-          },
+          }),
         });
         const parsed = mentorOutputSchema.parse(response);
         return {

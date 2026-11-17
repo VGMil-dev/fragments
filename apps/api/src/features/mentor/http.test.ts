@@ -141,7 +141,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
   });
 
-  it("preserves a Gateway HTTP 402 without retrying or storing an evaluation", async () => {
+  it("does not label a provider HTTP 402 as a Gateway budget restriction", async () => {
     const diagnostics: Record<string, unknown>[] = [];
     let evaluationCalls = 0;
     const evaluator: MentorEvaluator = {
@@ -159,13 +159,24 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     });
     const body = await response.json() as { error: { code: string; message: string } };
 
-    expect(response.status).toBe(402);
-    expect(body.error).toMatchObject({ code: "AI_GATEWAY_BUDGET_EXCEEDED" });
-    expect(body.error.message).toContain("Vercel AI Gateway");
+    expect(response.status).toBe(503);
+    expect(body.error).toMatchObject({ code: "AI_PROVIDER_UNAVAILABLE" });
     expect(evaluationCalls).toBe(1);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({ http_status: 402, provider_http_status: 402, provider_code: "budget_exceeded" });
+    expect(diagnostics[0]).toMatchObject({ http_status: 503, provider_http_status: 402, provider_code: "budget_exceeded" });
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+  });
+
+  it("returns Gateway 429 and preserves a bounded Retry-After header", async () => {
+    const evaluator: MentorEvaluator = {
+      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "GatewayRateLimitError", gatewayHttpStatus: 429, gatewayCode: "rate_limit_exceeded", gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", retryAfterMs: 2_500, kind: "rate_limit" }); },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("3");
+    expect((await response.json() as { error: { code: string } }).error.code).toBe("AI_RATE_LIMITED");
   });
 
   it("recovers the latest persisted evaluation without evaluating again", async () => {
