@@ -77,16 +77,18 @@ function retryAfterMs(error: Record<string, unknown> | null): number | null {
 
 export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
   const root = record(error);
-  const isGatewayError = gatewayError(root);
+  const normalizedGatewayFailure = httpStatus(root?.gatewayHttpStatus) !== null;
+  const isGatewayError = gatewayError(root) || normalizedGatewayFailure;
   const upstreamCall = providerCallError(error);
   const cause = record(root?.cause);
   const nestedProviderCall = isGatewayError ? providerCallError(cause) : null;
   const causeHasStatus = httpStatus(cause?.statusCode) !== null;
-  const gatewayStatus = isGatewayError ? httpStatus(root?.statusCode) : null;
+  const gatewayStatus = isGatewayError ? httpStatus(root?.statusCode) ?? httpStatus(root?.gatewayHttpStatus) : null;
   const providerStatus = httpStatus(root?.providerHttpStatus) ?? httpStatus(upstreamCall?.statusCode) ?? httpStatus(nestedProviderCall?.statusCode);
-  const gatewayType = safeCode(root?.type);
-  const generationId = typeof root?.generationId === "string" && safeGenerationIdPattern.test(root.generationId)
-    ? root.generationId
+  const gatewayType = safeCode(root?.type) ?? safeCode(root?.gatewayCode);
+  const rawGenerationId = root?.generationId ?? root?.gatewayGenerationId;
+  const generationId = typeof rawGenerationId === "string" && safeGenerationIdPattern.test(rawGenerationId)
+    ? rawGenerationId
     : null;
 
   return {
@@ -99,7 +101,7 @@ export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
       ? root.retryAfterMs
       : (isGatewayError ? retryAfterMs(root) : null) ?? retryAfterMs(causeHasStatus ? cause : upstreamCall),
     retryable: root?.isRetryable === true || gatewayStatus === 429 || providerStatus === 429 || providerStatus === 503,
-    providerDispatchPossible: root?.safeNoCharge === true ? false : isGatewayError
+    providerDispatchPossible: typeof root?.providerDispatchPossible === "boolean" ? root.providerDispatchPossible : root?.safeNoCharge === true ? false : isGatewayError
       ? Boolean(gatewayStatus !== 402 && (providerStatus !== null || gatewayStatus !== 429 || generationId !== null))
       : true,
   };

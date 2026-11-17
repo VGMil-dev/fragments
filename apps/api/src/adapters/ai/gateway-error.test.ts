@@ -52,6 +52,48 @@ describe("safe AI Gateway error classification", () => {
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(true);
   });
 
+  it("preserves dispatch evidence after the evaluator wraps a Gateway failure", () => {
+    const wrapped = Object.assign(new Error("Mentor evaluation failed"), {
+      name: "MentorEvaluationFailure",
+      gatewayHttpStatus: 429,
+      gatewayCode: "rate_limit_exceeded",
+      gatewayGenerationId: null,
+      providerHttpStatus: null,
+      providerCode: null,
+      retryAfterMs: 2_000,
+      providerDispatchPossible: false,
+    });
+
+    expect(classifyGatewayFailure(wrapped)).toMatchObject({
+      gatewayHttpStatus: 429,
+      gatewayCode: "rate_limit_exceeded",
+      providerHttpStatus: null,
+      retryAfterMs: 2_000,
+      providerDispatchPossible: false,
+    });
+    expect(hasConfirmedNoChargeGatewayRejection(wrapped)).toBe(true);
+  });
+
+  it("does not lose provider dispatch evidence after wrapping a Gateway 429", () => {
+    const wrapped = Object.assign(new Error("Mentor evaluation failed"), {
+      name: "MentorEvaluationFailure",
+      gatewayHttpStatus: 429,
+      gatewayCode: "rate_limit_exceeded",
+      gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7",
+      providerHttpStatus: 503,
+      providerCode: "service_unavailable",
+      providerDispatchPossible: true,
+    });
+
+    expect(classifyGatewayFailure(wrapped)).toMatchObject({
+      gatewayHttpStatus: 429,
+      gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7",
+      providerHttpStatus: 503,
+      providerDispatchPossible: true,
+    });
+    expect(hasConfirmedNoChargeGatewayRejection(wrapped)).toBe(false);
+  });
+
   it("does not classify a Gateway 429 as safe to retry when its cause contains a provider response", () => {
     const error = gatewayError({
       name: "GatewayRateLimitError", type: "rate_limit_exceeded", statusCode: 429, isRetryable: true,

@@ -51,6 +51,7 @@ function evaluationFailure(error: unknown, stage: MentorEvaluationFailureStage):
     gatewayHttpStatus: details.gatewayHttpStatus,
     gatewayCode: details.gatewayCode,
     gatewayGenerationId: details.gatewayGenerationId,
+    providerDispatchPossible: details.providerDispatchPossible,
   });
 }
 

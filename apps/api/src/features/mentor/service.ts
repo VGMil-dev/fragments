@@ -61,6 +61,7 @@ export class MentorEvaluationFailure extends Error {
   readonly gatewayHttpStatus: number | null;
   readonly gatewayCode: string | null;
   readonly gatewayGenerationId: string | null;
+  readonly providerDispatchPossible: boolean;
 
   constructor(input: {
     stage: MentorEvaluationFailureStage;
@@ -72,6 +73,7 @@ export class MentorEvaluationFailure extends Error {
     gatewayHttpStatus?: number | null;
     gatewayCode?: string | null;
     gatewayGenerationId?: string | null;
+    providerDispatchPossible?: boolean;
   }) {
     super("Mentor evaluation failed");
     this.name = "MentorEvaluationFailure";
@@ -84,6 +86,7 @@ export class MentorEvaluationFailure extends Error {
     this.gatewayHttpStatus = input.gatewayHttpStatus ?? null;
     this.gatewayCode = input.gatewayCode ?? null;
     this.gatewayGenerationId = input.gatewayGenerationId ?? null;
+    this.providerDispatchPossible = input.providerDispatchPossible ?? true;
   }
 }
 

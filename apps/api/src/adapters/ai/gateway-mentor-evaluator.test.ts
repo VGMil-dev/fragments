@@ -1,10 +1,15 @@
 import { DatabaseSync } from "node:sqlite";
-import { APICallError } from "ai";
+import { APICallError, generateText } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "../../db/migrate.js";
 import { SqliteAiBudgetLedger } from "./budget-ledger.js";
 import { createGatewayMentorEvaluator } from "./gateway-mentor-evaluator.js";
 import { MentorEvaluationFailure } from "../../features/mentor/service.js";
+
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+  return { ...actual, generateText: vi.fn() };
+});
 
 const databases: DatabaseSync[] = [];
 function makeLedger(limit = 1_000_000) {
@@ -118,6 +123,36 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     expect(JSON.stringify(firstFailure)).not.toContain("private request context");
     expect(JSON.stringify(firstFailure)).not.toContain("private prompt");
     expect(JSON.stringify(firstFailure)).not.toContain("private provider detail");
+  });
+
+  it("retries confirmed no-charge Gateway 429s through the production SDK adapter", async () => {
+    vi.useFakeTimers();
+    vi.mocked(generateText).mockReset();
+    const rateLimit = Object.assign(new Error("private gateway response"), {
+      name: "GatewayRateLimitError",
+      type: "rate_limit_exceeded",
+      statusCode: 429,
+      isRetryable: true,
+    });
+    vi.mocked(generateText).mockRejectedValueOnce(rateLimit)
+      .mockRejectedValueOnce(rateLimit)
+      .mockRejectedValueOnce(rateLimit)
+      .mockResolvedValueOnce({
+        output: generated,
+        finalStep: Promise.resolve({ providerMetadata: { gateway: { cost: "0.0004" } } }),
+      } as never);
+    const ledger = makeLedger();
+    const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger });
+
+    try {
+      const result = evaluator.evaluate(evaluationInput);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(result).resolves.toMatchObject({ modelId: "fixture/model" });
+      expect(generateText).toHaveBeenCalledTimes(4);
+      expect(ledger.summary()).toMatchObject({ settledMicroUsd: 400, reservedMicroUsd: 0, blocked: false });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("uses the minimum ledger reservation when model pricing is unavailable", async () => {
