@@ -158,6 +158,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       type: "rate_limit_exceeded",
       statusCode: 429,
       isRetryable: true,
+      providerDispatchPossible: false,
     });
     vi.mocked(generateText).mockRejectedValueOnce(rateLimit)
       .mockRejectedValueOnce(rateLimit)

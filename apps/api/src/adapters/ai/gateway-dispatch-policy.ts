@@ -4,7 +4,7 @@ import {
   type CostReceipt,
   type SqliteAiBudgetLedger,
 } from "./budget-ledger.js";
-import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
+import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection, hasProviderResponseEvidence } from "./gateway-error.js";
 
 type DispatchSignals = { reservationId: string; onDispatch: () => void; onConfirmedNoCharge: () => void };
 type PolicyOptions = {
@@ -108,7 +108,14 @@ export async function executeWithGatewayPolicy<T>(
     } catch (error) {
       const details = classifyGatewayFailure(error);
       const preDispatchTimeout = !dispatched && isTimeoutFailure(error);
-      const safeNoCharge = !dispatched || hasConfirmedNoChargeGatewayRejection(error);
+      const providerEvidence = hasProviderResponseEvidence(error);
+      const explicitPossibleDispatch = (error as { providerDispatchPossible?: unknown } | null)?.providerDispatchPossible === true;
+      if (!dispatched && (providerEvidence || explicitPossibleDispatch)) {
+        dispatched = true;
+        signals.onDispatch();
+      }
+      const safeNoCharge = hasConfirmedNoChargeGatewayRejection(error)
+        || (!dispatched && !providerEvidence && !explicitPossibleDispatch);
       if (safeNoCharge) signals.onConfirmedNoCharge();
       if (details.gatewayHttpStatus !== 429) {
         const delay = ledger.releaseDispatchSlot(acquired.leaseId, {

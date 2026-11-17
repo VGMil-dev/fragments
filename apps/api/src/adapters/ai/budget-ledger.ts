@@ -101,11 +101,31 @@ export class SqliteAiBudgetLedger {
         this.database.exec("COMMIT");
         return { blocked: true };
       }
+      const expired = this.database.prepare("SELECT reservation_id FROM ai_gateway_dispatch_slots WHERE lease_until<=?").all(now) as { reservation_id: string }[];
+      for (const slot of expired) this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE id=? AND status='reserved'").run(now, slot.reservation_id);
+      this.database.prepare("DELETE FROM ai_gateway_dispatch_slots WHERE lease_until<=?").run(now);
+      if (expired.length) {
+        this.database.exec("COMMIT");
+        return { blocked: true };
+      }
       const row = this.database.prepare(`SELECT lease_id, reservation_id, lease_until, cooldown_until, rate_limit_active
         FROM ai_gateway_dispatch_control WHERE id=1`).get() as { lease_id: string | null; reservation_id: string | null; lease_until: number; cooldown_until: number; rate_limit_active: number };
       if (row.rate_limit_active !== 1) {
+        const count = this.database.prepare("SELECT COUNT(*) AS count FROM ai_gateway_dispatch_slots").get() as { count: number };
+        if (Number(count.count) >= 2) {
+          const earliest = this.database.prepare("SELECT MIN(lease_until) AS until FROM ai_gateway_dispatch_slots").get() as { until: number };
+          this.database.exec("COMMIT");
+          return { waitMs: Math.max(1, Number(earliest.until) - now) };
+        }
+        const leaseId = randomUUID();
+        this.database.prepare("INSERT INTO ai_gateway_dispatch_slots(lease_id, reservation_id, lease_until) VALUES (?, ?, ?)").run(leaseId, reservationId, now + leaseMs);
         this.database.exec("COMMIT");
-        return { leaseId: null };
+        return { leaseId };
+      }
+      const activeSlots = this.database.prepare("SELECT MIN(lease_until) AS until, COUNT(*) AS count FROM ai_gateway_dispatch_slots").get() as { until: number | null; count: number };
+      if (Number(activeSlots.count) > 0) {
+        this.database.exec("COMMIT");
+        return { waitMs: Math.max(1, Number(activeSlots.until) - now) };
       }
       if (row.lease_id && row.lease_until > now) {
         this.database.exec("COMMIT");
@@ -139,12 +159,14 @@ export class SqliteAiBudgetLedger {
     this.database.exec("BEGIN IMMEDIATE");
     try {
       if (input.success) {
+        if (leaseId) this.database.prepare("DELETE FROM ai_gateway_dispatch_slots WHERE lease_id=?").run(leaseId);
         if (leaseId) this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
           cooldown_until=0, transient_failure_streak=0, rate_limit_active=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
         this.database.exec("COMMIT");
         return 0;
       }
       if (input.rateLimitRetryAfterMs !== undefined || input.transientFailure === true) {
+        if (leaseId) this.database.prepare("DELETE FROM ai_gateway_dispatch_slots WHERE lease_id=?").run(leaseId);
         const row = this.database.prepare("SELECT transient_failure_streak FROM ai_gateway_dispatch_control WHERE id=1")
           .get() as { transient_failure_streak: number };
         const streak = Number(row.transient_failure_streak) + 1;
@@ -163,6 +185,7 @@ export class SqliteAiBudgetLedger {
         this.database.exec("COMMIT");
         return delayMs;
       }
+      if (leaseId) this.database.prepare("DELETE FROM ai_gateway_dispatch_slots WHERE lease_id=?").run(leaseId);
       if (leaseId) this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0, updated_at=?
         WHERE id=1 AND lease_id=?`).run(now, leaseId);
       this.database.exec("COMMIT");

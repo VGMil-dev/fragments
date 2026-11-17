@@ -97,18 +97,24 @@ describe("SqliteAiBudgetLedger", () => {
     const secondWorker = new SqliteAiBudgetLedger(databases.at(-1)!);
     const first = firstWorker.acquireDispatchSlot("reservation-a", { now: 1_000, leaseMs: 10_000 });
     const second = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_001, leaseMs: 10_000 });
-    expect(first).toEqual({ leaseId: null });
-    expect(second).toEqual({ leaseId: null });
+    expect(first).toHaveProperty("leaseId");
+    expect(second).toHaveProperty("leaseId");
+    const third = firstWorker.acquireDispatchSlot("reservation-third", { now: 1_001, leaseMs: 10_000 });
+    expect(third).toEqual({ waitMs: 9_999 });
 
-    const cooldown = firstWorker.releaseDispatchSlot(first.leaseId, { now: 1_002, rateLimitRetryAfterMs: 2_000, random: () => 0.5 });
+    const cooldown = firstWorker.releaseDispatchSlot("leaseId" in first ? first.leaseId : null, { now: 1_002, rateLimitRetryAfterMs: 2_000, random: () => 0.5 });
     expect(cooldown).toBeGreaterThanOrEqual(2_000);
-    expect(secondWorker.acquireDispatchSlot("reservation-b", { now: 1_003, leaseMs: 10_000 })).toEqual({ waitMs: cooldown - 1 });
+    expect(secondWorker.acquireDispatchSlot("reservation-b", { now: 1_003, leaseMs: 10_000 })).toEqual({ waitMs: 9_998 });
+    if ("leaseId" in second) secondWorker.releaseDispatchSlot(second.leaseId, { now: 1_004, success: true });
     const acquired = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_002 + cooldown, leaseMs: 10_000 });
     expect(acquired).toHaveProperty("leaseId");
     const otherProbe = firstWorker.acquireDispatchSlot("reservation-c", { now: 1_003 + cooldown, leaseMs: 10_000 });
     expect(otherProbe).toEqual({ waitMs: 9_999 });
     if ("leaseId" in acquired) secondWorker.releaseDispatchSlot(acquired.leaseId, { now: 1_004 + cooldown, success: true });
-    expect(firstWorker.acquireDispatchSlot("reservation-c", { now: 1_005 + cooldown })).toEqual({ leaseId: null });
+    const recovered = firstWorker.acquireDispatchSlot("reservation-c", { now: 1_005 + cooldown });
+    expect(recovered).toHaveProperty("leaseId");
+    if ("leaseId" in recovered) firstWorker.releaseDispatchSlot(recovered.leaseId, { now: 1_006 + cooldown, rateLimitRetryAfterMs: 5_000, random: () => 0 });
+    expect(secondWorker.acquireDispatchSlot("reservation-d", { now: 1_007 + cooldown }).waitMs).toBe(4_999);
   });
 
   it("marks the probe reservation uncertain when its shared lease expires", () => {

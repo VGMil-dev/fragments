@@ -119,3 +119,19 @@ export function hasConfirmedNoChargeGatewayRejection(error: unknown): boolean {
   if (details.gatewayHttpStatus === 429) return root?.providerDispatchPossible === false;
   return details.gatewayHttpStatus === 402 && details.gatewayCode === "quota_for_entity_exceeded";
 }
+
+/** Any provider response metadata vetoes fallback assumptions that dispatch never began. */
+export function hasProviderResponseEvidence(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5; depth += 1) {
+    const item = record(current);
+    if (!item) return false;
+    if (isProviderCallError(current) && (httpStatus(item.statusCode) !== null
+      || typeof item.responseBody === "string" || item.data !== undefined || item.responseHeaders !== undefined)) return true;
+    if (httpStatus(item.providerHttpStatus) !== null || typeof item.providerCode === "string"
+      || (typeof item.generationId === "string" && safeGenerationIdPattern.test(item.generationId))) return true;
+    if (!item.cause || item.cause === current) return false;
+    current = item.cause;
+  }
+  return false;
+}

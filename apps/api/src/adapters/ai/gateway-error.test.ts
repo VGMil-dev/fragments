@@ -128,6 +128,15 @@ describe("safe AI Gateway error classification", () => {
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
   });
 
+  it("detects provider response bodies even without an upstream status", () => {
+    const error = gatewayError({
+      name: "GatewayRateLimitError", type: "rate_limit_exceeded", statusCode: 429,
+      cause: Object.assign(new Error("private"), { name: "APICallError", responseBody: "provider response body" }),
+    });
+    expect(classifyGatewayFailure(error).providerDispatchPossible).toBe(true);
+    expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
+  });
+
   it("treats a confirmed Gateway 402 as a no-usage rejection", () => {
     const error = gatewayError({
       name: "GatewayInternalServerError",
