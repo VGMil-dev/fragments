@@ -190,6 +190,22 @@ describe("bounded shared Gateway dispatch policy", () => {
     expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
   });
 
+  it("keeps a 429 without callback or explicit no-dispatch evidence uncertain", async () => {
+    const ledger = makeLedger();
+    const generate = vi.fn(async () => { throw rateLimitError(undefined, false); });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000, operationKey: "7".repeat(64),
+      isConfirmedNoCharge: hasConfirmedNoChargeGatewayRejection,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, () => generate(), {
+        sleep: async () => undefined,
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", safeNoCharge: false });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
+  });
+
   it("keeps a contradictory provider response uncertain when the dispatch callback never ran", async () => {
     const ledger = makeLedger();
     const response = Object.assign(new Error("private response"), { name: "APICallError", statusCode: 503 });

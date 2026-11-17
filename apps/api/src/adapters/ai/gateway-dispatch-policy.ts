@@ -110,13 +110,15 @@ export async function executeWithGatewayPolicy<T>(
       const timeoutFailure = isTimeoutFailure(error);
       const providerEvidence = hasProviderResponseEvidence(error);
       const explicitPossibleDispatch = (error as { providerDispatchPossible?: unknown } | null)?.providerDispatchPossible === true;
-      if (!dispatched && (providerEvidence || explicitPossibleDispatch)) {
+      const confirmedNoCharge = hasConfirmedNoChargeGatewayRejection(error);
+      const ambiguousGatewayRateLimit = details.gatewayHttpStatus === 429 && !confirmedNoCharge;
+      if (!dispatched && (providerEvidence || explicitPossibleDispatch || ambiguousGatewayRateLimit)) {
         dispatched = true;
         signals.onDispatch();
       }
       const preDispatchTimeout = !dispatched && timeoutFailure;
-      const safeNoCharge = hasConfirmedNoChargeGatewayRejection(error)
-        || (!dispatched && !providerEvidence && !explicitPossibleDispatch);
+      const safeNoCharge = confirmedNoCharge
+        || (!dispatched && !providerEvidence && !explicitPossibleDispatch && details.gatewayHttpStatus !== 429);
       if (safeNoCharge) signals.onConfirmedNoCharge();
       if (details.gatewayHttpStatus !== 429) {
         const delay = ledger.releaseDispatchSlot(acquired.leaseId, {

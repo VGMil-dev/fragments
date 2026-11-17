@@ -192,3 +192,13 @@ Revisores frescos completaron Codebase Details, Implementation Readiness y Zoom 
 | Zoom Out | 0 | 0 | 1 |
 
 Codebase encontró (1) que un timeout pre-callback con respuesta upstream aún podía seguir el retry pre-despacho y (2) que `providerCode` no impedía confirmar no-cargo 402 y liberar la reserva. Readiness pidió fixture, ruta y prueba de ausencia de mutación reproducibles. Se añadieron tests TDD (fallaron antes, pasan después), evidencia de respuesta upstream ahora veta no-cargo, y la marca `preDispatchTimeout` se calcula luego de procesar evidencia/posible despacho. El ensayo rollback especifica datos sintéticos, `GET /api/mentor/context`, snapshot lógico exacto y revisión por dos operadores. Zoom Out dejó un Nit editorial y no halló Blockers/Majors. R13 no fue limpio. La remediación quedó en `a1dd0fdd4943e2c02c2646a82ad58ffa8229753f`; CI exacto y rondas de cierre pendientes.
+
+## Revisión fresca R14 — `61f3009`
+
+Codebase 0/0/0, Readiness 0/0/1, Zoom Out 0/0/0 (Blocker/Major/Nit) sobre el mismo SHA `61f3009ae974a4d7c6cf49b9fb0b4f5bcba5c434`. CI #84 (`44024414570`) fue `success` en ese SHA. R14 fue limpia: cero Blockers y Majors. Readiness sugirió precisar el formato del snapshot como Nit.
+
+## Revisión fresca R15 — `61f3009`
+
+Codebase encontró un Blocker: el fallback pre-callback podía tratar un Gateway 429 sin señal explícita de no despacho como no facturable, habilitando retries y liberación. Readiness reportó dos Nits (serialización snapshot y trazabilidad rezagada); Zoom Out no encontró hallazgos.
+
+La remediación del siguiente cambio exige `providerDispatchPossible=false` para no-cargo/retry 429, marca el 429 ambiguo como posible despacho y agrega una regresión que falla antes del arreglo y pasa después. El snapshot se especifica con proyecciones/columnas, orden, `NULL`, UTF-8, LF y filas sintéticas deterministas; se corrige la trazabilidad. R15 no fue limpia; el commit de corrección requerirá CI y dos nuevas rondas Goldfish limpias sobre el mismo HEAD.
