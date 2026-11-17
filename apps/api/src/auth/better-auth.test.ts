@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { createServer, type IncomingMessage, type Server } from "node:http";
+import { format } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFragmentsAuth, createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
 import { createAcademicRepository } from "../features/mentor/academic-repository.js";
@@ -10,6 +11,7 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))));
   for (const database of databases.splice(0)) database.close();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 async function fixture(allowSignUp = true) {
@@ -31,6 +33,136 @@ async function createAccount(database: DatabaseSync, auth: Awaited<ReturnType<ty
 }
 
 describe("Better Auth integration", () => {
+  it("does not write fake OAuth callback parameters through the Node adapter", async () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    const fakeClientId = "FAKE_OAUTH_CLIENT_ID_LOG_LEAK_TEST";
+    const fakeClientSecret = "FAKE_OAUTH_CLIENT_SECRET_LOG_LEAK_TEST";
+    const auth = await createMigratedFragmentsAuth(database, {
+      secret: "test-only-oauth-log-secret-0123456789",
+      baseURL: "http://localhost:3000/api/auth",
+      publicAppURL: "http://localhost:5173",
+      githubClientId: fakeClientId,
+      githubClientSecret: fakeClientSecret,
+    });
+    const service = createFragmentsAuthService(auth);
+    const server = createServer((request, response) => service.handle(request, response));
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Node adapter fixture did not bind a TCP port.");
+
+    const captured: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => captured.push(format(...args)));
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => captured.push(format(...args)));
+    vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => captured.push(format(...args)));
+    let tokenExchangeFailure: "none" | "invalid_code" | "nested_exception" = "none";
+    const requestFetch = globalThis.fetch.bind(globalThis);
+    const fakeToken = "FAKE_OAUTH_ACCESS_TOKEN_LOG_LEAK_TEST";
+    const nestedFakeMarkers = [
+      "FAKE_OAUTH_NESTED_CODE_LOG_LEAK_TEST",
+      "FAKE_OAUTH_NESTED_STATE_LOG_LEAK_TEST",
+      "FAKE_OAUTH_NESTED_COOKIE_LOG_LEAK_TEST",
+      "FAKE_OAUTH_NESTED_TOKEN_LOG_LEAK_TEST",
+    ];
+    const fakeFetch = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "https://github.com/login/oauth/access_token") {
+        if (tokenExchangeFailure === "invalid_code") return new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 });
+        if (tokenExchangeFailure === "nested_exception") {
+          throw Object.assign(new Error("FAKE_OAUTH_NESTED_CODE_LOG_LEAK_TEST"), {
+            details: { state: "FAKE_OAUTH_NESTED_STATE_LOG_LEAK_TEST", cookie: "FAKE_OAUTH_NESTED_COOKIE_LOG_LEAK_TEST" },
+            cause: Object.assign(new Error("FAKE_OAUTH_NESTED_TOKEN_LOG_LEAK_TEST"), { token: "FAKE_OAUTH_NESTED_TOKEN_LOG_LEAK_TEST" }),
+          });
+        }
+        return new Response(JSON.stringify({ access_token: fakeToken, token_type: "bearer", scope: "read:user,user:email" }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (url === "https://api.github.com/user") {
+        return new Response(JSON.stringify({ id: 912337, login: "oauth-log-fixture", name: "OAuth Fixture", avatar_url: null, email: null }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (url === "https://api.github.com/user/emails") {
+        return new Response(JSON.stringify([{ email: "oauth.fixture@example.test", primary: true, verified: true }]), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch in fake OAuth provider: ${new URL(url).origin}`);
+    });
+    vi.stubGlobal("fetch", fakeFetch);
+
+    async function startOAuth() {
+      const login = await auth.api.signInSocial({
+        returnHeaders: true,
+        body: { provider: "github", callbackURL: "http://localhost:5173/auth/complete", errorCallbackURL: "http://localhost:5173/student/login" },
+      });
+      return {
+        state: new URL(login.response.url).searchParams.get("state") ?? "",
+        cookie: login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; "),
+      };
+    }
+
+    const fakeStates: string[] = [];
+    const fakeCookies: string[] = [];
+    const fakeCodes: string[] = [];
+    const fixedSensitiveMarkers = [fakeClientId, fakeClientSecret, fakeToken, ...nestedFakeMarkers];
+    async function callback(code: string, state: string, cookie?: string) {
+      fakeCodes.push(code);
+      const headers = cookie ? { cookie } : undefined;
+      const response = await requestFetch(`http://127.0.0.1:${address.port}/api/auth/callback/github?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, { headers, redirect: "manual" });
+      const body = await response.text();
+      return { response, body, state };
+    }
+    function expectPublicCallbackSafe(result: { response: Response; body: string; state: string }) {
+      const publicText = `${result.response.headers.get("location") ?? ""}\n${result.body}`;
+      for (const marker of [...fakeCodes, ...fakeStates, ...fakeCookies, ...fixedSensitiveMarkers, result.state]) {
+        expect(publicText).not.toContain(marker);
+      }
+    }
+
+    const fakeInvalidCode = "FAKE_OAUTH_CODE_INVALID_LOG_LEAK_TEST";
+    const fakeInvalidState = "FAKE_OAUTH_STATE_INVALID_LOG_LEAK_TEST";
+    fakeStates.push(fakeInvalidState);
+    const invalidStateResult = await callback(fakeInvalidCode, fakeInvalidState);
+    expect(invalidStateResult.response.status).toBe(302);
+    expectPublicCallbackSafe(invalidStateResult);
+
+    const invalidCodeLogin = await startOAuth();
+    fakeStates.push(invalidCodeLogin.state);
+    fakeCookies.push(invalidCodeLogin.cookie);
+    tokenExchangeFailure = "invalid_code";
+    const invalidCodeResult = await callback(fakeInvalidCode, invalidCodeLogin.state, invalidCodeLogin.cookie);
+    expect(invalidCodeResult.response.status).toBe(302);
+    expectPublicCallbackSafe(invalidCodeResult);
+
+    const nestedFailureLogin = await startOAuth();
+    fakeStates.push(nestedFailureLogin.state);
+    fakeCookies.push(nestedFailureLogin.cookie);
+    tokenExchangeFailure = "nested_exception";
+    const nestedFailureCode = "FAKE_OAUTH_CODE_NESTED_LOG_LEAK_TEST";
+    const nestedFailureResult = await callback(nestedFailureCode, nestedFailureLogin.state, nestedFailureLogin.cookie);
+    expect(nestedFailureResult.response.status).toBe(302);
+    expectPublicCallbackSafe(nestedFailureResult);
+
+    const successLogin = await startOAuth();
+    fakeStates.push(successLogin.state);
+    fakeCookies.push(successLogin.cookie);
+    tokenExchangeFailure = "none";
+    const successCode = "FAKE_OAUTH_CODE_VALID_LOG_LEAK_TEST";
+    const successResult = await callback(successCode, successLogin.state, successLogin.cookie);
+    expect(successResult.response.status).toBe(302);
+    const sessionCookie = successResult.response.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
+    expectPublicCallbackSafe(successResult);
+    expect(sessionCookie.length).toBeGreaterThan(0);
+    const session = await auth.api.getSession({ headers: new Headers({ cookie: sessionCookie }), query: { disableCookieCache: true } });
+    expect(session?.user.email).toBe("oauth.fixture@example.test");
+    expect(auth.options.rateLimit?.enabled).toBe(true);
+
+    const output = captured.join("\n");
+    expect(output).toContain('"event":"auth.diagnostic"');
+    expect(output).toContain('"code":"state_mismatch"');
+    expect(output).toContain('"code":"AUTH_ERROR"');
+    for (const marker of [...fakeCodes, ...fakeStates, ...fakeCookies, ...fixedSensitiveMarkers, sessionCookie]) {
+      expect(output).not.toContain(marker);
+    }
+    expect(fakeFetch).toHaveBeenCalled();
+  });
+
   it("creates and reuses a student through the GitHub OAuth callback with a personal email", async () => {
     const database = new DatabaseSync(":memory:"); databases.push(database);
     const auth = await createMigratedFragmentsAuth(database, {
