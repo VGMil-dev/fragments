@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación y pruebas en rama aislada `codex/mentor-ai-incident`. No se desplegó ni publicó. No se llamó al modelo.
+Implementación y pruebas en rama aislada `codex/mentor-ai-incident`, basada y sincronizada con `origin/main` `e25bacf` mediante merge normal. No se desplegó ni publicó. No se llamó al modelo.
 
 ## Diagnóstico de producción
 
@@ -18,24 +18,28 @@ Implementación y pruebas en rama aislada `codex/mentor-ai-incident`. No se desp
 
 - `apps/api/src/adapters/ai/gateway-error.ts` y `.test.ts`: clasifica por separado status/código de Gateway y del proveedor, valida IDs, interpreta `Retry-After` sin guardar cuerpos/mensajes, distingue rechazo sin cargo de despacho ambiguo.
 - `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `.test.ts`: máximo de tres intentos, backoff exponencial con jitter, `Retry-After`, un lease/cooldown SQLite compartido y sin reintento tras una respuesta/posible despacho del proveedor.
-- `apps/api/src/adapters/ai/budget-ledger.ts`, pruebas y migración 11: clave idempotente hasheada, sin duplicar operación terminada aunque el costo sea cero, libera solo si no hubo despacho o Vercel confirma rechazo sin cargo. Lease vencido se marca incierto.
+- `apps/api/src/adapters/ai/budget-ledger.ts`, pruebas y migración 12: clave idempotente hasheada, sin duplicar operación terminada aunque el costo sea cero, libera solo si no hubo despacho o Vercel confirma rechazo sin cargo. Lease vencido se marca incierto. Se conserva la migración Review v11 incorporada desde el remoto.
 - `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts`, `apps/api/src/features/mentor/{service,http}.ts` y pruebas: preserva los estados/IDs de diagnóstico permitidos; HTTP 429 lleva `Retry-After`, Gateway 402 es distinto de provider 402, no afirma que un holdback signifique presupuesto agotado.
 - `apps/web/src/features/mentor/mentor-screen.tsx` y prueba: presenta rate limit y proveedor no disponible sin iniciar recuperación automática.
-- Migración compatible e idempotente; no cambia contratos compartidos. Los archivos se compilaron desde la rama basada en `origin/main` `86313395ca2cc0470c5e84c9c4df9848b4a108d2`.
+- La rama se actualizó por fetch y merge normal contra `origin/main` `e25bacf` (tag `v0.4.8`); la migración resultante conserva Review v11 y agrega Gateway v12. No cambia contratos compartidos.
 
 Salidas frescas:
 
-- `pnpm --filter @fragments/api test` — PASS, 31 archivos, 135 pruebas.
+- `pnpm --filter @fragments/api test` — PASS después de sincronizar, 31 archivos, 142 pruebas.
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/api build` — PASS.
-- `pnpm --filter @fragments/web test` — PASS, 22 archivos, 96 pruebas.
+- `pnpm --filter @fragments/web test` — PASS después de sincronizar, 22 archivos, 97 pruebas.
 - `pnpm --filter @fragments/web typecheck` — PASS.
 - `pnpm --filter @fragments/web build` — PASS; el bundler informó avisos `MODULE_LEVEL_DIRECTIVE` de `lucide-react` (`use client`), sin fallo.
 - `git diff --check` — PASS.
-- Hash de implementación y documentación inicial: pendiente del commit.
+- `pnpm --filter @fragments/web build` — PASS; aviso no bloqueante del bundler `MODULE_LEVEL_DIRECTIVE` para `lucide-react`.
+- `git diff --check` — PASS.
+- Commit de implementación/documentación inicial: `d0c258399407b901f2ec7bb78e1ce223a63486d3`.
+- Merge local de sincronización: `24802c15f88c8cda433abac4304678a3a037b903`.
+- La fila incierta productiva continúa sin modificar. La reserva no queda reconciliada por esta rama; requiere correlación de ID o revisión manual.
 
 ## Límites y riesgo restante
 
 - La producción continúa bloqueada por la reserva incierta hasta correlacionar con ID compartido o revisión manual autorizada.
-- La recuperación de software está preparada en la rama, pero requiere revisión, integración y despliegue autorizado para afectar producción.
+- La recuperación de software está preparada en la rama, pero requiere revisión, integración y despliegue autorizado para afectar producción. Antes del commit documental final, la rama quedó 2 commits por delante de `origin/main`.
 - No se ha validado gasto con un nuevo llamado facturable y no debe inferirse un resultado de producción posterior.
