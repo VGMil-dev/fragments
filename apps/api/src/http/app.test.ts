@@ -298,12 +298,19 @@ describe("HTTP API", () => {
     expect(session.status).toBe(200);
     expect(await session.json()).toMatchObject({ user: { id: signupBody.user.id, isTeacher: true } });
 
-    const headers = { cookie, "content-type": "application/json" };
+    const missingIdempotencyKey = await fetch(`${base}/api/inspector/review-1/challenges`, {
+      method: "POST", headers: { cookie, "content-type": "application/json" },
+    });
+    expect(missingIdempotencyKey.status).toBe(400);
+    const headers = { cookie, "content-type": "application/json", "idempotency-key": "00000000-0000-4000-8000-000000000001" };
     const createdResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST", headers });
     expect(createdResponse.status).toBe(201);
     const createdBody = await createdResponse.json() as { data: { id: string; challenge: { teacherHint: string }; status: string } };
     expect(createdBody.data.challenge.teacherHint).toContain("operador");
     expect(createdBody.data.status).toBe("pending");
+    const repeatedCreate = await fetch(`${base}/api/inspector/review-1/challenges`, { method: "POST", headers });
+    expect(repeatedCreate.status).toBe(201);
+    expect(await repeatedCreate.json()).toMatchObject({ ok: true, data: { id: createdBody.data.id } });
 
     const assignedResponse = await fetch(`${base}/api/inspector/challenges/challenge-1/assign`, { method: "POST", headers, body: "{}" });
     expect(assignedResponse.status).toBe(200);

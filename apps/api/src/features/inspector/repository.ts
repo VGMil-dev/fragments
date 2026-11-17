@@ -3,6 +3,7 @@ import type { InspectorRecord, InspectorStore } from "./service.js";
 
 type Row = {
   id: string;
+  ai_operation_key: string | null;
   review_id: string;
   project_id: string;
   commit_sha: string;
@@ -18,6 +19,7 @@ type Row = {
 function fromRow(row: Row): InspectorRecord {
   return {
     id: row.id,
+    ...(row.ai_operation_key ? { aiOperationKey: row.ai_operation_key } : {}),
     reviewId: row.review_id,
     projectId: row.project_id,
     commitSha: row.commit_sha,
@@ -35,13 +37,14 @@ export function createInspectorRepository(database: DatabaseSync): InspectorStor
   const select = database.prepare("SELECT * FROM inspector_challenges WHERE id = ?");
   function persist(record: InspectorRecord): void {
     database.prepare(`INSERT INTO inspector_challenges
-      (id, review_id, project_id, commit_sha, challenge_json, status, created_at, assigned_to, assigned_at, superseded_by_commit_sha, defense_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, ai_operation_key, review_id, project_id, commit_sha, challenge_json, status, created_at, assigned_to, assigned_at, superseded_by_commit_sha, defense_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET review_id=excluded.review_id, project_id=excluded.project_id,
+        ai_operation_key=excluded.ai_operation_key,
         commit_sha=excluded.commit_sha, challenge_json=excluded.challenge_json, status=excluded.status,
         created_at=excluded.created_at, assigned_to=excluded.assigned_to, assigned_at=excluded.assigned_at,
         superseded_by_commit_sha=excluded.superseded_by_commit_sha, defense_json=excluded.defense_json`)
-      .run(record.id, record.reviewId, record.projectId, record.commitSha, JSON.stringify(record.challenge), record.status,
+      .run(record.id, record.aiOperationKey ?? null, record.reviewId, record.projectId, record.commitSha, JSON.stringify(record.challenge), record.status,
         record.createdAt, record.assignedTo ?? null, record.assignedAt ?? null, record.supersededByCommitSha ?? null,
         record.defense ? JSON.stringify(record.defense) : null);
   }

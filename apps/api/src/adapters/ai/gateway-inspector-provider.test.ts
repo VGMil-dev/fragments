@@ -20,9 +20,20 @@ const output = {
 };
 
 describe("Gateway Inspector adapter (labelled offline generation)", () => {
+  it("does not dispatch when the verified rate card is missing", async () => {
+    const generate = vi.fn(async () => ({ value: output, costUsd: 0 }));
+    const provider = createGatewayInspectorProvider({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, ledger: makeLedger(), generate });
+    await expect(provider.createChallenge({
+      commitSha: "a".repeat(40), evidenceExcerpt,
+      evidence: { path: "src/lost-items.ts", lines: [1, 1], digest: "b".repeat(64) },
+      findingReason: "Evidencia verificada.",
+    })).rejects.toThrow(/no está configurada/);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it("requires an exact quote from verified source lines and reserves/settles cost", async () => {
     const generate = vi.fn(async ({ prompt }: { prompt: string }) => ({ value: output, costUsd: 0.0001 }));
-    const provider = createGatewayInspectorProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 }, ledger: makeLedger(), generate });
+    const provider = createGatewayInspectorProvider({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 }, ledger: makeLedger(), generate });
     const challenge = await provider.createChallenge({
       commitSha: "a".repeat(40), evidenceExcerpt,
       evidence: { path: "src/lost-items.ts", lines: [1, 1], digest: "b".repeat(64) },
@@ -37,7 +48,7 @@ describe("Gateway Inspector adapter (labelled offline generation)", () => {
 
   it("rejects a quote not present in verified source and blocks secrets", async () => {
     const ledger = makeLedger();
-    const badQuote = createGatewayInspectorProvider({ modelId: "fixture/model", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 }, ledger,
+    const badQuote = createGatewayInspectorProvider({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 1, outputUsdPerMillion: 2 }, ledger,
       generate: async () => ({ value: { ...output, groundingQuote: "different method()" }, costUsd: 0.0001 }) });
     await expect(badQuote.createChallenge({ commitSha: "a".repeat(40), evidenceExcerpt, evidence: { path: "src/lost-items.ts", lines: [1, 1], digest: "b".repeat(64) }, findingReason: "Verified." })).rejects.toThrow(/no cita literalmente/);
     await expect(badQuote.createChallenge({ commitSha: "a".repeat(40), evidenceExcerpt: "src/key.ts\n1: const key = 'ghp_123456789012345678901234';", evidence: { path: "src/key.ts", lines: [1, 1], digest: "b".repeat(64) }, findingReason: "Verified." })).rejects.toThrow(/no está permitida/);

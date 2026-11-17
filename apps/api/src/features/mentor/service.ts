@@ -14,7 +14,7 @@ export type MentorEvaluation = {
 };
 
 export interface MentorEvaluator {
-  evaluate(input: { proposal: Proposal; proposalDigest: string; config: MentorControlConfig; contextVersion: number }): Promise<{
+  evaluate(input: { proposal: Proposal; proposalDigest: string; config: MentorControlConfig; contextVersion: number; operationKey: string }): Promise<{
     findings: AiAnalysis["findings"];
     limitations: string[];
     modelId: string;
@@ -57,6 +57,10 @@ export class MentorEvaluationFailure extends Error {
   readonly providerHttpStatus: number | null;
   readonly providerCode: string | null;
   readonly retryAfterMs: number | null;
+  readonly gatewayHttpStatus: number | null;
+  readonly gatewayCode: string | null;
+  readonly gatewayGenerationId: string | null;
+  readonly providerDispatchPossible: boolean;
 
   constructor(input: {
     stage: MentorEvaluationFailureStage;
@@ -64,6 +68,10 @@ export class MentorEvaluationFailure extends Error {
     providerHttpStatus?: number | null;
     providerCode?: string | null;
     retryAfterMs?: number | null;
+    gatewayHttpStatus?: number | null;
+    gatewayCode?: string | null;
+    gatewayGenerationId?: string | null;
+    providerDispatchPossible?: boolean;
   }) {
     super("Mentor evaluation failed");
     this.name = "MentorEvaluationFailure";
@@ -72,6 +80,10 @@ export class MentorEvaluationFailure extends Error {
     this.providerHttpStatus = input.providerHttpStatus ?? null;
     this.providerCode = input.providerCode ?? null;
     this.retryAfterMs = input.retryAfterMs ?? null;
+    this.gatewayHttpStatus = input.gatewayHttpStatus ?? null;
+    this.gatewayCode = input.gatewayCode ?? null;
+    this.gatewayGenerationId = input.gatewayGenerationId ?? null;
+    this.providerDispatchPossible = input.providerDispatchPossible ?? true;
   }
 }
 
@@ -186,12 +198,13 @@ export function createMentorService(options: Options) {
   return {
     proposalDigest(rawProposal: unknown): string { return digest(validateProposal(rawProposal)); },
 
-    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorControlConfig; version: number }): Promise<MentorEvaluation> {
+    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorControlConfig; version: number; operationKey?: string }): Promise<MentorEvaluation> {
       const proposal = validateProposal(rawProposal);
       const proposalDigest = digest(proposal);
       const config = MentorControlConfigSchema.parse(context?.config ?? defaultMentorConfig);
       const contextVersion = context?.version ?? 1;
-      const result = await options.evaluator.evaluate({ proposal, proposalDigest, config, contextVersion });
+      const operationKey = context?.operationKey ?? createHash("sha256").update(canonical({ proposalDigest, config, contextVersion })).digest("hex");
+      const result = await options.evaluator.evaluate({ proposal, proposalDigest, config, contextVersion, operationKey });
       if (result.inputDigest !== proposalDigest) throw new Error("El evaluador devolvió un digest que no corresponde a la propuesta.");
       const byCriterion = new Map(result.findings.map((finding) => [finding.criterionId, finding]));
       if (byCriterion.size !== config.criteria.length || config.criteria.some((criterion) => !byCriterion.has(criterion.id))) {

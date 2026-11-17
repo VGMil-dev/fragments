@@ -9,6 +9,7 @@ import type { InspectorRecord } from "./service.js";
 
 const record: InspectorRecord = {
   id: "challenge-1",
+  aiOperationKey: "c".repeat(64),
   reviewId: "review-1",
   projectId: "project-1",
   commitSha: "b".repeat(40),

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseSync } from "node:sqlite";
 import {
@@ -26,7 +26,11 @@ export type MentorEvaluationDiagnostic = {
   http_status: number;
   provider_http_status: number | null;
   provider_code: string | null;
+  gateway_http_status: number | null;
+  gateway_code: string | null;
+  provider_dispatch_possible: boolean | null;
   retry_after_ms: number | null;
+  gateway_generation_id: string | null;
 };
 
 export function createMentorHttp(
@@ -133,7 +137,10 @@ export function createMentorHttp(
           let work = pending.get(cacheKey);
           if (!work) {
             work = (async () => {
-              const result = await service.evaluate(proposal.proposal, repository.listGallery(), { config: active.config, version: active.version });
+              const result = await service.evaluate(proposal.proposal, repository.listGallery(), {
+                config: active.config, version: active.version,
+                operationKey: createHash("sha256").update(cacheKey).digest("hex"),
+              });
               const evaluatedAt = new Date().toISOString();
               const evaluationId = randomUUID();
               repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, inputDigest, active.version, new Date(evaluatedAt));
@@ -154,13 +161,17 @@ export function createMentorHttp(
           stage: failure?.stage ?? (error instanceof MentorInputError ? "input_validation" : "evaluation"),
           error_type: /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(errorType) ? errorType : "UnknownError",
           duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
-          http_status: failure?.providerHttpStatus === 402 ? 402 : 503,
+          http_status: failure?.providerHttpStatus === 402 || failure?.gatewayHttpStatus === 402 ? 402 : 503,
           provider_http_status: failure?.providerHttpStatus ?? null,
           provider_code: failure?.providerCode ?? null,
+          gateway_http_status: failure?.gatewayHttpStatus ?? null,
+          gateway_code: failure?.gatewayCode ?? null,
+          provider_dispatch_possible: failure?.providerDispatchPossible ?? null,
           retry_after_ms: failure?.retryAfterMs ?? null,
+          gateway_generation_id: failure?.gatewayGenerationId ?? null,
         };
         try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
-        if (failure?.providerHttpStatus === 402) {
+        if (failure?.providerHttpStatus === 402 || failure?.gatewayHttpStatus === 402) {
           sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto.");
         } else if (diagnostic.stage === "budget_reservation") {
           sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación no está disponible porque se agotó el presupuesto de IA configurado.");

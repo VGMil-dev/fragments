@@ -16,17 +16,19 @@ describe("SQLite platform", () => {
     const secondDb = openDatabase(path);
     try {
       expect(firstDb.prepare("PRAGMA journal_mode").get()?.journal_mode).toBe("wal");
-      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(11);
-      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(11);
+      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(13);
+      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(13);
       expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='trainer_attempts'").get()?.name).toBe("trainer_attempts");
       expect(firstDb.prepare("PRAGMA table_info(proposals)").all().some((column) => column.name === "owner_hash")).toBe(true);
       expect(firstDb.prepare("PRAGMA table_info(proposals)").all().some((column) => column.name === "owner_user_id")).toBe(true);
       expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_budget_reservations'").get()?.name).toBe("ai_budget_reservations");
+      expect(firstDb.prepare("PRAGMA table_info(ai_budget_reservations)").all().some((column) => column.name === "operation_key")).toBe(true);
+      expect(firstDb.prepare("PRAGMA table_info(inspector_challenges)").all().some((column) => column.name === "ai_operation_key")).toBe(true);
       expect(firstDb.prepare("PRAGMA table_info(trainer_banks)").all().some((column) => column.name === "bank_ready")).toBe(true);
       expect(firstDb.prepare("PRAGMA table_info(trainer_banks)").all().some((column) => column.name === "generation_owner")).toBe(true);
       expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mentor_control_versions'").get()?.name).toBe("mentor_control_versions");
       expect(firstDb.prepare("SELECT COUNT(*) AS count FROM mentor_control_versions").get()?.count).toBe(1);
-      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(11);
+      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(13);
       const first = new QueueRepository(firstDb); const second = new QueueRepository(secondDb);
       const job = first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "cross-connection" });
       expect(first.claim("worker-a", 1000, 10)?.id).toBe(job.id);

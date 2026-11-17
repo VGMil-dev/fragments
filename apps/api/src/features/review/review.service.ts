@@ -26,7 +26,7 @@ export type ReviewAiBudget = {
   timeoutMs: number;
   signal: AbortSignal;
 };
-export type ReviewAiInput = { packedText: string; snapshotFiles: Array<{ path: string; content: string }>; rubricVersion: string; inputDigest: string; snapshotDigest: string; budget: ReviewAiBudget };
+export type ReviewAiInput = { packedText: string; snapshotFiles: Array<{ path: string; content: string }>; rubricVersion: string; inputDigest: string; snapshotDigest: string; operationKey: string; budget: ReviewAiBudget };
 export type ReviewProcessingSignal = { signal?: AbortSignal; onStage?: (stage: ReviewStage) => void };
 type SubmissionResponseData = ReturnType<typeof SubmissionResponseSchema.parse>;
 export type PackedRepository = { text: string; inputDigest: string; tokenCount: number; omittedPaths?: string[] };
@@ -228,6 +228,7 @@ export function createReviewService(dependencies: ReviewDependencies) {
           rubricVersion: context.rubricVersion,
           inputDigest: packed.inputDigest,
           snapshotDigest: snapshot.digest,
+          operationKey: key,
           budget: { maxInputBytes: maxBytes, maxInputTokens: maxTokens, maxOutputTokens, timeoutMs: aiTimeoutMs, signal },
         });
         stage = "analysis_validation";

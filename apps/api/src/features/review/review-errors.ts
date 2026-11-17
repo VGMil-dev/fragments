@@ -24,6 +24,8 @@ export type ReviewErrorCode =
   | "PACK_RUNNER_FAILED"
   | "AI_NOT_CONFIGURED"
   | "AI_BUDGET_BLOCKED"
+  | "AI_GATEWAY_RATE_LIMITED"
+  | "AI_GATEWAY_UPSTREAM_UNAVAILABLE"
   | "AI_OUTCOME_UNCERTAIN"
   | "AI_OUTPUT_INVALID"
   | "RESULT_PERSIST_FAILED"
@@ -32,24 +34,37 @@ export type ReviewErrorCode =
   | "QUEUE_STORAGE_FAILED"
   | "QUEUE_POLL_FAILED";
 
+export type GatewayFailureSummary = {
+  gatewayHttpStatus: number | null;
+  gatewayCode: string | null;
+  gatewayGenerationId: string | null;
+  providerHttpStatus: number | null;
+  providerCode: string | null;
+  retryAfterMs: number | null;
+  providerDispatchPossible: boolean;
+};
+
 export type ReviewFailure = {
   stage: ReviewStage;
   errorCode: ReviewErrorCode;
   retryClass: ReviewRetryClass;
   durationMs: number;
+  gatewayFailure?: GatewayFailureSummary;
 };
 
 export class ReviewProcessingError extends Error {
   readonly stage: ReviewStage;
   readonly errorCode: ReviewErrorCode;
   readonly retryClass: ReviewRetryClass;
+  readonly gatewayFailure: GatewayFailureSummary | undefined;
 
-  constructor(stage: ReviewStage, errorCode: ReviewErrorCode, retryClass: ReviewRetryClass) {
+  constructor(stage: ReviewStage, errorCode: ReviewErrorCode, retryClass: ReviewRetryClass, gatewayFailure?: GatewayFailureSummary) {
     super("La revisión no pudo completar una etapa interna.");
     this.name = "ReviewProcessingError";
     this.stage = stage;
     this.errorCode = errorCode;
     this.retryClass = retryClass;
+    this.gatewayFailure = gatewayFailure;
   }
 }
 
@@ -68,7 +83,10 @@ const stageFallback: Record<ReviewStage, ReviewErrorCode> = {
 
 export function reviewFailure(error: unknown, fallbackStage: ReviewStage, durationMs: number): ReviewFailure {
   if (error instanceof ReviewProcessingError) {
-    return { stage: error.stage, errorCode: error.errorCode, retryClass: error.retryClass, durationMs };
+    return {
+      stage: error.stage, errorCode: error.errorCode, retryClass: error.retryClass, durationMs,
+      ...(error.gatewayFailure ? { gatewayFailure: error.gatewayFailure } : {}),
+    };
   }
   return { stage: fallbackStage, errorCode: stageFallback[fallbackStage], retryClass: "manual", durationMs };
 }
@@ -82,6 +100,7 @@ export type ReviewOperationalEvent = {
   durationMs: number;
   attempt: number;
   finalStatus: "completed" | "failed" | "retry_wait" | "lease_lost" | "degraded";
+  gatewayFailure?: GatewayFailureSummary;
 };
 
 /** Emit only allowlisted diagnostic fields; never serialize errors or job payloads. */

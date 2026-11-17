@@ -19,11 +19,15 @@ function encodeId(id: string): string | null {
   return value ? encodeURIComponent(value) : null;
 }
 
+function validRequestId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function jsonRequest(body: unknown): RequestInit {
   return { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
-export function createInspectorApi(client: ApiClient) {
+export function createInspectorApi(client: ApiClient, createRequestId: () => string = () => globalThis.crypto.randomUUID()) {
   return {
     list(reviewId: string): Promise<ApiResult<InspectorChallengeRecordResponse[]>> {
       const id = encodeId(reviewId);
@@ -31,10 +35,12 @@ export function createInspectorApi(client: ApiClient) {
       return client.request(`/api/inspector/${id}/challenges`, InspectorChallengeRecordsResponseSchema);
     },
 
-    create(reviewId: string): Promise<ApiResult<InspectorChallengeRecordResponse>> {
+    create(reviewId: string, requestId = createRequestId()): Promise<ApiResult<InspectorChallengeRecordResponse>> {
       const id = encodeId(reviewId);
-      if (!id) return Promise.resolve(INVALID_REQUEST);
-      return client.request(`/api/inspector/${id}/challenges`, InspectorChallengeRecordResponseSchema, { method: "POST" });
+      if (!id || !validRequestId(requestId)) return Promise.resolve(INVALID_REQUEST);
+      return client.request(`/api/inspector/${id}/challenges`, InspectorChallengeRecordResponseSchema, {
+        method: "POST", headers: { "idempotency-key": requestId },
+      });
     },
 
     assign(challengeId: string): Promise<ApiResult<InspectorChallengeRecordResponse>> {

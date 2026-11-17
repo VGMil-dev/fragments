@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { InspectorChallengeRecordResponse } from "@fragments/contracts";
 import type { createInspectorApi } from "../../lib/api/inspector-api.js";
 import { InspectorTeacherPanel } from "./InspectorTeacherPanel.js";
@@ -28,6 +28,7 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
   const [records, setRecords] = useState<InspectorChallengeRecordResponse[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [message, setMessage] = useState("");
+  const pendingCreateIds = useRef(new Map<string, string>());
   const active = records.find((record) => record.id === selectedId) ?? records.at(-1) ?? null;
 
   useEffect(() => {
@@ -83,8 +84,19 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
   }
 
   async function createChallenge() {
-    const result = await api.create(reviewId);
+    const storageKey = `fragments:inspector:create:${reviewId.slice(0, 100)}`;
+    let requestId = pendingCreateIds.current.get(reviewId);
+    try {
+      const stored = window.sessionStorage.getItem(storageKey);
+      if (stored && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored)) requestId = stored;
+    } catch { /* use the in-memory key when session storage is unavailable */ }
+    requestId ??= globalThis.crypto.randomUUID();
+    pendingCreateIds.current.set(reviewId, requestId);
+    try { window.sessionStorage.setItem(storageKey, requestId); } catch { /* the in-memory key still covers this view */ }
+    const result = await api.create(reviewId, requestId);
     if (!result.ok) { setMessage(result.error.message); return; }
+    pendingCreateIds.current.delete(reviewId);
+    try { window.sessionStorage.removeItem(storageKey); } catch { /* result remains saved on the server */ }
     saveRecord(result.data);
     setMessage("Reto creado desde evidencia verificada.");
   }
