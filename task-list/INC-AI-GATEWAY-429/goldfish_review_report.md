@@ -228,3 +228,5 @@ Codebase 0/0/0, Readiness 0/1/0 y Zoom Out 0/0/0. El Major fue que el registro a
 Codebase 0/0/1, Readiness 0/1/0 y Zoom Out 0/0/1 (Blocker/Major/Nit) sobre `e8adc88d1fdffeeac517c7723f59d245840887ce`; CI #89 (`44026424321`) terminó `success` en ese mismo SHA. No se encontraron fallos de comportamiento financiero.
 
 El Major de Readiness fue que TASKS/evidencia no identificaban el ciclo actual ni SHA exacto; se corrige en este commit registrando R20 y su CI. Codebase también detectó que el resumen superior aún describía migración v12 como actual; se reemplaza con el estado v12–v14, la regla de 429 ambiguo y el límite de dos slots. Zoom Out dejó Nit sobre la especificación byte-level del snapshot, sin bloquear. R20 no fue limpia por el Major de trazabilidad; el HEAD documental nuevo requiere CI y dos ciclos limpios.
+
+El commit documental posterior `919df21803c8a32d04e41d7313d115e4e9ad6af7` recibió CI #90 (`44026736806`) `success`. El siguiente commit conserva la evidencia de R20/CI90 y queda pendiente de ciclos R21/R22 sobre el mismo HEAD candidato.
