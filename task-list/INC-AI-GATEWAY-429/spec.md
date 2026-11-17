@@ -3,6 +3,7 @@
 ## Entradas y clasificación
 
 - Gateway 429: límite temporal; respuesta HTTP 429, código/ID seguros y `Retry-After` cuando estén presentes.
+- Conservar status, código, ID y certeza de despacho al transformar excepciones del SDK en errores internos; la política debe clasificar el error normalizado igual que la excepción original.
 - Gateway 402 confirmado: restricción de presupuesto o pago; no confundirlo con un error 402 del proveedor.
 - Gateway/proveedor 503: indisponibilidad temporal.
 - Timeout antes de despacho: permitir recuperación controlada; timeout tras posible despacho: conservar reserva incierta.
@@ -28,6 +29,7 @@
 ## Aceptación GIVEN / WHEN / THEN
 
 - GIVEN Gateway 429 inequívoco y sin respuesta upstream WHEN se ejecuta la evaluación THEN respeta backoff, intenta hasta el máximo establecido y contabiliza una sola operación.
+- GIVEN el adaptador normaliza la excepción del SDK WHEN la política recibe ese error THEN conserva la clasificación Gateway y ejecuta los mismos reintentos seguros.
 - GIVEN respuesta del proveedor, ID de generación o timeout después de despacho WHEN el intento falla THEN no reintenta automáticamente y conserva el holdback para revisión.
 - GIVEN Gateway 402 confirmado WHEN el intento falla THEN responde como limitación presupuestaria/pago sin llamarlo rate limit.
 - GIVEN múltiples workers y una misma clave WHEN despachan concurrentemente THEN solo uno obtiene el lease y no se crean cobros duplicados.
