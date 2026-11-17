@@ -16,6 +16,7 @@ import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
 import { createSqliteReviewStore } from "./features/review/sqlite-store.js";
 import { createReviewWorker } from "./features/review/worker.js";
+import { writeReviewOperationalEvent } from "./features/review/review-errors.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -113,7 +114,13 @@ let workerRunning = false;
 async function processReviewQueue() {
   if (workerRunning) return;
   workerRunning = true;
-  try { await worker.runOnce(); } catch { /* Queue polling continues; public errors stay generic. */ }
+  const startedAt = Date.now();
+  try { await worker.runOnce(); } catch {
+    writeReviewOperationalEvent({
+      event: "review.queue.poll_failed", reviewId: null, jobId: null, stage: "queue_poll",
+      errorCode: "QUEUE_POLL_FAILED", durationMs: Math.max(0, Date.now() - startedAt), attempt: 0, finalStatus: "degraded",
+    });
+  }
   finally { workerRunning = false; }
 }
 const workerTimer = setInterval(() => { void processReviewQueue(); }, 500);

@@ -6,6 +6,7 @@ import { createAiProvider } from "../../adapters/ai/ai-provider.js";
 import { createPdfRenderer } from "../../adapters/ai/pdf-renderer.js";
 import { createInMemoryReviewStore } from "./in-memory-review-store.js";
 import { ReviewRequestSchema, SubmissionResponseSchema, VerifySubmissionResponseSchema } from "@fragments/contracts";
+import { ReviewProcessingError } from "./review-errors.js";
 
 const source = "export function total(items: number[]) {\n  return items.reduce((a, b) => a + b, 0)\n}\n";
 const sha256 = async (value: string) => {
@@ -86,21 +87,21 @@ describe("review vertical slice", () => {
   it("rejects a driver that returns another commit without exposing repository contents", async () => {
     const f = await fixture({ repository: { getCommitSnapshot: vi.fn(async () => ({ owner: "student", repo: "demo", commitSha: "d".repeat(40), files: [], digest: "c".repeat(64) })) } });
 
-    await expect(f.service.review(publicRequest, reviewContext)).rejects.toThrow("El proveedor devolvió un commit distinto");
+    await expect(f.service.review(publicRequest, reviewContext)).rejects.toMatchObject({ errorCode: "SNAPSHOT_INVALID", retryClass: "permanent" });
     expect(f.ai.analyze).not.toHaveBeenCalled();
   });
 
   it("explains that a branch name or abbreviated reference must be replaced with a full commit SHA", async () => {
     const f = await fixture();
 
-    await expect(f.service.review({ ...publicRequest, commitSha: "main" }, reviewContext)).rejects.toThrow("Indica el SHA completo del commit");
+    await expect(f.service.review({ ...publicRequest, commitSha: "main" }, reviewContext)).rejects.toMatchObject({ errorCode: "SNAPSHOT_INVALID", retryClass: "permanent" });
     expect(f.repository.getCommitSnapshot).not.toHaveBeenCalled();
   });
 
   it("rejects internal project and rubric fields from the shared public request", async () => {
     const f = await fixture();
 
-    await expect(f.service.review({ ...publicRequest, projectId: "spoofed", rubricVersion: "untrusted" }, reviewContext)).rejects.toThrow("propietario y repositorio de GitHub válidos");
+    await expect(f.service.review({ ...publicRequest, projectId: "spoofed", rubricVersion: "untrusted" }, reviewContext)).rejects.toBeInstanceOf(ReviewProcessingError);
     expect(f.repository.getCommitSnapshot).not.toHaveBeenCalled();
   });
 
@@ -108,14 +109,14 @@ describe("review vertical slice", () => {
     const client = { readCommitSnapshot: vi.fn() };
     const repository = createGitHubRepositoryReader(client);
 
-    await expect(repository.getCommitSnapshot({ owner: "https://example.com", repo: "demo", commitSha })).rejects.toThrow("propietario y repositorio de GitHub válidos");
+    await expect(repository.getCommitSnapshot({ owner: "https://example.com", repo: "demo", commitSha })).rejects.toThrow();
     expect(client.readCommitSnapshot).not.toHaveBeenCalled();
   });
 
   it("rejects findings that cite a file absent from the validated snapshot", async () => {
     const f = await fixture({ ai: { analyze: vi.fn(async () => ({ rubricVersion: "review-v1", score: 80, findings: [{ criterionId: "missing", status: "failed" as const, evidence: [{ source: "repository" as const, path: "src/missing.ts", lines: [1, 1] as [number, number], digest: "c".repeat(64) }], reason: "La evidencia debe existir.", guidanceLevel: 1 as const }], limitations: [], modelId: "fake-review-v1", inputDigest: await sha256("commit snapshot") })) } });
 
-    await expect(f.service.review(publicRequest, reviewContext)).rejects.toThrow("La evidencia cita un archivo que no está en el commit");
+    await expect(f.service.review(publicRequest, reviewContext)).rejects.toMatchObject({ errorCode: "AI_OUTPUT_INVALID", retryClass: "manual" });
   });
 
   it("uses an idempotency key for a cached exact commit and rubric", async () => {

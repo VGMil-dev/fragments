@@ -117,6 +117,18 @@ describe("createStudentApi", () => {
     expect(fetcher.mock.calls[0]?.[1]?.method).toBe("POST");
   });
 
+  it("retries an existing Review id without creating a second job", async () => {
+    const queued = {
+      id: "review-1", owner: "classroom", repo: "demo", commitSha: "a".repeat(40),
+      status: "queued", createdAt: "2026-11-04T12:00:00.000Z", progress: 0,
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: queued }), { status: 202 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.retryReview("review-1")).resolves.toEqual({ ok: true, data: queued });
+    expect(fetcher).toHaveBeenCalledWith("/api/reviews/review-1/retry", expect.objectContaining({ method: "POST" }));
+  });
+
   it("uses the returned submission id for ephemeral README and PDF paths", async () => {
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response("# Entrega", { status: 200, headers: { "content-type": "text/markdown" } }))
