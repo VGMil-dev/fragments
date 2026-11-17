@@ -1,7 +1,7 @@
 # INC-AI-LEDGER-V2 — Evidencia
 
 ## Estado
-Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`). Commit de implementación: `c9d06d37129d52157bca6da99324917032c27dc9`; commit de evidencia: `9c40ff4ef535dbe1bac6f5ae26f7df7a81120ba0`. PR #46 abierto: https://github.com/VGMil-dev/fragments/pull/46. Los PR #43 y #45 se cerraron después de agregar a cada uno un comentario que los enlaza al #46. CI de #46 aún no reporta checks.
+Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`). Commit de implementación: `c9d06d37129d52157bca6da99324917032c27dc9`; commits de evidencia: `9c40ff4ef535dbe1bac6f5ae26f7df7a81120ba0`, `e7df7245ac2089073074e6a739a80e6cb6e0ae46` y el presente. PR #46 abierto: https://github.com/VGMil-dev/fragments/pull/46. Los PR #43 y #45 se cerraron después de agregar a cada uno un comentario que los enlaza al #46.
 
 ## Trabajo y límites
 - Se aisló la identidad financiera por operación; las migraciones SQLite v12/v13 guardan claves nuevas del ledger y de Inspector sin reasignar reservas ni retos antiguos.
@@ -17,7 +17,8 @@ Implementación confirmada en `codex/ledger-v2`, basada en `origin/main` (`35546
 - API focal Inspector/ledger — 28/28 pruebas exitosas; typecheck API exitoso.
 - `git push -u origin codex/ledger-v2` — PASS; rama publicada sin force push.
 - PR #46 creado contra `main`; PR #43 y #45 cerrados con referencia al reemplazo.
-- Sin operaciones externas de producción ni invocaciones pagadas. CI del PR aún pendiente; no se fusionó.
+- CI del PR #46 (`verify`, head `e7df7245ac2089073074e6a739a80e6cb6e0ae46`) — SUCCESS. Una anotación de advertencia informa que las actions actuales usan Node.js 20 y serán forzadas a Node.js 24; no hubo fallas.
+- Sin operaciones externas de producción ni invocaciones pagadas. El PR #46 permanece abierto y sin merge.
 
 ## Restricciones
 Sin cambios de producción/SQLite productiva, sin release, sin gasto IA, sin liberación de la reserva de 870 microUSD y sin reproceso de las seis revisiones.
