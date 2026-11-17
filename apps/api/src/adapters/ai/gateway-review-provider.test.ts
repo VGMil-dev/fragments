@@ -58,7 +58,7 @@ describe("Gateway Review adapter (labelled offline generation)", () => {
     const provider = createGatewayReviewAiProvider({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, rates: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2 }, ledger,
       generate: async () => ({ value: result }) });
     await expect(provider.analyze(input)).rejects.toMatchObject({ errorCode: "AI_BUDGET_BLOCKED", retryClass: "manual" });
-    expect(ledger.summary().blocked).toBe(true);
+    expect(ledger.summary().uncertainMicroUsd).toBeGreaterThan(0);
   });
 
   it("rejects quotes that are absent from the exact snapshot", async () => {

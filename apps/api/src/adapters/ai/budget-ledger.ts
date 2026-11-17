@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-const DEFAULT_LIMIT_MICROUSD = 1_000_000;
 const RESERVATION_MARGIN = 2;
 const STALE_RESERVATION_MS = 5 * 60_000;
 
@@ -20,10 +19,10 @@ export function estimateAiInputTokens(prompt: string): number {
   return Math.ceil(new TextEncoder().encode(prompt).byteLength / 4);
 }
 
-export type AiBudgetSummary = { limitMicroUsd: number; settledMicroUsd: number; reservedMicroUsd: number; availableMicroUsd: number; blocked: boolean };
+export type AiBudgetSummary = { settledMicroUsd: number; reservedMicroUsd: number; uncertainMicroUsd: number };
 
 export class AiBudgetUnavailableError extends Error {
-  constructor(message = "La barrera de consumo de IA no puede garantizar una reserva válida.") { super(message); this.name = "AiBudgetUnavailableError"; }
+  constructor(message = "No se pudo validar el costo ni registrar esta operación de IA.") { super(message); this.name = "AiBudgetUnavailableError"; }
 }
 
 export class AiEvaluationInProgressError extends Error {
@@ -47,9 +46,7 @@ export function estimateAiCallCostMicroUsd(input: { inputTokens: number; outputT
 }
 
 export class SqliteAiBudgetLedger {
-  constructor(private readonly database: DatabaseSync, readonly limitMicroUsd = DEFAULT_LIMIT_MICROUSD) {
-    if (!Number.isSafeInteger(limitMicroUsd) || limitMicroUsd < 1) throw new Error("El límite local de IA debe ser un entero positivo en microdólares.");
-  }
+  constructor(private readonly database: DatabaseSync) {}
 
   reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; operationKey: string; now?: number }): string {
     const id = input.id ?? randomUUID();
@@ -66,12 +63,6 @@ export class SqliteAiBudgetLedger {
         WHERE operation_key=? ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(input.operationKey) as { status: string } | undefined;
       if (previous && previous.status !== "released") {
         throw new AiEvaluationInProgressError();
-      }
-      const committedCosts = this.database.prepare(`SELECT
-        COALESCE(SUM(CASE WHEN status='settled' THEN actual_microusd ELSE reserved_microusd END),0) AS total
-        FROM ai_budget_reservations WHERE status IN ('reserved','uncertain','settled')`).get() as { total: number };
-      if (Number(committedCosts.total) + input.estimateMicroUsd > this.limitMicroUsd) {
-        throw new AiBudgetUnavailableError("El costo reservado supera el límite disponible para IA.");
       }
       this.database.prepare(`INSERT INTO ai_budget_reservations
         (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at, operation_key)
@@ -107,15 +98,13 @@ export class SqliteAiBudgetLedger {
   summary(): AiBudgetSummary {
     const row = this.database.prepare(`SELECT
       COALESCE(SUM(CASE WHEN status='settled' THEN actual_microusd ELSE 0 END),0) AS settled,
-      COALESCE(SUM(CASE WHEN status IN ('reserved','uncertain') THEN reserved_microusd ELSE 0 END),0) AS reserved,
-      MAX(CASE WHEN status='uncertain' THEN 1 ELSE 0 END) AS blocked
-      FROM ai_budget_reservations`).get() as { settled: number; reserved: number; blocked: number | null };
+      COALESCE(SUM(CASE WHEN status='reserved' THEN reserved_microusd ELSE 0 END),0) AS reserved,
+      COALESCE(SUM(CASE WHEN status='uncertain' THEN reserved_microusd ELSE 0 END),0) AS uncertain
+      FROM ai_budget_reservations`).get() as { settled: number; reserved: number; uncertain: number };
     return {
-      limitMicroUsd: this.limitMicroUsd,
       settledMicroUsd: Number(row.settled),
       reservedMicroUsd: Number(row.reserved),
-      availableMicroUsd: Math.max(0, this.limitMicroUsd - Number(row.settled) - Number(row.reserved)),
-      blocked: row.blocked === 1,
+      uncertainMicroUsd: Number(row.uncertain),
     };
   }
 

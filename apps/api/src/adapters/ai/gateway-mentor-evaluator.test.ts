@@ -7,11 +7,11 @@ import { createGatewayMentorEvaluator } from "./gateway-mentor-evaluator.js";
 import { MentorEvaluationFailure } from "../../features/mentor/service.js";
 
 const databases: DatabaseSync[] = [];
-function makeLedger(limit = 1_000_000) {
+function makeLedger() {
   const database = new DatabaseSync(":memory:");
   databases.push(database);
   migrate(database);
-  return new SqliteAiBudgetLedger(database, limit);
+  return new SqliteAiBudgetLedger(database);
 }
 afterEach(() => { for (const database of databases.splice(0)) database.close(); });
 
@@ -60,12 +60,12 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       findings: [{ evidence: [{ source: "proposal", field: "scope", digest: "a".repeat(64) }] }],
       guidance: ["¿Qué mostrarás en la primera demostración?"],
     });
-    expect(ledger.summary()).toMatchObject({ settledMicroUsd: 400, blocked: false });
+    expect(ledger.summary()).toMatchObject({ settledMicroUsd: 400, reservedMicroUsd: 0, uncertainMicroUsd: 0 });
   });
 
   it("allows an independent operation while preserving a legacy uncertain reservation", async () => {
     const generate = vi.fn(async () => ({ value: generated, costUsd: 0.0004 }));
-    const ledger = makeLedger(1_000);
+    const ledger = makeLedger();
     const database = databases.at(-1)!;
     database.prepare(`INSERT INTO ai_budget_reservations
       (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
@@ -85,7 +85,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
 
     expect(failure).toBeUndefined();
     expect(generate).toHaveBeenCalledOnce();
-    expect(ledger.summary()).toMatchObject({ reservedMicroUsd: 200, settledMicroUsd: 400, blocked: true });
+    expect(ledger.summary()).toMatchObject({ reservedMicroUsd: 0, uncertainMicroUsd: 200, settledMicroUsd: 400 });
   });
 
   it("captures safe provider status and Retry-After, then refuses a duplicate dispatch after an uncertain result", async () => {
@@ -117,7 +117,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     expect(firstFailure).toMatchObject({ stage: "provider_request", providerHttpStatus: 429, providerCode: "rate_limited", retryAfterMs: 2_000 });
     expect(retryFailure).toMatchObject({ stage: "budget_reservation", errorType: "AiEvaluationInProgressError" });
     expect(generate).toHaveBeenCalledOnce();
-    expect(ledger.summary().blocked).toBe(true);
+    expect(ledger.summary().uncertainMicroUsd).toBeGreaterThan(0);
     expect(JSON.stringify(firstFailure)).not.toContain("private request context");
     expect(JSON.stringify(firstFailure)).not.toContain("private prompt");
     expect(JSON.stringify(firstFailure)).not.toContain("private provider detail");
@@ -129,7 +129,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", providerOnly: "fixture-provider", gatewayKeyConfigured: true, ledger, generate });
     await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1, operationKey: "b".repeat(64) })).rejects.toMatchObject({ stage: "configuration", errorType: "MissingGatewayConfiguration" });
     expect(generate).not.toHaveBeenCalled();
-    expect(ledger.summary()).toMatchObject({ settledMicroUsd: 0, reservedMicroUsd: 0, blocked: false });
+    expect(ledger.summary()).toMatchObject({ settledMicroUsd: 0, reservedMicroUsd: 0, uncertainMicroUsd: 0 });
   });
 
   it("reuses the operation identity to prevent another dispatch after an ambiguous Gateway 429", async () => {
