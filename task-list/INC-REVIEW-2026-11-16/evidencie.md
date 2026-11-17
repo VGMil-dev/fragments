@@ -8,7 +8,9 @@ COMPLETED LOCAL. No se desplegó ni se modificaron los seis trabajos originales.
 
 - Checkout original limpio: rama `main`, HEAD `60e31bfb4781693b2310b7cd22cfc45e9aa1cdd2` (igual a `origin/main`).
 - Worktree aislado: `C:\Users\vgmil\.codex\worktrees\review-incident-2026-11-16\fragments`, rama `codex/review-incident-2026-11-16`, iniciado desde el HEAD anterior.
-- Producción: API/web `v0.4.7`, revisión `86313395ca2cc0470c5e84c9c4df9848b4a108d2`, API healthy. La revisión no existe en el clone local; no se hizo fetch externo.
+- Producción: API/web `v0.4.7`, revisión `86313395ca2cc0470c5e84c9c4df9848b4a108d2`, API healthy; el mismo SHA es ahora `origin/main` tras el fetch autorizado para preparar este PR.
+- Integración: `origin/main` actualizado a `86313395ca2cc0470c5e84c9c4df9848b4a108d2`; coincide con el objeto de commit de la tag anotada `v0.4.7`. Siguiente PATCH libre: `v0.4.8` (no se creó tag).
+- F16.5 intacta: `task-list/F16.5` es idéntica a `origin/main`; el diff del PR no contiene archivos F16.5. El único cambio en `apps/web/src/App.tsx` conecta el callback de reintento Review.
 - Seis filas Review fallidas entre 2026-11-16 17:35:19 y 17:37:46 UTC (12:35–12:37 Bogotá), todas con un intento. No hay evidencia suficiente para atribuir causa a GitHub, Repomix o IA.
 - Se observaron ocho POSTs `/api/reviews` en Nginx para seis filas idempotentes; solo un GET de estado. Todos los POST recibieron 202. No se copiaron IPs, referencias, agentes de usuario ni rutas con IDs al informe.
 - Los logs API solo muestran arranque/Better Auth; worker y sondeo descartaban errores. El ledger no tiene reservas Review del incidente, indicio pre-IA pero no prueba.
@@ -51,9 +53,13 @@ COMPLETED LOCAL. No se desplegó ni se modificaron los seis trabajos originales.
 - `node --test deploy/production/nginx.conf.test.mjs`: 3/3 exitosas.
 - `nginx -t`: exitoso con la imagen desplegada, ejecutada efímeramente y sin red.
 - Revisiones independientes: fiabilidad, seguridad OAuth/Nginx e idempotencia/persistencia. Rondas 5 y 6: las tres áreas CLEAN en ambas rondas consecutivas.
-- Rama local: `codex/review-incident-2026-11-16`; worktree aislado indicado arriba. Sin push, PR, deploy ni reejecución productiva.
+- Rama: `codex/review-incident-2026-11-16`; worktree aislado indicado arriba. La rama se publicó para el PR #42; sin deploy ni reejecución productiva.
 - Commit local de implementación: `ca77ac1` (`fix(review): recupera trabajos fallidos y protege logs`).
-- Estado final: readiness local PASS para revisión/PR; despliegue NO autorizado y no realizado. No hubo push ni PR.
+- Integración preparada: [PR #42](https://github.com/VGMil-dev/fragments/pull/42), base `main` en `86313395ca2cc0470c5e84c9c4df9848b4a108d2`, cabeza `209aa184da076ce3657796e4104628d95ca84701`, 33 archivos del hotfix. GitHub reporta `MERGEABLE`; estado abierto y no integrado.
+- GitHub Actions `Fragments CI`, run [44001314299](https://github.com/VGMil-dev/fragments/actions/runs/44001314299): `SUCCESS`; instalación congelada, backup/release tests, Python release agent, metadata de release, Turbo tests/typecheck/lint/build completados. El metadata test falló solo en la invocación local sobre el clon Windows enlazado; pasó en Actions.
+- CI local en worktree aislado: `pnpm install --frozen-lockfile` PASS; `pnpm exec turbo run test typecheck lint build` 10/10 tareas PASS (API 130 pruebas, web 95); tests release/backup 10/10; agente release Python 41 pruebas, 1 omitida; Nginx estático 3/3.
+- `nginx -t` repetido sobre la configuración candidata con la imagen productiva en un contenedor efímero aislado: PASS. No se modificaron/reiniciaron contenedores del servicio.
+- Estado final: readiness para PR PASS. No se hizo merge, release, tag, despliegue ni reejecución productiva.
 
 ### Plan de recuperación estudiantil
 
