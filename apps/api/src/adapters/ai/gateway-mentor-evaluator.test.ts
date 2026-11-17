@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { APICallError, generateText } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { migrate } from "../../db/migrate.js";
 import { SqliteAiBudgetLedger } from "./budget-ledger.js";
 import { createGatewayMentorEvaluator } from "./gateway-mentor-evaluator.js";
@@ -39,6 +40,7 @@ const evaluationInput = {
   proposalDigest: "a".repeat(64),
   config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] },
   contextVersion: 2,
+  idempotencyKey: "proposal-fixture:2:" + "a".repeat(64) + ":2",
 };
 
 describe("Gateway Mentor evaluator (labelled offline generation)", () => {
@@ -64,6 +66,29 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
       guidance: ["¿Qué mostrarás en la primera demostración?"],
     });
     expect(ledger.summary()).toMatchObject({ settledMicroUsd: 400, blocked: false });
+  });
+
+  it("persists only the hash of the canonical production idempotency identity", async () => {
+    const generate = vi.fn(async ({ onDispatch }: { onDispatch: () => void }) => { onDispatch(); return { value: generated, costUsd: 0.0004 }; });
+    const ledger = makeLedger();
+    const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger, generate });
+    const identity = "proposal-1:2:" + "a".repeat(64) + ":2";
+
+    await evaluator.evaluate({ ...evaluationInput, idempotencyKey: identity });
+
+    const stored = databases.at(-1)!.prepare("SELECT operation_key FROM ai_budget_reservations WHERE request_kind='mentor'").get() as { operation_key: string };
+    expect(stored.operation_key).toBe(createHash("sha256").update(identity).digest("hex"));
+    expect(stored.operation_key).not.toContain(identity);
+  });
+
+  it("does not dispatch a billable evaluation without a canonical idempotency key", async () => {
+    const generate = vi.fn(async () => ({ value: generated, costUsd: 0.0004 }));
+    const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger: makeLedger(), generate });
+
+    await expect(evaluator.evaluate({ ...evaluationInput, idempotencyKey: undefined })).rejects.toMatchObject({
+      stage: "input_validation", errorType: "MissingIdempotencyKey",
+    });
+    expect(generate).not.toHaveBeenCalled();
   });
 
   it("blocks provider dispatch when a previous dispatch has uncertain cost", async () => {
@@ -159,7 +184,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
     const generate = vi.fn(async ({ onDispatch }: { onDispatch: () => void }) => { onDispatch(); return { value: generated, costUsd: 0 }; });
     const ledger = makeLedger();
     const evaluator = createGatewayMentorEvaluator({ modelId: "fixture/model", gatewayKeyConfigured: true, ledger, generate });
-    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1 })).resolves.toMatchObject({ modelId: "fixture/model" });
+    await expect(evaluator.evaluate({ proposal, proposalDigest: "b".repeat(64), config: { subject: "Materia", theme: "Huerto", assignment: "Diseña", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica", criteria: [{ id: "scope", title: "Alcance", description: "Observable", weight: 100 }] }, contextVersion: 1, idempotencyKey: "fixture:proposal:b" })).resolves.toMatchObject({ modelId: "fixture/model" });
     expect(generate).toHaveBeenCalledOnce();
     expect(ledger.summary()).toMatchObject({ settledMicroUsd: 0, reservedMicroUsd: 0, blocked: false });
   });

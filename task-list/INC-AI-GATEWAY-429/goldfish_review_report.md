@@ -135,6 +135,20 @@ Goldfish hizo una revisión técnica independiente sobre `0715c3ec1d3bbca7503678
 
 Los dos Nits eran de trazabilidad: registrar CI #78 y el dictamen R9 en `evidencie.md` y actualizar la fila de `TASKS.md`. No señalaron defectos de implementación. Se anotaron los resultados exactos; cero Blockers/Majors pendientes. CI `Fragments CI` run `44018520968`, job requerido `verify` `133822150700`, terminó `success` sobre el mismo SHA; todos los pasos, incluidos tests/typecheck/lint/build y pruebas del agente de release, pasaron. La siguiente actualización documental tiene que recibir su propia corrida CI antes de considerar el PR listo.
 
+## Revisión R10 — hallazgos que reabren la tarea
+
+Goldfish hizo una nueva revisión fresca sobre `cd4c05a3a0174a48c2d6f97e8c1a2b60226f479c`, base `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`. Los resultados iniciales fueron:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 1 | 0 | 0 |
+| Implementation Readiness | 0 | 3 | 1 |
+| Zoom Out | 0 | 1 | 1 |
+
+Hallazgos: (1) `safeNoCharge=true` cortaba la comprobación de evidencia upstream y podía reintentar una solicitud facturable; (2) el lease singleton serializaba solicitudes distintas incluso en estado saludable; (3) la spec no definía identidad canónica/hash ni la conducta sin clave; (4) backoff/cooldown carecía de límites operativos exactos; (5) la tabla de respuestas API y campos expuestos estaba incompleta; (6) faltaban aserciones obligatorias para expiración de lease, repetición de clave, cooldown, retry agotado y migración de filas antiguas; (7) detalle de esquema/fases duplicado era un Nit de simplicidad. La tarea vuelve a `[ ]`. La corrección debe verificarse en su propio SHA; ningún resultado R9 aplica a este SHA.
+
+Remediación preparada en el siguiente conjunto de cambios: el rechazo sin cargo ahora exige comprobar primero que no hay status upstream; las rutas normales usan slots no exclusivos y el lease singleton se activa solo durante cooldown/sondeo; v13 agrega ese estado de forma aditiva. El adaptador Mentor exige una identidad canónica derivada de propuesta/version/digest/contexto y persiste solo su SHA-256. La spec fija backoff (base/cap/jitter/tiempo máximo), Retry-After, contratos HTTP y datos redactados; los tests cubren agotamiento, HTTP-date, cooldown de workers, lease vencido, hash, ausencia de clave, migración v11→v13 y respuestas HTTP. El Nit de detalle se acepta donde documenta compatibilidad de esquema y sincronización; se evita duplicar nueva mecánica en archivos compartidos. Verificación local posterior: suite específica 56/56; suite workspace 282/282, 10 tareas incluyendo typecheck/lint/build, con avisos no bloqueantes de `lucide-react`. CI/Goldfish final todavía deben correr sobre el commit que incorpore estos cambios y la evidencia.
+
 ## Revisión fresca R7 y dictamen del código actual
 
 Goldfish revisó `fc17c4f364c3a09f27f2484ae8026f50a79cd21e` contra `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; el merge-base coincide y el árbol estaba limpio.

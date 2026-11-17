@@ -1,7 +1,7 @@
 import { createGateway, generateText, Output } from "ai";
 import { z } from "zod";
 import { MentorEvaluationFailure, type MentorEvaluationFailureStage, type MentorEvaluator, type Proposal } from "../../features/mentor/service.js";
-import { AiBudgetUnavailableError, parseGatewayCostUsd, SqliteAiBudgetLedger, type AiGatewayRateCard } from "./budget-ledger.js";
+import { AiBudgetUnavailableError, AiDispatchUnavailableError, parseGatewayCostUsd, SqliteAiBudgetLedger, type AiGatewayRateCard } from "./budget-ledger.js";
 import { executeWithGatewayPolicy } from "./gateway-dispatch-policy.js";
 import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 import { createHash } from "node:crypto";
@@ -109,6 +109,9 @@ export function createGatewayMentorEvaluator(options: {
       if (!options.gatewayKeyConfigured || !options.modelId) {
         throw new MentorEvaluationFailure({ stage: "configuration", errorType: "MissingGatewayConfiguration" });
       }
+      if (!input.idempotencyKey) {
+        throw new MentorEvaluationFailure({ stage: "input_validation", errorType: "MissingIdempotencyKey" });
+      }
       const serialized = JSON.stringify({ proposal: input.proposal, context: input.config, contextVersion: input.contextVersion });
       if (Buffer.byteLength(serialized, "utf8") > maxInputBytes) {
         throw new MentorEvaluationFailure({ stage: "input_validation", errorType: "MentorInputTooLarge" });
@@ -150,6 +153,9 @@ export function createGatewayMentorEvaluator(options: {
         };
       } catch (error) {
         if (error instanceof MentorEvaluationFailure) throw error;
+        if (error instanceof AiDispatchUnavailableError) {
+          throw new MentorEvaluationFailure({ stage: "provider_request", errorType: error.name, retryAfterMs: error.retryAfterMs, kind: "rate_limit", providerDispatchPossible: false });
+        }
         if (error instanceof AiBudgetUnavailableError) {
           throw evaluationFailure(error, providerInvoked ? "budget_settlement" : "budget_reservation");
         }

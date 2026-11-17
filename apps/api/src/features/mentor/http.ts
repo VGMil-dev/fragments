@@ -158,7 +158,7 @@ export function createMentorHttp(
           stage: failure?.stage ?? (error instanceof MentorInputError ? "input_validation" : "evaluation"),
           error_type: /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(errorType) ? errorType : "UnknownError",
           duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
-          http_status: failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429 ? 429
+          http_status: failure?.kind === "rate_limit" || failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429 ? 429
             : failure?.gatewayHttpStatus === 402 ? 402 : 503,
           gateway_http_status: failure?.gatewayHttpStatus ?? null,
           gateway_code: failure?.gatewayCode ?? null,
@@ -169,14 +169,14 @@ export function createMentorHttp(
           retry_after_ms: failure?.retryAfterMs ?? null,
         };
         try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
-        if (failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429) {
+        if (failure?.kind === "rate_limit" || failure?.gatewayHttpStatus === 429 || failure?.providerHttpStatus === 429) {
           sendError(response, 429, "AI_RATE_LIMITED", "El servicio de evaluación recibió demasiadas solicitudes. Intenta más tarde.", failure.retryAfterMs);
         } else if (failure?.gatewayHttpStatus === 402) {
           sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible por una restricción de presupuesto o pago en AI Gateway.");
         } else if (failure?.providerHttpStatus === 402) {
-          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.");
+          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.", failure.retryAfterMs);
         } else if (failure?.gatewayHttpStatus === 503 || failure?.providerHttpStatus === 503) {
-          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.");
+          sendError(response, 503, "AI_PROVIDER_UNAVAILABLE", "El proveedor de evaluación no está disponible en este momento.", failure.retryAfterMs);
         } else if (diagnostic.stage === "budget_reservation") {
           sendError(response, 503, "AI_BUDGET_UNAVAILABLE", "La evaluación está temporalmente bloqueada mientras se concilia una solicitud anterior o se recupera la reserva local; no confirma que el presupuesto esté agotado.");
         } else {

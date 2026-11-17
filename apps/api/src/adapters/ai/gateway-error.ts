@@ -114,7 +114,6 @@ export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
 
 export function hasConfirmedNoChargeGatewayRejection(error: unknown): boolean {
   const root = record(error);
-  if (root?.safeNoCharge === true) return true;
   const details = classifyGatewayFailure(error);
   if (details.providerDispatchPossible || details.providerHttpStatus !== null) return false;
   if (details.gatewayHttpStatus === 429) return root?.providerDispatchPossible === false;

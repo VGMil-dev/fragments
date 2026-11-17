@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 
 function gatewayError(input: Record<string, unknown>): Error {
@@ -6,6 +6,8 @@ function gatewayError(input: Record<string, unknown>): Error {
 }
 
 describe("safe AI Gateway error classification", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("distinguishes gateway 429 from an upstream 503 and retains only safe identifiers", () => {
     const error = gatewayError({
       name: "GatewayRateLimitError",
@@ -113,6 +115,19 @@ describe("safe AI Gateway error classification", () => {
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
   });
 
+  it("does not let a safe-no-charge marker override contradictory provider evidence", () => {
+    const error = gatewayError({
+      name: "GatewayRateLimitError", type: "rate_limit_exceeded", statusCode: 429,
+      safeNoCharge: true, providerDispatchPossible: false, providerHttpStatus: 503,
+      isRetryable: true,
+    });
+
+    expect(classifyGatewayFailure(error)).toMatchObject({
+      gatewayHttpStatus: 429, providerHttpStatus: 503, providerDispatchPossible: false,
+    });
+    expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
+  });
+
   it("treats a confirmed Gateway 402 as a no-usage rejection", () => {
     const error = gatewayError({
       name: "GatewayInternalServerError",
@@ -123,6 +138,18 @@ describe("safe AI Gateway error classification", () => {
 
     expect(classifyGatewayFailure(error)).toMatchObject({ gatewayHttpStatus: 402, gatewayCode: "quota_for_entity_exceeded" });
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(true);
+  });
+
+  it("parses an HTTP-date Retry-After and ignores malformed values", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const makeError = (retryAfter: string) => gatewayError({
+      name: "GatewayRateLimitError", type: "rate_limit_exceeded", statusCode: 429,
+      responseHeaders: { "Retry-After": retryAfter },
+    });
+
+    expect(classifyGatewayFailure(makeError("Thu, 01 Jan 2026 00:00:05 GMT")).retryAfterMs).toBe(5_000);
+    expect(classifyGatewayFailure(makeError("not-a-date")).retryAfterMs).toBeNull();
   });
 
   it("keeps timeouts and unknown failures ambiguous", () => {

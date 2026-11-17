@@ -56,6 +56,25 @@ describe("bounded shared Gateway dispatch policy", () => {
     expect(databases[0]!.prepare("SELECT COUNT(*) AS count FROM ai_budget_reservations WHERE operation_key=?").get(operationKey)).toEqual({ count: 1 });
   });
 
+  it("does not retry before a Retry-After longer than the per-retry wait bound", async () => {
+    const ledger = makeLedger();
+    const generate = vi.fn(async () => {
+      throw Object.assign(rateLimitError(undefined, false, false), { responseHeaders: { "Retry-After": "40" } });
+    });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000, operationKey: "a".repeat(64),
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
+        sleep: async () => { throw new Error("Retry-After beyond the retry bound must not be slept through"); },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", retryAfterMs: 40_000, safeNoCharge: true });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: false, reservedMicroUsd: 0, settledMicroUsd: 0 });
+    expect(ledger.acquireDispatchSlot("next-operation", { now: Date.now() })).toMatchObject({ waitMs: expect.any(Number) });
+  });
+
   it("keeps an ambiguous dispatched 429 reservation uncertain after wrapping", async () => {
     const ledger = makeLedger();
     const generate = vi.fn(async () => {
@@ -146,6 +165,27 @@ describe("bounded shared Gateway dispatch policy", () => {
     }).catch((error: unknown) => error);
     expect(classifyGatewayFailure(failure)).toMatchObject({ gatewayHttpStatus: 429, providerHttpStatus: 503 });
 
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
+  });
+
+  it("does not retry when safe-no-charge conflicts with provider response evidence", async () => {
+    const ledger = makeLedger();
+    const generate = vi.fn(async () => {
+      throw Object.assign(rateLimitError(undefined, false, false), {
+        safeNoCharge: true,
+        providerHttpStatus: 503,
+      });
+    });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000, operationKey: "b".repeat(64),
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, (onDispatch) => { onDispatch(); return generate(); }, {
+        sleep: async () => { throw new Error("conflicting provider evidence must not be retried"); },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: "GatewayRateLimitError", safeNoCharge: false, providerDispatchPossible: false });
     expect(generate).toHaveBeenCalledOnce();
     expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
   });

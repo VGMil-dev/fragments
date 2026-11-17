@@ -167,6 +167,20 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
   });
 
+  it("maps a confirmed Gateway 402 to the budget/payment contract", async () => {
+    const evaluator: MentorEvaluator = {
+      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "GatewayInternalServerError", gatewayHttpStatus: 402, gatewayCode: "quota_for_entity_exceeded", gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", kind: "budget", providerDispatchPossible: false }); },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
+    const body = await response.json() as { ok: boolean; error: { code: string; message: string } };
+
+    expect(response.status).toBe(402);
+    expect(body).toMatchObject({ ok: false, error: { code: "AI_GATEWAY_BUDGET_EXCEEDED" } });
+    expect(JSON.stringify(body)).not.toMatch(/gen_|quota_for_entity_exceeded|private|token|secret/i);
+  });
+
   it("returns Gateway 429, preserves Retry-After, and logs only safe identifiers", async () => {
     const diagnostics: Record<string, unknown>[] = [];
     const evaluator: MentorEvaluator = {
@@ -177,9 +191,42 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("3");
-    expect((await response.json() as { error: { code: string } }).error.code).toBe("AI_RATE_LIMITED");
+    const body = await response.json() as { ok: boolean; error: { code: string; message: string } };
+    expect(body).toMatchObject({ ok: false, error: { code: "AI_RATE_LIMITED" } });
+    expect(JSON.stringify(body)).not.toMatch(/gen_|service_unavailable|private|prompt|token|secret/i);
     expect(diagnostics[0]).toMatchObject({ http_status: 429, gateway_http_status: 429, gateway_code: "rate_limit_exceeded", gateway_generation_id: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", provider_http_status: 503, provider_code: "service_unavailable", retry_after_ms: 2_500 });
     expect(JSON.stringify(diagnostics)).not.toMatch(/Huerto de aula|private|prompt|response|token|secret/i);
+  });
+
+  it("returns the provider 503 contract and preserves Retry-After without exposing technical IDs", async () => {
+    const evaluator: MentorEvaluator = {
+      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "APICallError", providerHttpStatus: 503, providerCode: "service_unavailable", retryAfterMs: 1_500, gatewayGenerationId: "gen_01M7K1YVAMRVX1VXNKJ1E661T7", kind: "unavailable" }); },
+    };
+    const base = await start(evaluator);
+    const proposal = await createProposal(base);
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
+    const body = await response.json() as { ok: boolean; error: { code: string; message: string } };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("2");
+    expect(body).toMatchObject({ ok: false, error: { code: "AI_PROVIDER_UNAVAILABLE" } });
+    expect(JSON.stringify(body)).not.toMatch(/gen_|service_unavailable|private|prompt|token|secret/i);
+  });
+
+  it("returns the shared local cooldown as a temporary rate limit without claiming a Gateway response", async () => {
+    const diagnostics: Record<string, unknown>[] = [];
+    const evaluator: MentorEvaluator = {
+      async evaluate() { throw new MentorEvaluationFailure({ stage: "provider_request", errorType: "AiDispatchUnavailableError", retryAfterMs: 2_000, kind: "rate_limit", providerDispatchPossible: false }); },
+    };
+    const base = await start(evaluator, (entry) => diagnostics.push(entry));
+    const proposal = await createProposal(base);
+    const response = await fetch(`${base}/api/proposals/${proposal.id}/review`, { method: "POST", headers: { "x-fixture-user": proposal.owner } });
+    const body = await response.json() as { ok: boolean; error: { code: string; message: string } };
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("2");
+    expect(body).toMatchObject({ ok: false, error: { code: "AI_RATE_LIMITED" } });
+    expect(diagnostics[0]).toMatchObject({ http_status: 429, gateway_http_status: null, gateway_code: null, retry_after_ms: 2_000 });
   });
 
   it("recovers the latest persisted evaluation without evaluating again", async () => {

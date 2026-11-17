@@ -88,7 +88,7 @@ export async function executeWithGatewayPolicy<T>(
     const acquired = ledger.acquireDispatchSlot(signals.reservationId, { now: now(), leaseMs });
     if ("blocked" in acquired) throw new AiBudgetUnavailableError("Hay una evaluación incierta pendiente de conciliación.");
     if ("waitMs" in acquired) {
-      const jitter = Math.round(Math.max(0, Math.min(1, random())) * 100);
+      const jitter = Math.floor(Math.max(0, Math.min(1 - Number.EPSILON, random())) * 101);
       const delay = acquired.waitMs + jitter;
       if (now() - startedAt + delay > maxDispatchWaitMs) throw new AiDispatchUnavailableError(acquired.waitMs);
       await sleep(delay);

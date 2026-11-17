@@ -30,7 +30,7 @@ export class AiDispatchUnavailableError extends Error {
   constructor(retryAfterMs: number) { super("No hay un turno disponible para iniciar la evaluación."); this.name = "AiDispatchUnavailableError"; this.retryAfterMs = retryAfterMs; }
 }
 
-export type DispatchSlotResult = { leaseId: string } | { waitMs: number } | { blocked: true };
+export type DispatchSlotResult = { leaseId: string | null } | { waitMs: number } | { blocked: true };
 
 function toMicroUsd(costUsd: number): number {
   const microUsd = Math.ceil(costUsd * 1_000_000);
@@ -101,8 +101,12 @@ export class SqliteAiBudgetLedger {
         this.database.exec("COMMIT");
         return { blocked: true };
       }
-      const row = this.database.prepare(`SELECT lease_id, reservation_id, lease_until, cooldown_until
-        FROM ai_gateway_dispatch_control WHERE id=1`).get() as { lease_id: string | null; reservation_id: string | null; lease_until: number; cooldown_until: number };
+      const row = this.database.prepare(`SELECT lease_id, reservation_id, lease_until, cooldown_until, rate_limit_active
+        FROM ai_gateway_dispatch_control WHERE id=1`).get() as { lease_id: string | null; reservation_id: string | null; lease_until: number; cooldown_until: number; rate_limit_active: number };
+      if (row.rate_limit_active !== 1) {
+        this.database.exec("COMMIT");
+        return { leaseId: null };
+      }
       if (row.lease_id && row.lease_until > now) {
         this.database.exec("COMMIT");
         return { waitMs: Math.max(1, Number(row.lease_until) - now) };
@@ -130,37 +134,36 @@ export class SqliteAiBudgetLedger {
     }
   }
 
-  releaseDispatchSlot(leaseId: string, input: { now?: number; success?: boolean; rateLimitRetryAfterMs?: number | null; transientFailure?: boolean; random?: () => number } = {}): number {
+  releaseDispatchSlot(leaseId: string | null, input: { now?: number; success?: boolean; rateLimitRetryAfterMs?: number | null; transientFailure?: boolean; random?: () => number } = {}): number {
     const now = input.now ?? Date.now();
     this.database.exec("BEGIN IMMEDIATE");
     try {
-      const row = this.database.prepare("SELECT transient_failure_streak FROM ai_gateway_dispatch_control WHERE id=1 AND lease_id=?")
-        .get(leaseId) as { transient_failure_streak: number } | undefined;
-      if (!row) {
-        this.database.exec("COMMIT");
-        return 0;
-      }
       if (input.success) {
-        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
-          cooldown_until=0, transient_failure_streak=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
+        if (leaseId) this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
+          cooldown_until=0, transient_failure_streak=0, rate_limit_active=0, updated_at=? WHERE id=1 AND lease_id=?`).run(now, leaseId);
         this.database.exec("COMMIT");
         return 0;
       }
       if (input.rateLimitRetryAfterMs !== undefined || input.transientFailure === true) {
+        const row = this.database.prepare("SELECT transient_failure_streak FROM ai_gateway_dispatch_control WHERE id=1")
+          .get() as { transient_failure_streak: number };
         const streak = Number(row.transient_failure_streak) + 1;
         const exponentialCap = Math.min(30_000, 1_000 * 2 ** Math.min(streak - 1, 5));
-        const jitter = Math.round(Math.max(0, Math.min(1, (input.random ?? Math.random)())) * exponentialCap);
+        const jitter = Math.floor(Math.max(0, Math.min(1 - Number.EPSILON, (input.random ?? Math.random)())) * (exponentialCap + 1));
         const retryAfterMs = typeof input.rateLimitRetryAfterMs === "number" && Number.isFinite(input.rateLimitRetryAfterMs)
           ? Math.max(0, Math.min(input.rateLimitRetryAfterMs, 86_400_000))
           : 0;
         const delayMs = Math.max(100, retryAfterMs, jitter);
-        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0,
-          cooldown_until=MAX(cooldown_until, ?), transient_failure_streak=?, updated_at=? WHERE id=1 AND lease_id=?`)
-          .run(now + delayMs, streak, now, leaseId);
+        this.database.prepare(`UPDATE ai_gateway_dispatch_control SET
+          lease_id=CASE WHEN ? IS NOT NULL AND lease_id=? THEN NULL ELSE lease_id END,
+          reservation_id=CASE WHEN ? IS NOT NULL AND lease_id=? THEN NULL ELSE reservation_id END,
+          lease_until=CASE WHEN ? IS NOT NULL AND lease_id=? THEN 0 ELSE lease_until END,
+          cooldown_until=MAX(cooldown_until, ?), transient_failure_streak=?, rate_limit_active=1, updated_at=? WHERE id=1`)
+          .run(leaseId, leaseId, leaseId, leaseId, leaseId, leaseId, now + delayMs, streak, now);
         this.database.exec("COMMIT");
         return delayMs;
       }
-      this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0, updated_at=?
+      if (leaseId) this.database.prepare(`UPDATE ai_gateway_dispatch_control SET lease_id=NULL, reservation_id=NULL, lease_until=0, updated_at=?
         WHERE id=1 AND lease_id=?`).run(now, leaseId);
       this.database.exec("COMMIT");
       return 0;

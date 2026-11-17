@@ -92,18 +92,39 @@ describe("SqliteAiBudgetLedger", () => {
     expect(() => firstWorker.reserve({ requestKind: "mentor", estimateMicroUsd: 1, operationKey, now: 30 })).toThrow(AiEvaluationInProgressError);
   });
 
-  it("shares one dispatch lease and a Retry-After cooldown across ledger instances", () => {
+  it("allows healthy concurrent dispatches and serializes only the post-rate-limit probe across workers", () => {
     const firstWorker = ledger();
     const secondWorker = new SqliteAiBudgetLedger(databases.at(-1)!);
     const first = firstWorker.acquireDispatchSlot("reservation-a", { now: 1_000, leaseMs: 10_000 });
-    expect(first).toHaveProperty("leaseId");
-    const blocked = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_001, leaseMs: 10_000 });
-    expect(blocked).toEqual({ waitMs: 9_999 });
+    const second = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_001, leaseMs: 10_000 });
+    expect(first).toEqual({ leaseId: null });
+    expect(second).toEqual({ leaseId: null });
 
     const cooldown = firstWorker.releaseDispatchSlot(first.leaseId, { now: 1_002, rateLimitRetryAfterMs: 2_000, random: () => 0.5 });
     expect(cooldown).toBeGreaterThanOrEqual(2_000);
     expect(secondWorker.acquireDispatchSlot("reservation-b", { now: 1_003, leaseMs: 10_000 })).toEqual({ waitMs: cooldown - 1 });
     const acquired = secondWorker.acquireDispatchSlot("reservation-b", { now: 1_002 + cooldown, leaseMs: 10_000 });
     expect(acquired).toHaveProperty("leaseId");
+    const otherProbe = firstWorker.acquireDispatchSlot("reservation-c", { now: 1_003 + cooldown, leaseMs: 10_000 });
+    expect(otherProbe).toEqual({ waitMs: 9_999 });
+    if ("leaseId" in acquired) secondWorker.releaseDispatchSlot(acquired.leaseId, { now: 1_004 + cooldown, success: true });
+    expect(firstWorker.acquireDispatchSlot("reservation-c", { now: 1_005 + cooldown })).toEqual({ leaseId: null });
+  });
+
+  it("marks the probe reservation uncertain when its shared lease expires", () => {
+    const worker = ledger();
+    const reservation = worker.reserve({ requestKind: "mentor", estimateMicroUsd: 870, id: "probe-reservation", now: 1 });
+    worker.releaseDispatchSlot(null, { now: 2, rateLimitRetryAfterMs: 0, random: () => 0 });
+    const acquired = worker.acquireDispatchSlot(reservation, { now: 102, leaseMs: 10 });
+    expect(acquired).toHaveProperty("leaseId");
+    expect(worker.acquireDispatchSlot("other-reservation", { now: 113, leaseMs: 10 })).toEqual({ blocked: true });
+    expect(databases.at(-1)!.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservation)).toEqual({ status: "uncertain" });
+  });
+
+  it("applies bounded exponential jitter to the shared cooldown", () => {
+    const worker = ledger();
+    expect(worker.releaseDispatchSlot(null, { now: 1_000, transientFailure: true, random: () => 1 })).toBe(1_000);
+    expect(worker.releaseDispatchSlot(null, { now: 2_000, transientFailure: true, random: () => 1 })).toBe(2_000);
+    expect(worker.releaseDispatchSlot(null, { now: 4_000, transientFailure: true, random: () => 0 })).toBe(100);
   });
 });

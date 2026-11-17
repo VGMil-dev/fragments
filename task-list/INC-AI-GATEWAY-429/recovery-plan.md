@@ -23,7 +23,7 @@ Este plan no se ejecutó. Owner operativo: mantenedor autorizado de Fragments. R
 
 1. Publicar el branch propio por push normal y completar PR contra `main`; no fusionar durante este GOAL.
 2. Después de aprobación y merge normal, repetir el preflight de main y crear una nueva tag anotada solamente con autorización de release. Seguir el agente F14 y su entorno protegido; no ejecutar `docker compose` manual en el VPS.
-3. El cambio aplica una migración SQLite aditiva v12; mantiene la migración Review v11. El rollback de F14 debe volver a las imágenes API/web previas sin restaurar la base completa. El binario anterior tolera las columnas/tablas aditivas, pero se debe comprobar en CI con esa pareja de revisiones antes de ejecutar el release.
+3. El cambio aplica las migraciones SQLite aditivas v12/v13; mantiene la migración Review v11. La v13 agrega `rate_limit_active` con valor inicial cero al control singleton creado en v12. El rollback de F14 debe volver a las imágenes API/web previas sin restaurar la base completa. El binario anterior tolera las columnas/tablas aditivas, pero se debe comprobar en CI la imagen API previa contra el esquema v13 antes de ejecutar el release.
 4. Tras recrear API y web secuencialmente según F14, comprobar ambos contenedores `healthy`, revisión de imagen igual a la autorizada, `/health` HTTP 200, web HTTP 200, sesiones/auth y errores de arranque. No reconciliar todavía: con la fila incierta presente el comportamiento esperado es bloquear un despacho nuevo.
 
 ## Conciliación de 870 microUSD

@@ -232,6 +232,10 @@ const migrations = [
     );
     INSERT OR IGNORE INTO ai_gateway_dispatch_control(id) VALUES (1);`,
   },
+  {
+    version: 13,
+    sql: `ALTER TABLE ai_gateway_dispatch_control ADD COLUMN rate_limit_active INTEGER NOT NULL DEFAULT 0;`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {

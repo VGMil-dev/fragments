@@ -41,7 +41,8 @@ describe("Mentor control migration", () => {
     expect(database.prepare("SELECT attempt, started_at, finished_at, duration_ms, stage, error_code, retry_class, final_status FROM review_attempts WHERE job_id='review-failed-old'").get())
       .toEqual({ attempt: 1, started_at: null, finished_at: 200, duration_ms: null, stage: "unknown", error_code: "LEGACY_UNCLASSIFIED", retry_class: "manual", final_status: "failed" });
     expect(database.prepare("SELECT id, status, defense_json FROM inspector_challenges WHERE id='inspector-old'").get()).toEqual({ id: "inspector-old", status: "completed", defense_json: '{"outcome":"restored"}' });
-    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(database.prepare("SELECT rate_limit_active FROM ai_gateway_dispatch_control WHERE id=1").get()).toEqual({ rate_limit_active: 0 });
     expect(database.prepare("SELECT COUNT(*) AS count FROM mentor_academic_publications").get()?.count).toBe(0);
     expect(database.prepare("SELECT id, proposal_json, owner_hash, owner_user_id FROM proposals").get()).toEqual({ id: "proposal-1", proposal_json: '{"title":"Histórica"}', owner_hash: "legacy-owner-hash", owner_user_id: null });
     expect(database.prepare("SELECT proposal_id, version, proposal_json FROM proposal_revisions").get()).toEqual({ proposal_id: "proposal-1", version: 1, proposal_json: '{"title":"Histórica"}' });
@@ -53,5 +54,26 @@ describe("Mentor control migration", () => {
     expect(database.prepare("SELECT COUNT(*) AS count FROM proposal_revisions").get()?.count).toBe(1);
     expect(database.prepare("SELECT COUNT(*) AS count FROM mentor_evaluations").get()?.count).toBe(1);
     expect(database.prepare("SELECT COUNT(*) AS count FROM session").get()?.count).toBe(1);
+  });
+
+  it("preserves a v11 reservation through the additive v12/v13 migrations", () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    database.exec(`
+      CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);
+      INSERT INTO schema_migrations(version, applied_at) VALUES
+        (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9), (10, 10), (11, 11);
+      CREATE TABLE ai_budget_reservations (
+        id TEXT PRIMARY KEY, request_kind TEXT NOT NULL, reserved_microusd INTEGER NOT NULL,
+        actual_microusd INTEGER, status TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+      );
+      INSERT INTO ai_budget_reservations VALUES ('legacy', 'mentor', 870, NULL, 'uncertain', 100, 200);
+    `);
+
+    migrate(database);
+
+    expect(database.prepare("SELECT status, reserved_microusd, operation_key FROM ai_budget_reservations WHERE id='legacy'").get())
+      .toEqual({ status: "uncertain", reserved_microusd: 870, operation_key: null });
+    expect(database.prepare("SELECT rate_limit_active FROM ai_gateway_dispatch_control WHERE id=1").get()).toEqual({ rate_limit_active: 0 });
+    expect(database.prepare("SELECT MAX(version) version FROM schema_migrations").get()).toEqual({ version: 13 });
   });
 });
