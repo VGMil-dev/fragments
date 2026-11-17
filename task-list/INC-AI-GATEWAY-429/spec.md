@@ -15,6 +15,15 @@ La implementación y sus pruebas se limitan a estos paths:
 
 No modificar `packages/contracts`, configuración raíz/workspace, configuración TypeScript compartida ni rutas no listadas. Si aparece una dependencia que requiere uno de esos cambios, proponerla al planner antes de editarla.
 
+## Fases y checkpoints de implementación
+
+Cada fase debe terminar en estado buildable y con sus pruebas enfocadas verdes antes de continuar:
+
+1. **Esquema y ledger:** aplicar la migración aditiva v12 en `apps/api/src/db/migrate.ts`; implementar `operation_key`, índice parcial y singleton de despacho en `apps/api/src/adapters/ai/budget-ledger.ts`. Ejecutar `apps/api/src/db/migrate.test.ts`, `apps/api/src/db/open.test.ts` y `apps/api/src/adapters/ai/budget-ledger.test.ts`. Checkpoint: v11 se conserva y operaciones ambiguas no se liberan.
+2. **Clasificación y política de despacho:** implementar `apps/api/src/adapters/ai/gateway-error.ts`, `apps/api/src/adapters/ai/gateway-error.test.ts`, `apps/api/src/adapters/ai/gateway-dispatch-policy.ts` y `apps/api/src/adapters/ai/gateway-dispatch-policy.test.ts`. Checkpoint: Gateway 402 confirmado queda separado; 429 desnudo es incierto; retry solo con prueba positiva de no despacho; timeout solo se reintenta antes de `fetch`; backoff/cooldown quedan acotados y compartidos.
+3. **Integración Mentor y UI:** actualizar `apps/api/src/adapters/ai/gateway-mentor-evaluator.ts`, `apps/api/src/features/mentor/service.ts`, `apps/api/src/features/mentor/http.ts`, `apps/api/src/features/mentor/service.test.ts`, `apps/api/src/features/mentor/http.test.ts`, `apps/web/src/features/mentor/mentor-screen.tsx` y `apps/web/src/features/mentor/mentor-screen.test.tsx`. Checkpoint: status/código/IDs permitidos y certeza de despacho sobreviven las capas; UI no reintenta sola ni llama al 429 agotamiento de presupuesto.
+4. **Verificación integrada y entrega:** ejecutar la suite/tareas del workspace y CI `verify`; revisar diff y evidencia; completar revisión Goldfish sobre el SHA publicado. Checkpoint: cero Blockers/Majors en el HEAD final; sin llamada productiva, conciliación, merge ni deploy dentro de esta tarea. Puertas de release y conciliación permanecen en `recovery-plan.md`.
+
 ## Entradas y clasificación
 
 - Gateway 429: límite temporal; respuesta HTTP 429, código/ID seguros y `Retry-After` cuando estén presentes.

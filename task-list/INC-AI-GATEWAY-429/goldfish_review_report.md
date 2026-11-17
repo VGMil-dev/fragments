@@ -108,3 +108,17 @@ Goldfish auditó el HEAD `57ca4621b3d210656b692c4c2a538fe8cdc56317` contra `orig
 **Nits:** R5 readiness detectó que la evidencia `[x]` de `TASKS.md` citaba CI/Goldfish para `0d4cb78`, no el SHA R5 `57ca462`; Codebase anotó que la ausencia de metadatos de proveedor no es prueba de no despacho. La tarea se reabrió y se está corrigiendo la regla antes de cualquier cierre.
 
 Remediación local posterior a R5: la falta de datos ahora clasifica el posible despacho como verdadero. Solo un indicador explícito y confiable `providerDispatchPossible=false` habilita retry/release de un 429 sin upstream; el SDK normal actual no provee esa señal, de modo que un 429 ordinario se queda incierto y no se reintenta automáticamente. Gateway 402 con código `quota_for_entity_exceeded` sigue siendo un rechazo sin despacho, salvo evidencia upstream contraria. Las regresiones nuevas fallaron antes del fix (2 fallos del clasificador/política) y pasaron después; suite focalizada 16/16, suite completa local 10/10 tareas (API 154, contratos 19, web 97; typecheck/lint/build). Este estado corregido todavía requiere commit, CI y Goldfish exactos antes de volver a declarar el PR listo.
+
+## Revisión fresca R6: fases de implementación
+
+Goldfish R6 revisó el SHA `6c9a9418a814f3d9fd0a996d24d2cd6a5e0ab8ae` contra `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 0 |
+| Implementation Readiness | 0 | 1 | 1 |
+| Zoom Out | 0 | 0 | 0 |
+
+**Major de readiness:** faltaba definir fases de implementación con checkpoints buildable/testable. **Nit documental:** el estado decía commit/push pendientes aunque `6c9a941` ya estaba en remoto. La spec ahora define cuatro fases (ledger/migración; clasificación/policy; integración Mentor/UI; verificación integrada) con paths y resultados verificables. La evidencia ya identifica `6c9a941`, CI #75 PASS y el SHA documental siguiente pendiente; el Nit no se aplica al nuevo estado.
+
+La revisión reconfirmó que la rama no reintenta un 429 SDK desnudo por falta de evidencia positiva: conserva el holdback incierto. Esa limitación funcional debe comunicarse con claridad; no afirmar que el SDK normal permite retry de 429. La migración anterior API/v12 sigue como puerta pre-release separada. Los cambios documentales que remedian R6 requieren CI y Goldfish sobre su nuevo HEAD.
