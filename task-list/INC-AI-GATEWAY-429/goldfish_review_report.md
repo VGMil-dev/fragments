@@ -136,3 +136,15 @@ Goldfish revisó `fc17c4f364c3a09f27f2484ae8026f50a79cd21e` contra `origin/main`
 Las tres perspectivas confirmaron las fases/checkpoints de la spec, el allowlist de 22 paths, el esquema SQLite v12, y el comportamiento conservador de 429: sin evidencia afirmativa de no despacho, no reintenta ni libera y el ledger permanece `uncertain`. Este dictamen aplica al SHA citado.
 
 CI `Fragments CI` #76 (`44017680286`), job requerido `verify` `133819432182`, finalizó `success` en ese mismo SHA. La evidencia identifica explícitamente el cambio posterior como documental y pendiente de su propia verificación para evitar atribuirle este resultado R7.
+
+## Revisión R8 y corrección del estado de tarea
+
+Goldfish auditó `2af4d4066a7fbfe74627bbdd6786bbd2aa6d7636` contra la base `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`. Conteos:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 1 |
+| Implementation Readiness | 0 | 0 | 1 |
+| Zoom Out | 0 | 1 | 0 |
+
+El Major y ambos Nits correspondieron a trazabilidad/completitud: `[x]` se había marcado por resultados en `fc17c4f`, mientras `2af4d40` era un cambio documental posterior y aún no tenía CI/Goldfish exactos en la evidencia. El CI #77 terminó `success` sobre `2af4d40` después de la revisión. La casilla se reabrió en esta actualización y queda `[ ]` hasta que CI y Goldfish evalúen el HEAD que contiene la corrección.

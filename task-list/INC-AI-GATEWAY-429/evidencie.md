@@ -84,3 +84,10 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - La protección activa `Fragments main via pull request` requiere PR+`verify`, cero aprobaciones humanas, resolución de hilos, merge commit y no permite bypass. El usuario indicó que la revisión Goldfish independiente satisface el control técnico si no quedan Blockers/Majors; el resultado R7 cumple. No hay aprobación humana obligatoria.
 - Riesgo operativo explícito: el SDK Gateway 4.0.136 no aporta evidencia afirmativa de cero intentos upstream en un 429 ordinario. Ese caso se mantiene como rate limit en la interfaz, no se reintenta automáticamente y conserva holdback `uncertain`, bloqueando despachos hasta conciliación. Los retries solo se ejercitan con señal sintética confiable de no despacho. En producción, la reserva 870 microUSD sigue intacta sin ID común ni conciliación.
 - Este informe es un cambio documental posterior a la verificación R7; requiere CI/Goldfish propios sobre su SHA actualizado. No se hizo merge, release, tag, conciliación, evaluación IA ni despliegue.
+
+## Revisión R8 y estado de cierre
+
+- Goldfish R8 revisó `2af4d4066a7fbfe74627bbdd6786bbd2aa6d7636` contra base `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`. Hallazgo agregado: Codebase 0/0/1, Readiness 0/0/1 y Zoom Out 0/1/0. No encontraron un nuevo defecto de implementación; el Major/Nits correspondieron a que `TASKS.md` estaba `[x]` usando CI #76/R7 de `fc17c4f` mientras el propio cierre indicaba que el SHA documental `2af4d40` necesitaba verificaciones propias.
+- CI #77 (`44018076742`), job `verify` `133820728183`, terminó `success` después de ese Goldfish, sobre `2af4d40` exacto.
+- Se corrigió la discrepancia dejando la casilla `[ ]` hasta que CI y Goldfish cubran el HEAD posterior que contiene el registro R8. R8 es una revisión histórica del estado entonces observado; su hallazgo no se presenta como defecto funcional persistente.
+- El árbol funcional permanece sin cambios desde `6c9a941`; el 429 SDK desnudo sigue siendo rate limit ambiguo, sin retry ni liberación automática. La fila productiva sigue intacta. El próximo HEAD requiere su propio CI/Goldfish; sin merge/deploy/llamada IA.
