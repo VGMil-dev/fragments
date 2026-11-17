@@ -1,0 +1,37 @@
+# Informe Goldfish — INC-AI-GATEWAY-429
+
+## Alcance y ejecución
+
+- PR revisado: https://github.com/VGMil-dev/fragments/pull/43.
+- Rama: `codex/mentor-ai-incident`.
+- HEAD auditado: `5ce6ab6d871a9bf602f4e42acec2ec71698cb4e4` (diff contra `origin/main`).
+- Framework: EGM oficial `egm@egm` versión `0.1.1`, instalada desde el marketplace oficial en esta sesión.
+- Tres revisores nativos frescos, lanzados con `fork_turns: none`, modelo solicitado `gpt-6-luna`, esfuerzo `medium`. La orquestación no puede observar telemetría separada que certifique el modelo efectivo del runtime.
+- Cada reviewer leyó su persona, estándar asignado y archivos requeridos. Todos fueron de solo lectura; ninguno modificó archivos, ejecutó pruebas, contactó producción o llamó al proveedor.
+- La comprobación de marcador parent-only no detectó su presencia en los informes. `fork_turns: none` no demuestra aislamiento de archivos de instrucciones del host, como advierte la guía EGM.
+
+## Resultados
+
+### Codebase Details
+
+**Lecturas:** `agents/codebase_details.md`, `resources/document_standards/re-implementation-standard.md`, diff completo y archivos AI/runtime y de evidencia relevantes.
+
+**Resultado:** 0 Blockers, 0 Majors, 0 Nits. Confirmó separación de status Gateway/proveedor, evidencia de despacho antes de `fetch`, `Retry-After`, estados del ledger, clave idempotente hasheada, lease/cooldown compartido y diagnósticos redactados.
+
+### Implementation Readiness
+
+**Lecturas:** `agents/implementation_readiness.md`, `resources/document_standards/implementation-readiness-standard.md`, especificación, runbook, migración, implementación y pruebas.
+
+**Resultado:** 0 Blockers, 0 Majors, 0 Nits. Confirmó que los límites de reintento, la incertidumbre de despacho y el procedimiento condicional del ledger están documentados y probados.
+
+**Condición para release:** antes de publicar, debe verificarse que la imagen API anterior tolera el esquema SQLite aditivo v12. Esa pareja de revisiones aún no se ha probado; la puerta está registrada en `recovery-plan.md`.
+
+### Zoom Out
+
+**Lecturas:** `agents/zoom_out.md`, `resources/document_standards/zoom-out-standard.md`, `docs/SYSTEM_DESIGN.md`, diff, especificación y runbook.
+
+**Resultado:** 0 Blockers, 0 Majors, 0 Nits. Consideró justificado el control de despacho/cooldown compartido: los leases actuales de la cola gestionan propiedad de jobs, no límites globales de llamadas al Gateway.
+
+## Dictamen
+
+El review satisface el control Goldfish para el HEAD auditado: cero Blockers y cero Majors. R1 del review se limita al commit indicado; un runbook de release conserva la condición de compatibilidad API previa/v12. El PR no fue fusionado ni desplegado.
