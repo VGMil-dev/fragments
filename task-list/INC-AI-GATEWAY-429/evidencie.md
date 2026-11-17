@@ -91,3 +91,12 @@ Salidas frescas del HEAD local antes de publicar el PR:
 - CI #77 (`44018076742`), job `verify` `133820728183`, terminó `success` después de ese Goldfish, sobre `2af4d40` exacto.
 - Se corrigió la discrepancia dejando la casilla `[ ]` hasta que CI y Goldfish cubran el HEAD posterior que contiene el registro R8. R8 es una revisión histórica del estado entonces observado; su hallazgo no se presenta como defecto funcional persistente.
 - El árbol funcional permanece sin cambios desde `6c9a941`; el 429 SDK desnudo sigue siendo rate limit ambiguo, sin retry ni liberación automática. La fila productiva sigue intacta. El próximo HEAD requiere su propio CI/Goldfish; sin merge/deploy/llamada IA.
+
+## Verificación R9 — rama publicada
+
+- HEAD de implementación y documentación `0715c3ec1d3bbca75036786fbd3208617ffc4f80`, base exacta `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; merge-base coincide, árbol limpio, PR #43 abierto y mergeable.
+- CI `Fragments CI` #78 (`44018520968`), job requerido `verify` `133822150700`, terminó `success` sobre ese SHA.
+- Goldfish R9 sobre el mismo SHA: Codebase Details 0 Blocker/0 Major/1 Nit; Implementation Readiness 0/0/0; Zoom Out 0 Blocker/0 Major/1 Nit. No hay Blockers ni Majors. Los dos Nits piden actualizar esta evidencia y `TASKS.md` con CI #78 y los resultados R9 exactos; se corrige aquí.
+- Verificación local actual del código en ese HEAD: `pnpm exec turbo run test typecheck lint build --force` — 10/10 tareas; contratos 19/19, API 154/154 en 32 archivos, web 97/97 en 22 archivos; typecheck, lint y builds PASS. Avisos no bloqueantes del build web `MODULE_LEVEL_DIRECTIVE` en `lucide-react`. En CI #78 pasaron además los scripts de release/backup sintético y metadata Vite.
+- Se actualizó `goldfish_review_report.md` y la fila de `TASKS.md` para consignar los resultados exactos R9. Este cierre documental genera un commit nuevo y requiere CI en su SHA final; los resultados R9 y CI #78 se atribuyen solamente a `0715c3e`.
+- Producción sigue sin llamar al proveedor ni tocar el ledger. El 429 simple del SDK permanece como rate limit sin reintento, holdback incierto y despachos posteriores bloqueados hasta conciliación. Reconciliación NO-GO sin correlación inequívoca, autorización y procedimiento auditado. Sin merge, tag ni despliegue.

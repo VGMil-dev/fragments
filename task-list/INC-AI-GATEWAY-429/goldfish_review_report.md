@@ -123,6 +123,18 @@ Goldfish R6 revisó el SHA `6c9a9418a814f3d9fd0a996d24d2cd6a5e0ab8ae` contra `or
 
 La revisión reconfirmó que la rama no reintenta un 429 SDK desnudo por falta de evidencia positiva: conserva el holdback incierto. Esa limitación funcional debe comunicarse con claridad; no afirmar que el SDK normal permite retry de 429. La migración anterior API/v12 sigue como puerta pre-release separada. Los cambios documentales que remedian R6 requieren CI y Goldfish sobre su nuevo HEAD.
 
+## Revisión fresca R9 — HEAD publicado del PR #43
+
+Goldfish hizo una revisión técnica independiente sobre `0715c3ec1d3bbca75036786fbd3208617ffc4f80`, con base `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 0 | 0 | 1 |
+| Implementation Readiness | 0 | 0 | 0 |
+| Zoom Out | 0 | 0 | 1 |
+
+Los dos Nits eran de trazabilidad: registrar CI #78 y el dictamen R9 en `evidencie.md` y actualizar la fila de `TASKS.md`. No señalaron defectos de implementación. Se anotaron los resultados exactos; cero Blockers/Majors pendientes. CI `Fragments CI` run `44018520968`, job requerido `verify` `133822150700`, terminó `success` sobre el mismo SHA; todos los pasos, incluidos tests/typecheck/lint/build y pruebas del agente de release, pasaron. La siguiente actualización documental tiene que recibir su propia corrida CI antes de considerar el PR listo.
+
 ## Revisión fresca R7 y dictamen del código actual
 
 Goldfish revisó `fc17c4f364c3a09f27f2484ae8026f50a79cd21e` contra `origin/main` `35546eb5745b6d6edfe7efcb4d0a97b1dbe4d6cf`; el merge-base coincide y el árbol estaba limpio.
