@@ -60,6 +60,7 @@ Cada fase debe terminar en estado buildable y con sus pruebas enfocadas verdes a
 - GIVEN una señal explícita y confiable `providerDispatchPossible=false` para un Gateway 429 WHEN se ejecuta la evaluación THEN permite hasta tres reintentos con backoff/jitter, conserva una sola reserva y la libera solo al confirmarse sin cargo.
 - GIVEN el adaptador normaliza la excepción del SDK WHEN la política recibe ese error THEN conserva la clasificación Gateway y ejecuta los mismos reintentos seguros.
 - GIVEN un marcador `safeNoCharge=true` pero también status/respuesta upstream WHEN se evalúa la certeza financiera THEN evidencia upstream prevalece, no hay retry, y la reserva queda incierta.
+- GIVEN providerCode o un cuerpo de respuesta APICallError sin status WHEN se confirma un rechazo 402/no-cargo o timeout antes del callback THEN la evidencia upstream veta el no-cargo/retry y la reserva queda incierta.
 - GIVEN respuesta del proveedor, ID de generación o timeout después de despacho WHEN el intento falla THEN no reintenta automáticamente y conserva el holdback para revisión.
 - GIVEN Gateway 402 confirmado WHEN el intento falla THEN responde como limitación presupuestaria/pago sin llamarlo rate limit.
 - GIVEN múltiples workers y una misma clave WHEN despachan concurrentemente THEN solo uno obtiene el lease y no se crean cobros duplicados.
@@ -75,7 +76,7 @@ Cada fase debe terminar en estado buildable y con sus pruebas enfocadas verdes a
 - Workers/cooldown: en estado saludable dos reservas distintas adquieren slots y la tercera espera; tras 429 se drenan los slots existentes, todos esperan hasta cooldown, solo un sondeo toma lease, éxito lo limpia, otro 429 renueva la espera y la expiración marca incierta su reserva.
 - Idempotencia: misma identidad concurrente rechaza segunda reserva; `settled` con costo cero rechaza repetición; `released` permite retry de clave; DB contiene solo SHA-256 de identidad canónica.
 - Migración: v11→v12→v13→v14 conserva IDs/datos históricos, `operation_key` existente queda null, `rate_limit_active` inicia en cero y la tabla nueva de slots inicia vacía.
-- Incertidumbre: respuesta upstream, posible despacho, timeout después de `fetch`, o marcador de no-cargo que contradice status upstream nunca producen segundo despacho ni liberación; la fila termina incierta.
+- Incertidumbre: respuesta upstream, posible despacho, timeout después de `fetch`, timeout con respuesta/código de proveedor aun si no corrió el callback, o marcador de no-cargo que contradice status/código upstream nunca producen segundo despacho ni liberación; la fila termina incierta.
 - HTTP/redacción: contrato por Gateway 429, cooldown local, Gateway 402, provider 402/503 y error genérico; `Retry-After` se conserva; solo campos permitidos aparecen en logs; ningún ID técnico se devuelve en el cuerpo.
 
 ## Datos y UI

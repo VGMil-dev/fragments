@@ -44,7 +44,7 @@ function codeFromProviderError(error: Record<string, unknown> | null): string | 
 
 function isProviderCallError(value: unknown): value is Record<string, unknown> {
   const item = record(value);
-  return APICallError.isInstance(value) || (item?.name === "APICallError" && httpStatus(item.statusCode) !== null);
+  return APICallError.isInstance(value) || item?.name === "APICallError";
 }
 
 function providerCallError(value: unknown): Record<string, unknown> | null {
@@ -115,7 +115,7 @@ export function classifyGatewayFailure(error: unknown): GatewayFailureDetails {
 export function hasConfirmedNoChargeGatewayRejection(error: unknown): boolean {
   const root = record(error);
   const details = classifyGatewayFailure(error);
-  if (details.providerDispatchPossible || details.providerHttpStatus !== null) return false;
+  if (details.providerDispatchPossible || details.providerHttpStatus !== null || hasProviderResponseEvidence(error)) return false;
   if (details.gatewayHttpStatus === 429) return root?.providerDispatchPossible === false;
   return details.gatewayHttpStatus === 402 && details.gatewayCode === "quota_for_entity_exceeded";
 }
@@ -128,8 +128,7 @@ export function hasProviderResponseEvidence(error: unknown): boolean {
     if (!item) return false;
     if (isProviderCallError(current) && (httpStatus(item.statusCode) !== null
       || typeof item.responseBody === "string" || item.data !== undefined || item.responseHeaders !== undefined)) return true;
-    if (httpStatus(item.providerHttpStatus) !== null || typeof item.providerCode === "string"
-      || (typeof item.generationId === "string" && safeGenerationIdPattern.test(item.generationId))) return true;
+    if (httpStatus(item.providerHttpStatus) !== null || typeof item.providerCode === "string") return true;
     if (!item.cause || item.cause === current) return false;
     current = item.cause;
   }

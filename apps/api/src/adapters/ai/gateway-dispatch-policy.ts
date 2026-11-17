@@ -107,13 +107,14 @@ export async function executeWithGatewayPolicy<T>(
       return result;
     } catch (error) {
       const details = classifyGatewayFailure(error);
-      const preDispatchTimeout = !dispatched && isTimeoutFailure(error);
+      const timeoutFailure = isTimeoutFailure(error);
       const providerEvidence = hasProviderResponseEvidence(error);
       const explicitPossibleDispatch = (error as { providerDispatchPossible?: unknown } | null)?.providerDispatchPossible === true;
       if (!dispatched && (providerEvidence || explicitPossibleDispatch)) {
         dispatched = true;
         signals.onDispatch();
       }
+      const preDispatchTimeout = !dispatched && timeoutFailure;
       const safeNoCharge = hasConfirmedNoChargeGatewayRejection(error)
         || (!dispatched && !providerEvidence && !explicitPossibleDispatch);
       if (safeNoCharge) signals.onConfirmedNoCharge();

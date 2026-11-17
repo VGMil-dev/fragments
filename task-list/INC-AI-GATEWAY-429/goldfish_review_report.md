@@ -180,3 +180,15 @@ El Major y ambos Nits correspondieron a trazabilidad/completitud: `[x]` se habí
 Tres revisores Goldfish frescos inspeccionaron el HEAD `a0b3b68d94cf0dd567858238a897f69614866afd` en modo solo lectura. Codebase Details encontró 0 Blockers, 0 Majors y 0 Nits; Zoom Out encontró 0/0/0. Implementation Readiness encontró un Major: `recovery-plan.md` exigía verificar la compatibilidad de la imagen API previa con SQLite v14 pero no detallaba procedimiento, resultado esperado ni criterio de parada.
 
 El hallazgo se acepta y se resuelve en `recovery-plan.md`: prueba aislada con imagen fijada por digest, base sintética saneada v14, egress bloqueado, chequeos concretos de salud/esquema/integridad/reserva incierta y cancelación del release ante cualquier diferencia. El R12 agregado no fue limpio. Los siguientes ciclos deben revisar un SHA final sin cambios entre rondas; no se ejecutará el procedimiento de compatibilidad como parte de este PR.
+
+## Revisión fresca R13 — `09ac015`
+
+Revisores frescos completaron Codebase Details, Implementation Readiness y Zoom Out sobre `09ac015356b5fc18fc84f55c0bb14600c6f2bc93`:
+
+| Perspectiva | Blocker | Major | Nit |
+|---|---:|---:|---:|
+| Codebase Details | 2 | 0 | 0 |
+| Implementation Readiness | 0 | 1 | 0 |
+| Zoom Out | 0 | 0 | 1 |
+
+Codebase encontró (1) que un timeout pre-callback con respuesta upstream aún podía seguir el retry pre-despacho y (2) que `providerCode` no impedía confirmar no-cargo 402 y liberar la reserva. Readiness pidió fixture, ruta y prueba de ausencia de mutación reproducibles. Se añadieron tests TDD (fallaron antes, pasan después), evidencia de respuesta upstream ahora veta no-cargo, y la marca `preDispatchTimeout` se calcula luego de procesar evidencia/posible despacho. El ensayo rollback especifica datos sintéticos, `GET /api/mentor/context`, snapshot lógico exacto y revisión por dos operadores. Zoom Out dejó un Nit editorial y no halló Blockers/Majors. R13 no fue limpio. El commit de remediación y las rondas de cierre quedan pendientes.

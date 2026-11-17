@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "../../db/migrate.js";
 import { SqliteAiBudgetLedger } from "./budget-ledger.js";
 import { executeWithGatewayPolicy } from "./gateway-dispatch-policy.js";
-import { classifyGatewayFailure } from "./gateway-error.js";
+import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 
 const databases: DatabaseSync[] = [];
 function makeLedger() {
@@ -203,6 +203,42 @@ describe("bounded shared Gateway dispatch policy", () => {
     }).catch((error: unknown) => error);
 
     expect(failure).toMatchObject({ name: "GatewayRateLimitError", safeNoCharge: false });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
+  });
+
+  it("does not retry a timeout when provider response evidence contradicts pre-dispatch", async () => {
+    const ledger = makeLedger();
+    const response = Object.assign(new Error("private response"), { name: "APICallError", responseBody: "upstream response" });
+    const timeout = Object.assign(new Error("timeout"), { name: "TimeoutError", cause: response });
+    const generate = vi.fn(async () => { throw timeout; });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000, operationKey: "9".repeat(64),
+      isConfirmedNoCharge: (error) => (error as Error & { safeNoCharge?: boolean }).safeNoCharge === true,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, () => generate(), {
+        sleep: async () => { throw new Error("ambiguous timeout must not retry"); },
+      }),
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBe(timeout);
+    expect(generate).toHaveBeenCalledOnce();
+    expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
+  });
+
+  it("does not release a Gateway 402 reservation when provider code evidence exists before the callback", async () => {
+    const ledger = makeLedger();
+    const error = Object.assign(new Error("private response"), {
+      name: "GatewayInternalServerError", type: "quota_for_entity_exceeded", statusCode: 402,
+      providerDispatchPossible: false, providerCode: "provider_response_seen",
+    });
+    const generate = vi.fn(async () => { throw error; });
+    const failure = await ledger.run({
+      requestKind: "mentor", inputTokens: 1_000, outputTokens: 1_000, operationKey: "8".repeat(64),
+      isConfirmedNoCharge: hasConfirmedNoChargeGatewayRejection,
+      invoke: (signals) => executeWithGatewayPolicy(ledger, signals, () => generate()),
+    }).catch((value: unknown) => value);
+
+    expect(failure).toBe(error);
     expect(generate).toHaveBeenCalledOnce();
     expect(ledger.summary()).toMatchObject({ blocked: true, reservedMicroUsd: 1, settledMicroUsd: 0 });
   });

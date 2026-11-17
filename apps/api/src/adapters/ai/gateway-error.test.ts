@@ -149,6 +149,14 @@ describe("safe AI Gateway error classification", () => {
     expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(true);
   });
 
+  it("rejects no-charge confirmation when a provider code is present without an HTTP status", () => {
+    const error = gatewayError({
+      name: "GatewayInternalServerError", type: "quota_for_entity_exceeded", statusCode: 402,
+      providerDispatchPossible: false, providerCode: "provider_response_seen",
+    });
+    expect(hasConfirmedNoChargeGatewayRejection(error)).toBe(false);
+  });
+
   it("parses an HTTP-date Retry-After and ignores malformed values", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
