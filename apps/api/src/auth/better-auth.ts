@@ -3,6 +3,7 @@ import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins";
 import { createResendPasswordResetEmailSender, type PasswordResetEmailSender } from "./resend-password-reset.js";
+import { createSafeBetterAuthLogger } from "./auth-diagnostics.js";
 import type { DatabaseSync } from "node:sqlite";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -56,6 +57,7 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
   return betterAuth({
     database,
     secret: options.secret,
+    logger: createSafeBetterAuthLogger(),
     baseURL,
     trustedOrigins,
     advanced: {
