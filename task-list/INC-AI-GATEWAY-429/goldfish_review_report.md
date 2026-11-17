@@ -202,3 +202,9 @@ Codebase 0/0/0, Readiness 0/0/1, Zoom Out 0/0/0 (Blocker/Major/Nit) sobre el mis
 Codebase encontró un Blocker: el fallback pre-callback podía tratar un Gateway 429 sin señal explícita de no despacho como no facturable, habilitando retries y liberación. Readiness reportó dos Nits (serialización snapshot y trazabilidad rezagada); Zoom Out no encontró hallazgos.
 
 La remediación del siguiente cambio exige `providerDispatchPossible=false` para no-cargo/retry 429, marca el 429 ambiguo como posible despacho y agrega una regresión que falla antes del arreglo y pasa después. El snapshot se especifica con proyecciones/columnas, orden, `NULL`, UTF-8, LF y filas sintéticas deterministas; se corrige la trazabilidad. R15 no fue limpia; el commit de corrección requerirá CI y dos nuevas rondas Goldfish limpias sobre el mismo HEAD.
+
+## Revisión fresca R16 — `42ee4c6`
+
+Codebase 0/0/1, Readiness 0/0/2, Zoom Out 0/0/0 (Blocker/Major/Nit) sobre `42ee4c6f4f4974796e82fecc4ab6271006d053d9`; CI #85 (`44025280574`) terminó `success` en el mismo SHA. R16 fue limpia, con 0 Blockers y 0 Majors.
+
+Nits aceptados y corregidos después: la implementación activa cooldown compartido ante todo Gateway 429, incluido el ambiguo, mientras la spec solo mencionaba no-cargo confirmado; y el runbook necesitaba gramática exacta del snapshot para secciones sin filas. También se pidió actualizar la trazabilidad desde R15. El siguiente commit aclara estas reglas; sus resultados R16 no se atribuyen al SHA posterior.
