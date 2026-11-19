@@ -33,6 +33,8 @@ import {
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
   ClassJoinCodeSchema,
+  ClassroomMutationAckSchema,
+  ClassEnrollmentTransitionSchema,
   ClassroomCreateRequestSchema,
   ClassroomUpdateRequestSchema,
   SkillCreateRequestSchema,
@@ -82,6 +84,13 @@ describe("shared API contracts", () => {
     const publicCode = { code: "A".repeat(43), expiresAt: null, createdAt: new Date().toISOString() };
     expect(ClassJoinCodeSchema.safeParse(publicCode).success).toBe(true);
     expect(ClassJoinCodeSchema.safeParse({ ...publicCode, codeHash: "secret" }).success).toBe(false);
+  });
+
+  it("validates classroom mutation acknowledgments and enrollment transitions", () => {
+    expect(ClassroomMutationAckSchema.safeParse({ ok: true }).success).toBe(true);
+    expect(ClassroomMutationAckSchema.safeParse({ ok: true, codeHash: "private" }).success).toBe(false);
+    expect(ClassEnrollmentTransitionSchema.safeParse({ status: "active" }).success).toBe(true);
+    expect(ClassEnrollmentTransitionSchema.safeParse({ status: "pending" }).success).toBe(false);
   });
 
   it("bounds and trims skill catalog names", () => {

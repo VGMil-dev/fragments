@@ -316,6 +316,8 @@ export const SkillCreateRequestSchema = z.object({ name: classroomText(100), des
 export const SkillUpdateRequestSchema = SkillCreateRequestSchema.partial().strict().refine((input) => Object.keys(input).length > 0, "Indica al menos un campo para actualizar.");
 export const ClassroomSkillsResponseSchema = z.array(SkillCatalogEntrySchema.extend({ enabled: z.boolean() })).max(500);
 export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifier, skillId: identifier, enabled: z.boolean(), updatedAt: z.iso.datetime() }).strict();
+export const ClassroomMutationAckSchema = z.object({ ok: z.literal(true) }).strict();
+export const ClassEnrollmentTransitionSchema = z.object({ status: z.enum(["active", "rejected", "removed"]) }).strict();
 // Future F18 mission DTOs: required skills are snapshots; optional skills stay a separate authorized set.
 export const AssignmentSkillSnapshotSchema = z.object({ skillId: identifier, name: classroomText(100), description: z.string().trim().max(1000).nullable() }).strict();
 export const AssignmentSchema = z.object({
@@ -492,6 +494,7 @@ export type ClassEnrollment = z.infer<typeof ClassEnrollmentSchema>;
 export type StudentClassroomRequest = z.infer<typeof StudentClassroomRequestSchema>;
 export type SkillCatalogEntry = z.infer<typeof SkillCatalogEntrySchema>;
 export type ClassroomSkills = z.infer<typeof ClassroomSkillsResponseSchema>;
+export type ClassEnrollmentTransition = z.infer<typeof ClassEnrollmentTransitionSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
 export type AssignmentVersion = z.infer<typeof AssignmentVersionSchema>;
 export type AssignmentSkillSnapshot = z.infer<typeof AssignmentSkillSnapshotSchema>;

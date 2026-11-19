@@ -1,4 +1,5 @@
 import {
+  ClassEnrollmentTransitionSchema,
   ClassroomCreateRequestSchema,
   ClassroomPageSchema,
   ClassroomSchema,
@@ -8,6 +9,7 @@ import {
   ClassJoinCodeSchema,
   ClassroomSkillsResponseSchema,
   ClassroomSkillAvailabilitySchema,
+  ClassroomMutationAckSchema,
   SkillCatalogResponseSchema,
   SkillCatalogEntrySchema,
   StudentClassroomRequestsSchema,
@@ -15,11 +17,8 @@ import {
   TeacherStudentsPageSchema,
 } from "@fragments/contracts";
 import { createApiClient } from "./api-client.js";
-import { z } from "zod";
 
 const api = createApiClient();
-const AckSchema = z.object({ ok: z.literal(true) }).strict();
-const TransitionSchema = z.object({ status: z.enum(["active", "rejected", "removed"]) }).strict();
 
 export const classroomApi = {
   list(offset = 0) { return api.request(`/api/teacher/classrooms?offset=${offset}&limit=50`, ClassroomPageSchema); },
@@ -28,10 +27,10 @@ export const classroomApi = {
   update(id: string, input: unknown) { const parsed = ClassroomUpdateRequestSchema.safeParse(input); return parsed.success ? api.request(`/api/teacher/classrooms/${id}`, ClassroomSchema, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) }) : Promise.resolve({ ok: false as const, error: { code: "INVALID_INPUT", message: "Revisa los datos del aula." } }); },
   enrollments(id: string) { return api.request(`/api/teacher/classrooms/${id}/enrollments`, ClassEnrollmentsResponseSchema); },
   createCode(id: string) { return api.request(`/api/teacher/classrooms/${id}/join-code`, ClassJoinCodeSchema, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); },
-  revokeCode(id: string) { return api.request(`/api/teacher/classrooms/${id}/join-code/revoke`, AckSchema, { method: "POST" }); },
-  approve(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/approve`, TransitionSchema, { method: "POST" }); },
-  reject(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/reject`, TransitionSchema, { method: "POST" }); },
-  remove(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/remove`, TransitionSchema, { method: "POST" }); },
+  revokeCode(id: string) { return api.request(`/api/teacher/classrooms/${id}/join-code/revoke`, ClassroomMutationAckSchema, { method: "POST" }); },
+  approve(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/approve`, ClassEnrollmentTransitionSchema, { method: "POST" }); },
+  reject(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/reject`, ClassEnrollmentTransitionSchema, { method: "POST" }); },
+  remove(classroomId: string, enrollmentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/${enrollmentId}/remove`, ClassEnrollmentTransitionSchema, { method: "POST" }); },
   directAssign(classroomId: string, studentId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/enrollments/direct`, ClassEnrollmentSchema, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ studentId }) }); },
   listSkills() { return api.request("/api/teacher/skills", SkillCatalogResponseSchema); },
   createSkill(input: unknown) { return api.request("/api/teacher/skills", SkillCatalogEntrySchema, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }); },
