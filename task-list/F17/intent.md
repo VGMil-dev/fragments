@@ -7,7 +7,7 @@ El espacio autenticado actual entra directamente a herramientas aisladas. No hay
 Implementar un espacio estudiantil responsive y accesible sobre OAuth GitHub y servicios/persistencia existentes: Mi espacio, Mis aulas, Mis proyectos, Mis entregas, Galería, Mentor, Review y Trainer. Mentor debe permitir borradores recuperables y navegar seis vistas independientes. Las funciones académicas futuras deben quedar preparadas mediante contratos de lectura, sin crear el backend F18 ni mostrar datos ficticios.
 
 ## No objetivos
-- No cambiar silenciosamente la política de publicación de Galería. Mantener el comportamiento del backend existente mientras la discrepancia entre F15 y F17 se documenta y queda pendiente de decisión contractual.
+- Mantener la política automática existente de F15, aprobada expresamente para F17 con aviso previo claro. Documentar el disparador, contenido, audiencia y controles reales; sin consentimiento ficticio ni cambio de API.
 - No desplegar carga de imágenes hasta demostrar persistencia, permisos, compatibilidad read-only, recuperación, limpieza, cuotas y rollback F14. Si no se demuestra, limitar etapa Portada a prompt copiable y portada determinista.
 - No implementar aulas, códigos, matrículas, rúbricas, contexto docente ni servicios de F18.
 - No implementar F19 (crear repositorios desde Mentor), F20 (likes/vistas), generación pagada de imágenes ni backend académico duplicado.

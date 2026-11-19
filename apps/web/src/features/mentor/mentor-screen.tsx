@@ -456,6 +456,7 @@ export function MentorScreen({
             {evaluation?.status === "success" ? "Reevaluar" : "Evaluar propuesta"}
           </button>
         </div>
+        <p className="mentor-screen__hint" role="note">Al guardar una evaluación elegible, esta versión se publica automáticamente en Galería. El estudiante no puede retirar una versión ya publicada; un docente puede hacerlo con registro de auditoría.</p>
         {!proposal ? <p className="mentor-screen__hint">Guarda tu propuesta para poder evaluarla.</p> : null}
         {proposal && !evaluationReady ? <p className="mentor-screen__hint">Completa título, problema, solución, descripción, propósito, al menos un objetivo y alcance antes de evaluar.</p> : null}
         {evaluation ? (

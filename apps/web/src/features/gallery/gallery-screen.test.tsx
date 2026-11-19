@@ -39,6 +39,10 @@ describe("GalleryScreen", () => {
     expect(html).toContain('class="gallery-entry__status"');
     expect(html).toContain("Evaluada");
     expect(html).toContain('class="gallery-entry__action"');
+    expect(html).toContain("se publica automáticamente");
+    expect(html).toContain("etiquetas y temas");
+    expect(html).toContain("no tiene opt-out");
+    expect(html).toContain("registro de auditoría");
     expect(html).not.toContain("nota");
   });
 

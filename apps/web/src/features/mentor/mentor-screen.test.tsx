@@ -260,6 +260,8 @@ describe("MentorScreen", () => {
     await openEvaluationStage();
     const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     expect(evaluate).toBeDefined();
+    expect(mountedContainer.textContent).toContain("se publica automáticamente en Galería");
+    expect(mountedContainer.textContent).toContain("no puede retirar una versión ya publicada");
     await act(async () => evaluate?.click());
     expect(actions.onEvaluate).toHaveBeenCalledWith(proposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
