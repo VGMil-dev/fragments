@@ -29,11 +29,11 @@
 - Límite visual del follow-up: `page.screenshot()` falló tres veces en Ego con timeout de `Page.captureScreenshot`, aun después de confirmar `document.readyState=complete`; no se guardaron capturas. La inspección se basó en snapshots y geometría DOM/CSS en vivo, no en comparación de píxeles. El OAuth real no está configurado y la fixture no lo prueba. Las siete maquetas canónicas tampoco estaban en el ZIP. TaskSpace Ego cerrado y API/Vite temporales detenidos; SQLite/cookie/scripts de fixture eliminados.
 - Goldfish: dictamen estático independiente encontró P2 en la lectura de historial de borrador parcial; fix y prueba de regresión añadidos. Confirmó CLEAN para ese hallazgo. Modelo GPT-6 Luna no disponible en selector; modelo heredado, sin pruebas ejecutadas por Goldfish.
 - Kit aportado tiene `original_archive_included=false` e `image_assets_included=false`; no hay referencias canónicas de las siete maquetas. No afirmar fidelidad visual definitiva.
-- No hay commit, push, PR, CI remoto, merge, tag, release ni verificación productiva todavía. No hay persistencia de portadas validada; carga deshabilitada. F18 académico pendiente.
+- Commit local de implementación: `594720a031d329964475ec625b5bd97bfd9566bf`. No hay push, PR, CI remoto, merge, tag, release ni verificación productiva. No hay persistencia de portadas validada; carga deshabilitada. F18 académico pendiente.
 - Ningún dato de `.env`, credencial, cookie, sesión, base real o secreto debe añadirse a este archivo.
 
 ## Commits
-- Sin commits todavía.
+- `594720a031d329964475ec625b5bd97bfd9566bf` — `feat(f17): implementa el espacio estudiantil y Mentor por etapas`.
 
 ## Preflight de persistencia de portadas — lectura estática
 - `docker-compose.prod.yml` configura `DATABASE_URL=file:/app/data/fragments.sqlite` y el volumen nombrado `fragments-data:/app/data`; el Dockerfile runtime crea `/app/data` y cambia propiedad a `node:node`. Esta evidencia solo confirma la configuración declarada en el repositorio.
@@ -45,5 +45,5 @@
 - `git diff --check` — PASS (sin salida).
 - Dictamen Goldfish estático recibido: encontró que el historial de borradores propios parseaba la propuesta como completa (P2). Corregido `getProposalHistoryByUser()` para validar con el lector de borradores; prueba nueva cubre historial parcial y aislamiento por propietario. Goldfish confirmó CLEAN para ese fix; no ejecutó pruebas y usó modelo heredado, no GPT-6 Luna.
 - Revalidación tras el fix: `pnpm exec turbo run test typecheck lint build --force` — PASS, 10/10 tareas; contracts 22/22, web 100/100 (22 archivos), API 159/159 (31 archivos), typecheck/lint/build PASS. Solo advertencias `MODULE_LEVEL_DIRECTIVE` de `lucide-react`. `git diff --check` — PASS.
-- Estado antes de commit: implementación verificada en rama local, aún sin commit. Aceptación y tarea permanecen abiertas: Ego no logró generar capturas, no están las maquetas y falta resolver/aceptar explícitamente el conflicto de Galería. No se altera la política actual, no se habilita carga de portadas y no se implementa F18.
+- Estado tras el commit `594720a031d329964475ec625b5bd97bfd9566bf`: implementación verificada en rama local, sin push/PR. Aceptación y tarea permanecen abiertas: Ego no logró generar capturas, no están las maquetas y falta resolver/aceptar explícitamente el conflicto de Galería. No se altera la política actual, no se habilita carga de portadas y no se implementa F18.
 - Control de base repetido: `git ls-remote origin refs/heads/main`, `origin/main` y HEAD coincidieron en `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`. `git fetch origin --prune` devolvió código distinto de cero al intentar actualizar commit-graph (`failed to rename temporary commit-graph file`); no cambió refs. Sin cambios de `main` por integrar.
