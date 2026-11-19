@@ -22,4 +22,4 @@
 
 .identity-card h1, .identity-card p { margin: 0; }
 .identity-card__privacy { color: #ADBBD3; font-size: 0.9rem; }
-.identity-card a { color: #1558C9; }
+.identity-card a { color: var(--f16-info, #65B8FF); }
