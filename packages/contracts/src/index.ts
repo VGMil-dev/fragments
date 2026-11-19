@@ -276,6 +276,70 @@ export const TeacherStudentsPageSchema = z.object({
   items: z.array(TeacherStudentEntrySchema).max(50),
   nextOffset: z.number().int().min(0).nullable(),
 }).strict();
+const classroomText = (max: number) => z.string().trim().min(1).max(max);
+export const ClassroomStatusSchema = z.enum(["active", "archived"]);
+export const ClassroomSchema = z.object({
+  id: identifier, title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80),
+  period: z.string().trim().max(80).nullable(), context: z.string().trim().max(2000).nullable(),
+  status: ClassroomStatusSchema, createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+}).strict();
+export const ClassroomSummarySchema = ClassroomSchema.omit({ context: true });
+export const ClassroomPageSchema = z.object({ items: z.array(ClassroomSummarySchema).max(50), nextOffset: z.number().int().min(0).nullable() }).strict();
+export const ClassroomCreateRequestSchema = z.object({
+  title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80),
+  period: z.string().trim().max(80).nullable().optional(), context: z.string().trim().max(2000).nullable().optional(),
+}).strict();
+export const ClassroomUpdateRequestSchema = ClassroomCreateRequestSchema.partial().extend({ status: ClassroomStatusSchema.optional() }).strict()
+  .refine((input) => Object.keys(input).length > 0, "Indica al menos un campo para actualizar.");
+export const ClassroomJoinCodeRequestSchema = z.object({ expiresInDays: z.number().int().min(1).max(90).nullable().optional() }).strict();
+export const ClassJoinCodeSchema = z.object({ code: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/), expiresAt: z.iso.datetime().nullable(), createdAt: z.iso.datetime() }).strict();
+export const ClassEnrollmentStatusSchema = z.enum(["pending", "active", "rejected", "removed"]);
+export const ClassEnrollmentSourceSchema = z.enum(["join_code", "teacher_assignment"]);
+export const ClassEnrollmentSchema = z.object({
+  id: identifier, studentId: identifier, githubLogin: githubLogin.nullable(), status: ClassEnrollmentStatusSchema,
+  source: ClassEnrollmentSourceSchema, requestedAt: z.iso.datetime(), decidedAt: z.iso.datetime().nullable(),
+}).strict();
+export const ClassEnrollmentsResponseSchema = z.array(ClassEnrollmentSchema).max(500);
+export const StudentClassroomRequestSchema = z.object({
+  id: identifier, status: ClassEnrollmentStatusSchema, source: ClassEnrollmentSourceSchema,
+  requestedAt: z.iso.datetime(), decidedAt: z.iso.datetime().nullable(),
+}).strict();
+export const StudentClassroomRequestsSchema = z.array(StudentClassroomRequestSchema).max(200);
+export const StudentClassroomsSchema = z.array(ClassroomSummarySchema).max(200);
+export const DirectEnrollmentRequestSchema = z.object({ studentId: identifier }).strict();
+export const JoinClassroomRequestSchema = z.object({ code: z.string().trim().regex(/^[A-Za-z0-9_-]{32,64}$/) }).strict();
+export const SkillCatalogEntrySchema = z.object({
+  id: identifier, name: classroomText(100), description: z.string().trim().max(1000).nullable(), archived: z.boolean(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+}).strict();
+export const SkillCatalogResponseSchema = z.array(SkillCatalogEntrySchema).max(500);
+export const SkillCreateRequestSchema = z.object({ name: classroomText(100), description: z.string().trim().max(1000).nullable().optional() }).strict();
+export const SkillUpdateRequestSchema = SkillCreateRequestSchema.partial().strict().refine((input) => Object.keys(input).length > 0, "Indica al menos un campo para actualizar.");
+export const ClassroomSkillsResponseSchema = z.array(SkillCatalogEntrySchema.extend({ enabled: z.boolean() })).max(500);
+export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifier, skillId: identifier, enabled: z.boolean(), updatedAt: z.iso.datetime() }).strict();
+// Future F18 mission DTOs: required skills are snapshots; optional skills stay a separate authorized set.
+export const AssignmentSkillSnapshotSchema = z.object({ skillId: identifier, name: classroomText(100), description: z.string().trim().max(1000).nullable() }).strict();
+export const AssignmentSchema = z.object({
+  id: identifier, classroomId: identifier, title: classroomText(160), status: z.enum(["draft", "published"]),
+  currentVersionId: identifier.nullable(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+}).strict();
+export const AssignmentVersionSchema = z.object({
+  id: identifier, assignmentId: identifier, version: z.number().int().positive(), title: classroomText(160),
+  instructions: classroomText(5000), requiredSkills: z.array(AssignmentSkillSnapshotSchema).max(100),
+  optionalSkills: z.array(AssignmentSkillSnapshotSchema).max(100), publishedAt: z.iso.datetime().nullable(),
+}).strict().superRefine((version, context) => {
+  const ids = new Set<string>();
+  for (const [kind, entries] of [["requiredSkills", version.requiredSkills], ["optionalSkills", version.optionalSkills]] as const) {
+    for (const entry of entries) {
+      if (ids.has(entry.skillId)) context.addIssue({ code: "custom", path: [kind], message: "Una habilidad solo puede tener una clasificación por versión." });
+      ids.add(entry.skillId);
+    }
+  }
+});
+export const StudentOptionalSkillSelectionSchema = z.object({
+  proposalId: identifier, assignmentVersionId: identifier, skillIds: z.array(identifier).max(100),
+}).strict().superRefine((selection, context) => {
+  if (new Set(selection.skillIds).size !== selection.skillIds.length) context.addIssue({ code: "custom", path: ["skillIds"], message: "No repitas habilidades optativas." });
+});
 export const TeacherProjectSchema = z.object({
   id: identifier,
   title: nonEmptyText.max(160),
@@ -418,6 +482,20 @@ export type AcademicGalleryPage = z.infer<typeof AcademicGalleryPageSchema>;
 export type AcademicGalleryDetail = z.infer<typeof AcademicGalleryDetailSchema>;
 export type TeacherStudentEntry = z.infer<typeof TeacherStudentEntrySchema>;
 export type TeacherStudentsPage = z.infer<typeof TeacherStudentsPageSchema>;
+export type Classroom = z.infer<typeof ClassroomSchema>;
+export type ClassroomSummary = z.infer<typeof ClassroomSummarySchema>;
+export type ClassroomPage = z.infer<typeof ClassroomPageSchema>;
+export type ClassroomCreateRequest = z.infer<typeof ClassroomCreateRequestSchema>;
+export type ClassroomUpdateRequest = z.infer<typeof ClassroomUpdateRequestSchema>;
+export type ClassJoinCode = z.infer<typeof ClassJoinCodeSchema>;
+export type ClassEnrollment = z.infer<typeof ClassEnrollmentSchema>;
+export type StudentClassroomRequest = z.infer<typeof StudentClassroomRequestSchema>;
+export type SkillCatalogEntry = z.infer<typeof SkillCatalogEntrySchema>;
+export type ClassroomSkills = z.infer<typeof ClassroomSkillsResponseSchema>;
+export type Assignment = z.infer<typeof AssignmentSchema>;
+export type AssignmentVersion = z.infer<typeof AssignmentVersionSchema>;
+export type AssignmentSkillSnapshot = z.infer<typeof AssignmentSkillSnapshotSchema>;
+export type StudentOptionalSkillSelection = z.infer<typeof StudentOptionalSkillSelectionSchema>;
 export type TeacherProject = z.infer<typeof TeacherProjectSchema>;
 export type TeacherProjectsResponse = z.infer<typeof TeacherProjectsResponseSchema>;
 export type CreateProposalRequest = z.infer<typeof CreateProposalRequestSchema>;

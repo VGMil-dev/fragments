@@ -32,6 +32,12 @@ import {
   RepositorySnapshotSchema,
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
+  ClassJoinCodeSchema,
+  ClassroomCreateRequestSchema,
+  ClassroomUpdateRequestSchema,
+  SkillCreateRequestSchema,
+  AssignmentVersionSchema,
+  StudentOptionalSkillSelectionSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
@@ -65,6 +71,32 @@ const analysis = {
 };
 
 describe("shared API contracts", () => {
+  it("validates classroom input without accepting client-supplied ownership", () => {
+    const valid = { title: "Grupo A", subject: "Programación", groupLabel: "10A" };
+    expect(ClassroomCreateRequestSchema.safeParse(valid).success).toBe(true);
+    expect(ClassroomCreateRequestSchema.safeParse({ ...valid, teacherId: "teacher-1" }).success).toBe(false);
+    expect(ClassroomUpdateRequestSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("exposes only the join code and safe expiry metadata", () => {
+    const publicCode = { code: "A".repeat(43), expiresAt: null, createdAt: new Date().toISOString() };
+    expect(ClassJoinCodeSchema.safeParse(publicCode).success).toBe(true);
+    expect(ClassJoinCodeSchema.safeParse({ ...publicCode, codeHash: "secret" }).success).toBe(false);
+  });
+
+  it("bounds and trims skill catalog names", () => {
+    expect(SkillCreateRequestSchema.safeParse({ name: "  Custom Hooks  " }).success).toBe(true);
+    expect(SkillCreateRequestSchema.safeParse({ name: "   " }).success).toBe(false);
+  });
+
+  it("keeps future required and optional mission skills distinct and forbids repeated choices", () => {
+    const skill = { skillId: "skill-1", name: "Accesibilidad", description: null };
+    const version = { id: "version-1", assignmentId: "assignment-1", version: 1, title: "Actividad", instructions: "Construye una pantalla.", requiredSkills: [skill], optionalSkills: [{ ...skill, skillId: "skill-2" }], publishedAt: null };
+    expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
+    expect(AssignmentVersionSchema.safeParse({ ...version, optionalSkills: [skill] }).success).toBe(false);
+    expect(StudentOptionalSkillSelectionSchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "version-1", skillIds: ["skill-2"] }).success).toBe(true);
+    expect(StudentOptionalSkillSelectionSchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "version-1", skillIds: ["skill-2", "skill-2"] }).success).toBe(false);
+  });
   it("validates teacher login and session responses without exposing session tokens", () => {
     expect(TeacherLoginRequestSchema.safeParse({ email: "teacher@example.test", password: "fake-password" }).success).toBe(true);
     expect(TeacherLoginRequestSchema.safeParse({ email: "invalid", password: "x" }).success).toBe(false);

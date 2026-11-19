@@ -6,6 +6,24 @@ const databases: DatabaseSync[] = [];
 afterEach(() => { for (const database of databases.splice(0)) database.close(); });
 
 describe("Mentor control migration", () => {
+  it("creates F18 tables idempotently and enforces same-teacher skill availability", () => {
+    const database = new DatabaseSync(":memory:"); databases.push(database);
+    database.exec(`PRAGMA foreign_keys=ON;
+      CREATE TABLE user (id TEXT PRIMARY KEY);
+      CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL REFERENCES user(id));
+      INSERT INTO user(id) VALUES ('teacher-a'),('teacher-b');`);
+    migrate(database);
+    migrate(database);
+    database.prepare(`INSERT INTO classrooms(id,teacher_id,title,subject,group_label,identity_key,status,created_at,updated_at)
+      VALUES('class-a','teacher-a','Aula','Programación','A','aula','active','2026-11-19T12:00:00.000Z','2026-11-19T12:00:00.000Z')`).run();
+    database.prepare(`INSERT INTO teacher_skills(id,teacher_id,name,normalized_name,archived,created_at,updated_at)
+      VALUES('skill-a','teacher-a','Componentes','componentes',0,'2026-11-19T12:00:00.000Z','2026-11-19T12:00:00.000Z')`).run();
+    expect(() => database.prepare(`INSERT INTO classroom_skill_availability(classroom_id,skill_id,teacher_id,enabled,updated_at)
+      VALUES('class-a','skill-a','teacher-b',1,'2026-11-19T12:00:00.000Z')`).run()).toThrow();
+    expect(database.prepare("PRAGMA integrity_check").get()?.integrity_check).toBe("ok");
+    expect(database.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()?.version).toBe(14);
+  });
+
   it("adds operation identity to a schema v11 ledger without changing a historical uncertain reservation", () => {
     const database = new DatabaseSync(":memory:"); databases.push(database);
     database.exec(`
@@ -39,7 +57,7 @@ describe("Mentor control migration", () => {
 
     expect(database.prepare("SELECT id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at, operation_key FROM ai_budget_reservations").get())
       .toEqual({ id: "mentor-870", request_kind: "mentor", reserved_microusd: 870, actual_microusd: null, status: "uncertain", created_at: 100, updated_at: 200, operation_key: null });
-    expect(database.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()?.version).toBe(13);
+    expect(database.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()?.version).toBe(14);
     expect(database.prepare("PRAGMA integrity_check").get()?.integrity_check).toBe("ok");
     expect(database.prepare("SELECT id, status, defense_json, ai_operation_key FROM inspector_challenges").get()).toEqual({
       id: "legacy-challenge", status: "completed", defense_json: "{}", ai_operation_key: null,
@@ -87,7 +105,7 @@ describe("Mentor control migration", () => {
     expect(database.prepare("SELECT attempt, started_at, finished_at, duration_ms, stage, error_code, retry_class, final_status FROM review_attempts WHERE job_id='review-failed-old'").get())
       .toEqual({ attempt: 1, started_at: null, finished_at: 200, duration_ms: null, stage: "unknown", error_code: "LEGACY_UNCLASSIFIED", retry_class: "manual", final_status: "failed" });
     expect(database.prepare("SELECT id, status, defense_json, ai_operation_key FROM inspector_challenges WHERE id='inspector-old'").get()).toEqual({ id: "inspector-old", status: "completed", defense_json: '{"outcome":"restored"}', ai_operation_key: null });
-    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect(database.prepare("SELECT id, reserved_microusd, status, operation_key FROM ai_budget_reservations").get()).toEqual({
       id: "mentor-historic", reserved_microusd: 870, status: "uncertain", operation_key: null,
     });

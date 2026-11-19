@@ -18,6 +18,7 @@ import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
+import { ClassroomStudio } from "./features/classroom/ClassroomStudio";
 import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
@@ -215,6 +216,7 @@ export function App() {
   if (path === "/student/login") return <><StudentLoginScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/auth/complete") return <><OAuthCompletionScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher/students") return <><TeacherStudentsWorkspace navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/teacher/classrooms" || path.startsWith("/teacher/classrooms/") || path === "/teacher/skills") return <><ClassroomStudio path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/inspector") {
     return <><div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
@@ -300,6 +302,7 @@ export function App() {
         <a href="/teacher/inspector" onClick={(event) => { event.preventDefault(); navigate("/teacher/inspector"); }}>Área docente</a>
         <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>Control de Mentor</a>
         <a href="/teacher/students" onClick={(event) => { event.preventDefault(); navigate("/teacher/students"); }}>Estudiantes y proyectos</a>
+        <a href="/teacher/classrooms" onClick={(event) => { event.preventDefault(); navigate("/teacher/classrooms"); }}>Classroom Studio</a>
         <span>Hecho para aprender creando <span aria-hidden="true">✳</span></span>
         <BuildVersion />
       </footer>
