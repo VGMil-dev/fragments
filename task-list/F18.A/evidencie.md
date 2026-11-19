@@ -34,4 +34,4 @@
 
 - Notion no se modificó; ver recomendaciones de actualización en el resumen de entrega.
 - Sin merge, tag o despliegue. Commit y PR pendientes.
-- SHA de commit: pendiente.
+- Commit de implementación: `281f04b` (`feat(classroom): implementa base de Classroom Studio`).
