@@ -145,3 +145,4 @@
 - Estado revalidado: PR #51 apunta a `ec7de25e29064482a344ad02a9419ea02bf97fbb`, abierto, `draft=false`, mergeable; no hay reviews ni hilos reportados.
 - Commit documental `ffcc37838d21e525647f4b9ee6be1d8207e7cdde` (`docs(f17): registra verificación CI más reciente`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 125 (`44640553538`) — success para ese commit.
 - PR #51 revalidado abierto, listo para revisión normal, mergeable; sin reseñas ni hilos reportados. La revisión e integración normales siguen pendientes.
+- Commit documental `436f7c2aa77d8b732b8aa6d7817e32c37f101cfe` (`docs(f17): actualiza CI y estado de revisión`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 126 (`44640848391`) — success para ese commit.
