@@ -11,6 +11,8 @@ export interface ProposalDraftFields {
   purpose: string;
   goals: string;
   skills: string;
+  technologies: string;
+  expectedOutcome: string;
   scope: string;
   constraints: string;
 }
@@ -27,11 +29,13 @@ const FIELD_HELP: Record<keyof ProposalDraftFields, string> = {
   purpose: "Explica para qué quieres construirlo.",
   goals: "Incluye al menos un objetivo, uno por línea.",
   skills: "Revisa las habilidades: escribe una por línea.",
+  technologies: "Revisa las tecnologías: escribe una por línea.",
+  expectedOutcome: "El resultado esperado debe tener máximo 3000 caracteres.",
   scope: "Describe qué incluirá esta primera versión.",
   constraints: "Revisa las condiciones: escribe una por línea.",
 };
 
-function parseLines(value: string): string[] {
+function parseLines(value = ""): string[] {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
@@ -44,6 +48,8 @@ export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraf
     purpose: fields.purpose,
     goals: parseLines(fields.goals),
     skills: parseLines(fields.skills),
+    technologies: parseLines(fields.technologies),
+    expectedOutcome: fields.expectedOutcome.trim(),
     tags: [],
     scope: fields.scope,
     constraints: parseLines(fields.constraints),

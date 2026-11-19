@@ -300,6 +300,8 @@ describe("shared API contracts", () => {
 
   it("validates proposal requests and versioned proposal responses", () => {
     expect(CreateProposalRequestSchema.safeParse(proposal).success).toBe(true);
+    expect(CreateProposalRequestSchema.safeParse({ ...proposal, technologies: ["TypeScript", "SQLite"], expectedOutcome: "Prototipo verificable" }).success).toBe(true);
+    expect(CreateProposalRequestSchema.safeParse({ ...proposal, technologies: Array.from({ length: 21 }, () => "TypeScript") }).success).toBe(false);
     expect(CreateProposalRequestSchema.safeParse({ ...proposal, goals: [] }).success).toBe(false);
     expect(UpdateProposalRequestSchema.safeParse({ ...proposal, expectedVersion: 2 }).success).toBe(true);
     expect(UpdateProposalRequestSchema.safeParse({ ...proposal, expectedVersion: 0 }).success).toBe(false);
@@ -312,12 +314,13 @@ describe("shared API contracts", () => {
   });
 
   it("accepts partial Mentor drafts but requires the full F17 proposal before evaluation", () => {
-    const partial = { title: "Mi idea", problem: "" };
+    const partial = { title: "Mi idea", problem: "", technologies: ["TypeScript"], expectedOutcome: "Prototipo verificable" };
     expect(ProposalDraftFieldsSchema.safeParse(partial).success).toBe(true);
     expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial }).success).toBe(true);
     expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now }).success).toBe(true);
     expect(ProposalEvaluationInputSchema.safeParse(proposal).success).toBe(false);
     expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso." }).success).toBe(true);
+    expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso.", technologies: ["TypeScript"], expectedOutcome: "MVP demostrable" }).success).toBe(true);
     expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial, ownerUserId: "spoofed" }).success).toBe(false);
   });
 

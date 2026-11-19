@@ -11,6 +11,8 @@ describe("validateProposalDraft", () => {
       purpose: "",
       goals: "",
       skills: "",
+      technologies: "",
+      expectedOutcome: "",
       scope: "",
       constraints: "",
     });
@@ -31,6 +33,8 @@ describe("validateProposalDraft", () => {
       purpose: "Ayudarme a observar mejor las plantas.",
       goals: "Crear un registro\nConsultar observaciones",
       skills: "HTML\nCSS",
+      technologies: "TypeScript\nSQLite",
+      expectedOutcome: "Un prototipo que registre observaciones.",
       scope: "Una bitácora personal sin cuentas.",
       constraints: "Funciona sin conexión",
     });
@@ -45,6 +49,8 @@ describe("validateProposalDraft", () => {
         purpose: "Ayudarme a observar mejor las plantas.",
         goals: ["Crear un registro", "Consultar observaciones"],
         skills: ["HTML", "CSS"],
+        technologies: ["TypeScript", "SQLite"],
+        expectedOutcome: "Un prototipo que registre observaciones.",
         tags: [],
         scope: "Una bitácora personal sin cuentas.",
         constraints: ["Funciona sin conexión"],

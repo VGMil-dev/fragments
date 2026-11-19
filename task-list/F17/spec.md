@@ -24,7 +24,7 @@
 - Idea: título, problema, solución, descripción y propósito.
 - Contexto: datos reales de una misión F18 versionada y autorizada, read-only; sin misión, estado personal sin contenido docente inventado.
 - Habilidades: requeridas bloqueadas; optativas seleccionables solo desde catálogo real autorizado.
-- Objetivos/alcance: objetivos personales agregables, MVP, tecnologías y resultado esperado, separados de restricciones docentes.
+- Objetivos/alcance: objetivos personales agregables, MVP, tecnologías previstas y resultado esperado, separados de las condiciones propias del proyecto y de restricciones docentes. Tecnologías y resultado esperado son opcionales para compatibilidad con borradores existentes y aparecen en la entrega generada.
 - Evaluación: resumen, validación, botón explícito. Borrador nunca llama al evaluador. La evaluación persistida identifica la revisión exacta; no implica aprobación académica.
 - Portada: disponible solo tras evaluación persistida para la versión actual. Prompt determinista y copiable, fallback Fragments; carga externa deshabilitada hasta superar los controles de infraestructura anteriores.
 

@@ -23,6 +23,8 @@ const proposal = {
     purpose: "Observar el crecimiento de las plantas.",
     goals: ["Guardar una observación"],
     skills: ["HTML"],
+    technologies: ["TypeScript"],
+    expectedOutcome: "Una bitácora que permita consultar observaciones.",
     tags: [],
     scope: "Una bitácora personal.",
     constraints: ["Sin cuentas de usuario"],
@@ -136,6 +138,20 @@ describe("MentorScreen", () => {
     expect(html).toContain("Crear propuesta directamente");
     expect(html).not.toContain("72/100");
     expect(html).not.toContain("scope necesita");
+  });
+
+  it("shows the personal objectives, MVP, technologies, and expected outcome in Stage 4", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />); });
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
+    await act(async () => objectives?.click());
+    expect(mountedContainer.textContent).toContain("Tecnologías que planeas usar");
+    expect(mountedContainer.textContent).toContain("Resultado esperado");
+    expect(mountedContainer.textContent).toContain("Condiciones propias del proyecto");
+    expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "TypeScript")).toBe(true);
+    expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "Una bitácora que permita consultar observaciones.")).toBe(true);
   });
 
   it("lists saved proposals and opens the selected one", () => {

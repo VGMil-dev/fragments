@@ -44,6 +44,8 @@ const EMPTY_DRAFT: ProposalDraftFields = {
   purpose: "",
   goals: "",
   skills: "",
+  technologies: "",
+  expectedOutcome: "",
   scope: "",
   constraints: "",
 };
@@ -59,6 +61,8 @@ function fieldsFromProposal(proposal: ProposalDraftResponse): ProposalDraftField
     purpose: proposal.proposal.purpose ?? "",
     goals: proposal.proposal.goals?.join("\n") ?? "",
     skills: proposal.proposal.skills?.join("\n") ?? "",
+    technologies: proposal.proposal.technologies?.join("\n") ?? "",
+    expectedOutcome: proposal.proposal.expectedOutcome ?? "",
     scope: proposal.proposal.scope ?? "",
     constraints: proposal.proposal.constraints?.join("\n") ?? "",
   };
@@ -92,6 +96,8 @@ function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
     description: fields.description.trim(), purpose: fields.purpose.trim(),
     goals: fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
     skills: fields.skills.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
+    technologies: fields.technologies.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
+    expectedOutcome: fields.expectedOutcome.trim(),
     scope: fields.scope.trim(), constraints: fields.constraints.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   } };
 }
@@ -400,7 +406,17 @@ export function MentorScreen({
         </label> : null}
 
         {activeStage === 3 ? <label className="mentor-field">
-          <span>Condiciones o límites, uno por línea</span>
+          <span>Tecnologías que planeas usar, una por línea</span>
+          <textarea rows={3} value={fields.technologies} disabled={formBusy} onChange={(event) => updateField("technologies", event.target.value)} />
+        </label> : null}
+
+        {activeStage === 3 ? <label className="mentor-field">
+          <span>Resultado esperado</span>
+          <textarea rows={3} value={fields.expectedOutcome} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("expectedOutcome", event.target.value)} />
+        </label> : null}
+
+        {activeStage === 3 ? <label className="mentor-field">
+          <span>Condiciones propias del proyecto, una por línea</span>
           <textarea rows={3} value={fields.constraints} disabled={formBusy} onChange={(event) => updateField("constraints", event.target.value)} aria-invalid={Boolean(fieldErrors.constraints)} aria-describedby={fieldErrors.constraints ? "mentor-constraints-error" : undefined} />
           {fieldErrors.constraints ? <small id="mentor-constraints-error" role="alert">{fieldErrors.constraints}</small> : null}
         </label> : null}
@@ -419,7 +435,7 @@ export function MentorScreen({
       {activeStage === 4 ? <section className="mentor-evaluation" aria-labelledby="mentor-evaluation-title">
         <section className="mentor-review-summary" aria-label="Resumen de tu propuesta">
           <h2>{fields.title.trim() || "Tu idea"}</h2>
-          <dl><dt>Problema</dt><dd>{fields.problem.trim() || "Aún sin completar"}</dd><dt>Solución</dt><dd>{fields.solution.trim() || "Aún sin completar"}</dd><dt>Descripción</dt><dd>{fields.description.trim() || "Aún sin completar"}</dd><dt>Propósito</dt><dd>{fields.purpose.trim() || "Aún sin completar"}</dd><dt>Objetivos</dt><dd>{goals.length ? goals.join(" · ") : "Aún sin completar"}</dd><dt>Alcance</dt><dd>{fields.scope.trim() || "Aún sin completar"}</dd></dl>
+          <dl><dt>Problema</dt><dd>{fields.problem.trim() || "Aún sin completar"}</dd><dt>Solución</dt><dd>{fields.solution.trim() || "Aún sin completar"}</dd><dt>Descripción</dt><dd>{fields.description.trim() || "Aún sin completar"}</dd><dt>Propósito</dt><dd>{fields.purpose.trim() || "Aún sin completar"}</dd><dt>Objetivos</dt><dd>{goals.length ? goals.join(" · ") : "Aún sin completar"}</dd><dt>Alcance</dt><dd>{fields.scope.trim() || "Aún sin completar"}</dd><dt>Tecnologías</dt><dd>{fields.technologies || "Aún sin completar"}</dd><dt>Resultado esperado</dt><dd>{fields.expectedOutcome.trim() || "Aún sin completar"}</dd></dl>
         </section>
         <div className="mentor-evaluation__heading">
           <div>
