@@ -68,4 +68,5 @@
 - Rama propia publicada con `git push -u origin codex/f17-student-experience`; no se publicó a `main`.
 - PR #51 creado en modo draft hacia `main`: https://github.com/VGMil-dev/fragments/pull/51. HEAD revisado al abrirlo: `7437bf5de2d375e9f3843572df4557906513c4da`; base `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`.
 - GitHub Actions `Fragments CI`, run `44582057293`, finalizó `success` para HEAD `7437bf5de2d375e9f3843572df4557906513c4da`. El PR sigue abierto/draft y sin merge.
+- La actualización documental se publicó después como HEAD `5931ba47fb77cf525a4d7f5f42b6b70606f679d9`; GitHub Actions `Fragments CI`, run `44582344201`, también finalizó `success` para ese HEAD.
 - El body del PR declara las limitaciones verificadas: sin capturas ni maquetas, sin OAuth real, sin prueba productiva de almacenamiento de imágenes; Galería conserva publicación automática sin consentimiento y requiere decisión contractual. No se solicita aprobación para desplegar.
