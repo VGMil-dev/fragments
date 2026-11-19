@@ -154,6 +154,26 @@ describe("MentorScreen", () => {
     expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "Una bitácora que permita consultar observaciones.")).toBe(true);
   });
 
+  it("blocks an oversized technology list with field-level guidance", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
+    await act(async () => objectives?.click());
+    const technologyField = Array.from(mountedContainer.querySelectorAll("label")).find((label) => label.textContent?.includes("Tecnologías que planeas usar"))?.querySelector("textarea");
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(technologyField, Array.from({ length: 21 }, (_, index) => `Tecnología ${index}`).join("\n"));
+    await act(async () => technologyField?.dispatchEvent(new Event("input", { bubbles: true })));
+    const idea = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Idea"));
+    await act(async () => idea?.click());
+    await act(async () => mountedContainer?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
+    expect(actions.onSave).not.toHaveBeenCalled();
+    expect(mountedContainer.textContent).toContain("Incluye máximo 20 tecnologías");
+    expect(mountedContainer.textContent).toContain("Revisa el campo de tecnologías");
+    expect(mountedContainer.querySelector('[aria-current="step"]')?.textContent).toContain("Objetivos");
+  });
+
   it("lists saved proposals and opens the selected one", () => {
     const onOpenProposal = vi.fn();
     const html = renderToStaticMarkup(

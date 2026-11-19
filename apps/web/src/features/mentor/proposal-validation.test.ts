@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { validateProposalDraft } from "./proposal-validation";
+import { validateProposalDraft, validateTechnologyList } from "./proposal-validation";
 
 describe("validateProposalDraft", () => {
+  it("validates technology count and per-line length with actionable guidance", () => {
+    expect(validateTechnologyList(Array.from({ length: 21 }, (_, index) => `Technology ${index}`).join("\n"))).toContain("20");
+    expect(validateTechnologyList("T".repeat(81))).toContain("80");
+    expect(validateTechnologyList("TypeScript\nSQLite")).toBeNull();
+  });
+
   it("reports the fields the student needs to complete", () => {
     const result = validateProposalDraft({
       title: "",

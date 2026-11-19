@@ -48,21 +48,32 @@ export function createMinimalPdfRenderer(): PdfRenderer {
         "Objetivos",
         ...proposal.goals.map((goal) => `- ${goal}`),
         "",
+        "Tecnologias previstas",
+        ...(proposal.technologies?.length ? proposal.technologies.map((technology) => `- ${technology}`) : ["Aun por definir"]),
+        "",
+        "Resultado esperado",
+        proposal.expectedOutcome || "Aun por definir",
+        "",
         "Alcance",
         proposal.scope,
         "",
         "Restricciones",
         ...(proposal.constraints.length ? proposal.constraints.map((constraint) => `- ${constraint}`) : ["Sin restricciones declaradas."]),
-      ].flatMap(wrapPdfLine).slice(0, 54);
-      const commands = ["BT", "/F1 10 Tf", "48 756 Td", "12 TL", ...lines.map((line, index) => `${index === 0 ? "" : "T* "}(${escapePdfText(line)}) Tj`), "ET"].join("\n");
-      const stream = Buffer.from(commands, "ascii");
+      ].flatMap(wrapPdfLine);
+      const pageLines = Array.from({ length: Math.max(1, Math.ceil(lines.length / 54)) }, (_, index) => lines.slice(index * 54, (index + 1) * 54));
       const objects = [
         "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        `<< /Type /Pages /Kids [${pageLines.map((_, index) => `${4 + index * 2} 0 R`).join(" ")}] /Count ${pageLines.length} >>`,
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        `<< /Length ${stream.length} >>\nstream\n${stream.toString("ascii")}\nendstream`,
       ];
+      for (let index = 0; index < pageLines.length; index++) {
+        const pageId = 4 + index * 2;
+        const contentId = pageId + 1;
+        const commands = ["BT", "/F1 10 Tf", "48 756 Td", "12 TL", ...pageLines[index]!.map((line, lineIndex) => `${lineIndex === 0 ? "" : "T* "}(${escapePdfText(line)}) Tj`), "ET"].join("\n");
+        const stream = Buffer.from(commands, "ascii");
+        objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`);
+        objects.push(`<< /Length ${stream.length} >>\nstream\n${stream.toString("ascii")}\nendstream`);
+      }
       const chunks: Buffer[] = [Buffer.from("%PDF-1.4\n", "ascii")];
       const offsets = [0];
       for (let index = 0; index < objects.length; index++) {

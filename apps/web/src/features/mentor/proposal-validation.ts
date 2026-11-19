@@ -39,6 +39,13 @@ function parseLines(value = ""): string[] {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
+export function validateTechnologyList(value: string): string | null {
+  const technologies = parseLines(value);
+  if (technologies.length > 20) return "Incluye máximo 20 tecnologías, una por línea.";
+  if (technologies.some((technology) => technology.length > 80)) return "Cada tecnología puede tener máximo 80 caracteres.";
+  return null;
+}
+
 export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraftValidation {
   const parsed = CreateProposalRequestSchema.safeParse({
     title: fields.title,

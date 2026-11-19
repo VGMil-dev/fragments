@@ -11,7 +11,7 @@ import type {
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
 import { SubmissionDownloads } from "../submissions/submission-downloads";
-import { validateProposalDraft, type ProposalDraftFields } from "./proposal-validation";
+import { validateProposalDraft, validateTechnologyList, type ProposalDraftFields } from "./proposal-validation";
 import { importMentorDocx, MentorDocxImportError } from "./docx-import";
 import "./mentor-screen.css";
 
@@ -209,6 +209,13 @@ export function MentorScreen({
     setSaveError(null);
     setVersionConflict(false);
     setFieldErrors({});
+    const technologyError = validateTechnologyList(fields.technologies);
+    if (technologyError) {
+      setActiveStage(3);
+      setFieldErrors({ technologies: technologyError });
+      setSaveError("Revisa el campo de tecnologías para guardar el borrador.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = draftPayload(fields);
@@ -407,7 +414,9 @@ export function MentorScreen({
 
         {activeStage === 3 ? <label className="mentor-field">
           <span>Tecnologías que planeas usar, una por línea</span>
-          <textarea rows={3} value={fields.technologies} disabled={formBusy} onChange={(event) => updateField("technologies", event.target.value)} />
+          <textarea rows={3} value={fields.technologies} disabled={formBusy} onChange={(event) => updateField("technologies", event.target.value)} aria-invalid={Boolean(fieldErrors.technologies)} aria-describedby={fieldErrors.technologies ? "mentor-technologies-help mentor-technologies-error" : "mentor-technologies-help"} />
+          <small id="mentor-technologies-help">Máximo 20 tecnologías, hasta 80 caracteres por línea.</small>
+          {fieldErrors.technologies ? <small id="mentor-technologies-error" role="alert">{fieldErrors.technologies}</small> : null}
         </label> : null}
 
         {activeStage === 3 ? <label className="mentor-field">
