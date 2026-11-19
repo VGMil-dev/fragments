@@ -77,3 +77,9 @@
 - Intento de lectura de protección de rama `main` mediante la API GitHub devolvió `403 Resource not accessible by integration`. El PR sigue en draft; no se intentó merge ni se usó otra credencial/ruta para eludir el control.
 - Commit de especificación/evidencia actualizada: `6bf2e2143c8a10d6d309f9fee0e91dc8befa3d42`; `git diff --check` PASS. GitHub Actions `Fragments CI` run `44584338562` finalizó success para ese HEAD, incluida instalación y test/typecheck/lint/build. No hubo cambios funcionales.
 - El body del PR declara las limitaciones verificadas: sin capturas ni maquetas, sin OAuth real, sin prueba productiva de almacenamiento de imágenes; Galería conserva publicación automática sin consentimiento y requiere decisión contractual. No se solicita aprobación para desplegar.
+
+## Contraste de acceso — 2026-11-19
+- Se ajustó el enlace dentro de la tarjeta de identidad a `var(--f16-info, #65B8FF)` sobre la superficie `#121C32`; contraste calculado 7.96:1, frente a 2.64:1 del color anterior. El enlace de marca queda fuera del selector.
+- Goldfish revisó el alcance CSS y el contraste: CLEAN; AA y AAA para texto normal. Sin pruebas adicionales ejecutadas por el revisor.
+- La verificación completa local ya registrada (`pnpm exec turbo run test typecheck lint build --force`) se ejecutó con este cambio presente: 10/10 tareas; contracts 22/22, web 104/104, API 159/159, typecheck/lint/build PASS. `git diff --check` PASS.
+- Commit: `3b2e849bd18827d74e44d4f40ad8a6eed1ab4846` (`fix(f17): mejora contraste del acceso`).
