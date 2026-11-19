@@ -11,6 +11,7 @@
 ## Rutas y navegación
 - `/student/dashboard`: Mi espacio; accesible solo con sesión estudiantil. Perfil GitHub real y un CTA: continuar una propuesta recuperable o crear la primera.
 - Destinos principales: `/student/dashboard`, `/student/classrooms`, `/student/projects`, `/student/submissions`. Herramientas secundarias: `/student/gallery`, `/student/mentor`, `/student/review`, `/student/trainer`.
+- Referencias visuales canónicas recibidas en `Fragments_F17_Pantallas_2026-11-19.zip`: cinco pantallas en `01_canonicas/` (dashboard, vistas principales del portal, Mentor idea, Mentor habilidades y Mentor consolidado); las cuatro exploratorias no son criterio canónico. El shell adopta navegación lateral en escritorio y barra inferior Inicio/Aulas/Entregas/Más en móvil. El dashboard prioriza continuar/crear proyecto, actividad persistida y estado honesto de F18 no disponible.
 - Mentor admite una sola sección activa: idea, contexto, habilidades, objetivos y alcance, evaluación o portada. La navegación por etapa es accesible, con selector y controles Anterior/Siguiente en móvil.
 - Móvil usa Inicio, Aulas, Entregas y Más. No añadir destinos superiores de Actividades/Solicitudes/Retos/Prácticas.
 
