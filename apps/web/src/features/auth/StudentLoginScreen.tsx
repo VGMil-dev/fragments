@@ -30,7 +30,7 @@ export function StudentLoginScreen({ navigate }: { navigate: (path: string) => v
       }
       setUnavailable(false);
       if (result.ok) {
-        if (result.data.authenticated) navigate("/student/gallery");
+        if (result.data.authenticated) navigate("/student/dashboard");
         else {
           if (result.data.reason === "role_not_student") { navigate("/teacher/mentor-control"); return; }
           setConfigured(result.data.githubOAuthConfigured);

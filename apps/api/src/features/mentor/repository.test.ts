@@ -38,10 +38,10 @@ describe("Mentor repository ownership and revisions", () => {
 
   it("merges partial draft updates so omitted fields remain recoverable", () => {
     const repo = repository();
-    const created = repo.createProposalDraftByUser({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"] }, "student-1");
+    const created = repo.createProposalDraftByUser({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], technologies: ["TypeScript"], expectedOutcome: "Un registro navegable" }, "student-1");
     const updated = repo.updateProposalDraftByUser(created.id, "student-1", 1, { purpose: "Aprender con el jardín" });
     expect(updated.status).toBe("updated");
-    if (updated.status === "updated") expect(updated.proposal.proposal).toMatchObject({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], purpose: "Aprender con el jardín" });
+    if (updated.status === "updated") expect(updated.proposal.proposal).toMatchObject({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], technologies: ["TypeScript"], expectedOutcome: "Un registro navegable", purpose: "Aprender con el jardín" });
   });
 
   it("returns history for an owned incomplete draft without exposing it to another account", () => {
