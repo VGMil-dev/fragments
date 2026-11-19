@@ -131,4 +131,5 @@
 - `pnpm exec turbo run test typecheck lint build --force` — PASS, 10/10 tareas; contracts 22/22, web 106/106 (23 archivos), API 159/159 (31 archivos); typecheck/lint/build PASS. Warnings de build `MODULE_LEVEL_DIRECTIVE` en lucide-react. `git diff --check` PASS.
 - Commit fix: `b65d4a879dc0f6f5e695bd61004745d9763f8ff1` (`fix(f17): oculta el menú móvil cerrado`). Publicado en la rama propia; GitHub Actions `Fragments CI` run 119 (`44623402855`) — success para este HEAD.
 - CI run 120 (`44623756584`) — success para el HEAD documental `c95ec33445547caa993fb0493f8c7c3ae41721a6`; PR #51 actualizado con la nota del fix CSS, límites de Ego y cinco maquetas aceptadas.
+- El seguimiento documental posterior está en HEAD `d769fd8b67884392f5a1e99ec5504d121b738845`; GitHub Actions `Fragments CI` run 121 (`44624307622`) — success para ese HEAD.
 - Notion F17 revalidado en «En validación», evidencia y próximo paso actualizados con commit b65d4a8, runs 119/120 y límites de OAuth/imágenes/tap físico.
