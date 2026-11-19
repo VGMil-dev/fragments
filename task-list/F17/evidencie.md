@@ -63,3 +63,9 @@
 - Commits locales: `efa7c9b` (`fix(f17): dirige estudiantes al dashboard`) y `ec0f5b6` (`fix(f17): completa y valida la entrega Mentor`). Aún sin push/PR. No se cambió la política de Galería, no se habilitó carga de imágenes ni se implementó F18. Los gates visuales, OAuth real, Galería y almacenamiento operativo permanecen pendientes.
 - Instalación de preflight: `pnpm install --frozen-lockfile` — PASS (`Already up to date`, lockfile sin cambios).
 - Commit de evidencia y checklist: `ac62fb7` (`docs(f17): registra revisión de entregas`).
+
+## Integración por PR — 2026-11-19
+- Rama propia publicada con `git push -u origin codex/f17-student-experience`; no se publicó a `main`.
+- PR #51 creado en modo draft hacia `main`: https://github.com/VGMil-dev/fragments/pull/51. HEAD revisado al abrirlo: `7437bf5de2d375e9f3843572df4557906513c4da`; base `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`.
+- GitHub Actions `Fragments CI`, run `44582057293`, finalizó `success` para HEAD `7437bf5de2d375e9f3843572df4557906513c4da`. El PR sigue abierto/draft y sin merge.
+- El body del PR declara las limitaciones verificadas: sin capturas ni maquetas, sin OAuth real, sin prueba productiva de almacenamiento de imágenes; Galería conserva publicación automática sin consentimiento y requiere decisión contractual. No se solicita aprobación para desplegar.
