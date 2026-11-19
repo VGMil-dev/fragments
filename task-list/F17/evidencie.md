@@ -136,6 +136,8 @@
 
 ## PR listo para revisión — 2026-11-20
 - Revalidación GitHub del HEAD `0c981c97f9c4e157c054539ed335e39578f0d90b`: PR #51 abierto, `draft=false`, mergeable; no integrado ni desplegado. GitHub Actions `Fragments CI` run 122 (`44625868182`) — success para ese HEAD.
+- Actualización documental commit `aeaf625dd4fc14914c58c50ac103e1c89bd64d3f` (`docs(f17): registra PR listo para revisión`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 123 (`44626788088`) — success para ese commit.
+- PR #51 apunta ahora a `aeaf625dd4fc14914c58c50ac103e1c89bd64d3f`, abierto, listo para revisión normal (`draft=false`) y mergeable; run 123 — success.
 - La revisión normal queda pendiente; el conector no devolvió reseñas ni hilos de revisión. No se verificó la protección de rama.
 - Se conserva la decisión del propietario de continuar con cinco maquetas canónicas. Galería A aprobada; portada deshabilitada mientras no se demuestre persistencia/recuperación. OAuth real y tap físico móvil siguen sin verificar; F18 no está implementado.
 - No se hizo merge ni publicación de release. PR #51: https://github.com/VGMil-dev/fragments/pull/51.
