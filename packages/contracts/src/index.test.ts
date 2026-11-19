@@ -147,6 +147,54 @@ describe("shared API contracts", () => {
     expect(result.success).toBe(true);
   });
 
+  it("preserves printable Unicode and spaces in repository paths", () => {
+    const path = "src/diseño/niñez y café.ts";
+    const result = RepositorySnapshotSchema.safeParse({
+      owner: "student",
+      repo: "demo",
+      commitSha: "b".repeat(40),
+      files: [{ path, content: "export {};", sha: "c".repeat(40) }],
+      digest,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.files[0]?.path).toBe(path);
+    expect(EvidenceReferenceSchema.safeParse({ source: "repository", path, lines: [1, 1], digest }).success).toBe(true);
+    expect(FeedbackFindingSchema.safeParse({
+      criterionId: "source",
+      status: "verified",
+      evidence: [{ source: "repository", path, lines: [1, 1], digest }],
+      file: path,
+      lines: [1, 1],
+      reason: "La ruta del archivo coincide con el commit.",
+      guidanceLevel: 1,
+    }).success).toBe(true);
+  });
+
+  it("rejects unsafe or non-portable repository paths", () => {
+    const paths = [
+      "/etc/passwd",
+      "../secrets.txt",
+      "src/../secrets.txt",
+      "src/./index.ts",
+      "src//index.ts",
+      "src/",
+      "src\\index.ts",
+      "src/\u0001index.ts",
+      `src/${"a".repeat(508)}.ts`,
+    ];
+
+    for (const path of paths) {
+      expect(RepositorySnapshotSchema.safeParse({
+        owner: "student",
+        repo: "demo",
+        commitSha: "b".repeat(40),
+        files: [{ path, content: "x", sha: "c".repeat(40) }],
+        digest,
+      }).success, path).toBe(false);
+    }
+  });
+
   it("rejects unsafe paths and incomplete commit identifiers", () => {
     const result = RepositorySnapshotSchema.safeParse({
       owner: "student",

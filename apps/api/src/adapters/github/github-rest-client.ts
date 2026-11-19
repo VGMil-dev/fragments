@@ -124,7 +124,13 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
         files.push({ path: entry.path, content, sha: entry.sha });
       }
       const withoutDigest = { owner: input.owner, repo: input.repo, commitSha, files };
-      const snapshot = RepositorySnapshotSchema.parse({ ...withoutDigest, digest: await digestSnapshot(withoutDigest) });
+      const digest = await digestSnapshot(withoutDigest);
+      let snapshot: RepositorySnapshot;
+      try {
+        snapshot = RepositorySnapshotSchema.parse({ ...withoutDigest, digest });
+      } catch {
+        throw new ReviewProcessingError("snapshot_validation", "SNAPSHOT_INVALID", "permanent");
+      }
       return snapshot;
     },
   };

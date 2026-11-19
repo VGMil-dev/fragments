@@ -32,6 +32,40 @@ describe("GitHub REST exact commit reader", () => {
     }
   });
 
+  it("preserves Unicode and spaces in paths returned by the GitHub tree", async () => {
+    const path = "src/diseño/niñez y café.ts";
+    const content = "export const café = true;\n";
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/repos/student/demo")) return response({ private: false });
+      if (url.endsWith(`/commits/${commitSha}`)) return response({ sha: commitSha, commit: { tree: { sha: treeSha } } });
+      if (url.includes(`/git/trees/${treeSha}?recursive=1`)) return response({ truncated: false, tree: [
+        { path, type: "blob", mode: "100644", sha: blobSha, size: Buffer.byteLength(content) },
+      ] });
+      return response({ sha: blobSha, content: Buffer.from(content).toString("base64"), encoding: "base64" });
+    });
+
+    const snapshot = await createGitHubRestRepositoryReader({ fetch }).readCommitSnapshot({ owner: "student", repo: "demo", commitSha });
+
+    expect(snapshot.files).toEqual([{ path, content, sha: blobSha }]);
+  });
+
+  it("classifies an invalid GitHub snapshot as a validation failure, not a GitHub outage", async () => {
+    const invalidPath = "src/\u0001index.ts";
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/repos/student/demo")) return response({ private: false });
+      if (url.endsWith(`/commits/${commitSha}`)) return response({ sha: commitSha, commit: { tree: { sha: treeSha } } });
+      if (url.includes(`/git/trees/${treeSha}?recursive=1`)) return response({ truncated: false, tree: [
+        { path: invalidPath, type: "blob", mode: "100644", sha: blobSha, size: Buffer.byteLength(source) },
+      ] });
+      return response({ sha: blobSha, content: Buffer.from(source).toString("base64"), encoding: "base64" });
+    });
+
+    await expect(createGitHubRestRepositoryReader({ fetch }).readCommitSnapshot({ owner: "student", repo: "demo", commitSha }))
+      .rejects.toMatchObject({ stage: "snapshot_validation", errorCode: "SNAPSHOT_INVALID", retryClass: "permanent" });
+  });
+
   it("rejects arbitrary URL-like owner values before making a request", async () => {
     const fetch = vi.fn();
     const reader = createGitHubRestRepositoryReader({ fetch });

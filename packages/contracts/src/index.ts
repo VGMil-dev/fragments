@@ -7,7 +7,10 @@ const safeRelativePath = z
   .string()
   .min(1)
   .max(512)
-  .regex(/^(?!\/)(?!.*\\)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+$/);
+  .refine((path) => {
+    if (path.startsWith("/") || /^[A-Za-z]:/.test(path) || path.includes("\\") || /\p{Cc}/u.test(path)) return false;
+    return path.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+  }, "Debe ser una ruta relativa segura.");
 const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/);
 const githubOwner = z.string().regex(/^[A-Za-z0-9-]{1,39}$/);
 const githubRepo = z.string().regex(/^[A-Za-z0-9_.-]{1,100}$/);
