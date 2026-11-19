@@ -135,7 +135,9 @@ describe("Classroom Studio HTTP — synthetic identity fixtures", () => {
     database.prepare("UPDATE class_join_codes SET expires_at='2000-01-01T00:00:00.000Z' WHERE code_hash IS NOT NULL").run();
     expect((await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code: expired.body.data.code })).body.error!.code).toBe("INVALID_JOIN_CODE");
     const current = await request(base, `/api/teacher/classrooms/${classId}/join-code`, fixtureTeacherA, "teacher", "POST", {});
-    expect((await request(base, `/api/teacher/classrooms/${classId}/join-code/revoke`, fixtureTeacherA, "teacher", "POST")).status).toBe(200);
+    const revoked = await request(base, `/api/teacher/classrooms/${classId}/join-code/revoke`, fixtureTeacherA, "teacher", "POST");
+    expect(revoked.status).toBe(200);
+    expect(revoked.body.data).toEqual({ revoked: true });
     expect((await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code: current.body.data.code })).body.error!.code).toBe("INVALID_JOIN_CODE");
     let final!: Awaited<ReturnType<typeof request>>;
     for (let i = 0; i < 11; i++) final = await request(base, "/api/classroom-join-requests", fixtureStudentB, "student", "POST", { code: "X".repeat(43) });

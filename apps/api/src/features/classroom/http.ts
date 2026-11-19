@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseSync } from "node:sqlite";
 import {
   ApiResultSchema, ClassroomCreateRequestSchema, ClassroomJoinCodeRequestSchema, ClassroomPageSchema,
-  ClassroomSchema, ClassroomUpdateRequestSchema, ClassEnrollmentSchema, ClassEnrollmentsResponseSchema,
+  ClassroomSchema, ClassroomUpdateRequestSchema, ClassEnrollmentSchema, ClassEnrollmentsResponseSchema, ClassroomJoinCodeRevocationSchema,
   ClassJoinCodeSchema, ClassroomSkillsResponseSchema, DirectEnrollmentRequestSchema, JoinClassroomRequestSchema,
   SkillCatalogResponseSchema, SkillCreateRequestSchema, SkillUpdateRequestSchema, StudentClassroomRequestsSchema,
   StudentClassroomsSchema, ClassroomSkillAvailabilitySchema,
@@ -71,7 +71,7 @@ export function createClassroomHttp(database: DatabaseSync, auth?: FragmentsAuth
       const revokeCodeMatch = pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/join-code\/revoke$/);
       if (revokeCodeMatch && request.method === "POST") {
         if (!classrooms.revokeJoinCode(teacherId, revokeCodeMatch[1]!)) sendError(response, 404, "NOT_FOUND", "No hay un código activo para revocar en esa aula.");
-        else sendJson(response, 200, { ok: true, data: { revoked: true } });
+        else sendJson(response, 200, { ok: true, data: ClassroomJoinCodeRevocationSchema.parse({ revoked: true }) });
         return "handled";
       }
 

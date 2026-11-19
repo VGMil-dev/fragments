@@ -33,13 +33,11 @@ import {
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
   ClassJoinCodeSchema,
-  ClassroomMutationAckSchema,
+  ClassroomJoinCodeRevocationSchema,
   ClassEnrollmentTransitionSchema,
   ClassroomCreateRequestSchema,
   ClassroomUpdateRequestSchema,
   SkillCreateRequestSchema,
-  AssignmentVersionSchema,
-  StudentOptionalSkillSelectionSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
@@ -86,9 +84,10 @@ describe("shared API contracts", () => {
     expect(ClassJoinCodeSchema.safeParse({ ...publicCode, codeHash: "secret" }).success).toBe(false);
   });
 
-  it("validates classroom mutation acknowledgments and enrollment transitions", () => {
-    expect(ClassroomMutationAckSchema.safeParse({ ok: true }).success).toBe(true);
-    expect(ClassroomMutationAckSchema.safeParse({ ok: true, codeHash: "private" }).success).toBe(false);
+  it("validates code revocation responses and enrollment transitions", () => {
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ revoked: true }).success).toBe(true);
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ revoked: true, codeHash: "private" }).success).toBe(false);
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ ok: true }).success).toBe(false);
     expect(ClassEnrollmentTransitionSchema.safeParse({ status: "active" }).success).toBe(true);
     expect(ClassEnrollmentTransitionSchema.safeParse({ status: "pending" }).success).toBe(false);
   });
@@ -98,14 +97,6 @@ describe("shared API contracts", () => {
     expect(SkillCreateRequestSchema.safeParse({ name: "   " }).success).toBe(false);
   });
 
-  it("keeps future required and optional mission skills distinct and forbids repeated choices", () => {
-    const skill = { skillId: "skill-1", name: "Accesibilidad", description: null };
-    const version = { id: "version-1", assignmentId: "assignment-1", version: 1, title: "Actividad", instructions: "Construye una pantalla.", requiredSkills: [skill], optionalSkills: [{ ...skill, skillId: "skill-2" }], publishedAt: null };
-    expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
-    expect(AssignmentVersionSchema.safeParse({ ...version, optionalSkills: [skill] }).success).toBe(false);
-    expect(StudentOptionalSkillSelectionSchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "version-1", skillIds: ["skill-2"] }).success).toBe(true);
-    expect(StudentOptionalSkillSelectionSchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "version-1", skillIds: ["skill-2", "skill-2"] }).success).toBe(false);
-  });
   it("validates teacher login and session responses without exposing session tokens", () => {
     expect(TeacherLoginRequestSchema.safeParse({ email: "teacher@example.test", password: "fake-password" }).success).toBe(true);
     expect(TeacherLoginRequestSchema.safeParse({ email: "invalid", password: "x" }).success).toBe(false);

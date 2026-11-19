@@ -2,38 +2,35 @@
 
 ## Base y preflight
 
-- Rama: `codex/f18a-classroom-foundation`.
-- Worktree actual: `C:\Users\vgmil\.codex\worktrees\f18a-classroom\fragments`; se movió desde D: (exFAT no permite los symlinks de pnpm). No se modificó el worktree F17 ni `task-list/F18`.
-- Base `origin/main`: `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`; `v0.4.11`: `09f9670e60981bd4e594a37cce5502486bddfc9d`, ancestro confirmado con `git merge-base --is-ancestor` (código 0).
-- ZIP validado sin extracción: 23 archivos, 0 faltantes y 0 hashes discordantes; el README lo describe como preview conceptual.
-- `pnpm install --frozen-lockfile`: falló en D: exFAT por `EISDIR`; instalación repetida en NTFS terminó correctamente (18.2 s; 310 reutilizados, 0 descargados). No se cambiaron manifests ni lockfile.
-- `.env` no se leyó ni se incorporó a evidencia. El QA web usó Better Auth local con identidad de prueba y SQLite temporal, exclusivamente valores sintéticos. No hubo llamadas a AI Gateway, GitHub OAuth, Moodle ni servicios de producción.
-- Se preserva `task-list/F18`, que corresponde al hotfix Review histórico.
+- Rama: `codex/f18a-classroom-foundation`; worktree: `C:\Users\vgmil\.codex\worktrees\f18a-classroom\fragments`.
+- Base `origin/main`: `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`. El tag `v0.4.11` apunta a `ca55c37e1b5273391f29838137ef8d3ea8e2c305`; `git merge-base --is-ancestor` confirmó que es ancestro.
+- ZIP inspeccionado sin extraer: 24 entradas contando `manifest.json`; 23 recursos declarados, 0 faltantes y 0 discrepancias de tamaño/SHA-256. El README y manifiesto lo describen como preview conceptual. No se requería importar recursos a la UI existente.
+- No se modificaron manifests ni lockfile por la instalación. `.env` no se leyó ni incluyó. QA utilizó Better Auth local con identidad sintética y SQLite temporal ya eliminado. Sin llamadas a AI Gateway, OAuth real, Moodle ni producción.
+- Se preservó el worktree F17 y el directorio histórico `task-list/F18`.
 
 ## Implementación
 
-- Contratos Zod tipados para aulas, matrícula, códigos de ingreso, catálogo privado del docente, disponibilidad por aula y lecturas propias del estudiante; entradas no pueden asignar propietario y respuestas no exponen hashes.
-- Migración SQLite 14 repetible con aulas, hashes/revocación de códigos, solicitudes y matrículas, auditoría de transiciones, control de intentos y catálogo/relaciones de habilidades. Restricciones compuestas impiden habilitar en un aula una habilidad ajena al docente propietario.
-- API con propietario derivado de Better Auth, privacidad por docente/estudiante, aprobación explícita de solicitudes, asignación directa diferenciada, reglas de archivo y limitación de intentos.
-- UI docente conectada en `/teacher/classrooms*` y `/teacher/skills`, adaptada a rutas protegidas, estados vacíos/carga/error y tokens F16.
-- Revisión visual detectó que `/teacher/classrooms/new` se consultaba como si `new` fuera un ID. Se agregó una prueba de regresión: falla antes del arreglo y pasa después.
+- Contratos Zod y persistencia para aulas, matrículas, códigos de ingreso, catálogo privado docente, habilidades habilitadas por aula y consultas propias del estudiante. Propiedad docente derivada de Better Auth; hashes no salen en respuestas.
+- Migración SQLite 14 repetible con reglas de unicidad, auditoría de transiciones, revocación y límites de intentos. ACL mantiene separados los datos de docentes y estudiantes.
+- API distingue solicitudes pendientes por código de asignaciones docentes directas activas. Corregida la forma compartida de revocación `{revoked:true}` entre servidor y cliente.
+- Se retiraron DTOs de Assignment/misiones fuera de F18.A; `intent.md` excluye misiones, versiones/rúbricas, Trainer y F19.
+- UI persistida para aulas y catálogo docente bajo rutas `/teacher/classrooms*` y `/teacher/skills`, con estados de carga/vacío/error, tokens F16 y navegación accesible.
+- QA detectó y corrigió `/teacher/classrooms/new` interpretado como ID. A 768 px se amplió el breakpoint a 820 px para mostrar paneles en una columna.
 
 ## Verificación local
 
-- `pnpm --filter @fragments/api test`: 32 archivos / 157 pruebas aprobadas.
-- `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx`: 1 prueba aprobada; el mismo comando produjo fallo intencional antes del arreglo (consultaba el ID `new`).
-- `pnpm exec turbo run test typecheck lint build --force`: 10 tareas exitosas. Suite final: contracts 26, API 157, web 96.
-- Typecheck de API/web/contratos, lint TypeScript y build completaron sin error. Build separa el bundle principal web a 460.17 kB; permanece la nota `use client` de `lucide-react`.
-- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs`: 1/1 aprobado en 38.8 s con el cambio ya comprometido.
-- CI inicial del PR falló en ese test porque el build limpio no resolvía `zod` importado de forma directa desde el cliente web; se eliminó esa dependencia implícita usando contratos compartidos. CI remoto `verify` pasó en el head `c392e73` (run `44570522608`, 42 s; https://github.com/VGMil-dev/fragments/actions/runs/44570522608).
-- `git diff --check`: sin errores de whitespace.
-- Ego Lite local con docente sintético: ingreso docente, vista vacía, alta de aula, detalle, generación de código y alta de habilidad. Foco por teclado visible (borde 3 px en “Saltar al contenido”) y media query `prefers-reduced-motion: reduce` confirmada.
-- Captura de escritorio inspeccionada visualmente: `task-list/F18.A/evidence/classroom-desktop.png`. Capturas 320/390/768 px no quedaron disponibles: Ego agotó el timeout de captura tras `Emulation.setDeviceMetricsOverride`; QA responsive a esos anchos queda `NOT_VERIFIED`.
-- Catálogo privado probado entre docentes A/B y lecturas/matrículas entre estudiantes A/B en fixtures explícitas `fixture-*`. No certifica aislamiento de cuentas reales en producción.
-- Revisión Goldfish/peer independiente: `NOT_VERIFIED` (sin agente independiente solicitado/disponible). Se hizo revisión manual local de cambios.
+- `pnpm exec turbo run test typecheck lint build --force`: PASS, 10/10 tareas, sin caché.
+- Suite: contracts 25, API 157, web 96 pruebas aprobadas; typecheck, lint y builds completados.
+- Bundle principal web: 459.24 kB; `mammoth` separado (491.75 kB). Permanecen avisos de `use client` de módulos Lucide.
+- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs`: PASS, 1/1 en clon limpio tras `68fdc4e`.
+- `git diff --check`: PASS en los cambios anteriores; se volverá a ejecutar para este diff antes del commit.
+- Ego Lite, datos sintéticos: 320, 390, 768 y 1440 px, sin overflow horizontal; detalle apilado en móvil y 768 px, paneles en escritorio. Foco visible de 3 px en “Saltar al contenido”; `prefers-reduced-motion: reduce` confirmado.
+- Capturas: `classroom-320.png`, `classroom-390.png`, `classroom-768.png`, `classroom-1440.png`, `classrooms-list-1440.png`, `skills-catalog-1440.png` en `task-list/F18.A/evidence/`.
+- Aislamiento probado con fixtures sintéticas `fixture-*`; no certifica aislamiento de cuentas reales en producción. Revisión externa independiente: `NOT_VERIFIED`; revisión manual local realizada.
 
-## Límites y cierre
+## Estado de revisión y límites
 
-- Notion no se modificó; ver recomendaciones de actualización en el resumen de entrega.
-- PR draft #50 está abierto en `https://github.com/VGMil-dev/fragments/pull/50`; `verify` remoto PASS en `c392e73`. Sin merge, tag o despliegue.
-- Commits de implementación: `281f04b` (`feat(classroom): implementa base de Classroom Studio`) y `68fdc4e` (`fix(classroom): reuse shared mutation response schemas`).
+- PR draft #50: https://github.com/VGMil-dev/fragments/pull/50. CI remoto `verify` PASS en head `92f33ac` (run `44571693543`); cambios actuales esperan CI del nuevo head.
+- Sin merge, tag ni despliegue. Notion no se modificó.
+- Recomendaciones Notion: distinguir F18.A de la incidencia/hotfix Review histórico; documentar que F17 consume aulas, solicitudes, matrículas y habilidades autorizadas; acotar contrato F17–F19 a DTOs actuales y excluir misiones/versionado; registrar decisiones de privacidad, aprobación explícita y procedencia de asignación directa.
+- Commits previos: `281f04b` implementación inicial, `3379e9b` evidencia, `68fdc4e` fix de contrato/CI, `c392e73` y `92f33ac` actualización de evidencia.
