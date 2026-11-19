@@ -33,4 +33,4 @@
 - PR draft #50: https://github.com/VGMil-dev/fragments/pull/50. CI remoto `verify` PASS en head `92f33ac` (run `44571693543`); cambios actuales esperan CI del nuevo head.
 - Sin merge, tag ni despliegue. Notion no se modificó.
 - Recomendaciones Notion: distinguir F18.A de la incidencia/hotfix Review histórico; documentar que F17 consume aulas, solicitudes, matrículas y habilidades autorizadas; acotar contrato F17–F19 a DTOs actuales y excluir misiones/versionado; registrar decisiones de privacidad, aprobación explícita y procedencia de asignación directa.
-- Commits: `281f04b` implementación inicial, `3379e9b` evidencia, `68fdc4e` fix de contrato/CI, `c392e73` y `92f33ac` CI/evidencia, `9d9b7818a65fdc8fd5a513af12c0a919e1a15d34` alinea revocación, acota DTOs y añade capturas.
+- Commits: `281f04b` implementación inicial, `3379e9b` evidencia, `68fdc4e` fix de contrato/CI, `c392e73` y `92f33ac` CI/evidencia, `9d9b7818a65fdc8fd5a513af12c0a919e1a15d34` alinea revocación, acota DTOs y añade capturas; `e535698c539839e3e3483d204b254f8af0154c31` registra QA final.
