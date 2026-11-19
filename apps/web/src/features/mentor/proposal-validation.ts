@@ -7,6 +7,8 @@ export interface ProposalDraftFields {
   title: string;
   problem: string;
   solution: string;
+  description: string;
+  purpose: string;
   goals: string;
   skills: string;
   scope: string;
@@ -21,6 +23,8 @@ const FIELD_HELP: Record<keyof ProposalDraftFields, string> = {
   title: "Escribe un título para tu propuesta.",
   problem: "Describe el problema que quieres resolver.",
   solution: "Explica cómo ayudará tu proyecto.",
+  description: "Describe brevemente qué hará tu proyecto.",
+  purpose: "Explica para qué quieres construirlo.",
   goals: "Incluye al menos un objetivo, uno por línea.",
   skills: "Revisa las habilidades: escribe una por línea.",
   scope: "Describe qué incluirá esta primera versión.",
@@ -36,6 +40,8 @@ export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraf
     title: fields.title,
     problem: fields.problem,
     solution: fields.solution,
+    description: fields.description,
+    purpose: fields.purpose,
     goals: parseLines(fields.goals),
     skills: parseLines(fields.skills),
     tags: [],

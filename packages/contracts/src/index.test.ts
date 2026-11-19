@@ -9,6 +9,10 @@ import {
   ApiResultSchema,
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
+  CreateProposalDraftRequestSchema,
+  ProposalDraftFieldsSchema,
+  ProposalDraftResponseSchema,
+  ProposalEvaluationInputSchema,
   GalleryOptInRequestSchema,
   CreateReviewSubmissionRequestSchema,
   EvidenceReferenceSchema,
@@ -305,6 +309,16 @@ describe("shared API contracts", () => {
     expect(
       ProposalResponseSchema.safeParse({ id: "proposal-1", version: 2, proposal, updatedAt: now }).success,
     ).toBe(true);
+  });
+
+  it("accepts partial Mentor drafts but requires the full F17 proposal before evaluation", () => {
+    const partial = { title: "Mi idea", problem: "" };
+    expect(ProposalDraftFieldsSchema.safeParse(partial).success).toBe(true);
+    expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial }).success).toBe(true);
+    expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now }).success).toBe(true);
+    expect(ProposalEvaluationInputSchema.safeParse(proposal).success).toBe(false);
+    expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso." }).success).toBe(true);
+    expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial, ownerUserId: "spoofed" }).success).toBe(false);
   });
 
   it("validates evidence-backed Mentor evaluation and similarity matches", () => {

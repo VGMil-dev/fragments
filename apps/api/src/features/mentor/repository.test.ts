@@ -22,6 +22,37 @@ afterEach(() => { for (const db of dbs.splice(0)) db.close(); });
 const proposal = { title: "Huerto", problem: "Registrar plantas", solution: "Seguimiento del riego", goals: ["Medir crecimiento"], skills: ["TypeScript"], scope: "Una pantalla", constraints: [] };
 
 describe("Mentor repository ownership and revisions", () => {
+  it("stores partial student drafts and versions edits without crossing account ownership", () => {
+    const repo = repository();
+    const partial = { title: "Mi idea", problem: "", description: "", purpose: "", goals: [], skills: [], tags: [], scope: "", constraints: [] };
+    const created = repo.createProposalDraftByUser(partial, "student-1");
+    expect(created).toMatchObject({ version: 1, proposal: partial });
+    expect(repo.getOwnedProposalDraftByUser(created.id, "student-1")).toEqual(created);
+    expect(repo.getOwnedProposalDraftByUser(created.id, "student-2")).toBeNull();
+
+    const saved = repo.updateProposalDraftByUser(created.id, "student-1", 1, { ...partial, problem: "Una situación concreta." });
+    expect(saved).toMatchObject({ status: "updated", proposal: { version: 2, proposal: { problem: "Una situación concreta." } } });
+    expect(repo.updateProposalDraftByUser(created.id, "student-1", 1, partial).status).toBe("conflict");
+    expect(repo.updateProposalDraftByUser(created.id, "student-2", 2, partial).status).toBe("not_found");
+  });
+
+  it("merges partial draft updates so omitted fields remain recoverable", () => {
+    const repo = repository();
+    const created = repo.createProposalDraftByUser({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"] }, "student-1");
+    const updated = repo.updateProposalDraftByUser(created.id, "student-1", 1, { purpose: "Aprender con el jardín" });
+    expect(updated.status).toBe("updated");
+    if (updated.status === "updated") expect(updated.proposal.proposal).toMatchObject({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], purpose: "Aprender con el jardín" });
+  });
+
+  it("returns history for an owned incomplete draft without exposing it to another account", () => {
+    const repo = repository();
+    const partial = repo.createProposalDraftByUser({ title: "Idea en curso", problem: "", goals: [] }, "student-1");
+    repo.updateProposalDraftByUser(partial.id, "student-1", 1, { purpose: "Aprender" });
+
+    expect(repo.getProposalHistoryByUser(partial.id, "student-1")?.map((entry) => entry.version)).toEqual([1, 2]);
+    expect(repo.getProposalHistoryByUser(partial.id, "student-2")).toBeNull();
+  });
+
   it("keeps immutable versions, rejects stale writes, and checks owner hashes", () => {
     const repo = repository();
     const first = repo.createProposal(proposal, "a".repeat(64));

@@ -3,6 +3,28 @@ import { createApiClient } from "./api-client";
 import { createStudentApi } from "./student-api";
 
 describe("createStudentApi", () => {
+  it("creates and version-checks a partial proposal draft through owned routes", async () => {
+    const saved = { id: "proposal-1", version: 1, proposal: { title: "Huerto" }, updatedAt: "2026-11-19T10:00:00.000Z" };
+    const updated = { ...saved, version: 2 };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: saved }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: updated }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.saveProposalDraft({ proposal: { title: "Huerto" } })).resolves.toEqual({ ok: true, data: saved });
+    await expect(api.updateProposalDraft("proposal-1", { expectedVersion: 1, proposal: { problem: "Registrar riegos" } })).resolves.toEqual({ ok: true, data: updated });
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/me/proposals/drafts");
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(fetcher.mock.calls[1]?.[0]).toBe("/api/me/proposals/proposal-1/draft");
+    expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toMatchObject({ expectedVersion: 1 });
+  });
+  it("reads only account-scoped Mentor and Review submission summaries", async () => {
+    const data = [{ id: "submission-1", kind: "mentor", sourceId: "proposal-1", label: "Huerto escolar", score: 78, rubricVersion: "mentor-v1", createdAt: "2026-11-19T10:00:00.000Z" }];
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, data }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+    await expect(api.getMySubmissions()).resolves.toEqual({ ok: true, data });
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/me/submissions");
+  });
   it("loads the gallery through the shared response schema", async () => {
     const page = { items: [], nextOffset: null };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(

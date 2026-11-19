@@ -17,9 +17,16 @@ type Service = ReturnType<typeof createReviewService>;
 type RouteResult = "handled" | "unhandled";
 export type ReviewContextResolver = (request: IncomingMessage, input: ReturnType<typeof ReviewRequestSchema.parse>) => Promise<ReviewContext | null>;
 
-export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver }) {
+export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> }) {
   return async function handleReviewHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
+    const studentRoute = (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
+    const studentId = studentRoute && options.resolveStudentId ? await options.resolveStudentId(request) : null;
+    if (studentRoute && options.resolveStudentId && !studentId) {
+      sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Review.");
+      return "handled";
+    }
+    const ownsJob = (id: string) => !options.resolveStudentId || Boolean(studentId && options.store.getStudentIdForJob(id) === studentId);
 
     if (request.method === "POST" && url.pathname === "/api/reviews") {
       const raw = await readJson(request, response);
@@ -33,6 +40,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         const context = await options.resolveContext(request, parsed.data);
         if (!context) {
           sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo determinar el proyecto y la rúbrica para esta revisión.");
+          return "handled";
+        }
+        if (options.resolveStudentId && context.studentId !== studentId) {
+          sendError(response, 403, "FORBIDDEN", "La revisión debe pertenecer a la sesión estudiantil actual.");
           return "handled";
         }
         const job = await options.store.enqueue({ request: parsed.data, context });
@@ -52,6 +63,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       try {
         const current = options.store.getJob(retryMatch[1]!);
         if (!current) {
+          sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
+          return "handled";
+        }
+        if (!ownsJob(current.id)) {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
         }
@@ -88,6 +103,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión.");
         return "handled";
       }
+      if (!ownsJob(job.id)) {
+        sendError(response, 404, "NOT_FOUND", "No se encontró la revisión.");
+        return "handled";
+      }
       const data = publicReview(job);
       sendJson(response, 200, data);
       return "handled";
@@ -103,6 +122,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       }
       const review = options.store.getJob(parsed.data.reviewId);
       if (!review) {
+        sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
+        return "handled";
+      }
+      if (!ownsJob(review.id)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
         return "handled";
       }
@@ -123,6 +146,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
     if (pdfMatch) {
       const submission = options.store.getReviewSubmission(pdfMatch[1]!);
       if (!submission) {
+        sendError(response, 404, "NOT_FOUND", "No se encontró la entrega Review.");
+        return "handled";
+      }
+      if (options.resolveStudentId && (!studentId || !ownsJob(submission.sourceId))) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega Review.");
         return "handled";
       }

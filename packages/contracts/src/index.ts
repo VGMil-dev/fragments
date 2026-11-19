@@ -201,6 +201,8 @@ const ProposalDraftSchema = z.object({
   title: nonEmptyText.max(160),
   problem: nonEmptyText.max(3000),
   solution: nonEmptyText.max(3000),
+  description: nonEmptyText.max(3000).optional(),
+  purpose: nonEmptyText.max(1000).optional(),
   goals: z.array(nonEmptyText.max(240)).min(1).max(12),
   skills: z.array(nonEmptyText.max(80)).max(20),
   tags: z.array(nonEmptyText.max(50)).max(20).default([]),
@@ -301,6 +303,27 @@ export const GalleryWithdrawalRequestSchema = z.object({ reason: nonEmptyText.ma
 export const GalleryWithdrawalResponseSchema = z.object({ withdrawn: z.literal(true) }).strict();
 
 export const CreateProposalRequestSchema = ProposalDraftSchema;
+export const ProposalDraftFieldsSchema = z.object({
+  title: z.string().max(160).optional(),
+  problem: z.string().max(3000).optional(),
+  solution: z.string().max(3000).optional(),
+  description: z.string().max(3000).optional(),
+  purpose: z.string().max(1000).optional(),
+  goals: z.array(nonEmptyText.max(240)).max(12).optional(),
+  skills: z.array(nonEmptyText.max(80)).max(20).optional(),
+  tags: z.array(nonEmptyText.max(50)).max(20).optional(),
+  scope: z.string().max(3000).optional(),
+  constraints: z.array(nonEmptyText.max(500)).max(20).optional(),
+}).strict();
+export const ProposalEvaluationInputSchema = ProposalDraftSchema.extend({
+  description: nonEmptyText.max(3000),
+  purpose: nonEmptyText.max(1000),
+}).strict();
+export const CreateProposalDraftRequestSchema = z.object({ proposal: ProposalDraftFieldsSchema }).strict();
+export const UpdateProposalDraftRequestSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  proposal: ProposalDraftFieldsSchema,
+}).strict();
 export const UpdateProposalRequestSchema = ProposalDraftSchema.extend({
   expectedVersion: z.number().int().min(1),
 }).strict();
@@ -311,7 +334,23 @@ export const ProposalResponseSchema = z.object({
   proposal: ProposalDraftSchema,
   updatedAt: z.iso.datetime(),
 }).strict();
-export const OwnedProposalsResponseSchema = z.array(ProposalResponseSchema).max(200);
+export const ProposalDraftResponseSchema = z.object({
+  id: identifier,
+  version: z.number().int().min(1),
+  proposal: ProposalDraftFieldsSchema,
+  updatedAt: z.iso.datetime(),
+}).strict();
+export const OwnedProposalsResponseSchema = z.array(ProposalDraftResponseSchema).max(200);
+export const StudentSubmissionSchema = z.object({
+  id: identifier,
+  kind: z.enum(["mentor", "review"]),
+  sourceId: identifier,
+  label: nonEmptyText.max(200),
+  score: z.number().min(0).max(100),
+  rubricVersion: nonEmptyText.max(120),
+  createdAt: z.iso.datetime(),
+}).strict();
+export const StudentSubmissionsResponseSchema = z.array(StudentSubmissionSchema).max(200);
 export const ProposalEvaluationResponseSchema = z.object({
   evaluationId: identifier,
   proposalId: identifier,
@@ -421,9 +460,16 @@ export type TeacherStudentsPage = z.infer<typeof TeacherStudentsPageSchema>;
 export type TeacherProject = z.infer<typeof TeacherProjectSchema>;
 export type TeacherProjectsResponse = z.infer<typeof TeacherProjectsResponseSchema>;
 export type CreateProposalRequest = z.infer<typeof CreateProposalRequestSchema>;
+export type ProposalDraftFields = z.infer<typeof ProposalDraftFieldsSchema>;
+export type ProposalEvaluationInput = z.infer<typeof ProposalEvaluationInputSchema>;
+export type CreateProposalDraftRequest = z.infer<typeof CreateProposalDraftRequestSchema>;
+export type UpdateProposalDraftRequest = z.infer<typeof UpdateProposalDraftRequestSchema>;
 export type UpdateProposalRequest = z.infer<typeof UpdateProposalRequestSchema>;
 export type GalleryOptInRequest = z.infer<typeof GalleryOptInRequestSchema>;
 export type ProposalResponse = z.infer<typeof ProposalResponseSchema>;
+export type ProposalDraftResponse = z.infer<typeof ProposalDraftResponseSchema>;
+export type StudentSubmission = z.infer<typeof StudentSubmissionSchema>;
+export type StudentSubmissionsResponse = z.infer<typeof StudentSubmissionsResponseSchema>;
 export type ProposalEvaluationResponse = z.infer<typeof ProposalEvaluationResponseSchema>;
 export type MentorControlEvaluationHistoryItem = z.infer<typeof MentorControlEvaluationHistoryItemSchema>;
 export type MentorControlWorkspaceResponse = z.infer<typeof MentorControlWorkspaceResponseSchema>;

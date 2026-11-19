@@ -30,7 +30,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
+  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
   const academicHandler = createAcademicHttp(database, options.auth);
@@ -42,7 +42,7 @@ export function createHttpHandler(database: DatabaseSync, options: {
   const mentorControlHandler = options.mentor ? createMentorControlHttp(database, options.auth) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
-  const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession) : undefined;
+  const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession, async (request) => (await options.auth?.student(request))?.id ?? null) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     const pathname = new URL(request.url ?? "/", "http://fragments.local").pathname;
     if (pathname === "/api/auth/link-social" && request.method === "POST") {

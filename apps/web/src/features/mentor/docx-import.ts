@@ -357,6 +357,8 @@ function mapProposalFields(sections: Map<string, Element[]>): ProposalDraftField
       ["Evidencia inicial", labeledField(problemSection, "Evidencia u observación inicial")],
     ]),
     solution,
+    description: labeledField(general, "Resumen") || solution,
+    purpose: "",
     goals: labeledField(solutionSection, "Objetivo general"),
     skills: checkedSkills(skillsSection).join("\n"),
     scope: labeledLines([

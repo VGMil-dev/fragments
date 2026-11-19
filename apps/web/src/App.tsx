@@ -2,7 +2,7 @@ import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
 import { Lightbulb, Rocket, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { AcademicGalleryDetail, AcademicGalleryEntry, MentorPublishedConfig, ProposalResponse, StudentMe, UpdateProposalRequest } from "@fragments/contracts";
+import type { AcademicGalleryDetail, AcademicGalleryEntry, ProposalDraftResponse, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -31,29 +31,49 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [gallery, setGallery] = useState<AsyncState<AcademicGalleryEntry[]>>({ status: "loading" });
   const [reload, setReload] = useState(0);
   const [inspiration, setInspiration] = useState<AcademicGalleryEntry | undefined>();
-  const [mentorContext, setMentorContext] = useState<MentorPublishedConfig | undefined>();
   const [student, setStudent] = useState<StudentMe | null>(null);
-  const [ownedProposals, setOwnedProposals] = useState<ProposalResponse[]>([]);
+  const [authError, setAuthError] = useState(false);
+  const [authReload, setAuthReload] = useState(0);
+  const [ownedProposals, setOwnedProposals] = useState<ProposalDraftResponse[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState(false);
   const [proposalsReload, setProposalsReload] = useState(0);
-  const [selectedProposal, setSelectedProposal] = useState<ProposalResponse | undefined>();
+  const [submissions, setSubmissions] = useState<AsyncState<StudentSubmissionsResponse>>({ status: "loading" });
+  const [submissionsReload, setSubmissionsReload] = useState(0);
+  const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
+  const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<AcademicGalleryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  async function downloadSubmission(id: string, kind: "mentor" | "review") {
+    setSubmissionDownloadError(null);
+    try {
+      const result = kind === "mentor" ? await studentApi.downloadMentorPdf(id) : await studentApi.downloadReviewPdf(id);
+      if (!result.ok) { setSubmissionDownloadError("No pudimos descargar el resultado. Inténtalo de nuevo."); return; }
+      const url = URL.createObjectURL(result.data);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = kind === "mentor" ? "fragments-mentor.pdf" : "fragments-review.pdf";
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setSubmissionDownloadError("No pudimos descargar el resultado. Inténtalo de nuevo."); }
+  }
+
   useEffect(() => {
-    if (path !== "/student/gallery" && path !== "/student/mentor") return;
+    if (!path.startsWith("/student/")) return;
     let active = true;
+    setAuthError(false);
     void studentApi.getMe().then((result) => {
       if (!active) return;
-      if (!result.ok || !result.data.authenticated) { navigate("/student/login"); return; }
+      if (!result.ok) { setAuthError(true); return; }
+      if (!result.data.authenticated) { navigate("/student/login"); return; }
       setStudent(result.data);
-    });
+    }).catch(() => { if (active) setAuthError(true); });
     return () => { active = false; };
-  }, [path, navigate]);
+  }, [path, navigate, authReload]);
 
   useEffect(() => {
     if (path !== "/student/gallery" || !student) return;
@@ -84,14 +104,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   }, [selectedId]);
 
   useEffect(() => {
-    if (path !== "/student/mentor" || !student) return;
-    let active = true;
-    void studentApi.getMentorContext().then((result) => { if (active && result.ok) setMentorContext(result.data); });
-    return () => { active = false; };
-  }, [path]);
-
-  useEffect(() => {
-    if (path !== "/student/mentor" || !student) return;
+    if (!["/student/mentor", "/student/dashboard", "/student/projects"].includes(path) || !student) return;
     let active = true;
     setProposalsLoading(true);
     setProposalsError(false);
@@ -104,7 +117,21 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     return () => { active = false; };
   }, [path, student, proposalsReload]);
 
-  if ((path === "/student/gallery" || path === "/student/mentor") && !student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
+  useEffect(() => {
+    if (path !== "/student/submissions" || !student) return;
+    let active = true;
+    setSubmissions({ status: "loading" });
+    void studentApi.getMySubmissions().then((result) => {
+      if (!active) return;
+      if (result.ok) setSubmissions(result.data.length ? { status: "success", data: result.data } : { status: "empty" });
+      else if (result.error.code === "AUTH_REQUIRED") navigate("/student/login");
+      else setSubmissions({ status: "error", retry: () => setSubmissionsReload((value) => value + 1), message: "No pudimos cargar tus entregas guardadas." });
+    }).catch(() => { if (active) setSubmissions({ status: "error", retry: () => setSubmissionsReload((value) => value + 1), message: "No pudimos cargar tus entregas guardadas." }); });
+    return () => { active = false; };
+  }, [path, student, submissionsReload, navigate]);
+
+  if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
+  if (!student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
   return (
     <div className="student-workspace">
@@ -115,15 +142,43 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           <span className="brand__name">fragments<span className="brand__period">.</span></span>
         </a>
         <nav aria-label="Secciones para estudiantes">
-          <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Galería</a>
-          <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/mentor"); }}>Mentor</a>
-          <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
-          <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
+          <a href="/student/dashboard" aria-current={path === "/student/dashboard" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/dashboard"); }}><span className="student-nav-desktop">Mi espacio</span><span className="student-nav-mobile">Inicio</span></a>
+          <a href="/student/classrooms" aria-current={path === "/student/classrooms" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/classrooms"); }}><span className="student-nav-desktop-label">Mis aulas</span><span className="student-nav-mobile-label">Aulas</span></a>
+          <a className="student-nav-projects" href="/student/projects" aria-current={path === "/student/projects" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/projects"); }}>Mis proyectos</a>
+          <a href="/student/submissions" aria-current={path === "/student/submissions" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/submissions"); }}><span className="student-nav-desktop-label">Mis entregas</span><span className="student-nav-mobile-label">Entregas</span></a>
+          <details className="student-workspace__tools"><summary><span className="student-tools-desktop">Herramientas</span><span className="student-tools-mobile">Más</span></summary><div>
+            <a className="student-tools-mobile" href="/student/projects" onClick={(event) => { event.preventDefault(); navigate("/student/projects"); }}>Proyectos</a>
+            <a href="/student/gallery" onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}>Galería</a>
+            <a href="/student/mentor" onClick={(event) => { event.preventDefault(); navigate("/student/mentor"); }}>Mentor</a>
+            <a href="/student/review" onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}>Review</a>
+            <a href="/student/trainer" onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}>Trainer</a>
+          </div></details>
         </nav>
         <span className="student-workspace__nav-hint" aria-hidden="true">Secciones de estudiante</span>
         <div className="student-workspace__account">{student ? <>{student.profileUrl && student.githubLogin ? <a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a> : <span>Cuenta GitHub</span>}<button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
       </header>
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
+        {path === "/student/dashboard" ? <main className="student-portal" aria-labelledby="student-dashboard-title">
+          <p className="student-screen__eyebrow">MI ESPACIO</p><h1 id="student-dashboard-title">Hola, {student.githubLogin ? `@${student.githubLogin}` : "estudiante"}</h1>
+          {student.avatarUrl ? <img className="student-portal__avatar" src={student.avatarUrl} alt="" width="64" height="64" /> : null}
+          <p>Continúa una propuesta guardada o empieza una nueva.</p>
+          {proposalsLoading ? <p role="status">Buscando tus propuestas…</p> : proposalsError ? <p role="alert">No pudimos consultar tus propuestas ahora.</p> : ownedProposals.length ? <section><h2>Continúa tu proyecto</h2>
+            {ownedProposals.slice(0, 1).map((item) => <p key={item.id}><strong>{item.proposal.title || "Borrador sin título"}</strong> · versión {item.version}</p>)}
+            <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(ownedProposals[0]); navigate("/student/mentor"); }}>Continuar proyecto</button>
+          </section> : <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Crear mi primer proyecto</button>}
+        </main> : null}
+        {path === "/student/classrooms" ? <main className="student-portal" aria-labelledby="classrooms-title"><p className="student-screen__eyebrow">MI APRENDIZAJE</p><h1 id="classrooms-title">Mis aulas</h1><p role="status">El servicio de aulas aún no está disponible. Cuando se conecte, aquí aparecerán tus aulas y actividades reales.</p></main> : null}
+        {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
+          {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => <li key={item.id}><span className="student-project-list__cover" aria-hidden="true">✳</span><span><strong>{item.proposal.title || "Borrador sin título"}</strong><small>Borrador guardado · versión {item.version}</small></span><button type="button" onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button></li>)}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
+          <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Crear una propuesta</button>
+        </main> : null}
+        {path === "/student/submissions" ? <main className="student-portal" aria-labelledby="submissions-title"><p className="student-screen__eyebrow">RESULTADOS</p><h1 id="submissions-title">Mis entregas</h1>
+          {submissions.status === "loading" ? <p role="status">Cargando tus entregas…</p> : null}
+          {submissions.status === "error" ? <div role="alert"><p>{submissions.message}</p><button type="button" onClick={submissions.retry}>Reintentar</button></div> : null}
+          {submissions.status === "empty" ? <p>Aún no tienes entregas generadas. Las propuestas guardadas están en Mis proyectos; una evaluación formativa no es una aprobación docente.</p> : null}
+          {submissions.status === "success" ? <><ul className="student-submission-list">{submissions.data.map((item) => <li key={item.id}><span><strong>{item.label}</strong><small>{item.kind === "mentor" ? "Entrega Mentor" : "Entrega Review"} · {new Date(item.createdAt).toLocaleDateString("es-CO")}</small></span><span>{item.score}/100</span><small>Resultado disponible · no es aprobación docente</small><button type="button" onClick={() => void downloadSubmission(item.id, item.kind)}>Descargar PDF</button></li>)}</ul><p>Las propuestas guardadas están en Mis proyectos. Una evaluación formativa no es una aprobación docente.</p></> : null}
+          {submissionDownloadError ? <p role="alert">{submissionDownloadError}</p> : null}
+          <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Abrir Mentor</button></main> : null}
         {path === "/student/gallery" ? (
           <GalleryScreen
             state={gallery}
@@ -140,24 +195,24 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         {path === "/student/mentor" ? (
           <>
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
-            <p className="student-workspace__sharing" role="note"><strong>Antes de enviar:</strong> al guardar y evaluar tu propuesta, la revisión evaluada con su materia, consigna y rúbrica se compartirá automáticamente con estudiantes que iniciaron sesión y docentes. La galería no muestra notas ni comentarios privados.</p>
+            <p className="student-workspace__sharing" role="note"><strong>Cómo funciona Galería:</strong> cuando Mentor persiste una evaluación elegible, publica automáticamente esa versión. La ficha muestra tu propuesta, metas, habilidades, alcance, restricciones, tu perfil de GitHub y el contexto de materia, consigna y rúbrica; no muestra puntaje ni comentarios privados. La Galería está disponible para estudiantes con sesión y docentes. Hoy no hay consentimiento previo en la interfaz: la ruta de opt-in responde que la publicación es automática. Docentes pueden retirar una ficha con registro de auditoría. La especificación pide consentimiento; esa diferencia sigue pendiente de decisión.</p>
             <MentorScreen
               key={selectedProposal?.id ?? "new-proposal"}
-              mentorContext={mentorContext}
               initialProposal={selectedProposal}
               restoreEvaluation={Boolean(selectedProposal)}
-              savedProposals={ownedProposals}
+            savedProposals={ownedProposals}
               proposalsLoading={proposalsLoading}
               proposalsError={proposalsError}
               onRetryProposals={() => setProposalsReload((value) => value + 1)}
+              onResolveConflict={() => { setSelectedProposal(undefined); setProposalsReload((value) => value + 1); navigate("/student/projects"); }}
               onOpenProposal={setSelectedProposal}
               onSave={async (draft) => {
-                const result = await studentApi.saveProposal(draft);
+                const result = await studentApi.saveProposalDraft(draft);
                 if (result.ok) setOwnedProposals((current) => [result.data, ...current.filter((entry) => entry.id !== result.data.id)]);
                 return result;
               }}
-              onUpdate={async (proposalId: string, draft: UpdateProposalRequest) => {
-                const result = await studentApi.updateProposal(proposalId, draft);
+              onUpdate={async (proposalId: string, draft: UpdateProposalDraftRequest) => {
+                const result = await studentApi.updateProposalDraft(proposalId, draft);
                 if (result.ok) {
                   setOwnedProposals((current) => current.map((entry) => entry.id === result.data.id ? result.data : entry));
                   setSelectedProposal(result.data);
