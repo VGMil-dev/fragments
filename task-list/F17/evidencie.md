@@ -70,4 +70,9 @@
 - GitHub Actions `Fragments CI`, run `44582057293`, finalizó `success` para HEAD `7437bf5de2d375e9f3843572df4557906513c4da`. El PR sigue abierto/draft y sin merge.
 - La actualización documental se publicó después como HEAD `5931ba47fb77cf525a4d7f5f42b6b70606f679d9`; GitHub Actions `Fragments CI`, run `44582344201`, también finalizó `success` para ese HEAD.
 - La actualización final de evidencia/checklist creó HEAD `1794aa08cdbb1035c2548132026ea2cff695eab4`; `Fragments CI`, run `44582649271`, finalizó `success` para ese HEAD, incluida la instalación congelada y la tarea completa de test/typecheck/lint/build.
+
+## Reconciliación contractual de Galería — 2026-11-19
+- Quedó documentada la decisión pendiente sin cambiar F15: (A) actualizar F17 para aceptar publicación automática con disclosure y retirada docente; o (B) mantener consentimiento explícito, bloquear nuevas publicaciones hasta acción autenticada por revisión y definir el tratamiento de proyectos ya publicados.
+- Recomendación del planner: B, por coincidir con la especificación escrita vigente. Es una propuesta, no aprobación. La UI continúa describiendo solo la publicación automática real y no ofrece consentimiento ficticio.
+- Intento de lectura de protección de rama `main` mediante la API GitHub devolvió `403 Resource not accessible by integration`. El PR sigue en draft; no se intentó merge ni se usó otra credencial/ruta para eludir el control.
 - El body del PR declara las limitaciones verificadas: sin capturas ni maquetas, sin OAuth real, sin prueba productiva de almacenamiento de imágenes; Galería conserva publicación automática sin consentimiento y requiere decisión contractual. No se solicita aprobación para desplegar.
