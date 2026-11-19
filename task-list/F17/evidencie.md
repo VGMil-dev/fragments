@@ -48,3 +48,10 @@
 - Estado tras el commit `594720a031d329964475ec625b5bd97bfd9566bf`: implementación verificada en rama local, sin push/PR. Aceptación y tarea permanecen abiertas: Ego no logró generar capturas, no están las maquetas y falta resolver/aceptar explícitamente el conflicto de Galería. No se altera la política actual, no se habilita carga de portadas y no se implementa F18.
 - Control de base repetido: `git ls-remote origin refs/heads/main`, `origin/main` y HEAD coincidieron en `70bb2f30935eb0d9174ed69ebbfa107dd379d19e`. `git fetch origin --prune` devolvió código distinto de cero al intentar actualizar commit-graph (`failed to rename temporary commit-graph file`); no cambió refs. Sin cambios de `main` por integrar.
 - Notion F17 actualizado: [F17 — Portal y dashboard del estudiante](https://app.notion.com/p/41ccd5fa7ed781fcacc5cd8bc29d182f) quedó en estado «En desarrollo», con evidencia local/test/Ego y próximo paso registrados; no se marcó como implementada, completada ni desplegada.
+
+## Discrepancia de campos de objetivos — 2026-11-19
+- Contraste de la especificación F17 encontró que Stage 4 carecía de tecnologías previstas y resultado esperado. Se agregaron ambos campos al borrador y propuesta completos como opcionales, sin cambiar los campos de Galería. Las propuestas antiguas siguen siendo válidas.
+- Mentor presenta los campos y los conserva al guardar/recuperar; el README/PDF de entrega los incluye. El importador DOCX conserva compatibilidad iniciándolos vacíos. Se aclaró que las condiciones de la etapa son propias del proyecto y no requisitos docentes.
+- `pnpm exec turbo run test typecheck lint build --force` — PASS, 10/10 tareas. Contracts 22/22, web 101/101 en 22 archivos, API 159/159 en 31 archivos; typecheck/lint/build PASS. Build web emite únicamente advertencias `MODULE_LEVEL_DIRECTIVE` de `lucide-react`.
+- `git diff --check` — PASS (sin salida).
+- Commit de implementación: `1879181` (`feat(f17): completa objetivos de Mentor`). Queda local en `codex/f17-student-experience`; sin push/PR. Los bloqueos previos de capturas Ego, maquetas, OAuth real, decisión de Galería y almacenamiento/recuperación de imágenes continúan abiertos.
