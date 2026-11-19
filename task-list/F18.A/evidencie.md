@@ -22,8 +22,8 @@
 - `pnpm exec turbo run test typecheck lint build --force`: PASS, 10/10 tareas, sin caché.
 - Suite: contracts 25, API 157, web 96 pruebas aprobadas; typecheck, lint y builds completados.
 - Bundle principal web: 459.24 kB; `mammoth` separado (491.75 kB). Permanecen avisos de `use client` de módulos Lucide.
-- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs`: PASS, 1/1 en clon limpio tras `68fdc4e`.
-- `git diff --check`: PASS en los cambios anteriores; se volverá a ejecutar para este diff antes del commit.
+- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs`: PASS, 1/1 en clon limpio con HEAD `9d9b7818a65fdc8fd5a513af12c0a919e1a15d34`.
+- `git diff --check`: PASS para el commit `9d9b781` y para los cambios de documentación.
 - Ego Lite, datos sintéticos: 320, 390, 768 y 1440 px, sin overflow horizontal; detalle apilado en móvil y 768 px, paneles en escritorio. Foco visible de 3 px en “Saltar al contenido”; `prefers-reduced-motion: reduce` confirmado.
 - Capturas: `classroom-320.png`, `classroom-390.png`, `classroom-768.png`, `classroom-1440.png`, `classrooms-list-1440.png`, `skills-catalog-1440.png` en `task-list/F18.A/evidence/`.
 - Aislamiento probado con fixtures sintéticas `fixture-*`; no certifica aislamiento de cuentas reales en producción. Revisión externa independiente: `NOT_VERIFIED`; revisión manual local realizada.
@@ -33,4 +33,4 @@
 - PR draft #50: https://github.com/VGMil-dev/fragments/pull/50. CI remoto `verify` PASS en head `92f33ac` (run `44571693543`); cambios actuales esperan CI del nuevo head.
 - Sin merge, tag ni despliegue. Notion no se modificó.
 - Recomendaciones Notion: distinguir F18.A de la incidencia/hotfix Review histórico; documentar que F17 consume aulas, solicitudes, matrículas y habilidades autorizadas; acotar contrato F17–F19 a DTOs actuales y excluir misiones/versionado; registrar decisiones de privacidad, aprobación explícita y procedencia de asignación directa.
-- Commits previos: `281f04b` implementación inicial, `3379e9b` evidencia, `68fdc4e` fix de contrato/CI, `c392e73` y `92f33ac` actualización de evidencia.
+- Commits: `281f04b` implementación inicial, `3379e9b` evidencia, `68fdc4e` fix de contrato/CI, `c392e73` y `92f33ac` CI/evidencia, `9d9b7818a65fdc8fd5a513af12c0a919e1a15d34` alinea revocación, acota DTOs y añade capturas.
