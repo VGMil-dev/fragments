@@ -133,3 +133,9 @@
 - CI run 120 (`44623756584`) — success para el HEAD documental `c95ec33445547caa993fb0493f8c7c3ae41721a6`; PR #51 actualizado con la nota del fix CSS, límites de Ego y cinco maquetas aceptadas.
 - El seguimiento documental posterior está en HEAD `d769fd8b67884392f5a1e99ec5504d121b738845`; GitHub Actions `Fragments CI` run 121 (`44624307622`) — success para ese HEAD.
 - Notion F17 revalidado en «En validación», evidencia y próximo paso actualizados con commit b65d4a8, runs 119/120 y límites de OAuth/imágenes/tap físico.
+
+## PR listo para revisión — 2026-11-20
+- Revalidación GitHub del HEAD `0c981c97f9c4e157c054539ed335e39578f0d90b`: PR #51 abierto, `draft=false`, mergeable; no integrado ni desplegado. GitHub Actions `Fragments CI` run 122 (`44625868182`) — success para ese HEAD.
+- La revisión normal queda pendiente; el conector no devolvió reseñas ni hilos de revisión. No se verificó la protección de rama.
+- Se conserva la decisión del propietario de continuar con cinco maquetas canónicas. Galería A aprobada; portada deshabilitada mientras no se demuestre persistencia/recuperación. OAuth real y tap físico móvil siguen sin verificar; F18 no está implementado.
+- No se hizo merge ni publicación de release. PR #51: https://github.com/VGMil-dev/fragments/pull/51.
