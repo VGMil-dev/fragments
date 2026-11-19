@@ -22,8 +22,10 @@
 
 - `pnpm --filter @fragments/api test`: 32 archivos / 157 pruebas aprobadas.
 - `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx`: 1 prueba aprobada; el mismo comando produjo fallo intencional antes del arreglo (consultaba el ID `new`).
-- `pnpm exec turbo run test typecheck lint build --force`: 10 tareas exitosas. Suite final: contracts 25, API 157, web 96.
-- Typecheck de API/web/contratos, lint TypeScript y build completaron sin error. Build reporta chunk web de 523.60 kB (límite informativo 500 kB) y notas `use client` originadas en `lucide-react`.
+- `pnpm exec turbo run test typecheck lint build --force`: 10 tareas exitosas. Suite final: contracts 26, API 157, web 96.
+- Typecheck de API/web/contratos, lint TypeScript y build completaron sin error. Build separa el bundle principal web a 460.17 kB; permanece la nota `use client` de `lucide-react`.
+- `node --test deploy/production/release-agent/test-turbo-release-metadata.mjs`: 1/1 aprobado en 38.8 s con el cambio ya comprometido.
+- CI inicial del PR falló en ese test porque el build limpio no resolvía `zod` importado de forma directa desde el cliente web; se eliminó esa dependencia implícita usando contratos compartidos. La validación remota del commit correctivo está pendiente.
 - `git diff --check`: sin errores de whitespace.
 - Ego Lite local con docente sintético: ingreso docente, vista vacía, alta de aula, detalle, generación de código y alta de habilidad. Foco por teclado visible (borde 3 px en “Saltar al contenido”) y media query `prefers-reduced-motion: reduce` confirmada.
 - Captura de escritorio inspeccionada visualmente: `task-list/F18.A/evidence/classroom-desktop.png`. Capturas 320/390/768 px no quedaron disponibles: Ego agotó el timeout de captura tras `Emulation.setDeviceMetricsOverride`; QA responsive a esos anchos queda `NOT_VERIFIED`.
@@ -33,5 +35,5 @@
 ## Límites y cierre
 
 - Notion no se modificó; ver recomendaciones de actualización en el resumen de entrega.
-- Sin merge, tag o despliegue. Commit y PR pendientes.
-- Commit de implementación: `281f04b` (`feat(classroom): implementa base de Classroom Studio`).
+- PR draft #50 está abierto en `https://github.com/VGMil-dev/fragments/pull/50`; CI del commit correctivo aún pendiente. Sin merge, tag o despliegue.
+- Commits de implementación: `281f04b` (`feat(classroom): implementa base de Classroom Studio`) y `68fdc4e` (`fix(classroom): reuse shared mutation response schemas`).
