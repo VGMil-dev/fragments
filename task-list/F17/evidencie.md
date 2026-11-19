@@ -143,3 +143,5 @@
 - No se hizo merge ni publicación de release. PR #51: https://github.com/VGMil-dev/fragments/pull/51.
 - Actualización documental commit `ec7de25e29064482a344ad02a9419ea02bf97fbb` (`docs(f17): registra CI del PR actualizado`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 124 (`44627163666`) — success para ese commit.
 - Estado revalidado: PR #51 apunta a `ec7de25e29064482a344ad02a9419ea02bf97fbb`, abierto, `draft=false`, mergeable; no hay reviews ni hilos reportados.
+- Commit documental `ffcc37838d21e525647f4b9ee6be1d8207e7cdde` (`docs(f17): registra verificación CI más reciente`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 125 (`44640553538`) — success para ese commit.
+- PR #51 revalidado abierto, listo para revisión normal, mergeable; sin reseñas ni hilos reportados. La revisión e integración normales siguen pendientes.
