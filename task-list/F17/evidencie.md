@@ -141,3 +141,5 @@
 - La revisión normal queda pendiente; el conector no devolvió reseñas ni hilos de revisión. No se verificó la protección de rama.
 - Se conserva la decisión del propietario de continuar con cinco maquetas canónicas. Galería A aprobada; portada deshabilitada mientras no se demuestre persistencia/recuperación. OAuth real y tap físico móvil siguen sin verificar; F18 no está implementado.
 - No se hizo merge ni publicación de release. PR #51: https://github.com/VGMil-dev/fragments/pull/51.
+- Actualización documental commit `ec7de25e29064482a344ad02a9419ea02bf97fbb` (`docs(f17): registra CI del PR actualizado`); `git diff --check` — PASS antes del commit. GitHub Actions `Fragments CI` run 124 (`44627163666`) — success para ese commit.
+- Estado revalidado: PR #51 apunta a `ec7de25e29064482a344ad02a9419ea02bf97fbb`, abierto, `draft=false`, mergeable; no hay reviews ni hilos reportados.
