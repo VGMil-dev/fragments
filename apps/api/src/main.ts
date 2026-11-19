@@ -100,7 +100,7 @@ const review = {
   resolveContext: async (_request: unknown, input: { owner: string; repo: string }) => ({
     projectId: `${input.owner}/${input.repo}`.toLowerCase(),
     rubricVersion: "review-v1",
-    evaluatorVersion: "gateway-structured-v1",
+    evaluatorVersion: "gateway-structured-v2",
   }),
 };
 
