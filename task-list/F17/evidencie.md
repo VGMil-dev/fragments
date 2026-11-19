@@ -83,3 +83,4 @@
 - Goldfish revisó el alcance CSS y el contraste: CLEAN; AA y AAA para texto normal. Sin pruebas adicionales ejecutadas por el revisor.
 - La verificación completa local ya registrada (`pnpm exec turbo run test typecheck lint build --force`) se ejecutó con este cambio presente: 10/10 tareas; contracts 22/22, web 104/104, API 159/159, typecheck/lint/build PASS. `git diff --check` PASS.
 - Commit: `3b2e849bd18827d74e44d4f40ad8a6eed1ab4846` (`fix(f17): mejora contraste del acceso`).
+- CI remoto actualizado: `Fragments CI`, run `44585761577` (run 112), `success` para el commit funcional `3c5ffd56e0b842f93a3cfa8d1bdcb933f240c374`.
