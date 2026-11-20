@@ -47,7 +47,7 @@
 - Estado permanece abierto hasta completar CI del commit documental/paquete, merge normal de PR #50, tag SemVer nuevo únicamente en el SHA de `main`, proceso F14 protegido y verificación real de producción. F18.A es solo la primera fase: no declarar F18 completa.
 - CI verification antes de preparar la entrega: PR #50 run `44679169801` concluyó `success` para `d8f33bd980a88f21f9c3c971038b6e6cba3983d9`. El nuevo commit de documentación y paquete tendrá un run distinto, requerido antes del merge.
 - Rechazo adicional completado en UI docente: solicitud sintética de estudiante B cambió de `pending` a `rejected`; la lista mostró “Rechazada”.
-- Paquete actual `Fragments_F18A_Final_Evidence.zip`: 22 entradas (20 PNG + informe + manifest). SHA-256: `8249efeba51e7d5a2620f95c58db2f4a9ed0a47bd9e129f749716b9827643039`. Relectura ZIP verificó todas las sumas SHA-256 contra `manifest.json`.
+- Paquete actual `Fragments_F18A_Final_Evidence.zip`: 22 entradas (20 PNG + informe + manifest). SHA-256: `9e281dff71ab2866d4ac21aacedf60bf09d49d8dc2359439179a16dfb15238c4`. Relectura ZIP verificó todas las sumas SHA-256 contra `manifest.json`.
 - Notion actualizado: página principal Fragments, ficha F18, ficha F17, contrato F17–F19 y fila ER FUT-03 del Atlas; se mantiene explícito que F18.A sigue en rama/PR y no está desplegada, y que Assignment/versiones siguen siendo diseño futuro.
 
 ## Merge normal de PR #50 — 2026-11-20
