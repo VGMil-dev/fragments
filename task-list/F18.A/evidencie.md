@@ -47,11 +47,18 @@
 - Estado permanece abierto hasta completar CI del commit documental/paquete, merge normal de PR #50, tag SemVer nuevo únicamente en el SHA de `main`, proceso F14 protegido y verificación real de producción. F18.A es solo la primera fase: no declarar F18 completa.
 - CI verification antes de preparar la entrega: PR #50 run `44679169801` concluyó `success` para `d8f33bd980a88f21f9c3c971038b6e6cba3983d9`. El nuevo commit de documentación y paquete tendrá un run distinto, requerido antes del merge.
 - Rechazo adicional completado en UI docente: solicitud sintética de estudiante B cambió de `pending` a `rejected`; la lista mostró “Rechazada”.
-- Paquete actual `Fragments_F18A_Final_Evidence.zip`: 22 entradas (20 PNG + informe + manifest). SHA-256: `9e281dff71ab2866d4ac21aacedf60bf09d49d8dc2359439179a16dfb15238c4`. Relectura ZIP verificó todas las sumas SHA-256 contra `manifest.json`.
+- Paquete actual `Fragments_F18A_Final_Evidence.zip`: 22 entradas (20 PNG + informe + manifest). SHA-256: `82b61a8f8b0989000bc78deb1e76fd2e36df470d5343f3b7c2b3bb71c69b5780`. Relectura ZIP verificó todas las sumas SHA-256 contra `manifest.json`.
 - Notion actualizado: página principal Fragments, ficha F18, ficha F17, contrato F17–F19 y fila ER FUT-03 del Atlas; se mantiene explícito que F18.A sigue en rama/PR y no está desplegada, y que Assignment/versiones siguen siendo diseño futuro.
 
 ## Merge normal de PR #50 — 2026-11-20
 
 - `gh pr merge 50 --merge` completó bajo protección normal después de que verify requerido estuviera PASS. PR #50: MERGED, `mergedAt=2026-11-20T05:17:29Z`, merge SHA `4b07d4f6b843a32d494ad75043ee1f44d6621757`.
 - `git fetch origin main --tags` y `git rev-parse origin/main` confirmaron `4b07d4f6b843a32d494ad75043ee1f44d6621757`; `v0.4.12` es ancestro. Rama local se avanzó por fast-forward sin editar `main`; HEAD `origin/main` coincide.
-- Release F14 aún no iniciada. No crearé tag hasta actualizar evidencia post-merge, confirmar nombre libre, árbol limpio, `main` exacto y atestiguar que el workflow de release corresponde al mismo SHA. El resultado de producción sigue pendiente y no se declara desplegado.
+- En esa comprobación pre-tag (05:20 UTC), release F14 aún no se había iniciado; el árbol estaba limpio, `v0.5.0` libre y `origin/main` en `fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04`. El tag se creó y publicó posteriormente, según el registro F14 siguiente.
+
+## Release F14 v0.5.0 — 2026-11-20
+
+- Tag anotado creado sin reutilizar tags: `v0.5.0`, tag object `79705074d95a294088bf36fba2b3694339a7e35a`, peeled commit `fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04` (SHA de `origin/main` tras merge de PR #53). Push normal del tag PASS. Verificación del workflow confirmó tag anotado, exactitud con main, ascendencia desde `v0.4.12` y workflow `release.yml` de confianza.
+- Workflow Fragments release run `44680764087`: verify tag/source, tests, typecheck, lint, build, bundle metadata, imágenes ARM64 y attest-package PASS; atestación firmada publicada como artefacto del run.
+- Job `publish-approved-release` permanece `waiting` por aprobación manual del entorno `fragments-production`. No se publicó el GitHub Release ni arrancó/confirmó el agente F14 pull en VPS. No se verificó health ni versión servida; estado no desplegado.
+- Gate pendiente para propietario: aprobar `publish-approved-release` en https://github.com/VGMil-dev/fragments/actions/runs/44680764087. No se usó bypass ni aprobación programática.
