@@ -237,7 +237,6 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         {path === "/student/mentor" ? (
           <>
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
-            <p className="student-workspace__sharing" role="note"><strong>Cómo funciona Galería:</strong> al guardar una evaluación que cumple los criterios, se publica automáticamente esa versión. Se comparte tu propuesta, metas, habilidades, etiquetas y temas, alcance, restricciones, perfil de GitHub y contexto de materia, consigna y rúbrica; no se comparten puntaje ni comentarios privados. La ven estudiantes con sesión y docentes. No hay opt-out ni retiro disponible para estudiantes: editar tu propuesta no quita una versión ya publicada y una nueva versión se publica solo después de otra evaluación elegible. Un docente puede retirar una ficha con registro de auditoría.</p>
             <MentorScreen
               key={selectedProposal?.id ?? "new-proposal"}
               initialProposal={selectedProposal}
