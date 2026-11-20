@@ -8,7 +8,7 @@
     },
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^lint"] },
-    "test": { "dependsOn": ["^build", "prisma:generate"], "outputs": [] },
+    "test": { "dependsOn": ["^build", "prisma:generate"], "env": ["DATABASE_URL"], "outputs": [], "cache": false },
     "typecheck": { "dependsOn": ["^build", "prisma:generate"] },
     "prisma:generate": { "outputs": ["src/generated/prisma/**"] }
   }
