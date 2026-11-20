@@ -54,14 +54,44 @@ jobs:
           BETTER_AUTH_SECRET: fragments-ci-config-validation-secret-32-characters
           BETTER_AUTH_URL: https://fragments.example.invalid
           PUBLIC_APP_URL: https://fragments.example.invalid
+          FRAGMENTS_POSTGRES_PORT: "55432"
+          FRAGMENTS_POSTGRES_PLATFORM: linux/amd64
         run: |
           set -euo pipefail
           cd deploy/production
           temporary_env_files=(.env.api .env.postgres .env.migrate .env.test-migrate .env.backup .env.restore .env.bootstrap .env.test-api)
-          cleanup() { rm -f "${temporary_env_files[@]}"; }
+          project=fragments-f21-compose-smoke
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              docker compose -p "$project" -f docker-compose.yml logs --no-color --tail=40 postgres || true
+            fi
+            docker compose -p "$project" -f docker-compose.yml down --volumes >/dev/null 2>&1 || true
+            rm -f "${temporary_env_files[@]}"
+            exit "$status"
+          }
           trap cleanup EXIT
           touch "${temporary_env_files[@]}"
-          docker compose --profile qa -f docker-compose.yml config --quiet
+          cat > .env.postgres <<'EOF'
+          POSTGRES_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_PROD_MIGRATOR_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_PROD_RUNTIME_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_PROD_BACKUP_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_TEST_MIGRATOR_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_TEST_RUNTIME_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_TEST_BACKUP_PASSWORD=fragments-ci-smoke
+          FRAGMENTS_RESTORE_PASSWORD=fragments-ci-smoke
+          EOF
+          docker compose -p "$project" --profile qa -f docker-compose.yml config --quiet
+          init_source=$(docker compose -p "$project" -f docker-compose.yml config --format json | jq -r '.services.postgres.volumes[] | select(.target == "/docker-entrypoint-initdb.d/10-create-databases.sh").source')
+          test -f "$init_source"
+          docker compose -p "$project" -f docker-compose.yml up -d --wait postgres
+          docker compose -p "$project" -f docker-compose.yml exec -T postgres sh -c 'test -s /docker-entrypoint-initdb.d/10-create-databases.sh'
+          databases=$(docker compose -p "$project" -f docker-compose.yml exec -T postgres psql -U fragments_bootstrap -d postgres --tuples-only --no-align --command "SELECT count(*) FROM pg_database WHERE datname IN ('fragments_prod','fragments_test')")
+          roles=$(docker compose -p "$project" -f docker-compose.yml exec -T postgres psql -U fragments_bootstrap -d postgres --tuples-only --no-align --command "SELECT count(*) FROM pg_roles WHERE rolname IN ('fragments_prod_migrator','fragments_prod_runtime','fragments_prod_backup','fragments_test_migrator','fragments_test_runtime','fragments_test_backup','fragments_restore')")
+          printf 'Compose smoke created %s databases and %s roles.\n' "$databases" "$roles"
+          test "$databases" = 2
+          test "$roles" = 7
 
       - name: Apply the Prisma schema to the disposable test database
         run: pnpm --filter @fragments/api prisma:migrate:deploy
