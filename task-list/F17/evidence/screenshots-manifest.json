@@ -1,0 +1,193 @@
+{
+  "task": "F17",
+  "capturedAtUtc": "2026-11-20",
+  "captureTool": "Ego Browser native window screenshots",
+  "environment": "Local web app with in-memory API and synthetic fixture identity/data; no external AI/GitHub calls",
+  "notes": [
+    "Screenshots 15–20 show the 400x593 responsive viewport inside the browser emulation frame.",
+    "Screenshot 14 was captured at 902x609 because the browser window could not be maximized during that capture.",
+    "The images are original screenshots converted losslessly from JPEG capture output to PNG; no visual content was altered."
+  ],
+  "screenshots": [
+    {
+      "index": 1,
+      "file": "01-desktop-dashboard.png",
+      "route": "/student/dashboard",
+      "state": "Desktop dashboard",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "4ce030e2fd0a17246e3d046ed1091641f599d89a0d96e5ff018cb9b5f9715fff"
+    },
+    {
+      "index": 2,
+      "file": "02-desktop-aulas.png",
+      "route": "/student/classrooms",
+      "state": "Desktop aulas",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "3d85034d3a8f229fbf2cae9fb67d2489f7d16b13800ee29020b49c08bcd0a485"
+    },
+    {
+      "index": 3,
+      "file": "03-desktop-projects.png",
+      "route": "/student/projects",
+      "state": "Desktop proyectos",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "25a22774f6454d1eb5f0ea6175aa096d7414a7b440adddd73949ad0838506565"
+    },
+    {
+      "index": 4,
+      "file": "04-desktop-entregas.png",
+      "route": "/student/submissions",
+      "state": "Desktop entregas",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "62a9f0ad1d022001f82c16a0eb42f902b9ed31a05a60937fa52fb76d4c915670"
+    },
+    {
+      "index": 5,
+      "file": "05-desktop-galeria.png",
+      "route": "/student/gallery",
+      "state": "Desktop Galería",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "ba71b9bd20f177b54a7c8acfa5bb774f8ff39eede2d53ce5cb3c0e91ec9932af"
+    },
+    {
+      "index": 6,
+      "file": "06-desktop-mentor-idea.png",
+      "route": "/student/mentor#idea",
+      "state": "Mentor Idea",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "bc18d6411b034f15136f7a096790b8147c689e9a39cac98d0430b5ae11db13f5"
+    },
+    {
+      "index": 7,
+      "file": "07-desktop-mentor-contexto.png",
+      "route": "/student/mentor#context",
+      "state": "Mentor Contexto",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "83f20900fda01d0aa11c5e3a62f9de778b012517183ff26e77d46487504a0fd1"
+    },
+    {
+      "index": 8,
+      "file": "08-desktop-mentor-habilidades.png",
+      "route": "/student/mentor#skills",
+      "state": "Mentor Habilidades",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "813a3f4eca2dc7a5f5aab2bc70f9b6fd32591a854be3e5a736e3dc429a34a737"
+    },
+    {
+      "index": 9,
+      "file": "09-desktop-mentor-objetivos.png",
+      "route": "/student/mentor#goals",
+      "state": "Mentor Objetivos",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "a74d2367216daa0019c88394a32785a949f644f5beb6d61fb93c77214b7bd591"
+    },
+    {
+      "index": 10,
+      "file": "10-desktop-mentor-evaluacion.png",
+      "route": "/student/mentor#evaluation",
+      "state": "Mentor Evaluación",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "8e079cfb2d50538ae79a6c052f6e81aad4e7b542851a867637bdb6fcb65c68b7"
+    },
+    {
+      "index": 11,
+      "file": "11-desktop-mentor-portada.png",
+      "route": "/student/mentor#cover",
+      "state": "Mentor Portada",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "c130e413124d8c29d4f60e7d99b809168d085976c5ef82d6d2cd5fd3e68d082f"
+    },
+    {
+      "index": 12,
+      "file": "12-desktop-review.png",
+      "route": "/student/review",
+      "state": "Desktop Review",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "f6c0ee46d85f546b7ce057b7e15b784be03a7c9f7e0a4c4d13e57ff369120558"
+    },
+    {
+      "index": 13,
+      "file": "13-desktop-trainer-retos.png",
+      "route": "/student/trainer#challenges",
+      "state": "Trainer retos",
+      "captureResolution": "1366x728",
+      "renderedViewport": "1366x728",
+      "sha256": "88687b7439a4f0bf6f76f42026d62adf840e402c201b494742decd4a356dcc42"
+    },
+    {
+      "index": 14,
+      "file": "14-desktop-trainer-practicas.png",
+      "route": "/student/trainer#practice",
+      "state": "Trainer prácticas",
+      "captureResolution": "902x609",
+      "renderedViewport": "902x609",
+      "sha256": "8d7e385788784ede525a61f7a760e05d459f942a5909d3269cdfd531d7a4fd92"
+    },
+    {
+      "index": 15,
+      "file": "15-mobile-dashboard.png",
+      "route": "/student/dashboard",
+      "state": "Móvil dashboard",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "625a05bc22014c652044de2741acfe5fd0798c349970362d02dbb5c0cf969833"
+    },
+    {
+      "index": 16,
+      "file": "16-mobile-aulas.png",
+      "route": "/student/classrooms",
+      "state": "Móvil aulas",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "f5e526116f47e445d29b2ef0c1c79dcfb60470505ee6d4cf20b8a4240afc7b20"
+    },
+    {
+      "index": 17,
+      "file": "17-mobile-galeria.png",
+      "route": "/student/gallery",
+      "state": "Móvil Galería",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "7279b12c648846cdd3b89bb97c39ebee47ce97fa6d1c11bd708ec322a3c3e80d"
+    },
+    {
+      "index": 18,
+      "file": "18-mobile-mentor-idea.png",
+      "route": "/student/mentor#idea",
+      "state": "Móvil Mentor Idea",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "ac0affefb16f12f850638fe82a12dbc6eaff78fe2fc1f4764f460ccdc0bb51f2"
+    },
+    {
+      "index": 19,
+      "file": "19-mobile-mentor-portada.png",
+      "route": "/student/mentor#cover",
+      "state": "Móvil Mentor Portada",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "cade2998aec81597602404c25f4963da2b0bf0d1c0b5fbb44d008efa3d5f2453"
+    },
+    {
+      "index": 20,
+      "file": "20-mobile-review.png",
+      "route": "/student/review",
+      "state": "Móvil Review",
+      "captureResolution": "902x609",
+      "renderedViewport": "400x593 (responsive emulation)",
+      "sha256": "a5605b269ba954f6e269c08ea3936f695b7dfb33317803cd17d0d79a643783f5"
+    }
+  ]
+}
