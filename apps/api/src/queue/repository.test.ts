@@ -41,7 +41,7 @@ describePostgres("QueueRepository PostgreSQL", () => {
   it("reclaims an expired lease with the same job identity", async () => {
     const job = await first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: `${prefix}-retry-key` });
     expect((await first.claim("worker-a", 1000, 10))?.id).toBe(job.id);
-    expect((await second.claim("worker-b", 1011, 10))?.id).toBe(job.id);
+    expect((await second.claim("worker-b", 1011, 100))?.id).toBe(job.id);
     expect(await second.complete(job.id, "worker-b", 1022)).toBe(true);
   });
 

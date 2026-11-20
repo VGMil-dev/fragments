@@ -41,7 +41,7 @@ export function createPrismaMentorControlRepository(database: PrismaClient) {
     },
     async publishDraft(publishedBy: string, now = new Date()): Promise<{ status: "published"; active: MentorPublishedConfig } | { status: "invalid_weights" }> {
       return database.$transaction(async (tx) => {
-        await tx.$queryRaw(Prisma.sql`SELECT pg_advisory_xact_lock(21021)`);
+        await tx.$executeRaw(Prisma.sql`LOCK TABLE mentor_control_versions IN EXCLUSIVE MODE`);
         const draftRow = await tx.mentorControlDraft.findUnique({ where: { id: 1 } });
         if (!draftRow) throw new Error("No se encontró el borrador de Mentor.");
         const draft = MentorDraftConfigSchema.parse({ config: draftRow.configJson, updatedAt: draftRow.updatedAt.toISOString() });

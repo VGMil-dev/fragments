@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "../../db/open.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createReviewHttp } from "./http.js";
@@ -17,6 +17,13 @@ const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Review worker con PostgreSQL.");
 const describePostgres = databaseUrl ? describe : describe.skip;
 const databases: PrismaClient[] = [];
+beforeEach(async () => {
+  if (!databaseUrl) return;
+  const database = openDatabase(databaseUrl); await database.$connect();
+  await database.submission.deleteMany({ where: { kind: "review" } });
+  await database.job.deleteMany({ where: { type: "review" } });
+  await database.$disconnect();
+});
 afterEach(async () => { for (const database of databases.splice(0)) { await database.submission.deleteMany({ where: { kind: "review" } }); await database.job.deleteMany({ where: { type: "review" } }); await database.$disconnect(); } });
 
 async function fixture() {

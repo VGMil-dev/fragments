@@ -47,7 +47,7 @@ async function start() {
 }
 
 async function request(base: string, path: string, user: string, role: "teacher" | "student", method = "GET", body?: unknown) {
-  const response = await fetch(`${base}${path}`, { method, headers: {
+  const response = await fetch(`${base}${path}`, { method, signal: AbortSignal.timeout(5_000), headers: {
     "x-fixture-user": user, "x-fixture-role": role, ...(body === undefined ? {} : { "content-type": "application/json" }),
   }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   return { status: response.status, body: await response.json() as { ok: boolean; data?: any; error?: { code: string } } };

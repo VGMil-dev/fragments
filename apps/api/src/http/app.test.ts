@@ -21,7 +21,11 @@ const databases: PrismaClient[] = [];
 async function testDatabase() { const database = openDatabase(databaseUrl!); databases.push(database); await database.$connect(); return database; }
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
-  for (const db of databases.splice(0)) await db.$disconnect();
+  for (const db of databases.splice(0)) {
+    await db.submission.deleteMany({ where: { kind: "review" } });
+    await db.job.deleteMany({ where: { type: "review" } });
+    await db.$disconnect();
+  }
 });
 
 describePostgres("HTTP API — PostgreSQL integration", () => {
@@ -176,7 +180,7 @@ describePostgres("HTTP API — PostgreSQL integration", () => {
     });
     const account = await authInstance.api.signUpEmail({ body: { name: "Estudiante fixture", email: "student-api@example.test", password: "fixture-password-2026" } });
     await db.user.update({ where: { id: account.user.id }, data: { githubLogin: "student-api-fixture" } });
-    await db.account.create({ data: { id: `github-link-${namespace}`, accountId: `github-stable-${namespace}`, providerId: "github", userId: account.user.id } });
+    await db.account.create({ data: { id: `github-link-${namespace}`, accountId: `github-stable-${namespace}-mentor`, providerId: "github", userId: account.user.id } });
     const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "student-api@example.test", password: "fixture-password-2026" } });
     const sessionCookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
     const auth = createFragmentsAuthService(authInstance, db);
