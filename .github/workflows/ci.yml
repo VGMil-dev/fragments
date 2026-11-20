@@ -49,6 +49,19 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate production and isolated QA Compose profiles
+        env:
+          BETTER_AUTH_SECRET: fragments-ci-config-validation-secret-32-characters
+          BETTER_AUTH_URL: https://fragments.example.invalid
+          PUBLIC_APP_URL: https://fragments.example.invalid
+        run: |
+          set -euo pipefail
+          temporary_env_files=(.env.api .env.postgres .env.migrate .env.test-migrate .env.backup .env.restore .env.bootstrap .env.test-api)
+          cleanup() { rm -f "${temporary_env_files[@]}"; }
+          trap cleanup EXIT
+          touch "${temporary_env_files[@]}"
+          docker compose --profile qa -f deploy/production/docker-compose.yml config --quiet
+
       - name: Apply the Prisma schema to the disposable test database
         run: pnpm --filter @fragments/api prisma:migrate:deploy
 
