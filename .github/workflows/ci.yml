@@ -61,8 +61,13 @@ jobs:
           temporary_env_files=(.env.api .env.postgres .env.migrate .env.test-migrate .env.backup .env.restore .env.bootstrap .env.test-api)
           project=fragments-f21-compose-smoke
           cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              docker compose -p "$project" -f docker-compose.yml logs --no-color --tail=40 postgres || true
+            fi
             docker compose -p "$project" -f docker-compose.yml down --volumes >/dev/null 2>&1 || true
             rm -f "${temporary_env_files[@]}"
+            exit "$status"
           }
           trap cleanup EXIT
           touch "${temporary_env_files[@]}"
