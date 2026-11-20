@@ -20,7 +20,7 @@ model User {
   role                String?
   banned              Boolean                           @default(false)
   banReason           String?
-  banExpiresAt        DateTime?                         @db.Timestamptz(3)
+  banExpires          DateTime?                         @map("banExpiresAt") @db.Timestamptz(3)
   sessions            Session[]
   accounts            Account[]
   classrooms          Classroom[]                       @relation("ClassroomTeacher")

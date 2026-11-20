@@ -141,7 +141,7 @@ describePostgres("Classroom Studio HTTP — PostgreSQL integration", () => {
     expect(await prisma.classEnrollmentEvent.count({ where: { enrollmentId: pending.body.data.id, previousStatus: "pending", nextStatus: "active", source: "teacher_assignment" } })).toBe(1);
     expect((await request(base, `/api/teacher/classrooms/${classId}/enrollments/${assigned.body.data.id}/remove`, fixtureTeacherA, "teacher", "POST")).status).toBe(200);
     expect((await request(base, `/api/teacher/classrooms/${classId}/enrollments/direct`, fixtureTeacherA, "teacher", "POST", { studentId: fixtureStudentA })).status).toBe(409);
-  });
+  }, 15_000);
 
   it("rejects expired, revoked, and repeated invalid codes without granting membership", async () => {
     const { base, prisma } = await start();

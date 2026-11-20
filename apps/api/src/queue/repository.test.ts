@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "../db/open.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import { QueueRepository } from "./repository.js";
@@ -23,9 +23,10 @@ describePostgres("QueueRepository PostgreSQL", () => {
   });
   afterAll(async () => {
     if (!firstDb) return;
-    await firstDb.job.deleteMany({ where: { idempotencyKey: { startsWith: prefix } } });
     await Promise.all([firstDb.$disconnect(), secondDb.$disconnect()]);
   });
+  beforeEach(async () => { await firstDb.job.deleteMany(); });
+  afterEach(async () => { await firstDb.job.deleteMany(); });
   it("returns one idempotent job and grants only one active lease", async () => {
     const key = `${prefix}-same-key`;
     const job = await first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: key });

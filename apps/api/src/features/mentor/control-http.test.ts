@@ -53,8 +53,14 @@ afterEach(async () => {
   for (const server of servers.splice(0)) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   for (const database of databases.splice(0)) {
     await database.proposal.deleteMany({ where: { ownerUserId: studentId } });
-    await database.mentorControlDraft.deleteMany();
-    await database.mentorControlVersion.deleteMany();
+    await database.mentorAcademicPublication.deleteMany();
+    await database.mentorControlVersion.deleteMany({ where: { version: { gt: 1 } } });
+    const seed = await database.mentorControlVersion.findUnique({ where: { version: 1 } });
+    if (seed) await database.mentorControlDraft.upsert({
+      where: { id: 1 },
+      create: { id: 1, configJson: seed.configJson as never, updatedAt: seed.publishedAt },
+      update: { configJson: seed.configJson as never, updatedAt: seed.publishedAt },
+    });
     await database.account.deleteMany({ where: { userId: { in: [studentId, teacherId] } } });
     await database.user.deleteMany({ where: { id: { in: [studentId, teacherId] } } });
     await database.$disconnect();

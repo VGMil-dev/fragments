@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "../../db/open.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { AiBudgetUnavailableError, AiEvaluationInProgressError, estimateAiCallCostMicroUsd, parseGatewayCostUsd, PrismaAiBudgetLedger } from "./budget-ledger.js";
@@ -32,9 +32,8 @@ beforeAll(async () => {
   database = openDatabase(databaseUrl);
   await database.$connect();
 });
-afterEach(async () => {
-  if (database) await database.aiBudgetReservation.deleteMany({ where: { id: { startsWith: prefix } } });
-});
+beforeEach(async () => { if (database) await database.aiBudgetReservation.deleteMany(); });
+afterEach(async () => { if (database) await database.aiBudgetReservation.deleteMany(); });
 afterAll(async () => { await database?.$disconnect(); });
 
 describePostgres("Prisma AI budget ledger (fragments_test)", () => {

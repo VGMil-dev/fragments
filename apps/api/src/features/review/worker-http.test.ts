@@ -17,7 +17,7 @@ const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Review worker con PostgreSQL.");
 const describePostgres = databaseUrl ? describe : describe.skip;
 const databases: PrismaClient[] = [];
-afterEach(async () => { for (const database of databases.splice(0)) { await database.reviewAttempt.deleteMany({ where: { jobId: { startsWith: "review-test-" } } }); await database.submission.deleteMany({ where: { kind: "review", sourceId: { startsWith: "review-test-" } } }); await database.job.deleteMany({ where: { id: { startsWith: "review-test-" } } }); await database.$disconnect(); } });
+afterEach(async () => { for (const database of databases.splice(0)) { await database.submission.deleteMany({ where: { kind: "review" } }); await database.job.deleteMany({ where: { type: "review" } }); await database.$disconnect(); } });
 
 async function fixture() {
   const id = `review-test-${randomUUID()}`;

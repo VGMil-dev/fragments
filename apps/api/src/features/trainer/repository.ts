@@ -57,10 +57,9 @@ export function createTrainerRepository(database: PrismaClient) {
     async claimBankGeneration(reviewId: string, commitSha: string, owner: string, now: number, leaseMs: number): Promise<boolean> {
       const timestamp = new Date(now);
       const timestampMs = BigInt(now);
-      await database.trainerBank.upsert({
-        where: { reviewId_commitSha: { reviewId, commitSha } },
-        create: { reviewId, commitSha, challengesJson: [], createdAt: timestamp, bankReady: false },
-        update: {},
+      await database.trainerBank.createMany({
+        data: [{ reviewId, commitSha, challengesJson: [], createdAt: timestamp, bankReady: false }],
+        skipDuplicates: true,
       });
       const result = await database.trainerBank.updateMany({
         where: { reviewId, commitSha, bankReady: false, OR: [{ generationOwner: null }, { generationLeaseUntil: { lte: timestampMs } }] },
