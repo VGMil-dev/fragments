@@ -74,6 +74,7 @@
 
 ## Corrección de confirmaciones de acciones — 2026-11-20
 
+- Commit de corrección y evidencia: `234dc49d895869afbba9cd7f4a4bef19d06c2b2c` (`fix(classroom): conservar confirmaciones de acciones`).
 - Ego local reprodujo que el refresco de datos borraba el mensaje de éxito al guardar un aula. Se corrigió el orden de actualización y se añadió una prueba de regresión en `ClassroomStudio.test.tsx`.
 - Se aplicó el mismo patrón a guardar/crear/editar/archivar habilidades, asignación directa, habilitar/quitar habilidad y aprobar/rechazar/retirar matrícula. Las acciones de matrícula ahora muestran resultado visible.
 - Verificación fresca `pnpm exec turbo run test typecheck lint build --force`: PASS, 10/10 tareas; contracts 26/26, API 167/167, web 119/119. Typecheck, lint y build PASS; permanece el aviso Lucide `MODULE_LEVEL_DIRECTIVE`.
