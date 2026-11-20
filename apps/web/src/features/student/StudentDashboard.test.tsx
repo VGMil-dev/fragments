@@ -5,20 +5,25 @@ import { StudentDashboard } from "./StudentDashboard";
 
 const student: StudentMe = { authenticated: true, id: "fixture-student", githubLogin: "fixture-student", avatarUrl: null, profileUrl: "https://github.com/fixture-student", registeredAt: "2026-11-19T12:00:00.000Z" };
 const proposal = { id: "fixture-proposal", version: 2, proposal: { title: "Bitácora de jardín" }, updatedAt: "2026-11-19T12:00:00.000Z" };
-const defaultProps = { student, proposals: [], proposalsLoading: false, proposalsError: false, onRetryProposals: vi.fn(), submissions: { status: "empty" as const }, onRetrySubmissions: vi.fn(), onContinueProposal: vi.fn(), onCreateProposal: vi.fn(), onNavigate: vi.fn() };
+const defaultProps = { student, classrooms: [], classroomRequests: [], classroomsLoading: false, classroomsError: null, onRetryClassrooms: vi.fn(), proposals: [], proposalsLoading: false, proposalsError: false, onRetryProposals: vi.fn(), submissions: { status: "empty" as const }, onRetrySubmissions: vi.fn(), onContinueProposal: vi.fn(), onCreateProposal: vi.fn(), onNavigate: vi.fn() };
 
 describe("StudentDashboard", () => {
-  it("uses the student's saved proposal and renders truthful unavailable and empty states", () => {
+  it("uses the student's saved proposal and renders truthful classroom and empty states", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} />);
 
     expect(html).toContain("@fixture-student");
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("Borrador guardado · versión 2");
-    expect(html).toContain("F18 esté conectado");
+    expect(html).toContain("Aún no tienes aulas activas");
     expect(html).toContain("Aún no tienes entregas generadas");
     expect(html).toContain("Explorar Galería");
     expect(html).not.toContain("Programación Móvil");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
+  });
+
+  it("summarizes authorized classes and pending enrollment truthfully", () => {
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} classrooms={[{ id: "fixture-room", title: "Aula de prueba", subject: "Ciencias", groupLabel: "7A", period: null, status: "active", createdAt: "2026-11-19T12:00:00.000Z", updatedAt: "2026-11-19T12:00:00.000Z" }]} classroomRequests={[{ id: "fixture-request", status: "pending", source: "join_code", requestedAt: "2026-11-19T12:00:00.000Z", decidedAt: null }]} />);
+    expect(html).toContain("Tienes 1 aula activa y solicitudes pendientes de aprobación");
   });
 
   it("offers one create action when no proposal exists and shows a real latest submission", () => {

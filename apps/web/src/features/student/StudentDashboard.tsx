@@ -1,9 +1,14 @@
 import { ArrowRight, ClipboardCheck, GraduationCap, Image, Layers3 } from "lucide-react";
-import type { ProposalDraftResponse, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
+import type { ClassroomSummary, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
 import type { AsyncState } from "../../hooks/async-state";
 
 type StudentDashboardProps = {
   student: StudentMe;
+  classrooms: ClassroomSummary[];
+  classroomRequests: StudentClassroomRequest[];
+  classroomsLoading: boolean;
+  classroomsError: string | null;
+  onRetryClassrooms: () => void;
   proposals: ProposalDraftResponse[];
   proposalsLoading: boolean;
   proposalsError: boolean;
@@ -15,7 +20,7 @@ type StudentDashboardProps = {
   onNavigate: (path: string) => void;
 };
 
-export function StudentDashboard({ student, proposals, proposalsLoading, proposalsError, onRetryProposals, submissions, onRetrySubmissions, onContinueProposal, onCreateProposal, onNavigate }: StudentDashboardProps) {
+export function StudentDashboard({ student, classrooms, classroomRequests, classroomsLoading, classroomsError, onRetryClassrooms, proposals, proposalsLoading, proposalsError, onRetryProposals, submissions, onRetrySubmissions, onContinueProposal, onCreateProposal, onNavigate }: StudentDashboardProps) {
   const latestSubmission = submissions.status === "success"
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
@@ -43,7 +48,7 @@ export function StudentDashboard({ student, proposals, proposalsLoading, proposa
       <div className="student-dashboard__grid">
         <section className="student-dashboard__card" aria-labelledby="student-dashboard-classrooms">
           <h2 id="student-dashboard-classrooms"><GraduationCap size={20} aria-hidden="true" />En tus aulas</h2>
-          <p role="status">El servicio de aulas aún no está disponible. Aquí aparecerán tus aulas y actividades reales cuando F18 esté conectado.</p>
+          {classroomsLoading ? <p role="status">Consultando tus aulas…</p> : classroomsError ? <><p role="alert">{classroomsError}</p><button className="student-dashboard__link" type="button" onClick={onRetryClassrooms}>Reintentar</button></> : <p>{classrooms.length ? `Tienes ${classrooms.length} aula${classrooms.length === 1 ? " activa" : "s activas"}${classroomRequests.some((request) => request.status === "pending") ? " y solicitudes pendientes de aprobación" : ""}.` : "Aún no tienes aulas activas. Puedes solicitar ingreso con el código de tu docente."}</p>}
           <button type="button" className="student-dashboard__link" onClick={() => onNavigate("/student/classrooms")}>Ver Mis aulas <ArrowRight size={16} aria-hidden="true" /></button>
         </section>
 

@@ -2,7 +2,7 @@ import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
 import { ClipboardCheck, Code2, Dumbbell, Folder, GraduationCap, Home, Image, Lightbulb, MoreHorizontal, Rocket, Sparkles, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { AcademicGalleryDetail, AcademicGalleryEntry, ProposalDraftResponse, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
+import type { AcademicGalleryDetail, AcademicGalleryEntry, ClassroomSummary, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -16,6 +16,7 @@ import { MentorControlWorkspace } from "./features/mentor-control/MentorControlW
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { StudentDashboard } from "./features/student/StudentDashboard";
+import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
 import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
@@ -49,6 +50,11 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<AcademicGalleryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [myClassrooms, setMyClassrooms] = useState<ClassroomSummary[]>([]);
+  const [myClassroomRequests, setMyClassroomRequests] = useState<StudentClassroomRequest[]>([]);
+  const [classroomsLoading, setClassroomsLoading] = useState(false);
+  const [classroomsError, setClassroomsError] = useState<string | null>(null);
+  const [classroomsReload, setClassroomsReload] = useState(0);
 
   async function downloadSubmission(id: string, kind: "mentor" | "review") {
     setSubmissionDownloadError(null);
@@ -76,6 +82,25 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     }).catch(() => { if (active) setAuthError(true); });
     return () => { active = false; };
   }, [path, navigate, authReload]);
+
+  useEffect(() => {
+    if (!(["/student/dashboard", "/student/classrooms"].includes(path)) || !student) return;
+    let active = true;
+    setClassroomsLoading(true);
+    setClassroomsError(null);
+    void Promise.all([studentApi.getMyClassrooms(), studentApi.getMyClassroomRequests()]).then(([rooms, requests]) => {
+      if (!active) return;
+      if (!rooms.ok || !requests.ok) {
+        if ((!rooms.ok && rooms.error.code === "AUTH_REQUIRED") || (!requests.ok && requests.error.code === "AUTH_REQUIRED")) { navigate("/student/login"); return; }
+        setClassroomsError("No pudimos cargar tus aulas y solicitudes.");
+      } else {
+        setMyClassrooms(rooms.data);
+        setMyClassroomRequests(requests.data);
+      }
+      setClassroomsLoading(false);
+    }).catch(() => { if (active) { setClassroomsError("No pudimos cargar tus aulas y solicitudes."); setClassroomsLoading(false); } });
+    return () => { active = false; };
+  }, [path, student, classroomsReload, navigate]);
 
   useEffect(() => {
     if (path !== "/student/gallery" || !student) return;
@@ -169,6 +194,11 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
         {path === "/student/dashboard" ? <StudentDashboard
           student={student}
+          classrooms={myClassrooms}
+          classroomRequests={myClassroomRequests}
+          classroomsLoading={classroomsLoading}
+          classroomsError={classroomsError}
+          onRetryClassrooms={() => setClassroomsReload((value) => value + 1)}
           proposals={ownedProposals}
           proposalsLoading={proposalsLoading}
           proposalsError={proposalsError}
@@ -179,7 +209,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           onCreateProposal={() => navigate("/student/mentor")}
           onNavigate={navigate}
         /> : null}
-        {path === "/student/classrooms" ? <main className="student-portal" aria-labelledby="classrooms-title"><p className="student-screen__eyebrow">MI APRENDIZAJE</p><h1 id="classrooms-title">Mis aulas</h1><p role="status">El servicio de aulas aún no está disponible. Cuando se conecte, aquí aparecerán tus aulas y actividades reales.</p></main> : null}
+        {path === "/student/classrooms" ? <StudentClassroomsScreen classrooms={myClassrooms} requests={myClassroomRequests} loading={classroomsLoading} error={classroomsError} onRefresh={() => setClassroomsReload((value) => value + 1)} /> : null}
         {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
           {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => <li key={item.id}><span className="student-project-list__cover" aria-hidden="true">✳</span><span><strong>{item.proposal.title || "Borrador sin título"}</strong><small>Borrador guardado · versión {item.version}</small></span><button type="button" onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button></li>)}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
           <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Crear una propuesta</button>

@@ -112,3 +112,29 @@
   .student-dashboard__project-action .button { width: 100%; }
   .student-workspace__nav .brand__name { font-size: 18px; }
 }
+/* Classroom Studio surfaces integrated into the existing student workspace. */
+.student-classrooms { width: min(100% - 2rem, 1040px); margin: 0 auto; padding: 1.25rem 0 2rem; }
+.student-classrooms__heading { margin-bottom: 1.25rem; }
+.student-classrooms__heading h1 { margin: .25rem 0; }
+.student-classrooms__join, .student-classrooms__card { padding: 1.1rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-panel); background: var(--f16-surface); }
+.student-classrooms__join { margin-bottom: 1rem; }
+.student-classrooms__join h2, .student-classrooms section h2 { margin: 0 0 .8rem; }
+.student-classrooms__join label { display: block; margin-bottom: .35rem; font-weight: 650; }
+.student-classrooms__join > div { display: flex; gap: .65rem; }
+.student-classrooms__join input { flex: 1; min-width: 0; min-height: 44px; padding: .65rem .75rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); background: var(--f16-surface); color: var(--f16-text-primary); }
+.student-classrooms__join small { display: block; margin-top: .45rem; color: var(--f16-text-secondary); }
+.student-classrooms__notice { padding: .75rem 1rem; border-left: 3px solid var(--f16-lime); background: var(--f16-surface); }
+.student-classrooms section { margin-top: 1.5rem; }
+.student-classrooms__list, .student-classrooms__requests { display: grid; gap: .75rem; padding: 0; list-style: none; }
+.student-classrooms__card { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(13rem, .75fr); gap: 1rem; }
+.student-classrooms__card p { margin: 0; color: var(--f16-text-secondary); }
+.student-classrooms__card h3 { margin: .25rem 0 .5rem; }
+.student-classrooms__status { display: inline-flex; padding: .25rem .55rem; border-radius: 999px; background: color-mix(in srgb, var(--f16-lime) 18%, var(--f16-surface)); font-size: .84rem; }
+.student-classrooms__skills { padding-left: 1rem; border-left: 1px solid var(--f16-border); }
+.student-classrooms__skills h4 { margin: 0 0 .4rem; }
+.student-classrooms__skills ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.student-classrooms__skills li { padding: .3rem .55rem; border: 1px solid var(--f16-border); border-radius: 999px; }
+.student-classrooms__requests li { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem; border-bottom: 1px solid var(--f16-border); }
+.student-classrooms__link { min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); background: var(--f16-surface); color: var(--f16-text-primary); cursor: pointer; }
+.student-classrooms :focus-visible { outline: 3px solid var(--f16-lime); outline-offset: 3px; }
+@media (max-width: 700px) { .student-classrooms { width: min(100% - 1rem, 1040px); } .student-classrooms__card { grid-template-columns: 1fr; } .student-classrooms__skills { padding: .75rem 0 0; border-top: 1px solid var(--f16-border); border-left: 0; } .student-classrooms__join > div { flex-direction: column; } .student-classrooms__join button { width: 100%; } }
