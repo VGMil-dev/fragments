@@ -133,7 +133,7 @@ services:
         format: raw
     entrypoint:
       - /app/apps/api/node_modules/.bin/prisma
-    command: [migrate, deploy, --schema, apps/api/prisma/schema.prisma]
+    command: [migrate, deploy, --config, apps/api/prisma.config.ts, --schema, apps/api/prisma/schema.prisma]
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,7 +154,7 @@ services:
         format: raw
     entrypoint:
       - /app/apps/api/node_modules/.bin/prisma
-    command: [migrate, deploy, --schema, apps/api/prisma/schema.prisma]
+    command: [migrate, deploy, --config, apps/api/prisma.config.ts, --schema, apps/api/prisma/schema.prisma]
     depends_on:
       postgres:
         condition: service_healthy
