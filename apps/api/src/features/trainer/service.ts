@@ -7,7 +7,7 @@ import type { TrainerAttempt, TrainerChallenge, TrainerStatus } from "./reposito
 export type TrainerReview = Pick<InspectorReviewRecord, "id" | "projectId" | "owner" | "repo" | "commitSha" | "analysis">;
 export interface TrainerDependencies {
   reviews: {
-    listCompleted(): Promise<Array<Pick<TrainerReview, "id" | "owner" | "repo" | "commitSha"> & { updatedAt: string }>>;
+    listCompleted(studentId?: string): Promise<Array<Pick<TrainerReview, "id" | "owner" | "repo" | "commitSha"> & { updatedAt: string }>>;
     getEvidence(id: string): Promise<ReviewEvidence | null>;
   };
   provider: { createChallenge(input: { reviewId: string; commitSha: string; evidence: { source: "repository"; path: string; lines: [number, number]; digest: string }; findingReason: string; evidenceExcerpt: string }): Promise<ChallengeDraft> };
@@ -113,7 +113,7 @@ export function createTrainerService(dependencies: TrainerDependencies) {
   }
 
   return {
-    listReviews: () => dependencies.reviews.listCompleted(),
+    listReviews: (studentId?: string) => dependencies.reviews.listCompleted(studentId),
     history(sessionHash: string, reviewId?: string): TrainerAttempt[] { return dependencies.store.history(sessionHash, reviewId); },
     async draw(sessionHash: string, reviewId: string): Promise<{ challenge: TrainerChallenge; category: "new" | "pending" | "review"; bankSize: number }> {
       const bank = await bankFor(reviewId);

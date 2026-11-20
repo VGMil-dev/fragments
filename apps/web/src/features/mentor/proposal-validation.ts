@@ -7,8 +7,12 @@ export interface ProposalDraftFields {
   title: string;
   problem: string;
   solution: string;
+  description: string;
+  purpose: string;
   goals: string;
   skills: string;
+  technologies: string;
+  expectedOutcome: string;
   scope: string;
   constraints: string;
 }
@@ -21,14 +25,25 @@ const FIELD_HELP: Record<keyof ProposalDraftFields, string> = {
   title: "Escribe un título para tu propuesta.",
   problem: "Describe el problema que quieres resolver.",
   solution: "Explica cómo ayudará tu proyecto.",
+  description: "Describe brevemente qué hará tu proyecto.",
+  purpose: "Explica para qué quieres construirlo.",
   goals: "Incluye al menos un objetivo, uno por línea.",
   skills: "Revisa las habilidades: escribe una por línea.",
+  technologies: "Revisa las tecnologías: escribe una por línea.",
+  expectedOutcome: "El resultado esperado debe tener máximo 3000 caracteres.",
   scope: "Describe qué incluirá esta primera versión.",
   constraints: "Revisa las condiciones: escribe una por línea.",
 };
 
-function parseLines(value: string): string[] {
+function parseLines(value = ""): string[] {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+export function validateTechnologyList(value: string): string | null {
+  const technologies = parseLines(value);
+  if (technologies.length > 20) return "Incluye máximo 20 tecnologías, una por línea.";
+  if (technologies.some((technology) => technology.length > 80)) return "Cada tecnología puede tener máximo 80 caracteres.";
+  return null;
 }
 
 export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraftValidation {
@@ -36,8 +51,12 @@ export function validateProposalDraft(fields: ProposalDraftFields): ProposalDraf
     title: fields.title,
     problem: fields.problem,
     solution: fields.solution,
+    description: fields.description,
+    purpose: fields.purpose,
     goals: parseLines(fields.goals),
     skills: parseLines(fields.skills),
+    technologies: parseLines(fields.technologies),
+    expectedOutcome: fields.expectedOutcome.trim(),
     tags: [],
     scope: fields.scope,
     constraints: parseLines(fields.constraints),

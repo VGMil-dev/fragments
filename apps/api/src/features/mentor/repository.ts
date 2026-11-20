@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import {
   ProposalResponseSchema,
+  ProposalDraftResponseSchema,
+  StudentSubmissionsResponseSchema,
   type GalleryEntry,
+  type ProposalDraftFields,
+  type ProposalDraftResponse,
   type UpdateProposalRequest,
   SubmissionSnapshotSchema,
   type ProposalResponse,
@@ -51,6 +55,65 @@ export function createMentorRepository(database: DatabaseSync) {
       const row = database.prepare("SELECT id, version, proposal_json, updated_at FROM proposals WHERE id = ? AND owner_user_id = ?")
         .get(id, ownerUserId) as { id: string; version: number; proposal_json: string; updated_at: string } | undefined;
       return row ? ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }) : null;
+    },
+
+    createProposalDraftByUser(proposal: ProposalDraftFields, ownerUserId: string, now = new Date()): ProposalDraftResponse {
+      const response = ProposalDraftResponseSchema.parse({ id: randomUUID(), version: 1, proposal, updatedAt: now.toISOString() });
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.prepare("INSERT INTO proposals(id, version, proposal_json, updated_at, owner_hash, owner_user_id) VALUES (?, ?, ?, ?, NULL, ?)")
+          .run(response.id, response.version, JSON.stringify(response.proposal), response.updatedAt, ownerUserId);
+        database.prepare("INSERT INTO proposal_revisions(proposal_id, version, proposal_json, updated_at) VALUES (?, ?, ?, ?)")
+          .run(response.id, response.version, JSON.stringify(response.proposal), response.updatedAt);
+        database.exec("COMMIT");
+      } catch (error) { database.exec("ROLLBACK"); throw error; }
+      return response;
+    },
+
+    getOwnedProposalDraftByUser(id: string, ownerUserId: string): ProposalDraftResponse | null {
+      const row = database.prepare("SELECT id, version, proposal_json, updated_at FROM proposals WHERE id = ? AND owner_user_id = ?")
+        .get(id, ownerUserId) as { id: string; version: number; proposal_json: string; updated_at: string } | undefined;
+      return row ? ProposalDraftResponseSchema.parse({ id: row.id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }) : null;
+    },
+
+    listStudentSubmissions(ownerUserId: string) {
+      const rows = database.prepare(`SELECT s.id, s.kind, s.source_id AS sourceId,
+          CASE WHEN s.kind = 'mentor' THEN COALESCE(json_extract(s.snapshot_json, '$.proposal.title'), 'Proyecto Mentor')
+            ELSE COALESCE(json_extract(j.payload_json, '$.request.owner') || '/' || json_extract(j.payload_json, '$.request.repo'), 'Review') END AS label,
+          s.score, s.rubric_version AS rubricVersion, s.created_at AS createdAt
+        FROM submissions s
+        LEFT JOIN proposals p ON s.kind = 'mentor' AND p.id = s.source_id
+        LEFT JOIN jobs j ON s.kind = 'review' AND j.id = s.source_id AND j.type = 'review'
+        WHERE (s.kind = 'mentor' AND p.owner_user_id = ?)
+          OR (s.kind = 'review' AND json_extract(j.payload_json, '$.context.studentId') = ?)
+        ORDER BY s.created_at DESC, s.id LIMIT 200`).all(ownerUserId, ownerUserId);
+      return StudentSubmissionsResponseSchema.parse(rows);
+    },
+
+    updateProposalDraftByUser(id: string, ownerUserId: string, expectedVersion: number, proposal: ProposalDraftFields, now = new Date()):
+      { status: "updated"; proposal: ProposalDraftResponse } | { status: "conflict" | "not_found" } {
+      const nextVersion = expectedVersion + 1;
+      const updatedAt = now.toISOString();
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const current = database.prepare("SELECT version, proposal_json FROM proposals WHERE id = ? AND owner_user_id = ?")
+          .get(id, ownerUserId) as { version: number; proposal_json: string } | undefined;
+        if (!current) { database.exec("ROLLBACK"); return { status: "not_found" }; }
+        if (current.version !== expectedVersion) { database.exec("ROLLBACK"); return { status: "conflict" }; }
+        const next = ProposalDraftResponseSchema.parse({ id, version: nextVersion, proposal: { ...(JSON.parse(current.proposal_json) as ProposalDraftFields), ...proposal }, updatedAt });
+        const result = database.prepare(`UPDATE proposals SET version = ?, proposal_json = ?, updated_at = ?
+          WHERE id = ? AND owner_user_id = ? AND version = ?`)
+          .run(nextVersion, JSON.stringify(next.proposal), updatedAt, id, ownerUserId, expectedVersion);
+        if (Number(result.changes) !== 1) {
+          const owned = database.prepare("SELECT version FROM proposals WHERE id = ? AND owner_user_id = ?").get(id, ownerUserId);
+          database.exec("ROLLBACK");
+          return owned ? { status: "conflict" } : { status: "not_found" };
+        }
+        database.prepare("INSERT INTO proposal_revisions(proposal_id, version, proposal_json, updated_at) VALUES (?, ?, ?, ?)")
+          .run(id, nextVersion, JSON.stringify(next.proposal), updatedAt);
+        database.exec("COMMIT");
+        return { status: "updated", proposal: next };
+      } catch (error) { database.exec("ROLLBACK"); throw error; }
     },
 
     updateProposal(id: string, ownerHash: string, expectedVersion: number, proposal: UpdateProposalRequest, now = new Date()):
@@ -106,11 +169,11 @@ export function createMentorRepository(database: DatabaseSync) {
       return rows.map((row) => ProposalResponseSchema.parse({ id: row.proposal_id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }));
     },
 
-    getProposalHistoryByUser(id: string, ownerUserId: string): ProposalResponse[] | null {
-      if (!this.getOwnedProposalByUser(id, ownerUserId)) return null;
+    getProposalHistoryByUser(id: string, ownerUserId: string): ProposalDraftResponse[] | null {
+      if (!this.getOwnedProposalDraftByUser(id, ownerUserId)) return null;
       const rows = database.prepare(`SELECT proposal_id, version, proposal_json, updated_at FROM proposal_revisions
         WHERE proposal_id = ? ORDER BY version ASC`).all(id) as Array<{ proposal_id: string; version: number; proposal_json: string; updated_at: string }>;
-      return rows.map((row) => ProposalResponseSchema.parse({ id: row.proposal_id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }));
+      return rows.map((row) => ProposalDraftResponseSchema.parse({ id: row.proposal_id, version: row.version, proposal: JSON.parse(row.proposal_json) as unknown, updatedAt: row.updated_at }));
     },
 
     setGalleryOptIn(id: string, ownerHash: string, optedIn: boolean, now = new Date()):

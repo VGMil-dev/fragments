@@ -14,6 +14,8 @@ const databases: DatabaseSync[] = [];
 const draft = {
   title: "Huerto de aula", problem: "El curso necesita registrar el crecimiento de las plantas.",
   solution: "Una bitácora permite anotar riegos y comparar el crecimiento de cada planta.",
+  description: "Una bitácora para registrar y consultar el crecimiento de cada planta.",
+  purpose: "Ayudar al curso a observar cambios en su huerto.",
   goals: ["Registrar riegos"], skills: ["TypeScript"], scope: "Una pantalla registra plantas y medidas.", constraints: ["Funciona sin conexión"],
 };
 
@@ -69,6 +71,54 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const forged = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "student-1" }, body: JSON.stringify({ ...draft, ownerUserId: "student-2" }) });
     expect(forged.status).toBe(400);
     expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) AS count FROM proposals").get()!.count)).toBe(0);
+  });
+
+  it("requires the student's session to read the account-scoped submission list", async () => {
+    const base = await start();
+    expect((await fetch(`${base}/api/me/submissions`)).status).toBe(401);
+    const response = await fetch(`${base}/api/me/submissions`, { headers: { "x-fixture-user": "student-1" } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, data: [] });
+  });
+
+  it("persists partial drafts by student, rejects stale versions, and never evaluates incomplete data", async () => {
+    let evaluations = 0;
+    const local = createLocalMentorEvaluator();
+    const base = await start({ async evaluate(input) { evaluations += 1; return local.evaluate(input); } });
+    const headers = { "x-fixture-user": "student-1", "content-type": "application/json" };
+    const partial = { title: "Mi idea", problem: "", solution: "", description: "", purpose: "", goals: [], skills: [], scope: "", constraints: [] };
+    const created = await fetch(`${base}/api/me/proposals/drafts`, { method: "POST", headers, body: JSON.stringify({ proposal: partial }) });
+    expect(created.status).toBe(201);
+    const createdData = (await created.json() as { data: { id: string; version: number; proposal: typeof partial } }).data;
+    expect(createdData.proposal).toEqual(partial);
+
+    const listed = await fetch(`${base}/api/me/proposals`, { headers });
+    expect(listed.status).toBe(200);
+    expect((await listed.json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).toContain(createdData.id);
+    const hiddenFromOtherStudent = await fetch(`${base}/api/me/proposals`, { headers: { "x-fixture-user": "student-2" } });
+    expect((await hiddenFromOtherStudent.json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).not.toContain(createdData.id);
+
+    const incompleteEvaluation = await fetch(`${base}/api/proposals/${createdData.id}/review`, { method: "POST", headers: { "x-fixture-user": "student-1" } });
+    expect(incompleteEvaluation.status).toBe(422);
+    expect(evaluations).toBe(0);
+
+    const complete = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
+      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: draft }),
+    });
+    expect(complete.status).toBe(200);
+    expect((await complete.json() as { data: { version: number } }).data.version).toBe(2);
+    const stale = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
+      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: partial }),
+    });
+    expect(stale.status).toBe(409);
+    const otherOwnerEdit = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
+      method: "PUT", headers: { ...headers, "x-fixture-user": "student-2" }, body: JSON.stringify({ expectedVersion: 2, proposal: partial }),
+    });
+    expect(otherOwnerEdit.status).toBe(404);
+
+    const evaluated = await fetch(`${base}/api/proposals/${createdData.id}/review`, { method: "POST", headers: { "x-fixture-user": "student-1" } });
+    expect(evaluated.status).toBe(200);
+    expect(evaluations).toBe(1);
   });
 
   it("coalesces concurrent requests for the same proposal version", async () => {

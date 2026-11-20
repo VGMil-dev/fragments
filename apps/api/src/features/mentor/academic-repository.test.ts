@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { migrate } from "../../db/migrate.js";
 import { createMentorRepository } from "./repository.js";
 import { createAcademicRepository } from "./academic-repository.js";
+import { createSqliteReviewStore } from "../review/sqlite-store.js";
 
 const databases: DatabaseSync[] = [];
 function fixture() {
@@ -72,6 +73,35 @@ describe("F15 academic publication and historical ownership", () => {
       { proposal_version: 1, evaluation_id: "evaluation-1", evaluation_version: 1, context_version: 1, evaluation_context_version: 1, rubric_version: "mentor-rubric-v1", rubric_version: 1 },
       { proposal_version: 2, evaluation_id: "evaluation-2", evaluation_version: 2, context_version: 1, evaluation_context_version: 1, rubric_version: "mentor-rubric-v1", rubric_version: 1 },
     ]);
+  });
+
+  it("omits incomplete drafts from teacher project DTOs without failing the query", () => {
+    const { mentor, academic } = fixture();
+    const complete = mentor.createProposal(draft, null, "student-1");
+    const partial = mentor.createProposalDraftByUser({ title: "Idea en proceso" }, "student-1");
+    expect(academic.listStudentProjects("student-1").map((project) => project.id)).toEqual([complete.id]);
+    expect(academic.listOwnedProposals("student-1").map((project) => project.id)).toContain(partial.id);
+  });
+
+  it("lists only a student's persisted Mentor and Review submissions", async () => {
+    const { db, mentor } = fixture();
+    const proposalA = mentor.createProposal(draft, null, "student-1");
+    const proposalB = mentor.createProposal(draft, null, "student-2");
+    const mentorSubmission = (sourceId: string, createdAt: string) => ({
+      kind: "mentor" as const, sourceId, score: 75, snapshotJson: { proposal: { title: "Huerto propio" } },
+      contentHash: "a".repeat(64), verificationCode: sourceId, rubricVersion: "mentor-v1", createdAt,
+    });
+    mentor.saveSubmission("mentor-submission-a", mentorSubmission(proposalA.id, "2026-11-18T10:00:00.000Z"));
+    mentor.saveSubmission("mentor-submission-b", mentorSubmission(proposalB.id, "2026-11-18T10:00:00.000Z"));
+    const reviewStore = createSqliteReviewStore(db);
+    const reviewJob = await reviewStore.enqueue({ request: { owner: "public", repo: "demo", commitSha: "a".repeat(40) }, context: { projectId: "public/demo", rubricVersion: "review-v1", evaluatorVersion: "fake-v1", studentId: "student-1" } });
+    await reviewStore.submissions.save({ id: "review-submission-a", kind: "review", sourceId: reviewJob.id, score: 83, snapshotJson: { commitSha: "a".repeat(40) }, contentHash: "b".repeat(64), verificationCode: "z".repeat(32), rubricVersion: "review-v1", createdAt: "2026-11-19T10:00:00.000Z" });
+
+    expect(mentor.listStudentSubmissions("student-1")).toMatchObject([
+      { id: "review-submission-a", kind: "review", label: "public/demo" },
+      { id: "mentor-submission-a", kind: "mentor", label: "Huerto propio" },
+    ]);
+    expect(mentor.listStudentSubmissions("student-2").map((item) => item.id)).toEqual(["mentor-submission-b"]);
   });
 
   it("leaves old cookie-owned proposals unclaimed and makes claim one-time", () => {

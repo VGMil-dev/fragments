@@ -357,8 +357,12 @@ function mapProposalFields(sections: Map<string, Element[]>): ProposalDraftField
       ["Evidencia inicial", labeledField(problemSection, "Evidencia u observación inicial")],
     ]),
     solution,
+    description: labeledField(general, "Resumen") || solution,
+    purpose: "",
     goals: labeledField(solutionSection, "Objetivo general"),
     skills: checkedSkills(skillsSection).join("\n"),
+    technologies: "",
+    expectedOutcome: "",
     scope: labeledLines([
       ["Sí incluiré en el MVP", labeledField(scopeSection, "Sí incluiré en el MVP")],
       ["No incluiré todavía", labeledField(scopeSection, "No incluiré todavía")],

@@ -83,6 +83,7 @@ function parseContext(value: unknown): ReviewContext {
     projectId: String(context.projectId),
     rubricVersion: String(context.rubricVersion),
     evaluatorVersion: String(context.evaluatorVersion),
+    ...(typeof context.studentId === "string" ? { studentId: context.studentId } : {}),
   };
 }
 
@@ -303,9 +304,27 @@ export function createSqliteReviewStore(database: DatabaseSync) {
       return row ? view(row) : null;
     },
 
+    getStudentIdForJob(id: string): string | null {
+      const row = database.prepare("SELECT payload_json FROM jobs WHERE id = ? AND type = ?").get(id, jobType) as { payload_json: string } | undefined;
+      if (!row) return null;
+      try {
+        const context = (JSON.parse(row.payload_json) as ReviewPayload).context;
+        return typeof context?.studentId === "string" ? context.studentId : null;
+      } catch { return null; }
+    },
+
     listCompleted() {
       const rows = database.prepare("SELECT * FROM jobs WHERE type = ? AND status = 'done' ORDER BY updated_at DESC LIMIT 100")
         .all(jobType) as unknown as JobRow[];
+      return rows.map(view).filter((job) => job.record).map((job) => ({
+        id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha, updatedAt: job.updatedAt,
+      }));
+    },
+
+    listCompletedForStudent(studentId: string) {
+      const rows = database.prepare(`SELECT * FROM jobs WHERE type = ? AND status = 'done'
+        AND json_extract(payload_json, '$.context.studentId') = ? ORDER BY updated_at DESC LIMIT 100`)
+        .all(jobType, studentId) as unknown as JobRow[];
       return rows.map(view).filter((job) => job.record).map((job) => ({
         id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha, updatedAt: job.updatedAt,
       }));

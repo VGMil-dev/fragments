@@ -44,7 +44,7 @@ describe("OAuthCompletionScreen", () => {
 
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher).toHaveBeenLastCalledWith("/api/me", expect.objectContaining({ cache: "no-store" }));
-    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/gallery");
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/dashboard");
   });
 
   it("explains an unconfirmed student identity without suggesting an institutional email", async () => {
@@ -71,7 +71,7 @@ describe("OAuthCompletionScreen", () => {
     expect(retry?.textContent).toContain("Reintentar");
     await act(async () => retry?.click());
 
-    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/gallery");
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/dashboard");
   });
 
   it("does not route if Better Auth has no valid session", async () => {

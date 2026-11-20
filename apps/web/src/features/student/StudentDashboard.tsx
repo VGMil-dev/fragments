@@ -1,0 +1,66 @@
+import { ArrowRight, ClipboardCheck, GraduationCap, Image, Layers3 } from "lucide-react";
+import type { ProposalDraftResponse, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
+import type { AsyncState } from "../../hooks/async-state";
+
+type StudentDashboardProps = {
+  student: StudentMe;
+  proposals: ProposalDraftResponse[];
+  proposalsLoading: boolean;
+  proposalsError: boolean;
+  onRetryProposals: () => void;
+  submissions: AsyncState<StudentSubmissionsResponse>;
+  onRetrySubmissions: () => void;
+  onContinueProposal: (proposal: ProposalDraftResponse) => void;
+  onCreateProposal: () => void;
+  onNavigate: (path: string) => void;
+};
+
+export function StudentDashboard({ student, proposals, proposalsLoading, proposalsError, onRetryProposals, submissions, onRetrySubmissions, onContinueProposal, onCreateProposal, onNavigate }: StudentDashboardProps) {
+  const latestSubmission = submissions.status === "success"
+    ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+    : undefined;
+  const continueProposal = proposals[0];
+
+  return (
+    <main className="student-dashboard" aria-labelledby="student-dashboard-title">
+      <header className="student-dashboard__heading">
+        <p className="student-screen__eyebrow">MI ESPACIO</p>
+        <h1 id="student-dashboard-title">Hola, {student.githubLogin ? `@${student.githubLogin}` : "estudiante"}</h1>
+        <p>Tu espacio para continuar propuestas y consultar tu actividad real.</p>
+        {student.avatarUrl ? <img className="student-dashboard__avatar" src={student.avatarUrl} alt="" width="56" height="56" /> : null}
+      </header>
+
+      <section className="student-dashboard__project" aria-label="Continuar tu proyecto">
+        <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
+        <div className="student-dashboard__project-copy">
+          {proposalsLoading ? <><span className="student-dashboard__status">Cargando</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Sin conexión</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Borrador guardado · versión {continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : <><span className="student-dashboard__status">Listo para empezar</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
+        </div>
+        <div className="student-dashboard__project-action">
+          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear mi primer proyecto <ArrowRight size={17} aria-hidden="true" /></button>}
+        </div>
+      </section>
+
+      <div className="student-dashboard__grid">
+        <section className="student-dashboard__card" aria-labelledby="student-dashboard-classrooms">
+          <h2 id="student-dashboard-classrooms"><GraduationCap size={20} aria-hidden="true" />En tus aulas</h2>
+          <p role="status">El servicio de aulas aún no está disponible. Aquí aparecerán tus aulas y actividades reales cuando F18 esté conectado.</p>
+          <button type="button" className="student-dashboard__link" onClick={() => onNavigate("/student/classrooms")}>Ver Mis aulas <ArrowRight size={16} aria-hidden="true" /></button>
+        </section>
+
+        <section className="student-dashboard__card" aria-labelledby="student-dashboard-submission">
+          <h2 id="student-dashboard-submission"><ClipboardCheck size={19} aria-hidden="true" />Última entrega</h2>
+          {submissions.status === "loading" ? <p role="status">Consultando tus entregas…</p> : null}
+          {submissions.status === "error" ? <><p role="alert">No pudimos consultar tus entregas ahora.</p><button type="button" className="student-dashboard__link" onClick={onRetrySubmissions}>Reintentar</button></> : null}
+          {submissions.status === "empty" ? <p>Aún no tienes entregas generadas.</p> : null}
+          {latestSubmission ? <><p className="student-dashboard__submission-title">{latestSubmission.label}</p><p>{latestSubmission.kind === "mentor" ? "Entrega Mentor" : "Entrega Review"} · {new Date(latestSubmission.createdAt).toLocaleDateString("es-CO")} · {latestSubmission.score}/100</p><small>Resultado formativo; no es aprobación docente.</small></> : null}
+          <button type="button" className="student-dashboard__link" onClick={() => onNavigate("/student/submissions")}>Ver Mis entregas <ArrowRight size={16} aria-hidden="true" /></button>
+        </section>
+      </div>
+
+      <section className="student-dashboard__gallery" aria-labelledby="student-dashboard-gallery">
+        <div><h2 id="student-dashboard-gallery"><Image size={19} aria-hidden="true" />Descubre en la Galería</h2><p>Explora propuestas compartidas por estudiantes con sesión.</p></div>
+        <button type="button" className="student-dashboard__link" onClick={() => onNavigate("/student/gallery")}>Explorar Galería <ArrowRight size={16} aria-hidden="true" /></button>
+      </section>
+    </main>
+  );
+}

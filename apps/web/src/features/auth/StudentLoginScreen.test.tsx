@@ -22,6 +22,17 @@ afterEach(() => {
 });
 
 describe("StudentLoginScreen", () => {
+  it("routes an existing student session to the dashboard", async () => {
+    getMe.mockResolvedValueOnce({ ok: true, data: { authenticated: true, id: "student-1", githubLogin: "student", avatarUrl: null, profileUrl: null } });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const navigate = vi.fn();
+    await act(async () => root?.render(<StudentLoginScreen navigate={navigate} />));
+
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/student/dashboard");
+  });
+
   it("offers recovery when the status API is unavailable and enables GitHub after retry", async () => {
     getMe
       .mockResolvedValueOnce({ ok: false, error: { code: "HTTP_ERROR", message: "Unavailable" } })

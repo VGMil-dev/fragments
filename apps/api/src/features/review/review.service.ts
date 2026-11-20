@@ -18,6 +18,7 @@ export type ReviewContext = {
   projectId: string;
   rubricVersion: string;
   evaluatorVersion: string;
+  studentId?: string;
 };
 export type ReviewAiBudget = {
   maxInputBytes: number;
@@ -85,7 +86,7 @@ export function digestSnapshot(snapshot: Omit<RepositorySnapshot, "digest">): Pr
 }
 
 async function keyFor(request: ReviewRequest, context: ReviewContext): Promise<string> {
-  return sha256(canonicalJson({ projectId: context.projectId, commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
+  return sha256(canonicalJson({ projectId: context.projectId, studentId: context.studentId ?? null, commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
 }
 
 export function reviewIdempotencyKey(request: ReviewRequest, context: ReviewContext): Promise<string> {
@@ -111,7 +112,9 @@ function parseReviewContext(value: unknown): ReviewContext {
   if (typeof projectId !== "string" || !projectId.trim() || projectId.length > 128) throw new Error("Falta el contexto interno del proyecto.");
   if (typeof rubricVersion !== "string" || !rubricVersion.trim() || rubricVersion.length > 64) throw new Error("Falta la versión interna de rúbrica.");
   if (typeof evaluatorVersion !== "string" || !evaluatorVersion.trim() || evaluatorVersion.length > 64) throw new Error("Falta la versión interna del evaluador.");
-  return { projectId: projectId.trim(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim() };
+  const studentId = context.studentId;
+  if (studentId !== undefined && (typeof studentId !== "string" || !studentId.trim() || studentId.length > 128)) throw new Error("La identidad propietaria de Review es inválida.");
+  return { projectId: projectId.trim(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim(), ...(typeof studentId === "string" ? { studentId: studentId.trim() } : {}) };
 }
 
 function toPublicReviewResponse(record: ReviewRecord): ReviewResponse {

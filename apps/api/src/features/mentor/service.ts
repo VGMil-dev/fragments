@@ -162,7 +162,7 @@ function terms(text: string): Map<string, number> {
 }
 
 function proposalText(proposal: Proposal): string {
-  return [proposal.title, proposal.problem, proposal.solution, ...proposal.goals, ...proposal.skills, proposal.scope, ...proposal.constraints].join(" ");
+  return [proposal.title, proposal.problem, proposal.solution, ...proposal.goals, ...proposal.skills, ...(proposal.technologies ?? []), proposal.expectedOutcome, proposal.scope, ...proposal.constraints].join(" ");
 }
 
 function galleryText(entry: GalleryEntry): string {
@@ -269,6 +269,8 @@ export function createMentorService(options: Options) {
         `## Objetivos\n${proposal.goals.map((goal) => `- ${goal}`).join("\n")}`, "",
         `## Habilidades\n${proposal.skills.map((skill) => `- ${skill}`).join("\n")}`, "",
         `## Alcance inicial\n${proposal.scope}`, "",
+        `## Tecnologías previstas\n${proposal.technologies?.length ? proposal.technologies.map((technology) => `- ${technology}`).join("\n") : "Aún por definir"}`, "",
+        `## Resultado esperado\n${proposal.expectedOutcome || "Aún por definir"}`, "",
         `## Restricciones\n${proposal.constraints.map((constraint) => `- ${constraint}`).join("\n")}`, "",
       ].join("\n");
     },

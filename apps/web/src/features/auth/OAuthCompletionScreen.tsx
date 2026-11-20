@@ -26,7 +26,7 @@ export function OAuthCompletionScreen({ navigate }: { navigate: (path: string) =
         if (!active) return;
         if (!meResponse.ok) { setState("unavailable"); return; }
         const me = await meResponse.json() as { data?: { authenticated?: unknown; reason?: unknown } };
-        if (me.data?.authenticated === true) navigate("/student/gallery");
+        if (me.data?.authenticated === true) navigate("/student/dashboard");
         else if (me.data?.authenticated === false) {
           const reason = me.data.reason;
           setState(reason === "github_account_not_linked" ? "github_unlinked"

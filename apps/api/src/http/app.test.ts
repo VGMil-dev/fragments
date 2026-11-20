@@ -115,7 +115,8 @@ describe("HTTP API", () => {
     const server = createServer(createHttpHandler(db, { review: {
       store,
       service,
-      resolveContext: async (_request, input) => ({ projectId: `${input.owner}/${input.repo}`, rubricVersion: "review-test-v1", evaluatorVersion: "fake-test-v1" }),
+      resolveStudentId: async () => "student-fixture",
+      resolveContext: async (_request, input) => ({ projectId: `${input.owner}/${input.repo}`, rubricVersion: "review-test-v1", evaluatorVersion: "fake-test-v1", studentId: "student-fixture" }),
     } }));
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -185,6 +186,8 @@ describe("HTTP API", () => {
         title: "Huerto escolar interactivo",
         problem: "El curso no tiene una forma sencilla de registrar el crecimiento de sus plantas.",
         solution: "Una aplicación local permite registrar medidas y ver su evolución semanal.",
+        description: "Una bitácora para observar el crecimiento de las plantas.",
+        purpose: "Ayudar al curso a aprender mediante observaciones.",
         goals: ["Registrar medidas", "Comparar plantas"],
         skills: ["TypeScript", "SQLite"],
         scope: "Una pantalla permite agregar y consultar medidas por planta.",

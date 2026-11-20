@@ -41,14 +41,19 @@ function session(request: IncomingMessage, response: ServerResponse, ensure: (ha
   return hash;
 }
 
-export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => boolean) {
+export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => boolean, resolveStudentId?: (request: IncomingMessage) => Promise<string | null>) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<RouteResult> => {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (!url.pathname.startsWith("/api/trainer/")) return "unhandled";
-    const sessionHash = session(request, response, ensureSession);
+    const studentId = resolveStudentId ? await resolveStudentId(request) : undefined;
+    if (resolveStudentId && !studentId) { error(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Trainer."); return "handled"; }
+    const browserSessionHash = session(request, response, ensureSession);
+    const sessionHash = studentId ? createHash("sha256").update(browserSessionHash).update("\0").update(studentId).digest("hex") : browserSessionHash;
+    if (studentId) ensureSession(sessionHash, new Date());
+    const ownsReview = async (reviewId: string) => !resolveStudentId || Boolean(studentId && (await service.listReviews(studentId)).some((review) => review.id === reviewId));
     try {
       if (request.method === "GET" && url.pathname === "/api/trainer/reviews") {
-        const reviews = z.array(TrainerReviewSchema).max(100).parse(await service.listReviews());
+        const reviews = z.array(TrainerReviewSchema).max(100).parse(await service.listReviews(studentId ?? undefined));
         json(response, 200, { ok: true, data: reviews }); return "handled";
       }
       if (request.method === "GET" && url.pathname === "/api/trainer/history") {
@@ -58,12 +63,14 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/draw") {
         const input = z.object({ reviewId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/) }).strict().parse(await body(request));
+        if (!await ownsReview(input.reviewId)) { error(response, 404, "REVIEW_NOT_FOUND", "No se encontró el análisis solicitado."); return "handled"; }
         const result = await service.draw(sessionHash, input.reviewId);
         const data = z.object({ challenge: TrainerChallengeSchema, category: z.enum(["new", "pending", "review"]), bankSize: z.number().int().min(1).max(5) }).strict().parse(result);
         json(response, 200, { ok: true, data }); return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/attempts") {
         const input = z.object({ reviewId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/), challengeId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/), status: TrainerStatusSchema, hintsUsed: z.number().int().min(0).max(3) }).strict().parse(await body(request));
+        if (!await ownsReview(input.reviewId)) { error(response, 404, "REVIEW_NOT_FOUND", "No se encontró el análisis solicitado."); return "handled"; }
         const result = await service.record({ ...input, sessionHash });
         json(response, 201, { ok: true, data: TrainerHistorySchema.element.parse(result) }); return "handled";
       }
