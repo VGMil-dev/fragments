@@ -1,6 +1,6 @@
 # F21 — Evidencia
 
-Estado: EN DESARROLLO. No se realizaron cambios en VPS ni producción.
+Estado: EN DESPLIEGUE. PR #59 integrada en `main` como merge commit `af7a3f3d125f2b44a6a28989e7b8e4f83758b32e`; VPS aún sin modificación.
 
 ## Fuentes y preflight
 - Objetivo local leído desde el attachment F21.
@@ -54,4 +54,8 @@ Comando SSH con `BatchMode=yes` y `StrictHostKeyChecking=yes` (`servidor`), usan
 - CI final de la rama: Actions run `44832455291`, job `verify` **success**. PostgreSQL 18.6 efímero; `prisma migrate deploy` PASS; política F14 y script backup PASS; `pg_dump`→`pg_restore`→verificación de tablas PASS; máquina de estados F14 y metadata release PASS; Turbo ejecutó **30 archivos/133 pruebas PASS, 0 omitidas**; typecheck, lint y build PASS. Linux CI es la verificación obligatoria de integración; la suite local Windows mantiene 62 skips de PostgreSQL porque no depende de una instalación local.
 
 ## Verificaciones pendientes
-Auditar y retirar las ramas SQLite de los handlers/repositorios heredados; ampliar tests de integración para cada persistencia Prisma y ejecutarlos en `fragments_test` CI/VPS; verificar roles y restores reales en ambas bases; actualizar/configurar el agente F14 en VPS, conservar el único backup SQLite de emergencia, Ego Lite con dos perfiles, aprobar release, desplegar y comprobar producción. Crear `F21_EVIDENCIAS` con máximo 20 archivos, completar informe, capturas y Notion. No se tocó VPS ni producción en esta etapa.
+CI actual de la rama: run `44832898084`, job `verify` **PASS**: PostgreSQL efímero, `prisma migrate deploy`, roundtrip pg_dump/restore, 133 pruebas sin omisiones, typecheck, lint y build. PR #59 mergeada por merge commit (squash no permitido por el repositorio). SHA de merge `af7a3f3d125f2b44a6a28989e7b8e4f83758b32e`.
+- F21 retiró el fixture F16 que dependía del `sqlite-store` eliminado; README y guía de agente ya describen PostgreSQL. Esta limpieza documental/fixture requiere una PR breve antes del tag.
+- No queda SQLite en repositorios productivos API; el agente F14 contiene solo la rutina acotada que crea/verifica el snapshot SQLite de emergencia previo al primer corte. Se detectó que la VPS aún tiene timer de backup SQLite activo y binario agente anterior: antes de disparar el release hay que instalar F14 actualizado y sustituir ese timer por el backup PostgreSQL, manteniendo el backup diario en el ciclo de corte.
+- VPS está viva y no se modificó en esta etapa: API/web Fragments sanos, PostgreSQL existente pertenece a Pits y no se tocará. Compose actual y agente F14 instalados en VPS son anteriores a F21; la configuración de release debe prepararse antes de emitir tag.
+- Pendientes: integrar limpieza residual, actualizar Compose/agente F14 en VPS sin interrumpir el servicio, tomar/verificar único snapshot SQLite, crear y comprobar ambas bases/roles, probar backups y restore en VPS, preparar QA aislado `fragments_test` y Ego Lite docente/estudiante, crear tag anotada, esperar aprobación protegida GitHub, comprobar despliegue y salud, actualizar Notion y generar `F21_EVIDENCIAS` (máximo 20 archivos con `INFORME_FINAL.md`).

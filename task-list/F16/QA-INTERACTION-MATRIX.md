@@ -1,6 +1,6 @@
 # F16 — QA Interaction Matrix
 
-**Estado:** cierre técnico **CONDITIONAL REVIEW**. R5–R6 convergen para readiness; zoom nativo BLOCKED y lector de pantalla NOT_VERIFIED. Los flujos autenticados usan `qa-fixtures/api-server.mjs`, SQLite en memoria y proveedores fake; no equivalen a OAuth/GitHub/IA/correo reales.
+**Estado:** cierre técnico **CONDITIONAL REVIEW**. R5–R6 convergen para readiness; zoom nativo BLOCKED y lector de pantalla NOT_VERIFIED. Los recorridos autenticados capturados en este artefacto son históricos y usaron un fixture local que F21 retiró junto con SQLite. Para QA funcional vigente, usar el perfil Compose `qa` de F21 contra `fragments_test`; esto no certifica proveedores externos.
 
 | ID | Ruta/superficie | Acción/estado | Resultado esperado | Método y viewport | Resultado/evidencia | Estado |
 |---|---|---|---|---|---|---|
