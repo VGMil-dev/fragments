@@ -62,3 +62,12 @@
 - Workflow Fragments release run `44680764087`: verify tag/source, tests, typecheck, lint, build, bundle metadata, imágenes ARM64 y attest-package PASS; atestación firmada publicada como artefacto del run.
 - Job `publish-approved-release` permanece `waiting` por aprobación manual del entorno `fragments-production`. No se publicó el GitHub Release ni arrancó/confirmó el agente F14 pull en VPS. No se verificó health ni versión servida; estado no desplegado.
 - Gate pendiente para propietario: aprobar `publish-approved-release` en https://github.com/VGMil-dev/fragments/actions/runs/44680764087. No se usó bypass ni aprobación programática.
+
+## Publicación F14 y verificación de producción — 2026-11-20
+
+- Run F14 44680764087 terminó completed/success. Release 0.5.0: tag object 79705074d95a294088bf36fba2b3694339a7e35a, peeled commit c64eb1944d3e5c2846644fd1b95a4a3f2f58f04. GitHub Release publicado: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.0. La publicación protegida completó sin bypass.
+- Ego Lite abrió https://fragments.gavanti.org: BuildVersion mostró 0.5.0 y SHA c64eb1944d3e5c2846644fd1b95a4a3f2f58f04. /health respondió HTTP 200, status=ok, database=ready; recursos JS y CSS 200.
+- Solicitudes externas sin sesión a /api/teacher/classrooms y /api/me/classrooms respondieron HTTP 401. No se inició sesión con cuentas reales ni se usaron datos reales; la ruta autenticada docente/estudiante en producción no queda certificada.
+- PR #54 de documentación del gate se fusionó; CI run 44681523200 PASS. origin/main actual: 09952a74ca0149f17063a83f2b2b50759c2a120. El tag permanece en el SHA exacto de release indicado arriba.
+- El informe y ZIP reflejan el estado desplegado. F18.A permanece parcial por QA integrada incompleta: no se cubrieron todos los anchos 320/768/1024 ni consola/teclado/reduced-motion para cada vista. No marcar F18 general completa.
+- ZIP regenerado con 22 entradas (20 capturas, informe y manifiesto). SHA-256: $zipHash. Manifiesto verificado sobre todos los archivos excepto sí mismo.
