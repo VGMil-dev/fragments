@@ -3,6 +3,34 @@ import { createApiClient } from "./api-client";
 import { createStudentApi } from "./student-api";
 
 describe("createStudentApi", () => {
+  it("reads account-scoped classrooms and requests, submits a join code, and loads authorized skills", async () => {
+    const classroom = { id: "classroom-a", title: "Grupo A", subject: "Programación", groupLabel: "10A", period: null, status: "active", createdAt: "2026-11-19T10:00:00.000Z", updatedAt: "2026-11-19T10:00:00.000Z" };
+    const request = { id: "enrollment-a", status: "pending", source: "join_code", requestedAt: "2026-11-19T10:00:00.000Z", decidedAt: null };
+    const skill = { id: "skill-a", name: "Descomposición", description: null, archived: false, createdAt: "2026-11-19T10:00:00.000Z", updatedAt: "2026-11-19T10:00:00.000Z" };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [classroom] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [request] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: request }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [skill] }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.getMyClassrooms()).resolves.toEqual({ ok: true, data: [classroom] });
+    await expect(api.getMyClassroomRequests()).resolves.toEqual({ ok: true, data: [request] });
+    await expect(api.requestClassroom("A".repeat(32))).resolves.toEqual({ ok: true, data: request });
+    await expect(api.getMyClassroomSkills("classroom-a")).resolves.toEqual({ ok: true, data: [skill] });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "/api/me/classrooms", "/api/me/classroom-requests", "/api/classroom-join-requests", "/api/me/classrooms/classroom-a/skills",
+    ]);
+    expect(JSON.parse(String(fetcher.mock.calls[2]?.[1]?.body))).toEqual({ code: "A".repeat(32) });
+  });
+
+  it("rejects malformed join codes before making a request", async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    const api = createStudentApi(createApiClient({ fetcher }));
+    await expect(api.requestClassroom("too-short")).resolves.toMatchObject({ ok: false, error: { code: "INVALID_REQUEST" } });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("creates and version-checks a partial proposal draft through owned routes", async () => {
     const saved = { id: "proposal-1", version: 1, proposal: { title: "Huerto" }, updatedAt: "2026-11-19T10:00:00.000Z" };
     const updated = { ...saved, version: 2 };

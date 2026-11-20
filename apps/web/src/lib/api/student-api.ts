@@ -8,6 +8,11 @@ import {
   MeResponseSchema,
   OwnedProposalsResponseSchema,
   StudentSubmissionsResponseSchema,
+  StudentClassroomsSchema,
+  StudentClassroomRequestsSchema,
+  StudentClassroomRequestSchema,
+  JoinClassroomRequestSchema,
+  SkillCatalogResponseSchema,
   MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
@@ -32,6 +37,9 @@ import {
   type ProposalResponse,
   type ProposalDraftResponse,
   type StudentSubmissionsResponse,
+  type ClassroomSummary,
+  type StudentClassroomRequest,
+  type SkillCatalogEntry,
   type UpdateProposalRequest,
   type UpdateProposalDraftRequest,
   type ReviewRequest,
@@ -83,6 +91,22 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
     },
     getMySubmissions(signal?: AbortSignal): Promise<ApiResult<StudentSubmissionsResponse>> {
       return client.request("/api/me/submissions", StudentSubmissionsResponseSchema, withSignal(signal));
+    },
+    getMyClassrooms(signal?: AbortSignal): Promise<ApiResult<ClassroomSummary[]>> {
+      return client.request("/api/me/classrooms", StudentClassroomsSchema, withSignal(signal));
+    },
+    getMyClassroomRequests(signal?: AbortSignal): Promise<ApiResult<StudentClassroomRequest[]>> {
+      return client.request("/api/me/classroom-requests", StudentClassroomRequestsSchema, withSignal(signal));
+    },
+    requestClassroom(code: string, signal?: AbortSignal) {
+      const request = JoinClassroomRequestSchema.safeParse({ code });
+      if (!request.success) return Promise.resolve(invalid<StudentClassroomRequest>());
+      return client.request("/api/classroom-join-requests", StudentClassroomRequestSchema, jsonRequest("POST", request.data, signal));
+    },
+    getMyClassroomSkills(classroomId: string, signal?: AbortSignal): Promise<ApiResult<SkillCatalogEntry[]>> {
+      const id = encodeId(classroomId);
+      if (!id) return Promise.resolve(invalid<SkillCatalogEntry[]>());
+      return client.request(`/api/me/classrooms/${id}/skills`, SkillCatalogResponseSchema, withSignal(signal));
     },
 
     getGalleryDetail(projectId: string, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryDetail>> {

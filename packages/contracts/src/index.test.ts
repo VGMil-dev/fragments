@@ -36,6 +36,12 @@ import {
   RepositorySnapshotSchema,
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
+  ClassJoinCodeSchema,
+  ClassroomJoinCodeRevocationSchema,
+  ClassEnrollmentTransitionSchema,
+  ClassroomCreateRequestSchema,
+  ClassroomUpdateRequestSchema,
+  SkillCreateRequestSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
@@ -69,6 +75,32 @@ const analysis = {
 };
 
 describe("shared API contracts", () => {
+  it("validates classroom input without accepting client-supplied ownership", () => {
+    const valid = { title: "Grupo A", subject: "Programación", groupLabel: "10A" };
+    expect(ClassroomCreateRequestSchema.safeParse(valid).success).toBe(true);
+    expect(ClassroomCreateRequestSchema.safeParse({ ...valid, teacherId: "teacher-1" }).success).toBe(false);
+    expect(ClassroomUpdateRequestSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("exposes only the join code and safe expiry metadata", () => {
+    const publicCode = { code: "A".repeat(43), expiresAt: null, createdAt: new Date().toISOString() };
+    expect(ClassJoinCodeSchema.safeParse(publicCode).success).toBe(true);
+    expect(ClassJoinCodeSchema.safeParse({ ...publicCode, codeHash: "secret" }).success).toBe(false);
+  });
+
+  it("validates code revocation responses and enrollment transitions", () => {
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ revoked: true }).success).toBe(true);
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ revoked: true, codeHash: "private" }).success).toBe(false);
+    expect(ClassroomJoinCodeRevocationSchema.safeParse({ ok: true }).success).toBe(false);
+    expect(ClassEnrollmentTransitionSchema.safeParse({ status: "active" }).success).toBe(true);
+    expect(ClassEnrollmentTransitionSchema.safeParse({ status: "pending" }).success).toBe(false);
+  });
+
+  it("bounds and trims skill catalog names", () => {
+    expect(SkillCreateRequestSchema.safeParse({ name: "  Custom Hooks  " }).success).toBe(true);
+    expect(SkillCreateRequestSchema.safeParse({ name: "   " }).success).toBe(false);
+  });
+
   it("validates teacher login and session responses without exposing session tokens", () => {
     expect(TeacherLoginRequestSchema.safeParse({ email: "teacher@example.test", password: "fake-password" }).success).toBe(true);
     expect(TeacherLoginRequestSchema.safeParse({ email: "invalid", password: "x" }).success).toBe(false);

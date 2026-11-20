@@ -228,6 +228,87 @@ const migrations = [
     CREATE UNIQUE INDEX inspector_challenges_ai_operation ON inspector_challenges(ai_operation_key)
       WHERE ai_operation_key IS NOT NULL;`,
   },
+  {
+    version: 14,
+    sql: `CREATE TABLE classrooms (
+      id TEXT PRIMARY KEY,
+      teacher_id TEXT NOT NULL REFERENCES user(id) ON DELETE RESTRICT,
+      title TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      group_label TEXT NOT NULL,
+      identity_key TEXT NOT NULL,
+      period TEXT,
+      context TEXT,
+      status TEXT NOT NULL CHECK (status IN ('active', 'archived')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (id, teacher_id),
+      UNIQUE (teacher_id, identity_key)
+    );
+    CREATE INDEX classrooms_teacher ON classrooms(teacher_id, updated_at DESC);
+    CREATE TABLE class_join_codes (
+      id TEXT PRIMARY KEY,
+      classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE RESTRICT,
+      code_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT,
+      revoked_at TEXT,
+      revoked_by TEXT REFERENCES user(id) ON DELETE RESTRICT,
+      created_at TEXT NOT NULL,
+      created_by TEXT NOT NULL REFERENCES user(id) ON DELETE RESTRICT
+    );
+    CREATE INDEX class_join_codes_live ON class_join_codes(classroom_id, revoked_at, expires_at);
+    CREATE TABLE class_enrollments (
+      id TEXT PRIMARY KEY,
+      classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE RESTRICT,
+      student_id TEXT NOT NULL REFERENCES user(id) ON DELETE RESTRICT,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'active', 'rejected', 'removed')),
+      source TEXT NOT NULL CHECK (source IN ('join_code', 'teacher_assignment')),
+      requested_at TEXT NOT NULL,
+      decided_at TEXT,
+      decided_by TEXT REFERENCES user(id) ON DELETE RESTRICT,
+      UNIQUE (classroom_id, student_id)
+    );
+    CREATE INDEX class_enrollments_classroom ON class_enrollments(classroom_id, status, requested_at);
+    CREATE INDEX class_enrollments_student ON class_enrollments(student_id, status, requested_at DESC);
+    CREATE TABLE class_enrollment_events (
+      id TEXT PRIMARY KEY,
+      enrollment_id TEXT NOT NULL REFERENCES class_enrollments(id) ON DELETE RESTRICT,
+      previous_status TEXT CHECK (previous_status IS NULL OR previous_status IN ('pending', 'active', 'rejected', 'removed')),
+      next_status TEXT NOT NULL CHECK (next_status IN ('pending', 'active', 'rejected', 'removed')),
+      source TEXT NOT NULL CHECK (source IN ('join_code', 'teacher_assignment', 'teacher_approval', 'teacher_rejection', 'teacher_removal')),
+      actor_user_id TEXT REFERENCES user(id) ON DELETE RESTRICT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX class_enrollment_events_history ON class_enrollment_events(enrollment_id, created_at);
+    CREATE TABLE class_join_attempts (
+      student_id TEXT PRIMARY KEY REFERENCES user(id) ON DELETE CASCADE,
+      window_started_at INTEGER NOT NULL,
+      attempt_count INTEGER NOT NULL CHECK (attempt_count >= 0)
+    );
+    CREATE TABLE teacher_skills (
+      id TEXT PRIMARY KEY,
+      teacher_id TEXT NOT NULL REFERENCES user(id) ON DELETE RESTRICT,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL,
+      description TEXT,
+      archived INTEGER NOT NULL CHECK (archived IN (0, 1)),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (teacher_id, normalized_name),
+      UNIQUE (id, teacher_id)
+    );
+    CREATE INDEX teacher_skills_owner ON teacher_skills(teacher_id, archived, name);
+    CREATE TABLE classroom_skill_availability (
+      classroom_id TEXT NOT NULL,
+      skill_id TEXT NOT NULL,
+      teacher_id TEXT NOT NULL,
+      enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (classroom_id, skill_id),
+      FOREIGN KEY (classroom_id, teacher_id) REFERENCES classrooms(id, teacher_id) ON DELETE RESTRICT,
+      FOREIGN KEY (skill_id, teacher_id) REFERENCES teacher_skills(id, teacher_id) ON DELETE RESTRICT
+    );`,
+  },
 ];
 
 export function migrate(database: DatabaseSync): void {
