@@ -84,6 +84,7 @@
 
 ## Release F14 v0.5.1 y verificación posterior — 2026-11-20
 
+- Commit que consolida informe, ZIP, manifiesto y actualización de TASKS: `a17f18481389ea5b0ed9de09720ab17c14642cfc` (`docs(f18a): cerrar informe y evidencia de release`).
 - Commit de aplicación y evidencia: `234dc49d895869afbba9cd7f4a4bef19d06c2b2c`; commit documental: `1b269c0` (`docs(f18a): registrar corrección de confirmaciones`). PR #56 pasó `verify` en run `44762099589` y se integró normalmente. `origin/main`: `5b81542df0b4f725027a44a7bc294199f3289faa`.
 - Tag anotado `v0.5.1` publicado sobre el SHA exacto `5b81542df0b4f725027a44a7bc294199f3289faa`. Run F14 `44762449183` completó `verify-build`, imágenes ARM64, attest-package y `publish-approved-release` con éxito; la aprobación normal del entorno `fragments-production` se registró para esta publicación. GitHub Release: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.1.
 - Ego Lite sobre la landing pública muestra `v0.5.1` y el SHA completo `5b81542df0b4f725027a44a7bc294199f3289faa`. `/health` respondió 200, `status=ok`, `database=ready`; UI cargó correctamente. Requests anónimos directos a `/api/teacher/classrooms` y `/api/me/classrooms` respondieron 401.
