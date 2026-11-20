@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { AiAnalysisSchema } from "@fragments/contracts";
 import { z } from "zod";
-import { estimateAiInputTokens, parseGatewayCostUsd, SqliteAiBudgetLedger, type AiGatewayRateCard } from "./budget-ledger.js";
+import { estimateAiInputTokens, parseGatewayCostUsd, type AiBudgetRunner, type AiGatewayRateCard } from "./budget-ledger.js";
 import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 import { ReviewProcessingError } from "../../features/review/review-errors.js";
 
@@ -52,7 +52,7 @@ export function createGatewayReviewAiProvider(options: {
   providerOnly?: string;
   gatewayKeyConfigured: boolean;
   rates?: AiGatewayRateCard;
-  ledger: SqliteAiBudgetLedger;
+  ledger: AiBudgetRunner;
   generate?: GenerateStructured;
 }) {
   const generate = options.generate ?? generateWithGateway;

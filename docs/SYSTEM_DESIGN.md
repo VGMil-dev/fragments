@@ -23,7 +23,7 @@ flowchart LR
 ```
 
 ## Arquitectura y estructura
-Turborepo + pnpm workspaces; `apps/web` (React + Vite + TS), `apps/api` (Node + TS; router HTTP, worker en proceso separado con mismo código base); `packages/contracts` (esquemas Zod DTO y tipos inferidos), `packages/ui` SOLO si aporta reutilización real; `packages/config` opcional. SQLite WAL con cola en tabla y lease/heartbeat/idempotencia, sin Redis. VPS Oracle 2 vCPU/12 GB, Docker Compose local y producción con perfiles o archivos override. Reverse proxy Caddy o existente, TLS y volúmenes. AI SDK `ai` + Vercel AI Gateway (`AI_GATEWAY_API_KEY` solo servidor) con proveedor configurable por variable, sin modelo definitivo hasta benchmark. Driver `AiProvider` encapsula SDK. Driver `RepositoryReader` encapsula GitHub; `RepositoryPacker` usa Repomix fijado (procesos temporales con límites); `Clock`,`Hashing`,`PdfRenderer`,`QueueRepository` y `EvaluationStore` con interfaces delgadas, mocks en pruebas. No ejecutar código del estudiante en VPS en MVP.
+Turborepo + pnpm workspaces; `apps/web` (React + Vite + TS), `apps/api` (Node + TS; router HTTP y worker en el mismo código base); `packages/contracts` (esquemas Zod DTO y tipos inferidos), `packages/ui` solo si aporta reutilización real; `packages/config` opcional. PostgreSQL con Prisma como almacenamiento único; cola en tabla con lease/heartbeat/idempotencia y sin Redis. La VPS ejecuta Docker Compose con PostgreSQL privado y dos bases limpias: `fragments_prod` y `fragments_test`. API usa un rol runtime y las migraciones un rol separado; backups/restores PostgreSQL son operados por F14. AI SDK `ai` + Vercel AI Gateway (`AI_GATEWAY_API_KEY` solo servidor). Drivers `AiProvider`, `RepositoryReader`, `RepositoryPacker`, `Clock`, `Hashing`, `PdfRenderer`, `QueueRepository` y repositorios Prisma mantienen límites pequeños. No ejecutar código del estudiante en VPS.
 
 ### Slices verticales (en vez de crear capas completas sin valor)
 S0 base funcional web/API/health/contratos. S1 propuesta Mentor end-to-end: pantalla→API→persistencia→fixture IA→resultado. S2 entrega Mentor README+PDF efímero+verificador. S3 Review por commit en cola, feedback y PDF. S4 Inspector privado por commit y registro docente. S5 galería opt-in e integración de calidad + hardening. Cada slice debe atravesar UI, API, persistencia, pruebas y evidencia.
@@ -41,15 +41,14 @@ La ruta pública de verificación da solo microinforme no sensible. Todas las ru
 - Galería F15: sesión GitHub requerida, publicación automática solo tras evaluación persistida con contexto inmutable; no revelar puntajes, correos, nombres legales, retos ni repositorios privados. La retirada docente es auditada y conserva el historial.
 - IA es orientativa; la decisión académica es docente.
 
-## Modelo mínimo SQLite
-`users(id,role,alias,...)`; `projects(id,owner_id,title,visibility,repo_url,...)`; `proposal_revisions(id,project_id,canonical_json,score,feedback,rubric_version,created_at)`; `submissions(id,kind,source_id,snapshot_json,score,sha256,verification_code,created_at)`; `evaluations(id,project_id,commit_sha,rubric_version,status,score,findings_json,model_id,created_at)`; `evaluation_jobs(id,evaluation_id,status,attempts,lease_until,updated_at)`; `challenges(id,evaluation_id,source_paths_json,prompt,teacher_help,expected_result,status)`; `defense_sessions(id,challenge_id,teacher_id,outcome,notes,created_at)`; `gallery_entries(id,project_id,approved_visibility,excerpt)`.
-Campos exactos/migraciones los define W3. Índices por commit/rúbrica y verificación. No almacenar repositorios completos; limpiar temporales.
+## Persistencia PostgreSQL
+El esquema actual está en `apps/api/prisma/schema.prisma`; las migraciones versionadas son la única fuente para preparar una base. Se guardan usuarios/sesiones Better Auth, propuestas/revisiones/evaluaciones, trabajos e intentos Review, entregas, retos Inspector, Trainer, aulas/matrículas, configuración versionada de Mentor y reservas de coste IA. Los índices y claves foráneas fijan idempotencia y propiedad. No se importan filas de SQLite ni se almacenan repositorios completos; los temporales se limpian.
 
 ## Seguridad y fiabilidad
 - Tratar README/código como datos no confiables (prompt injection); sanitizar entradas, longitud y rutas; GitHub URL allowlist y resolver repo mediante API oficial, no fetch arbitrario (SSRF).
 - No ejecutar `npm install`, build o scripts de estudiantes en el VPS. Repomix en entorno limitado; nunca `--remote-trust-config`; excluir secretos, binarios, node_modules, lockfiles gigantes según tarea; no transmitir PII a IA.
 - Limitar tamaño, tokens, concurrencia (1–2 al empezar), bytes, retries, timeout y presupuesto por cuenta. Encolar con transacción/lease; on restart se recuperan trabajos vencidos.
-- Proteger auth docente y secretos; CORS, HTTPS, control de sesiones, audit log mínimo, backups SQLite (WAL coordinado), logs sin tokens.
+- Proteger auth docente y secretos; CORS, HTTPS, control de sesiones, audit log mínimo, backups PostgreSQL verificados y logs sin tokens.
 - PDF verificado contra DB: token de verificación no acredita que el PDF no esté alterado visualmente; microinforme oficial es la fuente. No exponer detalles de retos.
 
 ## Diseño visual — sistema F16 Pixel Night
@@ -62,4 +61,4 @@ Tres prompts versionados (`mentor`, `review`, `inspector`) con salidas JSON esqu
 Ego(lite) + `ego-browser` como única herramienta de navegador para pruebas exploratorias, capturas y validación E2E en Windows del usuario. Verificar la conexión existente; si falla, registrar bloqueo sin sustituirlo por Playwright. Flujos mínimos: idea→nota→reintento→generar README/PDF; URL→cola→evaluación→feedback→PDF; docente→reto privado→registro; galería opt-in; vista móvil 390px, desktop 1440px; teclado, focus y reducción de movimiento.
 
 ## Criterios de aceptación transversales
-Compilación, lint, types, pruebas unitarias, integración SQLite, E2E navegador, Promptfoo contra fixtures, review de accesibilidad, API health, Docker local/prod, ninguna clave cliente, faltas de evidencia documentadas. Nadie da tarea por cerrada sin `task-list/<id>/evidencie.md` con comando, resultado, enlace a captura/log, limitaciones.
+Compilación, lint, types, pruebas unitarias, integración Prisma obligatoria en CI con PostgreSQL efímero, E2E navegador con Ego Lite, Promptfoo contra fixtures, revisión de accesibilidad, API health, Docker, ninguna clave cliente y límites de evidencia documentados. Nadie da tarea por cerrada sin `task-list/<id>/evidencie.md` con comando, resultado, enlace a captura/log y limitaciones.

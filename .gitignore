@@ -2,6 +2,12 @@
 .env.*
 !.env.example
 !deploy/production/.env.bootstrap.example
+!deploy/production/.env.postgres.example
+!deploy/production/.env.migrate.example
+!deploy/production/.env.backup.example
+!deploy/production/.env.test.example
+!deploy/production/.env.restore.example
+!deploy/production/.env.test-migrate.example
 deploy/production/.env
 deploy/production/.env.bootstrap
 /env
@@ -20,6 +26,7 @@ id_ed25519_sk
 *.p12
 *.pfx
 node_modules/
+apps/api/src/generated/prisma/
 dist/
 coverage/
 /.worktrees/

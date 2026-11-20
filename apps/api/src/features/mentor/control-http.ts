@@ -1,21 +1,21 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import { ApiResultSchema, MentorControlConfigSchema, MentorControlWorkspaceResponseSchema, MentorPublishedConfigSchema } from "@fragments/contracts";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
-import { createMentorControlRepository } from "./control-repository.js";
+import { createPrismaMentorControlRepository } from "./prisma-control-repository.js";
 
 type RouteResult = "handled" | "unhandled";
 const emptyRequest = z.object({}).strict();
 const errorSchema = ApiResultSchema(z.unknown());
 
-export function createMentorControlHttp(database: DatabaseSync, auth?: FragmentsAuthService) {
-  const repository = createMentorControlRepository(database);
+export function createMentorControlHttp(database: PrismaClient, auth?: FragmentsAuthService) {
+  const repository = createPrismaMentorControlRepository(database);
 
   return async function handleMentorControlHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (request.method === "GET" && url.pathname === "/api/mentor/context") {
-      try { sendJson(response, 200, { ok: true, data: MentorPublishedConfigSchema.parse(repository.getActive()) }); }
+      try { sendJson(response, 200, { ok: true, data: MentorPublishedConfigSchema.parse(await repository.getActive()) }); }
       catch { sendError(response, 503, "CONFIG_UNAVAILABLE", "Mentor no tiene una configuración publicada."); }
       return "handled";
     }
@@ -32,7 +32,7 @@ export function createMentorControlHttp(database: DatabaseSync, auth?: Fragments
 
     try {
       if (request.method === "GET" && url.pathname === "/api/teacher/mentor-control") {
-        sendJson(response, 200, { ok: true, data: MentorControlWorkspaceResponseSchema.parse(repository.workspace()) });
+        sendJson(response, 200, { ok: true, data: MentorControlWorkspaceResponseSchema.parse(await repository.workspace()) });
         return "handled";
       }
       if (request.method === "PUT" && url.pathname === "/api/teacher/mentor-control/draft") {
@@ -40,14 +40,14 @@ export function createMentorControlHttp(database: DatabaseSync, auth?: Fragments
         if (raw === undefined) return "handled";
         const config = MentorControlConfigSchema.safeParse(raw);
         if (!config.success) { sendError(response, 400, "INVALID_INPUT", "Revisa la temática y los criterios de la rúbrica."); return "handled"; }
-        sendJson(response, 200, { ok: true, data: repository.saveDraft(config.data) });
+        sendJson(response, 200, { ok: true, data: await repository.saveDraft(config.data) });
         return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/teacher/mentor-control/publish") {
         const raw = await readJson(request, response);
         if (raw === undefined) return "handled";
         if (!emptyRequest.safeParse(raw).success) { sendError(response, 400, "INVALID_INPUT", "La publicación no requiere campos."); return "handled"; }
-        const result = repository.publishDraft(teacherId);
+        const result = await repository.publishDraft(teacherId);
         if (result.status === "invalid_weights") { sendError(response, 400, "INVALID_RUBRIC_WEIGHTS", "Los pesos de la rúbrica deben sumar 100."); return "handled"; }
         sendJson(response, 201, { ok: true, data: result.active });
         return "handled";

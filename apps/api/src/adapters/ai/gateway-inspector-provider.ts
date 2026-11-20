@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { estimateAiInputTokens, parseGatewayCostUsd, type AiGatewayRateCard, type SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { estimateAiInputTokens, parseGatewayCostUsd, type AiBudgetRunner, type AiGatewayRateCard } from "./budget-ledger.js";
 import { hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 import type { ChallengeDraft } from "../../features/inspector/service.js";
 
@@ -47,7 +47,7 @@ export function createGatewayInspectorProvider(options: {
   providerOnly?: string;
   gatewayKeyConfigured: boolean;
   rates?: AiGatewayRateCard;
-  ledger: SqliteAiBudgetLedger;
+  ledger: AiBudgetRunner;
   generate?: GenerateStructured;
 }) {
   const generate = options.generate ?? generateWithGateway;

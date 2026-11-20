@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
   CreateMentorSubmissionRequestSchema,
   CreateProposalDraftRequestSchema,
@@ -15,8 +15,8 @@ import {
   StudentSubmissionsResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
-import { createMentorRepository } from "./repository.js";
-import { createMentorControlRepository } from "./control-repository.js";
+import { createPrismaMentorRepository } from "./prisma-repository.js";
+import { createPrismaMentorControlRepository } from "./prisma-control-repository.js";
 import { proposalEvaluationResponse } from "./evaluation-response.js";
 import { MentorEvaluationFailure, MentorInputError, type createMentorService } from "./service.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
@@ -39,26 +39,26 @@ export type MentorEvaluationDiagnostic = {
 };
 
 export function createMentorHttp(
-  database: DatabaseSync,
+  database: PrismaClient,
   service: MentorService,
   options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void; auth?: FragmentsAuthService } = {},
 ) {
-  const repository = createMentorRepository(database);
-  const control = createMentorControlRepository(database);
+  const repository = createPrismaMentorRepository(database);
+  const control = createPrismaMentorControlRepository(database);
   const pending = new Map<string, Promise<{ id: string; evaluation: Awaited<ReturnType<MentorService["evaluate"]>>; evaluatedAt: string }>>();
   const logFailure = options.logFailure ?? ((diagnostic: MentorEvaluationDiagnostic) => console.error(JSON.stringify(diagnostic)));
 
   return async function handleMentorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (request.method === "GET" && url.pathname === "/api/gallery") {
-      sendJson(response, 200, { ok: true, data: GalleryResponseSchema.parse(repository.listGallery()) });
+      sendJson(response, 200, { ok: true, data: GalleryResponseSchema.parse(await repository.listGallery()) });
       return "handled";
     }
 
     if (request.method === "GET" && url.pathname === "/api/me/submissions") {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      sendJson(response, 200, { ok: true, data: StudentSubmissionsResponseSchema.parse(repository.listStudentSubmissions(student.id)) });
+      sendJson(response, 200, { ok: true, data: StudentSubmissionsResponseSchema.parse(await repository.listStudentSubmissions(student.id)) });
       return "handled";
     }
 
@@ -72,7 +72,7 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta.");
         return "handled";
       }
-      const saved = repository.createProposal(proposal.data, null, student.id);
+      const saved = await repository.createProposal(proposal.data, null, student.id);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
       return "handled";
     }
@@ -84,7 +84,7 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = CreateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador."); return "handled"; }
-      const saved = repository.createProposalDraftByUser(input.data.proposal, student.id);
+      const saved = await repository.createProposalDraftByUser(input.data.proposal, student.id);
       sendJson(response, 201, { ok: true, data: ProposalDraftResponseSchema.parse(saved) });
       return "handled";
     }
@@ -97,7 +97,7 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador y la versión que editas."); return "handled"; }
-      const saved = repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, input.data.proposal);
+      const saved = await repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, input.data.proposal);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -115,7 +115,7 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta y la versión que editas."); return "handled"; }
-      const saved = repository.updateProposalByUser(proposalMatch[1]!, student.id, input.data.expectedVersion, input.data);
+      const saved = await repository.updateProposalByUser(proposalMatch[1]!, student.id, input.data.expectedVersion, input.data);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -129,7 +129,7 @@ export function createMentorHttp(
     if (historyMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const history = repository.getProposalHistoryByUser(historyMatch[1]!, student.id);
+      const history = await repository.getProposalHistoryByUser(historyMatch[1]!, student.id);
       if (!history) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
       sendJson(response, 200, { ok: true, data: history.map((entry) => ProposalDraftResponseSchema.parse(entry)) });
       return "handled";
@@ -146,9 +146,9 @@ export function createMentorHttp(
     if (recoverEvaluationMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const proposal = repository.getOwnedProposalDraftByUser(recoverEvaluationMatch[1]!, student.id);
+      const proposal = await repository.getOwnedProposalDraftByUser(recoverEvaluationMatch[1]!, student.id);
       const complete = proposal ? ProposalEvaluationInputSchema.safeParse(proposal.proposal) : null;
-      const latest = proposal && complete?.success ? repository.getLatestEvaluation(proposal.id, proposal.version) : null;
+      const latest = proposal && complete?.success ? await repository.getLatestEvaluation(proposal.id, proposal.version) : null;
       if (!proposal || !latest) {
         sendError(response, 404, "NOT_FOUND", "No se encontró una evaluación guardada para esta versión.");
         return "handled";
@@ -165,7 +165,7 @@ export function createMentorHttp(
     if (evaluateMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const savedDraft = repository.getOwnedProposalDraftByUser(evaluateMatch[1]!, student.id);
+      const savedDraft = await repository.getOwnedProposalDraftByUser(evaluateMatch[1]!, student.id);
       const parsedProposal = savedDraft ? ProposalEvaluationInputSchema.safeParse(savedDraft.proposal) : null;
       const proposal = savedDraft && parsedProposal?.success
         ? ProposalResponseSchema.parse({ ...savedDraft, proposal: parsedProposal.data })
@@ -177,22 +177,22 @@ export function createMentorHttp(
       }
       const startedAt = performance.now();
       try {
-        const active = control.getActive();
+        const active = await control.getActive();
         const inputDigest = service.proposalDigest(proposal.proposal);
         const cacheKey = `${proposal.id}:${proposal.version}:${inputDigest}:${active.version}`;
-        let stored = repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version);
+        let stored = await repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version);
         if (!stored) {
           let work = pending.get(cacheKey);
           if (!work) {
             work = (async () => {
-              const result = await service.evaluate(proposal.proposal, repository.listGallery(), {
+              const result = await service.evaluate(proposal.proposal, await repository.listGallery(), {
                 config: active.config, version: active.version,
                 operationKey: createHash("sha256").update(cacheKey).digest("hex"),
               });
               const evaluatedAt = new Date().toISOString();
               const evaluationId = randomUUID();
-              repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, inputDigest, active.version, new Date(evaluatedAt));
-              return repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version) ?? { id: evaluationId, evaluation: result, evaluatedAt };
+              await repository.saveEvaluation(evaluationId, proposal.id, proposal.version, result, inputDigest, active.version, new Date(evaluatedAt));
+              return await repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version) ?? { id: evaluationId, evaluation: result, evaluatedAt };
             })();
             pending.set(cacheKey, work);
           }
@@ -240,12 +240,12 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los datos de la entrega.");
         return "handled";
       }
-      const proposal = repository.getOwnedProposalByUser(input.data.proposalId, student.id);
+      const proposal = await repository.getOwnedProposalByUser(input.data.proposalId, student.id);
       if (!proposal || proposal.version !== input.data.proposalVersion) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la versión de propuesta.");
         return "handled";
       }
-      const evaluation = repository.getEvaluation(input.data.evaluationId, proposal.id, proposal.version);
+      const evaluation = await repository.getEvaluation(input.data.evaluationId, proposal.id, proposal.version);
       if (!evaluation) {
         sendError(response, 409, "EVALUATION_REQUIRED", "Evalúa esta versión antes de generar la entrega.");
         return "handled";
@@ -253,7 +253,7 @@ export function createMentorHttp(
       try {
         const snapshot = await service.createSubmission({ sourceId: proposal.id, proposal: proposal.proposal, evaluation });
         const id = randomUUID();
-        repository.saveSubmission(id, snapshot);
+        await repository.saveSubmission(id, snapshot);
         sendJson(response, 201, { ok: true, data: SubmissionResponseSchema.parse({ ...snapshot, id }) });
       } catch {
         sendError(response, 503, "SUBMISSION_UNAVAILABLE", "No se pudo generar la entrega en este momento.");
@@ -265,12 +265,12 @@ export function createMentorHttp(
     if (artifactMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const saved = repository.getSubmission(artifactMatch[1]!);
+      const saved = await repository.getSubmission(artifactMatch[1]!);
       if (!saved || saved.snapshot.kind !== "mentor") {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
         return "handled";
       }
-      if (!repository.getOwnedProposalByUser(saved.snapshot.sourceId, student.id)) {
+      if (!await repository.getOwnedProposalByUser(saved.snapshot.sourceId, student.id)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega.");
         return "handled";
       }
@@ -291,7 +291,7 @@ export function createMentorHttp(
 
     const verifyMatch = request.method === "GET" && url.pathname.match(/^\/api\/verify\/([A-Za-z0-9_-]{24,128})$/);
     if (verifyMatch) {
-      const submission = repository.getSubmissionByCode(verifyMatch[1]!);
+      const submission = await repository.getSubmissionByCode(verifyMatch[1]!);
       if (!submission || submission.kind !== "mentor") {
         return "unhandled";
       }

@@ -63,16 +63,16 @@ export function createTrainerService(dependencies: TrainerDependencies) {
   async function bankFor(reviewId: string): Promise<TrainerChallenge[]> {
     const review = await dependencies.reviews.getEvidence(reviewId);
     if (!review) throw new TrainerError("REVIEW_NOT_FOUND", "No se encontró el análisis solicitado.");
-    const existing = dependencies.store.getBank(review.id, review.commitSha);
-    if (existing !== null && dependencies.store.isBankReady(review.id, review.commitSha)) return existing;
+    const existing = await dependencies.store.getBank(review.id, review.commitSha);
+    if (existing !== null && await dependencies.store.isBankReady(review.id, review.commitSha)) return existing;
     const key = `${review.id}:${review.commitSha.toLowerCase()}`;
     const pending = inFlight.get(key);
     if (pending) return pending;
     const generation = (async () => {
       const owner = `trainer-${randomUUID()}`;
       const deadline = Date.now() + 190_000;
-      while (!dependencies.store.claimBankGeneration(review.id, review.commitSha, owner, Date.now(), 180_000)) {
-        if (dependencies.store.isBankReady(review.id, review.commitSha)) return dependencies.store.getBank(review.id, review.commitSha) ?? [];
+      while (!await dependencies.store.claimBankGeneration(review.id, review.commitSha, owner, Date.now(), 180_000)) {
+        if (await dependencies.store.isBankReady(review.id, review.commitSha)) return await dependencies.store.getBank(review.id, review.commitSha) ?? [];
         if (Date.now() >= deadline) throw new TrainerError("BANK_GENERATION_BUSY", "El banco de retos todavía se está preparando. Inténtalo de nuevo en un momento.");
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
@@ -103,9 +103,9 @@ export function createTrainerService(dependencies: TrainerDependencies) {
             // Un hallazgo que no produzca un reto válido no debe impedir usar los demás.
           }
         }
-        return dependencies.store.saveBank(review.id, review.commitSha, challenges, createdAt, true, owner);
+        return await dependencies.store.saveBank(review.id, review.commitSha, challenges, createdAt, true, owner);
       } finally {
-        dependencies.store.releaseBankGeneration(review.id, review.commitSha, owner);
+        await dependencies.store.releaseBankGeneration(review.id, review.commitSha, owner);
       }
     })();
     inFlight.set(key, generation);
@@ -114,12 +114,13 @@ export function createTrainerService(dependencies: TrainerDependencies) {
 
   return {
     listReviews: (studentId?: string) => dependencies.reviews.listCompleted(studentId),
-    history(sessionHash: string, reviewId?: string): TrainerAttempt[] { return dependencies.store.history(sessionHash, reviewId); },
+    history(sessionHash: string, reviewId?: string): Promise<TrainerAttempt[]> { return dependencies.store.history(sessionHash, reviewId); },
     async draw(sessionHash: string, reviewId: string): Promise<{ challenge: TrainerChallenge; category: "new" | "pending" | "review"; bankSize: number }> {
       const bank = await bankFor(reviewId);
       if (!bank.length) throw new TrainerError("NO_COMPATIBLE_CHALLENGES", "Review no encontró evidencia suficiente para preparar un reto seguro. Revisa otro análisis o consulta a tu docente.");
       const latest = new Map<string, TrainerAttempt>();
-      for (const attempt of dependencies.store.history(sessionHash, reviewId).slice().reverse()) latest.set(attempt.challengeId, attempt);
+      const history = await dependencies.store.history(sessionHash, reviewId);
+      for (const attempt of history.slice().reverse()) latest.set(attempt.challengeId, attempt);
       const groups = {
         new: bank.filter((challenge) => !latest.has(challenge.id)),
         pending: bank.filter((challenge) => ["pending", "in_progress", "need_more"].includes(latest.get(challenge.id)?.status ?? "")),
@@ -132,7 +133,7 @@ export function createTrainerService(dependencies: TrainerDependencies) {
       let category = available[0]!;
       for (const candidate of available) { draw -= weights[candidate]; if (draw < 0) { category = candidate; break; } }
       const candidates = groups[category];
-      const previous = dependencies.store.history(sessionHash, reviewId)[0]?.challengeId;
+      const previous = history[0]?.challengeId;
       const alternatives = candidates.filter((challenge) => challenge.id !== previous);
       const selected = (alternatives.length ? alternatives : candidates)[Math.floor(Math.min(Math.max(random(), 0), 0.999999) * (alternatives.length || candidates.length))]!;
       return { challenge: selected, category, bankSize: bank.length };

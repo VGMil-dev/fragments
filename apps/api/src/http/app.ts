@@ -1,5 +1,5 @@
 import { ApiResultSchema } from "@fragments/contracts";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../generated/prisma/client.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../auth/better-auth.js";
@@ -13,7 +13,7 @@ import type { createInspectorService } from "../features/inspector/service.js";
 import { createReviewHttp } from "../features/review/http.js";
 import type { ReviewContextResolver } from "../features/review/http.js";
 import type { createReviewService } from "../features/review/review.service.js";
-import type { createSqliteReviewStore } from "../features/review/sqlite-store.js";
+import type { createPrismaReviewStore } from "../features/review/prisma-store.js";
 import { createTrainerHttp } from "../features/trainer/http.js";
 import { createTrainerRepository } from "../features/trainer/repository.js";
 import type { createTrainerService } from "../features/trainer/service.js";
@@ -26,12 +26,12 @@ function sendError(response: ServerResponse, status: number, code: string, messa
   response.writeHead(status).end(JSON.stringify(errorSchema.parse({ ok: false, error: { code, message } })));
 }
 
-export function createHttpHandler(database: DatabaseSync, options: {
+export function createHttpHandler(database: PrismaClient, options: {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
+  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
   const academicHandler = createAcademicHttp(database, options.auth);
@@ -60,12 +60,12 @@ export function createHttpHandler(database: DatabaseSync, options: {
       return;
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
-    if (await classroomHandler(request, response) === "handled") return;
+    if (classroomHandler && await classroomHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");
     if (request.method === "GET" && request.url === "/health") {
       try {
-        database.prepare("SELECT 1").get();
+        await database.$queryRaw`SELECT 1`;
         const body = healthSchema.parse({ ok: true, data: { status: "ok", database: "ready" } });
         response.writeHead(200).end(JSON.stringify(body));
       } catch {
@@ -84,11 +84,11 @@ export function createHttpHandler(database: DatabaseSync, options: {
   };
 }
 
-export function createApiServer(database: DatabaseSync, options: {
+export function createApiServer(database: PrismaClient, options: {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createSqliteReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
+  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) { return createServer(createHttpHandler(database, options)); }

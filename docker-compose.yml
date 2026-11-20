@@ -1,4 +1,41 @@
 services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: fragments_bootstrap
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}
+      FRAGMENTS_PROD_MIGRATOR_PASSWORD: ${FRAGMENTS_PROD_MIGRATOR_PASSWORD:?Define PostgreSQL role passwords in .env}
+      FRAGMENTS_PROD_RUNTIME_PASSWORD: ${FRAGMENTS_PROD_RUNTIME_PASSWORD:?Define PostgreSQL role passwords in .env}
+      FRAGMENTS_TEST_MIGRATOR_PASSWORD: ${FRAGMENTS_TEST_MIGRATOR_PASSWORD:?Define PostgreSQL role passwords in .env}
+      FRAGMENTS_TEST_RUNTIME_PASSWORD: ${FRAGMENTS_TEST_RUNTIME_PASSWORD:?Define PostgreSQL role passwords in .env}
+      FRAGMENTS_RESTORE_PASSWORD: ${FRAGMENTS_RESTORE_PASSWORD:?Define FRAGMENTS_RESTORE_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - fragments-postgres-dev:/var/lib/postgresql
+      - ./deploy/production/postgres-init/10-create-databases.sh:/docker-entrypoint-initdb.d/10-create-databases.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U fragments_bootstrap -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: build
+    entrypoint: ./apps/api/node_modules/.bin/prisma
+    command: [migrate, deploy, --schema, apps/api/prisma/schema.prisma]
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL_DOCKER:?Define MIGRATION_DATABASE_URL_DOCKER in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     env_file: .env
     build:
@@ -8,12 +45,16 @@ services:
     command: ./apps/api/node_modules/.bin/tsx watch apps/api/src/main.ts
     environment:
       API_PORT: "3000"
-      DATABASE_URL: file:/app/data/fragments.sqlite
+      DATABASE_URL: ${DATABASE_URL_DOCKER:?Define DATABASE_URL_DOCKER in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     volumes:
       - ./apps/api:/app/apps/api
-      - fragments-data:/app/data
 
 volumes:
-  fragments-data:
+  fragments-postgres-dev:

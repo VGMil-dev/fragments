@@ -1,12 +1,8 @@
-import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { migrate } from "../../db/migrate.js";
-import { SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { describe, expect, it, vi } from "vitest";
 import { createGatewayReviewAiProvider } from "./gateway-review-provider.js";
+import { FakeAiBudgetLedger } from "../../../test-support/fake-ai-budget-ledger.js";
 
-const databases: DatabaseSync[] = [];
-function makeLedger() { const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db); return new SqliteAiBudgetLedger(db); }
-afterEach(() => { for (const db of databases.splice(0)) db.close(); });
+function makeLedger() { return new FakeAiBudgetLedger(); }
 
 const input = {
   packedText: "Commit exact sha\n### App.tsx\nexport default function App() { return null; }",

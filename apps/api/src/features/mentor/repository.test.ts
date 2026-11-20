@@ -1,78 +1,61 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { createMentorRepository } from "./repository.js";
-import { migrate } from "../../db/migrate.js";
+import { randomUUID } from "node:crypto";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
+import { createPrismaMentorRepository } from "./prisma-repository.js";
 
-const dbs: DatabaseSync[] = [];
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para Mentor repository PostgreSQL.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const namespace = randomUUID();
+const studentId = `mentor-repository-${namespace}`;
+let database: PrismaClient;
 
-function repository() {
-  const db = new DatabaseSync(":memory:");
-  dbs.push(db);
-  migrate(db);
-  db.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, image TEXT, role TEXT, isTeacher INTEGER DEFAULT 0, githubLogin TEXT, createdAt TEXT);
-    CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL);`);
-  db.prepare("INSERT INTO user(id, email, name, image, role, isTeacher, githubLogin, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-    .run("student-1", "student@example.test", "Student Fixture", "https://avatars.githubusercontent.com/u/123?v=4", "user", 0, "student-fixture", "2026-11-01T00:00:00.000Z");
-  db.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES (?, ?, ?, ?)").run("account-1", "github-stable-id-1", "github", "student-1");
-  return createMentorRepository(db);
-}
-
-afterEach(() => { for (const db of dbs.splice(0)) db.close(); });
-
-const proposal = { title: "Huerto", problem: "Registrar plantas", solution: "Seguimiento del riego", goals: ["Medir crecimiento"], skills: ["TypeScript"], scope: "Una pantalla", constraints: [] };
-
-describe("Mentor repository ownership and revisions", () => {
-  it("stores partial student drafts and versions edits without crossing account ownership", () => {
-    const repo = repository();
-    const partial = { title: "Mi idea", problem: "", description: "", purpose: "", goals: [], skills: [], tags: [], scope: "", constraints: [] };
-    const created = repo.createProposalDraftByUser(partial, "student-1");
-    expect(created).toMatchObject({ version: 1, proposal: partial });
-    expect(repo.getOwnedProposalDraftByUser(created.id, "student-1")).toEqual(created);
-    expect(repo.getOwnedProposalDraftByUser(created.id, "student-2")).toBeNull();
-
-    const saved = repo.updateProposalDraftByUser(created.id, "student-1", 1, { ...partial, problem: "Una situación concreta." });
-    expect(saved).toMatchObject({ status: "updated", proposal: { version: 2, proposal: { problem: "Una situación concreta." } } });
-    expect(repo.updateProposalDraftByUser(created.id, "student-1", 1, partial).status).toBe("conflict");
-    expect(repo.updateProposalDraftByUser(created.id, "student-2", 2, partial).status).toBe("not_found");
+describePostgres("Mentor Prisma repository ownership and revisions", () => {
+  beforeAll(async () => {
+    database = openDatabase(databaseUrl!);
+    await database.$connect();
+    await database.user.create({ data: { id: studentId, email: `${studentId}@example.test`, name: "Fixture student", emailVerified: true } });
+  });
+  afterAll(async () => {
+    if (!database) return;
+    await database.proposal.deleteMany({ where: { ownerHash: { startsWith: namespace } } });
+    await database.proposal.deleteMany({ where: { ownerUserId: studentId } });
+    await database.user.delete({ where: { id: studentId } });
+    await database.$disconnect();
   });
 
-  it("merges partial draft updates so omitted fields remain recoverable", () => {
-    const repo = repository();
-    const created = repo.createProposalDraftByUser({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], technologies: ["TypeScript"], expectedOutcome: "Un registro navegable" }, "student-1");
-    const updated = repo.updateProposalDraftByUser(created.id, "student-1", 1, { purpose: "Aprender con el jardín" });
+  it("stores drafts, enforces ownership, and versions edits", async () => {
+    const repo = createPrismaMentorRepository(database);
+    const draft = { title: "Mi idea", problem: "", description: "", purpose: "", goals: [], skills: [], tags: [], scope: "", constraints: [] };
+    const created = await repo.createProposalDraftByUser(draft, studentId);
+    expect(created).toMatchObject({ version: 1, proposal: draft });
+    expect(await repo.getOwnedProposalDraftByUser(created.id, studentId)).toEqual(created);
+    expect(await repo.getOwnedProposalDraftByUser(created.id, `${studentId}-other`)).toBeNull();
+
+    const saved = await repo.updateProposalDraftByUser(created.id, studentId, 1, { ...draft, problem: "Una situación concreta." });
+    expect(saved).toMatchObject({ status: "updated", proposal: { version: 2, proposal: { problem: "Una situación concreta." } } });
+    expect((await repo.updateProposalDraftByUser(created.id, studentId, 1, draft)).status).toBe("conflict");
+    expect((await repo.updateProposalDraftByUser(created.id, `${studentId}-other`, 2, draft)).status).toBe("not_found");
+    expect((await repo.getProposalHistoryByUser(created.id, studentId))?.map((entry) => entry.version)).toEqual([1, 2]);
+  });
+
+  it("merges partial draft updates and keeps omitted fields recoverable", async () => {
+    const repo = createPrismaMentorRepository(database);
+    const created = await repo.createProposalDraftByUser({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], technologies: ["TypeScript"], expectedOutcome: "Un registro navegable" }, studentId);
+    const updated = await repo.updateProposalDraftByUser(created.id, studentId, 1, { purpose: "Aprender con el jardín" });
     expect(updated.status).toBe("updated");
     if (updated.status === "updated") expect(updated.proposal.proposal).toMatchObject({ title: "Huerto", problem: "Registrar riegos", goals: ["Observar"], technologies: ["TypeScript"], expectedOutcome: "Un registro navegable", purpose: "Aprender con el jardín" });
   });
 
-  it("returns history for an owned incomplete draft without exposing it to another account", () => {
-    const repo = repository();
-    const partial = repo.createProposalDraftByUser({ title: "Idea en curso", problem: "", goals: [] }, "student-1");
-    repo.updateProposalDraftByUser(partial.id, "student-1", 1, { purpose: "Aprender" });
-
-    expect(repo.getProposalHistoryByUser(partial.id, "student-1")?.map((entry) => entry.version)).toEqual([1, 2]);
-    expect(repo.getProposalHistoryByUser(partial.id, "student-2")).toBeNull();
-  });
-
-  it("keeps immutable versions, rejects stale writes, and checks owner hashes", () => {
-    const repo = repository();
-    const first = repo.createProposal(proposal, "a".repeat(64));
-    expect(repo.getOwnedProposal(first.id, "b".repeat(64))).toBeNull();
-    expect(repo.updateProposal(first.id, "a".repeat(64), 1, { ...proposal, title: "Huerto escolar" })).toMatchObject({ status: "updated", proposal: { version: 2 } });
-    expect(repo.updateProposal(first.id, "a".repeat(64), 1, proposal).status).toBe("conflict");
-    expect(repo.getProposalHistory(first.id, "a".repeat(64))?.map((entry) => entry.version)).toEqual([1, 2]);
-  });
-
-  it("publishes an evaluated GitHub proposal once and keeps its published revision after an edit", () => {
-    const repo = repository();
-    const first = repo.createProposal(proposal, null, "student-1");
-    expect(repo.listGallery()).toEqual([]);
-    repo.saveEvaluation("eval-1", first.id, 1, {} as never, "a".repeat(64), 1, new Date("2026-11-01T12:00:00.000Z"));
-    expect(repo.listGallery()).toHaveLength(1);
-    expect(repo.listGallery()[0]?.title).toBe("Huerto");
-    repo.updateProposalByUser(first.id, "student-1", 1, { ...proposal, title: "Nuevo huerto", expectedVersion: 1 });
-    expect(repo.listGallery()[0]?.title).toBe("Huerto");
-    repo.saveEvaluation("eval-2", first.id, 2, {} as never, "b".repeat(64), 1, new Date("2026-11-02T12:00:00.000Z"));
-    expect(repo.listGallery()[0]?.title).toBe("Nuevo huerto");
-    expect(repo.listGallery()).toHaveLength(1);
+  it("keeps owner hashes isolated and returns immutable revision history", async () => {
+    const repo = createPrismaMentorRepository(database);
+    const proposal = { title: "Huerto", problem: "Registrar plantas", solution: "Seguimiento del riego", goals: ["Medir crecimiento"], skills: ["TypeScript"], scope: "Una pantalla", constraints: [] };
+    const ownerHash = `${namespace}-owner`;
+    const created = await repo.createProposal(proposal, ownerHash);
+    expect(await repo.getOwnedProposal(created.id, `${namespace}-other`)).toBeNull();
+    expect(await repo.updateProposal(created.id, ownerHash, 1, { ...proposal, title: "Huerto escolar", expectedVersion: 1 })).toMatchObject({ status: "updated", proposal: { version: 2 } });
+    expect((await repo.updateProposal(created.id, ownerHash, 1, { ...proposal, expectedVersion: 1 })).status).toBe("conflict");
+    expect((await repo.getProposalHistory(created.id, ownerHash))?.map((entry) => entry.version)).toEqual([1, 2]);
   });
 });

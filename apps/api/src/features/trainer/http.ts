@@ -25,14 +25,14 @@ function statusCode(value: unknown): number {
   if (value.code === "NO_VERIFIED_EVIDENCE" || value.code === "NO_COMPATIBLE_CHALLENGES") return 422;
   return 500;
 }
-function session(request: IncomingMessage, response: ServerResponse, ensure: (hash: string, now: Date) => boolean): string {
+async function session(request: IncomingMessage, response: ServerResponse, ensure: (hash: string, now: Date) => Promise<boolean>): Promise<string> {
   const token = (request.headers.cookie ?? "").split(";").map((part) => part.trim()).find((part) => part.startsWith("fragments_trainer_session="))?.slice("fragments_trainer_session=".length);
   let value = token && /^[a-f\d]{64}$/i.test(token) ? token : randomBytes(32).toString("hex");
   let hash = createHash("sha256").update(value).digest("hex");
-  if (!ensure(hash, new Date()) && token) {
+  if (!await ensure(hash, new Date()) && token) {
     value = randomBytes(32).toString("hex");
     hash = createHash("sha256").update(value).digest("hex");
-    ensure(hash, new Date());
+    await ensure(hash, new Date());
   }
   if (value !== token) {
     const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
@@ -41,15 +41,15 @@ function session(request: IncomingMessage, response: ServerResponse, ensure: (ha
   return hash;
 }
 
-export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => boolean, resolveStudentId?: (request: IncomingMessage) => Promise<string | null>) {
+export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => Promise<boolean>, resolveStudentId?: (request: IncomingMessage) => Promise<string | null>) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<RouteResult> => {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (!url.pathname.startsWith("/api/trainer/")) return "unhandled";
     const studentId = resolveStudentId ? await resolveStudentId(request) : undefined;
     if (resolveStudentId && !studentId) { error(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Trainer."); return "handled"; }
-    const browserSessionHash = session(request, response, ensureSession);
+    const browserSessionHash = await session(request, response, ensureSession);
     const sessionHash = studentId ? createHash("sha256").update(browserSessionHash).update("\0").update(studentId).digest("hex") : browserSessionHash;
-    if (studentId) ensureSession(sessionHash, new Date());
+    if (studentId) await ensureSession(sessionHash, new Date());
     const ownsReview = async (reviewId: string) => !resolveStudentId || Boolean(studentId && (await service.listReviews(studentId)).some((review) => review.id === reviewId));
     try {
       if (request.method === "GET" && url.pathname === "/api/trainer/reviews") {
@@ -58,7 +58,7 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
       }
       if (request.method === "GET" && url.pathname === "/api/trainer/history") {
         const reviewId = url.searchParams.get("reviewId") ?? undefined;
-        const history = TrainerHistorySchema.parse(service.history(sessionHash, reviewId));
+        const history = TrainerHistorySchema.parse(await service.history(sessionHash, reviewId));
         json(response, 200, { ok: true, data: history }); return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/draw") {

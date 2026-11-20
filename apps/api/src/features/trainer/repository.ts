@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 
 export type TrainerStatus = "pending" | "in_progress" | "completed" | "need_more";
 export type TrainerChallenge = {
@@ -27,85 +27,100 @@ export type TrainerAttempt = {
   attemptedAt: string;
 };
 
-export function createTrainerRepository(database: DatabaseSync) {
+export function createTrainerRepository(database: PrismaClient) {
   return {
-    ensureSession(sessionHash: string, now: Date): boolean {
-      const expiresAt = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString();
-      const existing = database.prepare("SELECT expires_at FROM trainer_sessions WHERE session_hash = ?").get(sessionHash) as { expires_at: string } | undefined;
-      if (existing && existing.expires_at > now.toISOString()) {
-        database.prepare("UPDATE trainer_sessions SET expires_at = ? WHERE session_hash = ?").run(expiresAt, sessionHash);
+    async ensureSession(sessionHash: string, now: Date): Promise<boolean> {
+      const expiresAt = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000);
+      const existing = await database.trainerSession.findUnique({ where: { sessionHash }, select: { expiresAt: true } });
+      if (existing && existing.expiresAt > now) {
+        await database.trainerSession.update({ where: { sessionHash }, data: { expiresAt } });
         return true;
       }
-      database.prepare("INSERT INTO trainer_sessions(session_hash, created_at, expires_at) VALUES (?, ?, ?) ON CONFLICT(session_hash) DO UPDATE SET created_at=excluded.created_at, expires_at=excluded.expires_at")
-        .run(sessionHash, now.toISOString(), expiresAt);
+      await database.trainerSession.upsert({
+        where: { sessionHash },
+        create: { sessionHash, createdAt: now, expiresAt },
+        update: { createdAt: now, expiresAt },
+      });
       return false;
     },
-    getBank(reviewId: string, commitSha: string): TrainerChallenge[] | null {
-      const row = database.prepare("SELECT challenges_json FROM trainer_banks WHERE review_id = ? AND commit_sha = ?")
-        .get(reviewId, commitSha) as { challenges_json: string } | undefined;
-      return row ? JSON.parse(row.challenges_json) as TrainerChallenge[] : null;
+
+    async getBank(reviewId: string, commitSha: string): Promise<TrainerChallenge[] | null> {
+      const row = await database.trainerBank.findUnique({ where: { reviewId_commitSha: { reviewId, commitSha } }, select: { challengesJson: true } });
+      return row ? row.challengesJson as TrainerChallenge[] : null;
     },
-    isBankReady(reviewId: string, commitSha: string): boolean {
-      const row = database.prepare("SELECT bank_ready FROM trainer_banks WHERE review_id = ? AND commit_sha = ?")
-        .get(reviewId, commitSha) as { bank_ready: number } | undefined;
-      return row?.bank_ready === 1;
+
+    async isBankReady(reviewId: string, commitSha: string): Promise<boolean> {
+      const row = await database.trainerBank.findUnique({ where: { reviewId_commitSha: { reviewId, commitSha } }, select: { bankReady: true } });
+      return row?.bankReady === true;
     },
-    claimBankGeneration(reviewId: string, commitSha: string, owner: string, now: number, leaseMs: number): boolean {
-      database.exec("BEGIN IMMEDIATE");
-      try {
-        database.prepare(`INSERT OR IGNORE INTO trainer_banks(review_id, commit_sha, challenges_json, created_at, bank_ready)
-          VALUES (?, ?, '[]', ?, 0)`).run(reviewId, commitSha, new Date(now).toISOString());
-        const result = database.prepare(`UPDATE trainer_banks SET generation_owner=?, generation_lease_until=?
-          WHERE review_id=? AND commit_sha=? AND bank_ready=0
-          AND (generation_owner IS NULL OR generation_lease_until <= ?)`)
-          .run(owner, now + leaseMs, reviewId, commitSha, now);
-        database.exec("COMMIT");
-        return result.changes === 1;
-      } catch (cause) { database.exec("ROLLBACK"); throw cause; }
+
+    async claimBankGeneration(reviewId: string, commitSha: string, owner: string, now: number, leaseMs: number): Promise<boolean> {
+      const timestamp = new Date(now);
+      const timestampMs = BigInt(now);
+      await database.trainerBank.createMany({
+        data: [{ reviewId, commitSha, challengesJson: [], createdAt: timestamp, bankReady: false }],
+        skipDuplicates: true,
+      });
+      const result = await database.trainerBank.updateMany({
+        where: { reviewId, commitSha, bankReady: false, OR: [{ generationOwner: null }, { generationLeaseUntil: { lte: timestampMs } }] },
+        data: { generationOwner: owner, generationLeaseUntil: BigInt(now + leaseMs) },
+      });
+      return result.count === 1;
     },
-    releaseBankGeneration(reviewId: string, commitSha: string, owner: string): void {
-      database.prepare("UPDATE trainer_banks SET generation_owner=NULL, generation_lease_until=NULL WHERE review_id=? AND commit_sha=? AND generation_owner=? AND bank_ready=0")
-        .run(reviewId, commitSha, owner);
+
+    async releaseBankGeneration(reviewId: string, commitSha: string, owner: string): Promise<void> {
+      await database.trainerBank.updateMany({
+        where: { reviewId, commitSha, generationOwner: owner, bankReady: false },
+        data: { generationOwner: null, generationLeaseUntil: null },
+      });
     },
-    saveBank(reviewId: string, commitSha: string, challenges: TrainerChallenge[], createdAt: string, ready = true, generationOwner?: string): TrainerChallenge[] {
-      database.exec("BEGIN IMMEDIATE");
-      try {
-        const current = this.getBank(reviewId, commitSha) ?? [];
+
+    async saveBank(reviewId: string, commitSha: string, challenges: TrainerChallenge[], createdAt: string, ready = true, generationOwner?: string): Promise<TrainerChallenge[]> {
+      return database.$transaction(async (tx) => {
+        const key = { reviewId_commitSha: { reviewId, commitSha } };
+        const currentRow = await tx.trainerBank.findUnique({ where: key, select: { challengesJson: true } });
+        const current = currentRow ? currentRow.challengesJson as TrainerChallenge[] : [];
         const byFeature = new Map(current.map((challenge) => [challenge.feature, challenge]));
         for (const challenge of challenges) if (!byFeature.has(challenge.feature)) byFeature.set(challenge.feature, challenge);
         const merged = [...byFeature.values()];
         if (generationOwner) {
-          const result = database.prepare(`UPDATE trainer_banks SET challenges_json=?, bank_ready=?, generation_owner=NULL, generation_lease_until=NULL
-            WHERE review_id=? AND commit_sha=? AND generation_owner=? AND bank_ready=0`)
-            .run(JSON.stringify(merged), ready ? 1 : 0, reviewId, commitSha, generationOwner);
-          if (result.changes !== 1) throw new Error("Se perdió la reserva de generación del banco Trainer.");
+          const result = await tx.trainerBank.updateMany({
+            where: { reviewId, commitSha, generationOwner, bankReady: false },
+            data: { challengesJson: merged, bankReady: ready, generationOwner: null, generationLeaseUntil: null },
+          });
+          if (result.count !== 1) throw new Error("Se perdió la reserva de generación del banco Trainer.");
         } else {
-          database.prepare(`INSERT INTO trainer_banks(review_id, commit_sha, challenges_json, created_at, bank_ready)
-            VALUES (?, ?, ?, ?, ?) ON CONFLICT(review_id, commit_sha) DO UPDATE SET challenges_json=excluded.challenges_json, bank_ready=excluded.bank_ready`)
-            .run(reviewId, commitSha, JSON.stringify(merged), createdAt, ready ? 1 : 0);
+          await tx.trainerBank.upsert({
+            where: key,
+            create: { reviewId, commitSha, challengesJson: merged, createdAt: new Date(createdAt), bankReady: ready },
+            update: { challengesJson: merged, bankReady: ready },
+          });
         }
-        database.exec("COMMIT");
         return merged;
-      } catch (cause) { database.exec("ROLLBACK"); throw cause; }
+      });
     },
-    history(sessionHash: string, reviewId?: string): TrainerAttempt[] {
-      const rows = reviewId
-        ? database.prepare("SELECT id, review_id, challenge_id, feature, status, hints_used, attempted_at FROM trainer_attempts WHERE session_hash = ? AND review_id = ? ORDER BY attempted_at DESC LIMIT 200").all(sessionHash, reviewId)
-        : database.prepare("SELECT id, review_id, challenge_id, feature, status, hints_used, attempted_at FROM trainer_attempts WHERE session_hash = ? ORDER BY attempted_at DESC LIMIT 200").all(sessionHash);
-      return (rows as Array<Record<string, unknown>>).map((row) => ({
-        id: String(row.id), reviewId: String(row.review_id), challengeId: String(row.challenge_id), feature: String(row.feature),
-        status: row.status as TrainerStatus, hintsUsed: Number(row.hints_used), attemptedAt: String(row.attempted_at),
-      }));
+
+    async history(sessionHash: string, reviewId?: string): Promise<TrainerAttempt[]> {
+      const rows = await database.trainerAttempt.findMany({
+        where: { sessionHash, ...(reviewId ? { reviewId } : {}) },
+        orderBy: { attemptedAt: "desc" }, take: 200,
+        select: { id: true, reviewId: true, challengeId: true, feature: true, status: true, hintsUsed: true, attemptedAt: true },
+      });
+      return rows.map((row) => ({ ...row, status: row.status as TrainerStatus, attemptedAt: row.attemptedAt.toISOString() }));
     },
-    practicedFeatures(reviewId: string): string[] {
-      const rows = database.prepare("SELECT feature FROM trainer_attempts WHERE review_id = ? GROUP BY feature ORDER BY MAX(attempted_at) DESC LIMIT 20").all(reviewId) as Array<{ feature: string }>;
+
+    async practicedFeatures(reviewId: string): Promise<string[]> {
+      const rows = await database.trainerAttempt.groupBy({ by: ["feature"], where: { reviewId }, _max: { attemptedAt: true }, orderBy: { _max: { attemptedAt: "desc" } }, take: 20 });
       return rows.map((row) => row.feature);
     },
-    recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string }): TrainerAttempt {
+
+    async recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string }): Promise<TrainerAttempt> {
       const id = randomUUID();
-      database.prepare("INSERT INTO trainer_attempts(id, session_hash, review_id, challenge_id, feature, status, hints_used, attempted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(id, input.sessionHash, input.reviewId, input.challengeId, input.feature, input.status, input.hintsUsed, input.attemptedAt);
-      return { id, reviewId: input.reviewId, challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt: input.attemptedAt };
+      const attemptedAt = new Date(input.attemptedAt);
+      await database.trainerAttempt.create({
+        data: { id, sessionHash: input.sessionHash, reviewId: input.reviewId, challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt },
+      });
+      return { id, reviewId: input.reviewId, challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt: attemptedAt.toISOString() };
     },
   };
 }

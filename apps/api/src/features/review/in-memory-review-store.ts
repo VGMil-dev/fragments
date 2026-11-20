@@ -3,7 +3,7 @@ import type { ReviewRecord } from "./review.service.js";
 
 type SubmissionResponse = ReturnType<typeof SubmissionResponseSchema.parse>;
 
-/** Test/development store only; the API platform owns durable SQLite persistence. */
+/** In-memory fixture store only; production persistence is provided by PostgreSQL through Prisma. */
 export function createInMemoryReviewStore() {
   const byId = new Map<string, ReviewRecord>();
   const byKey = new Map<string, ReviewRecord>();

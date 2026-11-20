@@ -1,0 +1,428 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String                            @id
+  name                String
+  email               String                            @unique
+  emailVerified       Boolean                           @default(false)
+  image               String?
+  createdAt           DateTime                          @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                          @updatedAt @db.Timestamptz(3)
+  isTeacher           Boolean                           @default(false)
+  githubLogin         String?
+  role                String?
+  banned              Boolean                           @default(false)
+  banReason           String?
+  banExpires          DateTime?                         @map("banExpiresAt") @db.Timestamptz(3)
+  sessions            Session[]
+  accounts            Account[]
+  classrooms          Classroom[]                       @relation("ClassroomTeacher")
+  enrollments         ClassEnrollment[]                 @relation("EnrollmentStudent")
+  enrollmentDecisions ClassEnrollment[]                 @relation("EnrollmentDecider")
+  enrollmentEvents    ClassEnrollmentEvent[]            @relation("EnrollmentEventActor")
+  createdJoinCodes    ClassJoinCode[]                   @relation("JoinCodeCreator")
+  revokedJoinCodes    ClassJoinCode[]                   @relation("JoinCodeRevoker")
+  teacherSkills       TeacherSkill[]
+  joinAttempts        ClassJoinAttempt?
+  proposals           Proposal[]
+  moderatedProjects   MentorAcademicProjectModeration[]
+
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime @db.Timestamptz(3)
+  token          String   @unique
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  impersonatedBy String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Job {
+  id             String          @id
+  type           String
+  payloadJson    Json            @map("payload_json")
+  idempotencyKey String          @unique @map("idempotency_key")
+  status         String          @default("pending")
+  attempts       Int             @default(0)
+  leaseOwner     String?         @map("lease_owner")
+  leaseUntil     DateTime?       @map("lease_until") @db.Timestamptz(3)
+  heartbeatAt    DateTime?       @map("heartbeat_at") @db.Timestamptz(3)
+  createdAt      DateTime        @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @map("updated_at") @db.Timestamptz(3)
+  lastStage      String?         @map("last_stage")
+  lastErrorCode  String?         @map("last_error_code")
+  retryClass     String?         @map("retry_class")
+  nextRetryAt    DateTime?       @map("next_retry_at") @db.Timestamptz(3)
+  reviewAttempts ReviewAttempt[]
+
+  @@index([status, leaseUntil, createdAt], map: "jobs_claimable")
+  @@map("jobs")
+}
+
+model ReviewAttempt {
+  jobId       String    @map("job_id")
+  attempt     Int
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(3)
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz(3)
+  durationMs  BigInt?   @map("duration_ms")
+  stage       String?
+  errorCode   String?   @map("error_code")
+  retryClass  String?   @map("retry_class")
+  finalStatus String    @map("final_status")
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, attempt])
+  @@index([startedAt(sort: Desc)], map: "review_attempts_started")
+  @@map("review_attempts")
+}
+
+model Proposal {
+  id           String                           @id
+  version      Int
+  proposalJson Json                             @map("proposal_json")
+  updatedAt    DateTime                         @map("updated_at") @db.Timestamptz(3)
+  ownerHash    String?                          @map("owner_hash")
+  ownerUserId  String?                          @map("owner_user_id")
+  owner        User?                            @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  revisions    ProposalRevision[]
+  evaluations  MentorEvaluation[]
+  galleryOptIn MentorGalleryOptIn?
+  moderation   MentorAcademicProjectModeration?
+
+  @@index([ownerUserId, updatedAt(sort: Desc)], map: "proposals_owner_user")
+  @@map("proposals")
+}
+
+model ProposalRevision {
+  proposalId   String                     @map("proposal_id")
+  version      Int
+  proposalJson Json                       @map("proposal_json")
+  updatedAt    DateTime                   @map("updated_at") @db.Timestamptz(3)
+  proposal     Proposal                   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  publication  MentorAcademicPublication?
+
+  @@id([proposalId, version])
+  @@map("proposal_revisions")
+}
+
+model MentorGalleryOptIn {
+  proposalId      String   @id @map("proposal_id")
+  proposalVersion Int      @map("proposal_version")
+  optedIn         Boolean  @default(false) @map("opted_in")
+  updatedAt       DateTime @map("updated_at") @db.Timestamptz(3)
+  proposal        Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@map("mentor_gallery_optins")
+}
+
+model MentorEvaluation {
+  id              String                      @id
+  proposalId      String                      @map("proposal_id")
+  proposalVersion Int                         @map("proposal_version")
+  evaluationJson  Json                        @map("evaluation_json")
+  evaluatedAt     DateTime                    @map("evaluated_at") @db.Timestamptz(3)
+  inputDigest     String?                     @map("input_digest")
+  contextVersion  Int?                        @map("context_version")
+  proposal        Proposal                    @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  publications    MentorAcademicPublication[]
+
+  @@unique([proposalId, proposalVersion, inputDigest, contextVersion], map: "mentor_evaluations_idempotency")
+  @@index([proposalId, proposalVersion], map: "mentor_evaluations_proposal")
+  @@index([evaluatedAt(sort: Desc)], map: "mentor_evaluations_history")
+  @@map("mentor_evaluations")
+}
+
+model Submission {
+  id               String   @id
+  kind             String
+  sourceId         String   @map("source_id")
+  score            Float
+  snapshotJson     Json     @map("snapshot_json")
+  contentHash      String   @map("content_hash")
+  verificationCode String   @unique @map("verification_code")
+  rubricVersion    String   @map("rubric_version")
+  createdAt        DateTime @map("created_at") @db.Timestamptz(3)
+
+  @@index([kind, sourceId], map: "submissions_source")
+  @@map("submissions")
+}
+
+model InspectorChallenge {
+  id                    String    @id
+  aiOperationKey        String?   @unique @map("ai_operation_key")
+  reviewId              String    @map("review_id")
+  projectId             String    @map("project_id")
+  commitSha             String    @map("commit_sha")
+  challengeJson         Json      @map("challenge_json")
+  status                String
+  createdAt             DateTime  @map("created_at") @db.Timestamptz(3)
+  assignedTo            String?   @map("assigned_to")
+  assignedAt            DateTime? @map("assigned_at") @db.Timestamptz(3)
+  supersededByCommitSha String?   @map("superseded_by_commit_sha")
+  defenseJson           Json?     @map("defense_json")
+
+  @@index([reviewId, createdAt], map: "inspector_challenges_review")
+  @@map("inspector_challenges")
+}
+
+model AiBudgetReservation {
+  id               String   @id
+  requestKind      String   @map("request_kind")
+  reservedMicrousd BigInt   @map("reserved_microusd")
+  actualMicrousd   BigInt?  @map("actual_microusd")
+  status           String
+  createdAt        DateTime @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @map("updated_at") @db.Timestamptz(3)
+  operationKey     String?  @map("operation_key")
+
+  @@index([status, createdAt], map: "ai_budget_reservations_status")
+  @@index([operationKey, createdAt(sort: Desc)], map: "ai_budget_reservations_operation")
+  @@map("ai_budget_reservations")
+}
+
+model TrainerSession {
+  sessionHash String           @id @map("session_hash")
+  createdAt   DateTime         @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime         @map("expires_at") @db.Timestamptz(3)
+  attempts    TrainerAttempt[]
+
+  @@map("trainer_sessions")
+}
+
+model TrainerBank {
+  reviewId             String   @map("review_id")
+  commitSha            String   @map("commit_sha")
+  challengesJson       Json     @map("challenges_json")
+  createdAt            DateTime @map("created_at") @db.Timestamptz(3)
+  bankReady            Boolean  @default(false) @map("bank_ready")
+  generationOwner      String?  @map("generation_owner")
+  generationLeaseUntil BigInt?  @map("generation_lease_until")
+
+  @@id([reviewId, commitSha])
+  @@map("trainer_banks")
+}
+
+model TrainerAttempt {
+  id          String         @id
+  sessionHash String         @map("session_hash")
+  reviewId    String         @map("review_id")
+  challengeId String         @map("challenge_id")
+  feature     String
+  status      String
+  hintsUsed   Int            @map("hints_used")
+  attemptedAt DateTime       @map("attempted_at") @db.Timestamptz(3)
+  session     TrainerSession @relation(fields: [sessionHash], references: [sessionHash], onDelete: Cascade)
+
+  @@index([sessionHash, reviewId, attemptedAt], map: "trainer_attempt_history")
+  @@index([sessionHash, challengeId, attemptedAt], map: "trainer_attempt_challenge")
+  @@map("trainer_attempts")
+}
+
+model MentorControlDraft {
+  id         Int      @id
+  configJson Json     @map("config_json")
+  updatedAt  DateTime @map("updated_at") @db.Timestamptz(3)
+
+  @@map("mentor_control_draft")
+}
+
+model MentorControlVersion {
+  version      Int                         @id
+  configJson   Json                        @map("config_json")
+  publishedAt  DateTime                    @map("published_at") @db.Timestamptz(3)
+  publishedBy  String                      @map("published_by")
+  publications MentorAcademicPublication[]
+
+  @@map("mentor_control_versions")
+}
+
+model MentorAcademicPublication {
+  proposalId      String               @map("proposal_id")
+  proposalVersion Int                  @map("proposal_version")
+  evaluationId    String               @map("evaluation_id")
+  contextVersion  Int                  @map("context_version")
+  rubricVersion   String               @map("rubric_version")
+  publishedAt     DateTime             @map("published_at") @db.Timestamptz(3)
+  revision        ProposalRevision     @relation(fields: [proposalId, proposalVersion], references: [proposalId, version], onDelete: Cascade)
+  evaluation      MentorEvaluation     @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
+  context         MentorControlVersion @relation(fields: [contextVersion], references: [version], onDelete: Restrict)
+
+  @@id([proposalId, proposalVersion])
+  @@index([publishedAt(sort: Desc)], map: "mentor_academic_publications_recent")
+  @@map("mentor_academic_publications")
+}
+
+model MentorAcademicProjectModeration {
+  proposalId  String   @id @map("proposal_id")
+  withdrawnBy String   @map("withdrawn_by")
+  reason      String
+  withdrawnAt DateTime @map("withdrawn_at") @db.Timestamptz(3)
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  moderator   User     @relation(fields: [withdrawnBy], references: [id], onDelete: Restrict)
+
+  @@map("mentor_academic_project_moderation")
+}
+
+model Classroom {
+  id                String                       @id
+  teacherId         String                       @map("teacher_id")
+  title             String
+  subject           String
+  groupLabel        String                       @map("group_label")
+  identityKey       String                       @map("identity_key")
+  period            String?
+  context           String?
+  status            String
+  createdAt         DateTime                     @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                     @map("updated_at") @db.Timestamptz(3)
+  teacher           User                         @relation("ClassroomTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  joinCodes         ClassJoinCode[]
+  enrollments       ClassEnrollment[]
+  skillAvailability ClassroomSkillAvailability[]
+
+  @@unique([id, teacherId])
+  @@unique([teacherId, identityKey])
+  @@index([teacherId, updatedAt(sort: Desc)], map: "classrooms_teacher")
+  @@map("classrooms")
+}
+
+model ClassJoinCode {
+  id          String    @id
+  classroomId String    @map("classroom_id")
+  codeHash    String    @unique @map("code_hash")
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy   String?   @map("revoked_by")
+  createdAt   DateTime  @map("created_at") @db.Timestamptz(3)
+  createdBy   String    @map("created_by")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  revoker     User?     @relation("JoinCodeRevoker", fields: [revokedBy], references: [id], onDelete: Restrict)
+  creator     User      @relation("JoinCodeCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([classroomId, revokedAt, expiresAt], map: "class_join_codes_live")
+  @@map("class_join_codes")
+}
+
+model ClassEnrollment {
+  id          String                 @id
+  classroomId String                 @map("classroom_id")
+  studentId   String                 @map("student_id")
+  status      String
+  source      String
+  requestedAt DateTime               @map("requested_at") @db.Timestamptz(3)
+  decidedAt   DateTime?              @map("decided_at") @db.Timestamptz(3)
+  decidedBy   String?                @map("decided_by")
+  classroom   Classroom              @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  student     User                   @relation("EnrollmentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  decider     User?                  @relation("EnrollmentDecider", fields: [decidedBy], references: [id], onDelete: Restrict)
+  events      ClassEnrollmentEvent[]
+
+  @@unique([classroomId, studentId])
+  @@index([classroomId, status, requestedAt], map: "class_enrollments_classroom")
+  @@index([studentId, status, requestedAt(sort: Desc)], map: "class_enrollments_student")
+  @@map("class_enrollments")
+}
+
+model ClassEnrollmentEvent {
+  enrollmentId   String          @map("enrollment_id")
+  previousStatus String?         @map("previous_status")
+  nextStatus     String          @map("next_status")
+  source         String
+  actorUserId    String?         @map("actor_user_id")
+  createdAt      DateTime        @map("created_at") @db.Timestamptz(3)
+  enrollment     ClassEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  actor          User?           @relation("EnrollmentEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([enrollmentId, createdAt, source])
+  @@index([enrollmentId, createdAt], map: "class_enrollment_events_history")
+  @@map("class_enrollment_events")
+}
+
+model ClassJoinAttempt {
+  studentId       String   @id @map("student_id")
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz(3)
+  attemptCount    Int      @map("attempt_count")
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("class_join_attempts")
+}
+
+model TeacherSkill {
+  id             String                       @id
+  teacherId      String                       @map("teacher_id")
+  name           String
+  normalizedName String                       @map("normalized_name")
+  description    String?
+  archived       Boolean                      @default(false)
+  createdAt      DateTime                     @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                     @map("updated_at") @db.Timestamptz(3)
+  teacher        User                         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  availability   ClassroomSkillAvailability[]
+
+  @@unique([teacherId, normalizedName])
+  @@unique([id, teacherId])
+  @@index([teacherId, archived, name], map: "teacher_skills_owner")
+  @@map("teacher_skills")
+}
+
+model ClassroomSkillAvailability {
+  classroomId String       @map("classroom_id")
+  skillId     String       @map("skill_id")
+  teacherId   String       @map("teacher_id")
+  enabled     Boolean      @default(false)
+  updatedAt   DateTime     @map("updated_at") @db.Timestamptz(3)
+  classroom   Classroom    @relation(fields: [classroomId, teacherId], references: [id, teacherId], onDelete: Restrict)
+  skill       TeacherSkill @relation(fields: [skillId, teacherId], references: [id, teacherId], onDelete: Restrict)
+
+  @@id([classroomId, skillId])
+  @@map("classroom_skill_availability")
+}

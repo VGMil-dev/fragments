@@ -1,28 +1,31 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { DatabaseSync } from "node:sqlite";
-import { migrate } from "../../db/migrate.js";
 import { createHttpHandler } from "../../http/app.js";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 
 const servers: Server[] = [];
-const databases: DatabaseSync[] = [];
-const fixtureTeacherA = "fixture-teacher-a";
-const fixtureTeacherB = "fixture-teacher-b";
-const fixtureStudentA = "fixture-student-a";
-const fixtureStudentB = "fixture-student-b";
+const prismaClients: PrismaClient[] = [];
+const namespace = randomUUID();
+const fixtureTeacherA = `fixture-teacher-a-${namespace}`;
+const fixtureTeacherB = `fixture-teacher-b-${namespace}`;
+const fixtureStudentA = `fixture-student-a-${namespace}`;
+const fixtureStudentB = `fixture-student-b-${namespace}`;
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Classroom Studio con PostgreSQL.");
+const describePostgres = databaseUrl ? describe : describe.skip;
 
 async function start() {
-  const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
-  database.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, image TEXT, role TEXT DEFAULT 'user', isTeacher INTEGER DEFAULT 0, githubLogin TEXT, createdAt TEXT);
-    CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL);`);
+  const prisma = openDatabase(databaseUrl!); prismaClients.push(prisma); await prisma.$connect();
   for (const [id, isTeacher, login] of [
     [fixtureTeacherA, 1, "teacher-a"], [fixtureTeacherB, 1, "teacher-b"],
     [fixtureStudentA, 0, "student-a"], [fixtureStudentB, 0, "student-b"],
   ] as const) {
-    database.prepare("INSERT INTO user(id,email,name,image,role,isTeacher,githubLogin,createdAt) VALUES(?,?,?,?,?,?,?,?)")
-      .run(id, `${login}@fixture.test`, login, null, "user", isTeacher, login, "2026-11-19T12:00:00.000Z");
-    if (!isTeacher) database.prepare("INSERT INTO account(id,accountId,providerId,userId) VALUES(?,?,'github',?)").run(`account-${id}`, `github-${id}`, id);
+    await prisma.user.upsert({ where: { id }, create: { id, name: login, email: `${login}@fixture.test`, emailVerified: true, role: "user", isTeacher: Boolean(isTeacher), githubLogin: login }, update: { name: login, role: "user", isTeacher: Boolean(isTeacher), githubLogin: login } });
+    if (!isTeacher) await prisma.account.upsert({ where: { providerId_accountId: { providerId: "github", accountId: `github-${id}` } },
+      create: { id: `account-${id}`, providerId: "github", accountId: `github-${id}`, userId: id }, update: { userId: id } });
   }
   const auth = {
     handle: (_request: unknown, response: { writeHead: (status: number) => { end: () => void } }) => { response.writeHead(503).end(); },
@@ -31,20 +34,20 @@ async function start() {
     async student(request: { headers: Record<string, string | undefined> }) {
       const id = request.headers["x-fixture-user"];
       if (!id) return null;
-      const row = database.prepare(`SELECT u.id,a.accountId,u.githubLogin,u.image,u.createdAt FROM user u JOIN account a ON a.userId=u.id AND a.providerId='github'
-        WHERE u.id=? AND u.isTeacher=0`).get(id) as { id: string; accountId: string; githubLogin: string | null; image: string | null; createdAt: string } | undefined;
-      return row ? { id: row.id, githubAccountId: row.accountId, githubLogin: row.githubLogin, avatarUrl: row.image, registeredAt: row.createdAt } : null;
+      const row = await prisma.user.findFirst({ where: { id, isTeacher: false, accounts: { some: { providerId: "github" } } }, include: { accounts: { where: { providerId: "github" }, take: 1 } } });
+      const account = row?.accounts[0];
+      return row && account ? { id: row.id, githubAccountId: account.accountId, githubLogin: row.githubLogin, avatarUrl: row.image, registeredAt: row.createdAt.toISOString() } : null;
     },
     githubOAuthConfigured: true,
   } as unknown as FragmentsAuthService;
-  const server = createServer(createHttpHandler(database, { auth })); servers.push(server);
+  const server = createServer(createHttpHandler(prisma, { auth })); servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address(); if (!address || typeof address === "string") throw new Error("Expected test server address");
-  return { base: `http://127.0.0.1:${address.port}`, database };
+  return { base: `http://127.0.0.1:${address.port}`, database: prisma, prisma };
 }
 
 async function request(base: string, path: string, user: string, role: "teacher" | "student", method = "GET", body?: unknown) {
-  const response = await fetch(`${base}${path}`, { method, headers: {
+  const response = await fetch(`${base}${path}`, { method, signal: AbortSignal.timeout(5_000), headers: {
     "x-fixture-user": user, "x-fixture-role": role, ...(body === undefined ? {} : { "content-type": "application/json" }),
   }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   return { status: response.status, body: await response.json() as { ok: boolean; data?: any; error?: { code: string } } };
@@ -59,10 +62,22 @@ afterEach(async () => {
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
-  for (const database of databases.splice(0)) database.close();
+  const ids = [fixtureTeacherA, fixtureTeacherB, fixtureStudentA, fixtureStudentB];
+  for (const prisma of prismaClients.splice(0)) {
+    await prisma.classEnrollmentEvent.deleteMany({ where: { enrollment: { studentId: { in: ids } } } });
+    await prisma.classEnrollment.deleteMany({ where: { studentId: { in: ids } } });
+    await prisma.classJoinAttempt.deleteMany({ where: { studentId: { in: ids } } });
+    await prisma.classroomSkillAvailability.deleteMany({ where: { teacherId: { in: ids } } });
+    await prisma.classJoinCode.deleteMany({ where: { classroom: { teacherId: { in: ids } } } });
+    await prisma.classroom.deleteMany({ where: { teacherId: { in: ids } } });
+    await prisma.teacherSkill.deleteMany({ where: { teacherId: { in: ids } } });
+    await prisma.account.deleteMany({ where: { userId: { in: ids } } });
+    await prisma.user.deleteMany({ where: { id: { in: ids } } });
+    await prisma.$disconnect();
+  }
 });
 
-describe("Classroom Studio HTTP — synthetic identity fixtures", () => {
+describePostgres("Classroom Studio HTTP — PostgreSQL integration", () => {
   it("isolates classrooms between teachers and never trusts client ownership", async () => {
     const { base } = await start();
     const created = await createClassroom(base);
@@ -78,7 +93,7 @@ describe("Classroom Studio HTTP — synthetic identity fixtures", () => {
   });
 
   it("keeps code enrollment pending until its owner approves and scopes student reads to the caller", async () => {
-    const { base, database } = await start();
+    const { base, prisma } = await start();
     const classroom = await createClassroom(base); const classId = classroom.body.data!.id as string;
     const skill = await request(base, "/api/teacher/skills", fixtureTeacherA, "teacher", "POST", { name: "  Custom Hooks  " });
     expect(skill.status).toBe(201);
@@ -90,9 +105,9 @@ describe("Classroom Studio HTTP — synthetic identity fixtures", () => {
     expect(Object.keys(generated.body.data!).sort()).toEqual(["code", "createdAt", "expiresAt"]);
     expect(generated.body.data).not.toHaveProperty("codeHash");
     const code = generated.body.data!.code as string;
-    const storedCode = database.prepare("SELECT code_hash FROM class_join_codes").get() as { code_hash: string };
-    expect(storedCode.code_hash).not.toBe(code);
-    expect(storedCode.code_hash).toMatch(/^[a-f0-9]{64}$/);
+    const storedCode = await prisma.classJoinCode.findFirstOrThrow({ where: { classroomId: classId } });
+    expect(storedCode.codeHash).not.toBe(code);
+    expect(storedCode.codeHash).toMatch(/^[a-f0-9]{64}$/);
     const first = await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code });
     const duplicate = await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code });
     expect(first.body.data.status).toBe("pending");
@@ -106,33 +121,33 @@ describe("Classroom Studio HTTP — synthetic identity fixtures", () => {
     expect((await request(base, `/api/me/classrooms/${classId}/skills`, fixtureStudentA, "student")).body.data.map((entry: { id: string }) => entry.id)).toEqual([skillId]);
     expect((await request(base, "/api/me/classrooms", fixtureStudentB, "student")).body.data).toEqual([]);
     expect((await request(base, `/api/me/classrooms/${classId}/skills`, fixtureStudentB, "student")).status).toBe(404);
-    expect(Number(database.prepare("SELECT COUNT(*) AS count FROM class_enrollment_events").get()!.count)).toBe(2);
+    expect(await prisma.classEnrollmentEvent.count({ where: { enrollmentId: first.body.data.id } })).toBe(2);
   });
 
   it("distinguishes direct teacher assignment, preserves its source and refuses silent reactivation", async () => {
-    const { base, database } = await start();
+    const { base, prisma } = await start();
     const classId = (await createClassroom(base)).body.data!.id as string;
     const assigned = await request(base, `/api/teacher/classrooms/${classId}/enrollments/direct`, fixtureTeacherA, "teacher", "POST", { studentId: fixtureStudentA });
     expect(assigned.status).toBe(200);
     expect(assigned.body.data).toMatchObject({ status: "active", source: "teacher_assignment", studentId: fixtureStudentA });
     expect((await request(base, "/api/me/classrooms", fixtureStudentA, "student")).body.data).toHaveLength(1);
     expect((await request(base, `/api/teacher/classrooms/${classId}/enrollments/direct`, fixtureTeacherA, "teacher", "POST", { studentId: "fixture-unknown" })).status).toBe(404);
-    expect(Number(database.prepare("SELECT COUNT(*) AS count FROM class_enrollment_events WHERE source='teacher_assignment'").get()!.count)).toBe(1);
+    expect(await prisma.classEnrollmentEvent.count({ where: { source: "teacher_assignment", actorUserId: fixtureTeacherA } })).toBe(1);
     const code = await request(base, `/api/teacher/classrooms/${classId}/join-code`, fixtureTeacherA, "teacher", "POST", {});
     const pending = await request(base, "/api/classroom-join-requests", fixtureStudentB, "student", "POST", { code: code.body.data.code });
     expect(pending.body.data.status).toBe("pending");
     const directFromPending = await request(base, `/api/teacher/classrooms/${classId}/enrollments/direct`, fixtureTeacherA, "teacher", "POST", { studentId: fixtureStudentB });
     expect(directFromPending.body.data).toMatchObject({ status: "active", source: "teacher_assignment" });
-    expect(Number(database.prepare("SELECT COUNT(*) AS count FROM class_enrollment_events WHERE enrollment_id=? AND previous_status='pending' AND next_status='active' AND source='teacher_assignment'").get(pending.body.data.id)!.count)).toBe(1);
+    expect(await prisma.classEnrollmentEvent.count({ where: { enrollmentId: pending.body.data.id, previousStatus: "pending", nextStatus: "active", source: "teacher_assignment" } })).toBe(1);
     expect((await request(base, `/api/teacher/classrooms/${classId}/enrollments/${assigned.body.data.id}/remove`, fixtureTeacherA, "teacher", "POST")).status).toBe(200);
     expect((await request(base, `/api/teacher/classrooms/${classId}/enrollments/direct`, fixtureTeacherA, "teacher", "POST", { studentId: fixtureStudentA })).status).toBe(409);
-  });
+  }, 15_000);
 
   it("rejects expired, revoked, and repeated invalid codes without granting membership", async () => {
-    const { base, database } = await start();
+    const { base, prisma } = await start();
     const classId = (await createClassroom(base)).body.data!.id as string;
     const expired = await request(base, `/api/teacher/classrooms/${classId}/join-code`, fixtureTeacherA, "teacher", "POST", { expiresInDays: 1 });
-    database.prepare("UPDATE class_join_codes SET expires_at='2000-01-01T00:00:00.000Z' WHERE code_hash IS NOT NULL").run();
+    await prisma.classJoinCode.updateMany({ where: { classroom: { teacherId: fixtureTeacherA } }, data: { expiresAt: new Date("2000-01-01T00:00:00.000Z") } });
     expect((await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code: expired.body.data.code })).body.error!.code).toBe("INVALID_JOIN_CODE");
     const current = await request(base, `/api/teacher/classrooms/${classId}/join-code`, fixtureTeacherA, "teacher", "POST", {});
     const revoked = await request(base, `/api/teacher/classrooms/${classId}/join-code/revoke`, fixtureTeacherA, "teacher", "POST");
