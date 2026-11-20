@@ -39,6 +39,8 @@ describe("GalleryScreen", () => {
     expect(html).toContain('class="gallery-entry__status"');
     expect(html).toContain("Evaluada");
     expect(html).toContain('class="gallery-entry__action"');
+    expect(html).toContain('/covers/project-generic.webp');
+    expect(html).toContain('width="1200" height="675"');
     expect(html).toContain("se publica automáticamente");
     expect(html).toContain("etiquetas y temas");
     expect(html).toContain("no tiene opt-out");

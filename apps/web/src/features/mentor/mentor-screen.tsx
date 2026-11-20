@@ -10,6 +10,7 @@ import type {
 } from "@fragments/contracts";
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
+import { coverTemplateFor, ProjectCover } from "../covers/project-cover";
 import { SubmissionDownloads } from "../submissions/submission-downloads";
 import { validateProposalDraft, validateTechnologyList, type ProposalDraftFields } from "./proposal-validation";
 import { importMentorDocx, MentorDocxImportError } from "./docx-import";
@@ -520,7 +521,7 @@ export function MentorScreen({
 
       {activeStage === 5 ? <section className="mentor-cover" aria-labelledby="mentor-cover-title"><p className="student-screen__eyebrow">PERSONALIZA TU PROYECTO</p><h2 id="mentor-cover-title">Portada</h2>
         {coverReady ? <><p>Prompt sugerido para crear una portada geométrica coherente con tu idea:</p><pre>{coverPrompt}</pre><button type="button" className="button button--light" onClick={() => void copyCoverPrompt()}>Copiar prompt</button>{coverCopyMessage ? <p role="status">{coverCopyMessage}</p> : null}</> : <p>Completa una evaluación guardada para la versión actual antes de personalizar la portada.</p>}
-        <div className="mentor-cover__fallback" role="img" aria-label={`Portada geométrica predeterminada para ${fields.title || "tu proyecto"}`}><span aria-hidden="true">✳</span></div><p>Usamos una portada predeterminada de Fragments. La carga de imágenes está deshabilitada porque el almacenamiento persistente y su recuperación aún no están verificados.</p>
+        <ProjectCover className="mentor-cover__fallback" title={fields.title || "tu proyecto"} template={coverTemplateFor(`${fields.title} ${fields.technologies}`)} /><p>Usamos una portada predeterminada de Fragments. La carga de imágenes está deshabilitada porque el almacenamiento persistente y su recuperación aún no están verificados.</p>
       </section> : null}
 
       {submission?.status === "success" ? (

@@ -1,6 +1,7 @@
 import type { AcademicGalleryDetail, AcademicGalleryEntry } from "@fragments/contracts";
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
+import { coverTemplateFor, ProjectCover } from "../covers/project-cover";
 import "./gallery-screen.css";
 
 export interface GalleryScreenProps {
@@ -40,7 +41,7 @@ export function GalleryScreen({ state, onChoose, selected, detailLoading = false
             <>
               <p className="student-screen__eyebrow">{selected.project.subject} · {selected.project.theme}</p>
               <h2 id="gallery-detail-title">{selected.project.title}</h2>
-              <div className="gallery-entry__cover" aria-label={`Portada geométrica predeterminada de ${selected.project.title}`} role="img"><span aria-hidden="true">✳</span></div>
+              <ProjectCover className="gallery-entry__cover" title={selected.project.title} template={coverTemplateFor([selected.project.title, selected.project.summary, selected.project.subject, selected.project.theme, ...selected.project.skills, ...selected.project.tags].join(" "))} />
               <p className="gallery-detail__byline">Proyecto de <a href={selected.project.author.profileUrl} target="_blank" rel="noreferrer">@{selected.project.author.login}</a> · revisión {selected.project.proposalVersion} · rúbrica {selected.project.rubricTitle} (v{selected.project.rubricVersion})</p>
               <p className="gallery-detail__assignment"><strong>Consigna:</strong> {selected.project.assignment}</p>
               <dl className="gallery-detail__facts">
@@ -67,7 +68,7 @@ export function GalleryScreen({ state, onChoose, selected, detailLoading = false
             {entries.map((entry) => (
               <li className="gallery-list__item" key={entry.id}>
                 <article className="gallery-entry">
-                  <div className="gallery-entry__cover" aria-label={`Portada geométrica predeterminada de ${entry.title}`} role="img"><span aria-hidden="true">✳</span></div>
+                  <ProjectCover className="gallery-entry__cover" title={entry.title} template={coverTemplateFor([entry.title, entry.summary, entry.subject, entry.theme, ...entry.skills, ...entry.tags].join(" "))} />
                   <div className="gallery-entry__copy">
                     <div className="gallery-entry__title-row"><h2>{entry.title}</h2><span className="gallery-entry__status">{entry.academicStatus}</span></div>
                     <p>{entry.summary}</p>
