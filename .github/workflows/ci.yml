@@ -77,9 +77,13 @@ jobs:
           FRAGMENTS_RESTORE_PASSWORD=fragments-ci-smoke
           EOF
           docker compose -p "$project" --profile qa -f docker-compose.yml config --quiet
+          init_source=$(docker compose -p "$project" -f docker-compose.yml config --format json | jq -r '.services.postgres.volumes[] | select(.target == "/docker-entrypoint-initdb.d/10-create-databases.sh").source')
+          test -f "$init_source"
           docker compose -p "$project" -f docker-compose.yml up -d --wait postgres
+          docker compose -p "$project" -f docker-compose.yml exec -T postgres sh -c 'test -s /docker-entrypoint-initdb.d/10-create-databases.sh'
           databases=$(docker compose -p "$project" -f docker-compose.yml exec -T postgres psql -U fragments_bootstrap -d postgres --tuples-only --no-align --command "SELECT count(*) FROM pg_database WHERE datname IN ('fragments_prod','fragments_test')")
           roles=$(docker compose -p "$project" -f docker-compose.yml exec -T postgres psql -U fragments_bootstrap -d postgres --tuples-only --no-align --command "SELECT count(*) FROM pg_roles WHERE rolname IN ('fragments_prod_migrator','fragments_prod_runtime','fragments_prod_backup','fragments_test_migrator','fragments_test_runtime','fragments_test_backup','fragments_restore')")
+          printf 'Compose smoke created %s databases and %s roles.\n' "$databases" "$roles"
           test "$databases" = 2
           test "$roles" = 7
 
