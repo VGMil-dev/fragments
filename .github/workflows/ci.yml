@@ -83,6 +83,10 @@ jobs:
           FRAGMENTS_RESTORE_PASSWORD=fragments-ci-smoke
           EOF
           docker compose -p "$project" --profile qa -f docker-compose.yml config --quiet
+          for service in migrate migrate-test; do
+            command=$(docker compose -p "$project" -f docker-compose.yml config --format json | jq -r --arg service "$service" '.services[$service].command | join(" ")')
+            [[ "$command" == *"--config apps/api/prisma.config.ts"* ]]
+          done
           init_source=$(docker compose -p "$project" -f docker-compose.yml config --format json | jq -r '.services.postgres.volumes[] | select(.target == "/docker-entrypoint-initdb.d/10-create-databases.sh").source')
           test -f "$init_source"
           docker compose -p "$project" -f docker-compose.yml up -d --wait postgres
