@@ -2,10 +2,11 @@
 
 **Estado:** CONFORME localmente. Revisión visual independiente aprobada; verificaciones finales frescas y SHA de implementación registrados.
 
-**Commit de implementación y evidencia:** `7f164ea` (`feat(mentor): pule la experiencia visual de Mentor`). La rama no se publicó.
+**Commits:** `7f164ea` implementación/evidencia; `84c2d8f` cierre documental; `7771380` merge normal de `origin/main` vigente. La rama se actualizará con detalles del PR tras publicarla.
 
 ## Preparación
 - `origin/main` se actualizó con `git fetch origin main`; base observada: `3bff674bad063ecf72893a9f469e1485373c5e07` (20-11-2026).
+- Antes de abrir el PR se volvió a consultar `origin/main` (`c1ef6f5b9cf01ebde259d019db2f3fdb6c519499`), que incluye F21 ya integrada. `codex/f17-mentor-polish` se actualizó mediante merge normal `7771380`; no hubo conflictos. El worktree F21 permaneció limpio. El diff de archivos propio de F17.1 contra `origin/main` incluye solo Mentor, favicon, ficha de tarea y evidencia.
 - Worktree independiente: `C:\Users\vgmil\.codex\worktrees\f17-mentor-polish\Fragments`; rama `codex/f17-mentor-polish`.
 - Worktree F21 preexistente `C:\Users\vgmil\.codex\worktrees\f21-postgres-prisma\Fragments` inspeccionado en inventario y dejado intacto.
 - Captura visual del propietario leída. Notion consultado: proyecto Fragments, sistema visual, F17, A-003 y fichas UX-05 a UX-10.
@@ -34,6 +35,11 @@
 - Verificación final: `pnpm exec turbo lint --force` — PASS, 1/1 tarea configurada (solo contracts).
 - Verificación final: `pnpm exec turbo build --force` — PASS, 3/3 tareas. Se mantienen advertencias upstream no bloqueantes de directivas `use client` en `lucide-react`.
 - Verificación final `git diff --check` — PASS.
+- Tras el merge de `origin/main` vigente: `pnpm --filter @fragments/web test` — PASS, 26 archivos / 119 pruebas.
+- Tras el merge: `pnpm exec turbo typecheck --force` — PASS, 5/5 tareas (incluye Prisma generate y typecheck API).
+- Tras el merge: `pnpm exec turbo lint --force` — PASS, 1/1 tarea configurada.
+- Tras el merge: `pnpm exec turbo build --force` — PASS, 4/4 tareas; advertencias no bloqueantes `use client` de `lucide-react`.
+- Tras el merge: `git diff --check` — PASS.
 
 ### Capturas de Agente A
 - `task-list/F17.1/captures/mentor-01-idea-desktop-1440x900.png`
@@ -52,6 +58,6 @@ Las capturas Ego Lite reales y `INFORME_FINAL.md` se conservan en esta carpeta. 
 
 ## Riesgos / límites
 - F21 está activa en un worktree separado; la integración debe revalidarse contra `main` vigente antes de cualquier PR/deploy.
-- No se creó PR, no se hizo push ni se desplegó. `AGENTS.md` del repositorio prohíbe publicar/pushear; se entrega rama y commit local para integrar cuando esa restricción cambie. La aprobación protegida de producción no se solicitó ni se eludió.
+- PR aún no creado en el momento de estas verificaciones; la rama está autorizada para push normal y PR a `main` según el `AGENTS.md` vigente. No se hizo merge a `main` ni despliegue. La aprobación protegida de producción no se solicitó ni se eludió.
 - Notion: se añadió actualización en la ficha F17 con resultado QA local y en A-004 como nota de cambio local pendiente de integración; no se cambió el estado canónico del asset en `main`.
 - La captura del propietario es la referencia compositiva para la etapa Idea; los flujos de las otras etapas siguen las fichas canónicas funcionales de Notion.
