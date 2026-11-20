@@ -10,6 +10,7 @@ const { classroomApi } = vi.hoisted(() => ({
     enrollments: vi.fn(),
     classroomSkills: vi.fn(),
     students: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -32,6 +33,7 @@ afterEach(() => {
   classroomApi.enrollments.mockReset();
   classroomApi.classroomSkills.mockReset();
   classroomApi.students.mockReset();
+  classroomApi.update.mockReset();
 });
 
 describe("ClassroomStudio", () => {
@@ -50,5 +52,35 @@ describe("ClassroomStudio", () => {
     expect(container.querySelector('input[name="title"]')).not.toBeNull();
     expect(container.textContent).not.toContain("No se encontró el aula.");
     expect(classroomApi.get).not.toHaveBeenCalled();
+  });
+
+  it("keeps the save confirmation visible after refreshing persisted classroom data", async () => {
+    const classroom = {
+      id: "fixture-classroom-a", title: "Aula original", subject: "Programación", groupLabel: "G1",
+      period: null, context: null, status: "active" as const,
+      createdAt: "2026-11-20T00:00:00.000Z", updatedAt: "2026-11-20T00:00:00.000Z",
+    };
+    const updated = { ...classroom, title: "Aula editada" };
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [classroom], nextOffset: null } });
+    classroomApi.get.mockResolvedValue({ ok: true, data: updated });
+    classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    classroomApi.update.mockResolvedValue({ ok: true, data: updated });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path={`/teacher/classrooms/${classroom.id}`} navigate={vi.fn()} />));
+    const title = container.querySelector<HTMLInputElement>('input[name="title"]');
+    const form = container.querySelector<HTMLFormElement>("form.cs-form");
+    expect(title).not.toBeNull();
+    expect(form).not.toBeNull();
+    title!.value = "Aula editada";
+
+    await act(async () => { form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+
+    expect(classroomApi.update).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Cambios guardados.");
   });
 });
