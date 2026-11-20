@@ -55,6 +55,7 @@ jobs:
           BETTER_AUTH_URL: https://fragments.example.invalid
           PUBLIC_APP_URL: https://fragments.example.invalid
           FRAGMENTS_POSTGRES_PORT: "55432"
+          FRAGMENTS_POSTGRES_PLATFORM: linux/amd64
         run: |
           set -euo pipefail
           cd deploy/production
