@@ -66,6 +66,7 @@ jobs:
             if [ "$status" -ne 0 ]; then
               docker compose -p "$project" -f docker-compose.yml logs --no-color --tail=40 postgres || true
             fi
+            docker rm -f fragments-f21-nginx-smoke >/dev/null 2>&1 || true
             docker compose -p "$project" -f docker-compose.yml down --volumes >/dev/null 2>&1 || true
             rm -f "${temporary_env_files[@]}"
             exit "$status"
@@ -96,6 +97,19 @@ jobs:
           printf 'Compose smoke created %s databases and %s roles.\n' "$databases" "$roles"
           test "$databases" = 2
           test "$roles" = 7
+          nginx_smoke=fragments-f21-nginx-smoke
+          docker run --detach --rm --name "$nginx_smoke" --read-only --user 101:101 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777 \
+            --volume "$PWD/nginx.test.conf:/etc/nginx/nginx.conf:ro" \
+            nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+          for attempt in {1..30}; do
+            if docker exec "$nginx_smoke" wget -q -O /dev/null http://127.0.0.1:8080/__health; then
+              break
+            fi
+            sleep 1
+          done
+          docker exec "$nginx_smoke" wget -q -O /dev/null http://127.0.0.1:8080/__health
+          docker stop "$nginx_smoke"
 
       - name: Apply the Prisma schema to the disposable test database
         run: pnpm --filter @fragments/api prisma:migrate:deploy
