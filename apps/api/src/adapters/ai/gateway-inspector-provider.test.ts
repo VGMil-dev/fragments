@@ -1,12 +1,8 @@
-import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { migrate } from "../../db/migrate.js";
-import { SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { describe, expect, it, vi } from "vitest";
 import { createGatewayInspectorProvider } from "./gateway-inspector-provider.js";
+import { FakeAiBudgetLedger } from "../../../test-support/fake-ai-budget-ledger.js";
 
-const databases: DatabaseSync[] = [];
-function makeLedger() { const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db); return new SqliteAiBudgetLedger(db); }
-afterEach(() => { for (const database of databases.splice(0)) database.close(); });
+function makeLedger() { return new FakeAiBudgetLedger(); }
 
 const evidenceExcerpt = "src/lost-items.ts\n1: return items.filter((item) => item.name.toLowerCase().includes(query));";
 const output = {

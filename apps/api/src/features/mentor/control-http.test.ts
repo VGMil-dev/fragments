@@ -1,14 +1,21 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { DatabaseSync } from "node:sqlite";
-import { migrate } from "../../db/migrate.js";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createMentorControlHttp } from "./control-http.js";
 import { createMentorHttp } from "./http.js";
 import { createMinimalPdfRenderer } from "./local-fakes.js";
 import { createMentorService, type MentorEvaluator } from "./service.js";
 
 const servers: Server[] = [];
-const databases: DatabaseSync[] = [];
+const databases: PrismaClient[] = [];
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Mentor control con PostgreSQL.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const namespace = randomUUID();
+const studentId = `student-fixture-${namespace}`;
+const teacherId = `teacher-fixture-${namespace}`;
 const proposalDraft = {
   title: "Mapa de plantas", problem: "El grupo no recuerda dónde sembró cada planta.",
   solution: "Un mapa local registra cada siembra.", description: "Un mapa local para ubicar plantas.", purpose: "Ayudar al grupo a cuidar el jardín.", goals: ["Ubicar las plantas"], skills: ["TypeScript"], tags: [],
@@ -16,15 +23,17 @@ const proposalDraft = {
 };
 
 async function start(evaluator: MentorEvaluator) {
-  const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
-  database.exec("CREATE TABLE user (id TEXT PRIMARY KEY, githubLogin TEXT, image TEXT, createdAt TEXT, role TEXT DEFAULT 'user', isTeacher INTEGER DEFAULT 0); CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT, providerId TEXT, userId TEXT);");
-  database.prepare("INSERT INTO user(id, githubLogin, createdAt) VALUES ('student-fixture', 'student-fixture', '2026-11-01T00:00:00.000Z')").run();
-  database.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES ('account-fixture', 'github-stable-fixture', 'github', 'student-fixture')").run();
+  const database = openDatabase(databaseUrl!); databases.push(database); await database.$connect();
+  await database.user.createMany({ data: [
+    { id: studentId, name: "Student fixture", email: `${studentId}@fixture.test`, emailVerified: true, githubLogin: "student-fixture" },
+    { id: teacherId, name: "Teacher fixture", email: `${teacherId}@fixture.test`, emailVerified: true, isTeacher: true },
+  ] });
+  await database.account.create({ data: { id: `account-${namespace}`, accountId: `github-stable-${namespace}`, providerId: "github", userId: studentId } });
   const auth = {
-    async teacherId(request: { headers: { cookie?: string } }) { return request.headers.cookie === "teacher_session=fake" ? "teacher-fixture" : null; },
+    async teacherId(request: { headers: { cookie?: string } }) { return request.headers.cookie === "teacher_session=fake" ? teacherId : null; },
     handle() {},
-    async userId(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] ?? (request.headers.cookie === "teacher_session=fake" ? "teacher-fixture" : null); },
-    async student(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] === "student-fixture" ? { id: "student-fixture", githubAccountId: "github-stable-fixture", githubLogin: "student-fixture", avatarUrl: null, registeredAt: "2026-11-01T00:00:00.000Z" } : null; },
+    async userId(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] ?? (request.headers.cookie === "teacher_session=fake" ? teacherId : null); },
+    async student(request: { headers: { [key: string]: string | undefined } }) { return request.headers["x-fixture-user"] === studentId ? { id: studentId, githubAccountId: `github-stable-${namespace}`, githubLogin: "student-fixture", avatarUrl: null, registeredAt: new Date().toISOString() } : null; },
   } as never;
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
   const control = createMentorControlHttp(database, auth);
@@ -42,10 +51,23 @@ async function start(evaluator: MentorEvaluator) {
 
 afterEach(async () => {
   for (const server of servers.splice(0)) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  for (const database of databases.splice(0)) database.close();
+  for (const database of databases.splice(0)) {
+    await database.proposal.deleteMany({ where: { ownerUserId: studentId } });
+    await database.mentorAcademicPublication.deleteMany();
+    await database.mentorControlVersion.deleteMany({ where: { version: { gt: 1 } } });
+    const seed = await database.mentorControlVersion.findUnique({ where: { version: 1 } });
+    if (seed) await database.mentorControlDraft.upsert({
+      where: { id: 1 },
+      create: { id: 1, configJson: seed.configJson as never, updatedAt: seed.publishedAt },
+      update: { configJson: seed.configJson as never, updatedAt: seed.publishedAt },
+    });
+    await database.account.deleteMany({ where: { userId: { in: [studentId, teacherId] } } });
+    await database.user.deleteMany({ where: { id: { in: [studentId, teacherId] } } });
+    await database.$disconnect();
+  }
 });
 
-describe("control docente de Mentor", () => {
+describePostgres("control docente de Mentor — PostgreSQL integration", () => {
   it("protege el control, publica versiones inmutables y conserva la nota histórica", async () => {
     let calls = 0;
     const evaluator: MentorEvaluator = {
@@ -83,11 +105,11 @@ describe("control docente de Mentor", () => {
     expect(published.status).toBe(201);
     expect((await published.json() as { data: { version: number } }).data.version).toBe(2);
 
-    const create = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "student-fixture" }, body: JSON.stringify(proposalDraft) });
+    const create = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": studentId }, body: JSON.stringify(proposalDraft) });
     expect(create.status).toBe(201);
     const proposal = await create.json() as { data: { id: string; version: number } };
     const evaluationUrl = `${base}/api/proposals/${proposal.data.id}/review`;
-    const student = { "x-fixture-user": "student-fixture" };
+    const student = { "x-fixture-user": studentId };
     const first = await fetch(evaluationUrl, { method: "POST", headers: student });
     const firstBody = await first.json() as { data: { evaluationId: string; analysis: { score: number; rubricVersion: string }; mentorContextVersion?: number; criterionBreakdown?: Array<{ weight: number; points: number }> } };
     const repeated = await fetch(evaluationUrl, { method: "POST", headers: student });

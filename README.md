@@ -6,7 +6,7 @@ Fragments es una plataforma académica para acompañar trabajo de programación 
 - **Review:** revisar un repositorio público de GitHub a partir de un commit, con hallazgos y pistas progresivas.
 - **Inspector:** espacio privado para docentes con retos basados en evidencia y seguimiento de defensas.
 
-La aplicación se compone de una web React/Vite, una API Node/TypeScript y contratos compartidos. El API usa SQLite para estado y persistencia. Better Auth protege las funciones docentes; el registro público está deshabilitado. El proveedor IA local puede operar con fixtures fake; las llamadas reales requieren configuración explícita del servidor y están sujetas al límite presupuestario local.
+La aplicación se compone de una web React/Vite, una API Node/TypeScript y contratos compartidos. El API usa PostgreSQL con Prisma para estado y persistencia. Better Auth protege las funciones docentes; el registro público está deshabilitado. El proveedor IA local puede operar con fixtures fake; las llamadas reales requieren configuración explícita del servidor y están sujetas al límite presupuestario local.
 
 ## Requisitos
 
@@ -39,7 +39,7 @@ Para ejecutar el API con Docker Compose:
 docker compose up --build
 ```
 
-Compose usa el volumen `fragments-data` para conservar la base SQLite entre reinicios. No es un despliegue de producción.
+Compose usa un volumen PostgreSQL persistente. Para credenciales y configuración local, sigue [`docs/ENV_SETUP.md`](docs/ENV_SETUP.md); no requiere PostgreSQL instalado en Windows.
 
 ## Docencia local
 

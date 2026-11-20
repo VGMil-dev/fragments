@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
   AcademicGalleryDetailSchema,
   AcademicGalleryPageSchema,
@@ -15,13 +15,13 @@ import {
 } from "@fragments/contracts";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
-import { createAcademicRepository } from "./academic-repository.js";
+import { createPrismaAcademicRepository } from "./prisma-academic-repository.js";
 
 type RouteResult = "handled" | "unhandled";
 const errorSchema = ApiResultSchema(z.unknown());
 
-export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthService) {
-  const academic = createAcademicRepository(database);
+export function createAcademicHttp(database: PrismaClient, auth?: FragmentsAuthService) {
+  const academic = createPrismaAcademicRepository(database);
 
   return async function handleAcademicHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
@@ -49,7 +49,7 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
     if (request.method === "GET" && url.pathname === "/api/me/proposals") {
       const student = await requireStudent(request, response, auth);
       if (!student) return "handled";
-      sendJson(response, 200, { ok: true, data: OwnedProposalsResponseSchema.parse(academic.listOwnedProposals(student.id)) });
+      sendJson(response, 200, { ok: true, data: OwnedProposalsResponseSchema.parse(await academic.listOwnedProposals(student.id)) });
       return "handled";
     }
 
@@ -59,7 +59,7 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
       if (!student) return "handled";
       const token = readOwnerToken(request);
       if (!token) { sendError(response, 404, "NOT_FOUND", "No se encontró una propuesta histórica con esta prueba de propiedad."); return "handled"; }
-      const status = academic.claimHistoricalProject(claim[1]!, hashOwnerToken(token), student.id);
+      const status = await academic.claimHistoricalProject(claim[1]!, hashOwnerToken(token), student.id);
       if (status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró una propuesta histórica con esta prueba de propiedad.");
       else if (status === "conflict") sendError(response, 409, "ALREADY_CLAIMED", "La propuesta histórica ya fue reclamada o no admite otro reclamo.");
       else sendJson(response, 200, { ok: true, data: { claimed: true } });
@@ -71,7 +71,7 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
       if (!student) return "handled";
       const page = readPage(url.searchParams);
       if (!page) { sendError(response, 400, "INVALID_PAGINATION", "Revisa los límites de la página solicitada."); return "handled"; }
-      sendJson(response, 200, { ok: true, data: AcademicGalleryPageSchema.parse(academic.listGallery(page.offset, page.limit)) });
+      sendJson(response, 200, { ok: true, data: AcademicGalleryPageSchema.parse(await academic.listGallery(page.offset, page.limit)) });
       return "handled";
     }
 
@@ -79,7 +79,7 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
     if (detail) {
       const student = await requireStudent(request, response, auth);
       if (!student) return "handled";
-      const value = academic.getGalleryDetail(detail[1]!);
+      const value = await academic.getGalleryDetail(detail[1]!);
       if (!value) sendError(response, 404, "NOT_FOUND", "No se encontró el proyecto publicado.");
       else sendJson(response, 200, { ok: true, data: AcademicGalleryDetailSchema.parse(value) });
       return "handled";
@@ -93,17 +93,17 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
       if (request.method === "GET" && url.pathname === "/api/teacher/students") {
         const page = readPage(url.searchParams);
         if (!page) { sendError(response, 400, "INVALID_PAGINATION", "Revisa los límites de la página solicitada."); return "handled"; }
-        sendJson(response, 200, { ok: true, data: TeacherStudentsPageSchema.parse(academic.listStudents(page.offset, page.limit)) });
+        sendJson(response, 200, { ok: true, data: TeacherStudentsPageSchema.parse(await academic.listStudents(page.offset, page.limit)) });
         return "handled";
       }
       if (request.method === "GET" && url.pathname === "/api/teacher/historical-projects") {
-        sendJson(response, 200, { ok: true, data: HistoricalProjectsResponseSchema.parse(academic.listHistoricalProjects()) });
+        sendJson(response, 200, { ok: true, data: HistoricalProjectsResponseSchema.parse(await academic.listHistoricalProjects()) });
         return "handled";
       }
       const studentProjects = request.method === "GET" && url.pathname.match(/^\/api\/teacher\/students\/([A-Za-z0-9_-]{1,100})\/projects$/);
       if (studentProjects) {
-        if (!academic.isGitHubStudent(studentProjects[1]!)) { sendError(response, 404, "NOT_FOUND", "No se encontró el perfil estudiantil."); return "handled"; }
-        sendJson(response, 200, { ok: true, data: TeacherProjectsResponseSchema.parse(academic.listStudentProjects(studentProjects[1]!)) });
+        if (!await academic.isGitHubStudent(studentProjects[1]!)) { sendError(response, 404, "NOT_FOUND", "No se encontró el perfil estudiantil."); return "handled"; }
+        sendJson(response, 200, { ok: true, data: TeacherProjectsResponseSchema.parse(await academic.listStudentProjects(studentProjects[1]!)) });
         return "handled";
       }
       const withdraw = request.method === "POST" && url.pathname.match(/^\/api\/teacher\/projects\/([A-Za-z0-9_-]{1,100})\/withdraw$/);
@@ -112,7 +112,7 @@ export function createAcademicHttp(database: DatabaseSync, auth?: FragmentsAuthS
         if (raw === undefined) return "handled";
         const input = GalleryWithdrawalRequestSchema.safeParse(raw);
         if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Indica un motivo para retirar el proyecto."); return "handled"; }
-        const removed = academic.withdrawProject(withdraw[1]!, teacherId, input.data.reason);
+        const removed = await academic.withdrawProject(withdraw[1]!, teacherId, input.data.reason);
         if (!removed) sendError(response, 409, "NOT_PUBLISHED", "El proyecto no está publicado o ya fue retirado.");
         else sendJson(response, 200, { ok: true, data: { withdrawn: true } });
         return "handled";

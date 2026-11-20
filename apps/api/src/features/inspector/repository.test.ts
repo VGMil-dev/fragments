@@ -1,61 +1,57 @@
-import { describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { migrate } from "../../db/migrate.js";
+import { randomUUID } from "node:crypto";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createInspectorRepository } from "./repository.js";
 import type { InspectorRecord } from "./service.js";
 
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Inspector Prisma.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const id = `inspector-${randomUUID()}`;
+let database: PrismaClient | undefined;
+let secondDatabase: PrismaClient | undefined;
+
 const record: InspectorRecord = {
-  id: "challenge-1",
-  aiOperationKey: "c".repeat(64),
-  reviewId: "review-1",
-  projectId: "project-1",
+  id,
+  aiOperationKey: `op-${randomUUID()}`,
+  reviewId: `review-${randomUUID()}`,
+  projectId: "fixture/demo",
   commitSha: "b".repeat(40),
   challenge: {
-    evaluationId: "review-1",
+    evaluationId: "review-fixture",
     sourceEvidence: [{ source: "repository", path: "src/math.ts", lines: [2, 4], digest: "a".repeat(64) }],
-    precondition: "Existe un acumulador.",
-    mutation: "Invierte la condición.",
-    demonstration: "Compara el resultado.",
-    restoration: "Restaura la condición.",
-    estimatedMinutes: 15,
-    teacherHint: "Revisa el acumulador.",
+    precondition: "Existe un acumulador.", mutation: "Invierte la condición.", demonstration: "Compara el resultado.",
+    restoration: "Restaura la condición.", estimatedMinutes: 15, teacherHint: "Revisa el acumulador.",
   },
   status: "pending",
-  createdAt: "2026-11-04T12:00:00.000Z",
+  createdAt: "2026-11-20T12:00:00.000Z",
 };
 
-describe("Inspector SQLite repository", () => {
-  it("persists private challenges, assignment and defense state", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "fragments-inspector-"));
-    const path = join(directory, "inspector.sqlite");
-    let database = new DatabaseSync(path);
-    migrate(database);
-    try {
-      const repository = createInspectorRepository(database);
-      await repository.create(record);
-      const assigned = { ...record, status: "assigned" as const, assignedTo: "teacher-1", assignedAt: "2026-11-04T12:01:00.000Z" };
-      await repository.update(assigned);
-      const completed = {
-        ...assigned,
-        status: "completed" as const,
-        defense: { mutationObserved: true, restorationConfirmed: true, notes: "Hecho.", recordedAt: "2026-11-04T12:02:00.000Z" },
-      };
-      await repository.update(completed);
+describePostgres("Inspector Prisma repository (fragments_test)", () => {
+  beforeAll(async () => {
+    database = openDatabase(databaseUrl!); secondDatabase = openDatabase(databaseUrl!);
+    await Promise.all([database.$connect(), secondDatabase.$connect()]);
+  });
+  afterEach(async () => { if (database) await database.inspectorChallenge.deleteMany({ where: { id } }); });
+  afterAll(async () => { await Promise.all([database?.$disconnect(), secondDatabase?.$disconnect()]); });
 
-      database.close();
-      database = new DatabaseSync(path);
-      migrate(database);
-      const reopened = createInspectorRepository(database);
-      expect(await reopened.get(record.id)).toEqual(completed);
-      expect(await reopened.listByReview(record.reviewId)).toEqual([completed]);
-      expect(database.prepare("SELECT challenge_json FROM inspector_challenges WHERE id = ?").get(record.id)?.challenge_json)
-        .toContain("teacherHint");
-    } finally {
-      database.close();
-      rmSync(directory, { recursive: true, force: true });
-    }
+  it("persists private challenges, assignment and defense through separate Prisma clients", async () => {
+    const repository = createInspectorRepository(database!);
+    await repository.create(record);
+    const assigned = { ...record, status: "assigned" as const, assignedTo: "teacher-fixture", assignedAt: "2026-11-20T12:01:00.000Z" };
+    await repository.update(assigned);
+    const completed = {
+      ...assigned,
+      status: "completed" as const,
+      defense: { mutationObserved: true, restorationConfirmed: true, notes: "Hecho.", recordedAt: "2026-11-20T12:02:00.000Z" },
+    };
+    await repository.update(completed);
+
+    const reopened = createInspectorRepository(secondDatabase!);
+    expect(await reopened.get(record.id)).toEqual(completed);
+    expect(await reopened.listByReview(record.reviewId)).toEqual([completed]);
+    const stored = await secondDatabase!.inspectorChallenge.findUniqueOrThrow({ where: { id } });
+    expect(stored.challengeJson).toMatchObject({ teacherHint: "Revisa el acumulador." });
   });
 });

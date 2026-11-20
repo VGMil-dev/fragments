@@ -1,20 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { createGatewayInspectorProvider } from "./adapters/ai/gateway-inspector-provider.js";
 import { createGatewayMentorEvaluator } from "./adapters/ai/gateway-mentor-evaluator.js";
-import { SqliteAiBudgetLedger } from "./adapters/ai/budget-ledger.js";
+import { PrismaAiBudgetLedger } from "./adapters/ai/budget-ledger.js";
 import { createGatewayReviewAiProvider } from "./adapters/ai/gateway-review-provider.js";
 import { createPdfRenderer } from "./adapters/ai/pdf-renderer.js";
 import { createGitHubRestRepositoryReader } from "./adapters/github/github-rest-client.js";
 import { runOfficialRepomix } from "./adapters/repomix/official-runner.js";
 import { createRepomixRepositoryPacker } from "./adapters/repomix/repomix.repository-packer.js";
-import { createMigratedFragmentsAuth, createFragmentsAuthService } from "./auth/better-auth.js";
+import { createFragmentsAuth, createFragmentsAuthService } from "./auth/better-auth.js";
 import { createInspectorReviewAdapter } from "./features/inspector/review-adapter.js";
 import { createInspectorRepository } from "./features/inspector/repository.js";
 import { createInspectorService } from "./features/inspector/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./features/mentor/local-fakes.js";
 import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
-import { createSqliteReviewStore } from "./features/review/sqlite-store.js";
+import { createPrismaReviewStore } from "./features/review/prisma-store.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { writeReviewOperationalEvent } from "./features/review/review-errors.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
@@ -24,8 +24,8 @@ import { createApiServer } from "./http/app.js";
 import { loadConfig } from "./platform/config.js";
 
 const config = loadConfig();
-const database = openDatabase(config.databasePath);
-const ledger = new SqliteAiBudgetLedger(database);
+const database = openDatabase(process.env.DATABASE_URL!);
+const ledger = new PrismaAiBudgetLedger(database);
 const rates = config.aiGatewayMaxInputUsdPerMillion !== undefined && config.aiGatewayMaxOutputUsdPerMillion !== undefined
   ? { inputUsdPerMillion: config.aiGatewayMaxInputUsdPerMillion, outputUsdPerMillion: config.aiGatewayMaxOutputUsdPerMillion }
   : undefined;
@@ -41,7 +41,7 @@ const mentor = createMentorService({
   pdf: mentorPdf,
 });
 
-const reviewStore = createSqliteReviewStore(database);
+const reviewStore = createPrismaReviewStore(database);
 const reviewService = createReviewService({
   repository: { getCommitSnapshot: (input, options) => github.readCommitSnapshot(input, options) },
   packer: repomix,
@@ -90,9 +90,9 @@ const trainer = createTrainerService({
   store: trainerStore,
 });
 const betterAuth = config.authEnabled && process.env.BETTER_AUTH_SECRET
-  ? await createMigratedFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
+  ? createFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
   : undefined;
-const auth = betterAuth ? createFragmentsAuthService(betterAuth) : undefined;
+const auth = betterAuth ? createFragmentsAuthService(betterAuth, database) : undefined;
 
 const review = {
   store: reviewStore,
@@ -133,7 +133,7 @@ workerTimer.unref?.();
 
 function shutdown() {
   clearInterval(workerTimer);
-  server.close(() => { database.close(); process.exit(0); });
+  server.close(() => { void database.$disconnect().then(() => process.exit(0)); });
 }
 process.once("SIGINT", shutdown);
 process.once("SIGTERM", shutdown);

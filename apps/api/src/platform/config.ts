@@ -1,6 +1,6 @@
 export interface AppConfig {
   port: number;
-  databasePath: string;
+  databaseConfigured: boolean;
   authEnabled: boolean;
   betterAuthSecretConfigured: boolean;
   betterAuthUrl: string;
@@ -28,9 +28,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const betterAuthUrl = parseHttpUrl(env.BETTER_AUTH_URL ?? `http://localhost:${port}`, "BETTER_AUTH_URL");
   const publicAppUrl = parseHttpUrl(env.PUBLIC_APP_URL ?? "http://localhost:5173", "PUBLIC_APP_URL");
 
-  const databaseUrl = env.DATABASE_URL ?? "file:./data/fragments.sqlite";
-  if (!databaseUrl.startsWith("file:") || databaseUrl.length <= "file:".length || databaseUrl.includes("?")) {
-    throw new Error("DATABASE_URL debe ser una ruta SQLite con prefijo file:.");
+  const databaseUrl = env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL es obligatorio.");
+  let parsedDatabaseUrl: URL;
+  try { parsedDatabaseUrl = new URL(databaseUrl); } catch { throw new Error("DATABASE_URL debe ser una conexión PostgreSQL válida."); }
+  if (!(["postgresql:", "postgres:"].includes(parsedDatabaseUrl.protocol)
+    && parsedDatabaseUrl.hostname && parsedDatabaseUrl.pathname.length > 1)) {
+    throw new Error("DATABASE_URL debe apuntar a una base PostgreSQL dedicada.");
   }
 
   const inputRate = parsePositiveRate(env.AI_GATEWAY_MAX_INPUT_USD_PER_MILLION, "AI_GATEWAY_MAX_INPUT_USD_PER_MILLION");
@@ -45,7 +49,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 
   return {
     port,
-    databasePath: databaseUrl.slice("file:".length),
+    databaseConfigured: true,
     authEnabled,
     betterAuthSecretConfigured: Boolean(env.BETTER_AUTH_SECRET),
     betterAuthUrl,

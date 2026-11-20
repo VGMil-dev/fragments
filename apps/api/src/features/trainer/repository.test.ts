@@ -1,53 +1,62 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
-import { migrate } from "../../db/migrate.js";
+import { randomUUID } from "node:crypto";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createTrainerRepository, type TrainerChallenge } from "./repository.js";
 
-let directory = "";
-afterEach(() => { if (directory) rmSync(directory, { recursive: true, force: true }); directory = ""; });
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Trainer Prisma.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const prefix = `trainer-test-${randomUUID().replaceAll("-", "")}`;
+let database: PrismaClient | undefined;
+let secondDatabase: PrismaClient | undefined;
+let store: ReturnType<typeof createTrainerRepository>;
+let secondStore: ReturnType<typeof createTrainerRepository>;
+const commitSha = "a".repeat(40);
+const reviewId = `${prefix}-review`;
+const sessionHash = `${prefix}-session`;
+const challenge: TrainerChallenge = {
+  id: `${prefix}-challenge`, reviewId, projectId: "fixture/demo", commitSha,
+  feature: "Búsqueda", task: "Modifica la búsqueda temporalmente.", expectedObservation: "Compara los resultados.",
+  restoration: "Restaura el código.", estimatedMinutes: 15, sourcePath: "src/search.ts", sourceLines: [1, 2],
+  hints: ["Observa el comportamiento.", "Busca la función.", "Cambia y restaura."], createdAt: "2026-11-20T12:00:00.000Z",
+};
 
-describe("Trainer SQLite repository", () => {
-  it("reserves one bank generator across separate SQLite connections", () => {
-    directory = mkdtempSync(join(tmpdir(), "fragments-trainer-lock-"));
-    const path = join(directory, "trainer.sqlite");
-    const firstDb = new DatabaseSync(path); migrate(firstDb);
-    const secondDb = new DatabaseSync(path); migrate(secondDb);
-    try {
-      const first = createTrainerRepository(firstDb);
-      const second = createTrainerRepository(secondDb);
-      expect(first.claimBankGeneration("review-lock", "a".repeat(40), "owner-a", 10_000, 1_000)).toBe(true);
-      expect(second.claimBankGeneration("review-lock", "a".repeat(40), "owner-b", 10_001, 1_000)).toBe(false);
-      first.releaseBankGeneration("review-lock", "a".repeat(40), "owner-a");
-      expect(second.claimBankGeneration("review-lock", "a".repeat(40), "owner-b", 10_002, 1_000)).toBe(true);
-    } finally { firstDb.close(); secondDb.close(); }
+describePostgres("Trainer Prisma repository (fragments_test)", () => {
+  beforeAll(async () => {
+    database = openDatabase(databaseUrl!); secondDatabase = openDatabase(databaseUrl!);
+    await Promise.all([database.$connect(), secondDatabase.$connect()]);
+    store = createTrainerRepository(database); secondStore = createTrainerRepository(secondDatabase);
+  });
+  afterEach(async () => {
+    if (!database) return;
+    await database.trainerAttempt.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
+    await database.trainerSession.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
+    await database.trainerBank.deleteMany({ where: { reviewId: { startsWith: prefix } } });
+  });
+  afterAll(async () => { await Promise.all([database?.$disconnect(), secondDatabase?.$disconnect()]); });
+
+  it("grants a bank generation lease to one concurrent worker and releases it", async () => {
+    const claims = await Promise.all([
+      store.claimBankGeneration(reviewId, commitSha, `${prefix}-owner-a`, Date.now(), 1_000),
+      secondStore.claimBankGeneration(reviewId, commitSha, `${prefix}-owner-b`, Date.now(), 1_000),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    const owner = claims[0] ? `${prefix}-owner-a` : `${prefix}-owner-b`;
+    await (claims[0] ? store : secondStore).releaseBankGeneration(reviewId, commitSha, owner);
+    expect(await store.claimBankGeneration(reviewId, commitSha, `${prefix}-owner-c`, Date.now(), 1_000)).toBe(true);
   });
 
-  it("preserves the challenge bank and session history after reopening the database", () => {
-    directory = mkdtempSync(join(tmpdir(), "fragments-trainer-"));
-    const path = join(directory, "trainer.sqlite");
-    const firstDb = new DatabaseSync(path); migrate(firstDb);
-    const firstStore = createTrainerRepository(firstDb);
-    const now = new Date("2026-11-08T12:00:00.000Z");
-    firstStore.ensureSession("session-hash", now);
-    const challenge: TrainerChallenge = {
-      id: "trainer-challenge", reviewId: "review-1", projectId: "project-1", commitSha: "a".repeat(40),
-      feature: "Búsqueda", task: "Modifica la búsqueda temporalmente.", expectedObservation: "Compara los resultados.",
-      restoration: "Restaura el código.", estimatedMinutes: 15, sourcePath: "src/search.ts", sourceLines: [1, 2],
-      hints: ["Observa el comportamiento.", "Busca la función.", "Cambia y restaura."], createdAt: now.toISOString(),
-    };
-    firstStore.saveBank("review-1", challenge.commitSha, [challenge], now.toISOString());
-    firstStore.recordAttempt({ sessionHash: "session-hash", reviewId: "review-1", challengeId: challenge.id, feature: challenge.feature, status: "completed", hintsUsed: 2, attemptedAt: now.toISOString() });
-    firstDb.close();
+  it("persists the challenge bank and scoped session history across Prisma clients", async () => {
+    const now = new Date("2026-11-20T12:00:00.000Z");
+    await store.ensureSession(sessionHash, now);
+    await store.saveBank(reviewId, commitSha, [challenge], now.toISOString());
+    await store.recordAttempt({ sessionHash, reviewId, challengeId: challenge.id, feature: challenge.feature, status: "completed", hintsUsed: 2, attemptedAt: now.toISOString() });
 
-    const reopenedDb = new DatabaseSync(path); migrate(reopenedDb);
-    try {
-      const reopened = createTrainerRepository(reopenedDb);
-      expect(reopened.getBank("review-1", challenge.commitSha)).toEqual([challenge]);
-      expect(reopened.history("session-hash", "review-1")).toMatchObject([{ status: "completed", hintsUsed: 2, feature: "Búsqueda" }]);
-      expect(reopened.practicedFeatures("review-1")).toEqual(["Búsqueda"]);
-    } finally { reopenedDb.close(); }
+    const reopened = createTrainerRepository(secondDatabase!);
+    expect(await reopened.getBank(reviewId, commitSha)).toEqual([challenge]);
+    expect(await reopened.history(sessionHash, reviewId)).toMatchObject([{ status: "completed", hintsUsed: 2, feature: "Búsqueda" }]);
+    expect(await reopened.practicedFeatures(reviewId)).toEqual(["Búsqueda"]);
+    expect(await reopened.ensureSession(sessionHash, now)).toBe(true);
   });
 });

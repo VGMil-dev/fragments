@@ -1,9 +1,9 @@
 import type { ReviewRequest } from "@fragments/contracts";
 import type { ReviewContext, createReviewService } from "./review.service.js";
-import type { createSqliteReviewStore } from "./sqlite-store.js";
+import type { createPrismaReviewStore } from "./prisma-store.js";
 import { reviewFailure, ReviewProcessingError, writeReviewOperationalEvent, type ReviewOperationalEvent, type ReviewStage } from "./review-errors.js";
 
-type Store = ReturnType<typeof createSqliteReviewStore>;
+type Store = ReturnType<typeof createPrismaReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
 
 export type ReviewWorkerOptions = {
@@ -29,7 +29,7 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
 
   return {
     async runOnce(): Promise<boolean> {
-      const recovered = options.store.reconcileExpiredLeases(now());
+      const recovered = await options.store.reconcileExpiredLeases(now());
       for (const result of recovered) {
         logEvent({
           event: "review.lease.recovered", reviewId: result.id, jobId: result.id, stage: result.stage,
@@ -40,7 +40,7 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
       const startedAt = now();
       let job;
       try {
-        job = options.store.claim(options.workerId, startedAt, leaseDurationMs);
+        job = await options.store.claim(options.workerId, startedAt, leaseDurationMs);
       } catch {
         throw new ReviewProcessingError("queue_claim", "QUEUE_STORAGE_FAILED", "manual");
       }
@@ -50,26 +50,31 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
       let leaseLost = false;
       let stage: ReviewStage = "repository";
       let leaseErrorCode: ReviewOperationalEvent["errorCode"] = "REVIEW_LEASE_EXPIRED";
+      let heartbeatRunning = false;
       const heartbeat = setInterval(() => {
-        try {
-          if (options.store.heartbeat(job.id, options.workerId, now(), leaseDurationMs)) return;
-          leaseLost = true;
-          controller.abort(new Error("La reserva del trabajo Review expiró."));
-        } catch {
-          leaseLost = true;
-          leaseErrorCode = "QUEUE_STORAGE_FAILED";
-          controller.abort(new Error("No se pudo renovar la reserva del trabajo Review."));
-        }
+        if (heartbeatRunning) return;
+        heartbeatRunning = true;
+        void (async () => {
+          try {
+            if (await options.store.heartbeat(job.id, options.workerId, now(), leaseDurationMs)) return;
+            leaseLost = true;
+            controller.abort(new Error("La reserva del trabajo Review expiró."));
+          } catch {
+            leaseLost = true;
+            leaseErrorCode = "QUEUE_STORAGE_FAILED";
+            controller.abort(new Error("No se pudo renovar la reserva del trabajo Review."));
+          } finally { heartbeatRunning = false; }
+        })();
       }, heartbeatIntervalMs);
       heartbeat.unref?.();
 
       try {
         const result = await options.service.review(job.request satisfies ReviewRequest, job.context satisfies ReviewContext, {
           signal: controller.signal, reviewId: job.id, leaseOwner: options.workerId,
-          onStage(nextStage) {
+          async onStage(nextStage) {
             stage = nextStage;
             try {
-              if (options.store.setStage(job.id, options.workerId, nextStage, now())) return;
+              if (await options.store.setStage(job.id, options.workerId, nextStage, now())) return;
               leaseLost = true;
               leaseErrorCode = "REVIEW_LEASE_EXPIRED";
               throw new ReviewProcessingError("lease_heartbeat", "REVIEW_LEASE_EXPIRED", "manual");
@@ -82,7 +87,7 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
           },
         });
         if (result.status !== "completed") throw new ReviewProcessingError("analysis_validation", "AI_OUTPUT_INVALID", "manual");
-        if (!options.store.complete(job.id, options.workerId, now())) {
+        if (!await options.store.complete(job.id, options.workerId, now())) {
           logEvent({ event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: "queue_completion", errorCode: "REVIEW_LEASE_EXPIRED", durationMs: Math.max(0, now() - startedAt), attempt: job.attempts, finalStatus: "lease_lost" });
           return true;
         }
@@ -94,7 +99,7 @@ export function createReviewWorker(options: ReviewWorkerOptions) {
           return true;
         }
         try {
-          const failed = options.store.fail(job.id, options.workerId, failure, now());
+          const failed = await options.store.fail(job.id, options.workerId, failure, now());
           logEvent({
             event: "review.attempt.finished", reviewId: job.id, jobId: job.id, stage: failure.stage,
             errorCode: failure.errorCode, durationMs: failure.durationMs, attempt: job.attempts,

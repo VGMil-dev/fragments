@@ -59,7 +59,7 @@ Este allowlist define los archivos de producto. Los documentos/evidencias F16 y 
 - Nuevos artefactos autorizados para esta extensión, con nombres cerrados: `task-list/F16/screenshots/qa-final/review-gallery.html` y `review-gallery-1440.png`. Ninguna otra salida generada entra al allowlist de esta extensión.
 - `task-list/F16/resources/master-kit/**` es solo entrada de lectura; no se modifica ni se incluye en staging.
 
-**Fixture local de QA (entrada read-only):** `task-list/F16/qa-fixtures/api-server.mjs`. Usa API compilada, SQLite en memoria, identidades sintéticas `.example.test` y providers fake etiquetados; enlaza a `127.0.0.1`, no carga `.env`, no realiza llamadas externas ni modifica fuentes bajo `apps/api/**`. No se modifica en la extensión de revisión visual.
+**Fixture local de QA (retirado):** el servidor anterior en `task-list/F16/qa-fixtures/api-server.mjs` fue retirado al migrar a PostgreSQL. Para pruebas funcionales actuales, usar el perfil Compose `qa` de F21 contra `fragments_test`, accesible en loopback vía túnel SSH; las pruebas de integración Prisma obligatorias corren con PostgreSQL efímero en CI.
 
 ## Fases estables, checkpoints y reversión
 

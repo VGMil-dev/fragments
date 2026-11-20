@@ -1,19 +1,10 @@
-import { DatabaseSync } from "node:sqlite";
 import { APICallError } from "ai";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { migrate } from "../../db/migrate.js";
-import { SqliteAiBudgetLedger } from "./budget-ledger.js";
+import { describe, expect, it, vi } from "vitest";
 import { createGatewayMentorEvaluator } from "./gateway-mentor-evaluator.js";
 import { MentorEvaluationFailure } from "../../features/mentor/service.js";
+import { FakeAiBudgetLedger } from "../../../test-support/fake-ai-budget-ledger.js";
 
-const databases: DatabaseSync[] = [];
-function makeLedger() {
-  const database = new DatabaseSync(":memory:");
-  databases.push(database);
-  migrate(database);
-  return new SqliteAiBudgetLedger(database);
-}
-afterEach(() => { for (const database of databases.splice(0)) database.close(); });
+function makeLedger() { return new FakeAiBudgetLedger(); }
 
 const proposal = {
   title: "Huerto de aula",
@@ -66,11 +57,7 @@ describe("Gateway Mentor evaluator (labelled offline generation)", () => {
   it("allows an independent operation while preserving a legacy uncertain reservation", async () => {
     const generate = vi.fn(async () => ({ value: generated, costUsd: 0.0004 }));
     const ledger = makeLedger();
-    const database = databases.at(-1)!;
-    database.prepare(`INSERT INTO ai_budget_reservations
-      (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at)
-      VALUES (?, ?, ?, NULL, 'uncertain', ?, ?)`)
-      .run("uncertain-mentor", "mentor", 200, Date.now(), Date.now());
+    ledger.seedUncertain("uncertain-mentor", 200);
     const evaluator = createGatewayMentorEvaluator({
       modelId: "fixture/model",
       providerOnly: "fixture-provider",

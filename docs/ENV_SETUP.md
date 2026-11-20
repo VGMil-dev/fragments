@@ -16,19 +16,19 @@ Usa `.env.example` como plantilla y guarda los valores reales solo en `.env`, qu
 | `BETTER_AUTH_URL` | Solo autenticación local/producción | URL base del backend, por ejemplo `http://localhost:3000`. | Base URL de rutas `/api/auth/*`. |
 | `TEACHER_TEST_EMAIL` | Solo provisioning local de pruebas | Correo de una cuenta docente local de prueba. | Identifica la cuenta que crea el comando `pnpm --filter @fragments/api provision:teacher`. |
 | `TEACHER_TEST_PASSWORD` | Solo provisioning local de pruebas | Contraseña temporal de al menos 12 caracteres; no reutilizar una contraseña personal. El comando no la imprime. | Better Auth deriva y persiste su hash. |
-| `DATABASE_URL` | Requerida | Definir una ruta SQLite local (`file:./data/fragments.sqlite`) o la ruta del volumen persistente en Docker. No es una credencial. | Ubicación de la base de datos. |
+| `DATABASE_URL` | Requerida | Cadena PostgreSQL para la base y el rol runtime asignados al entorno. Para desarrollo usa el servicio PostgreSQL de Compose; CI y producción gestionan sus propias URLs. | Conexión Prisma del backend. |
 | `PUBLIC_APP_URL` | Requerida en despliegue; localmente puede apuntar a `http://localhost:5173` | Usar la URL local durante desarrollo y la URL HTTPS pública asignada al desplegar. | Enlaces absolutos y configuración del origen público. |
 | `API_PORT` | Requerida | Elegir un puerto TCP libre entre 1 y 65535; `3000` es el valor local documentado. | Puerto HTTP del backend. |
 
 Para comprobar configuración local sin mostrar valores, consulta únicamente los nombres ausentes y el estado de formato. Nunca uses `Get-Content .env`, `cat .env`, `printenv` ni `env` en logs o evidencias. Una comprobación de presencia no prueba conectividad ni validez de una clave. No se prueba el Gateway ni GitHub hasta que el usuario pida una prueba opt-in con presupuesto controlado.
 
-Si falta la configuración completa del Gateway, Mentor usa una evaluación demostrativa `fake/local-heuristic-v1` con `limitations` explícitas. Con modelo, proveedor, tarifas y clave configurados, Mentor usa el Gateway y el ledger SQLite compartido. Los PDF y README se generan bajo demanda y no se persisten.
+Si falta la configuración completa del Gateway, Mentor usa una evaluación demostrativa `fake/local-heuristic-v1` con `limitations` explícitas. Con modelo, proveedor, tarifas y clave configurados, Mentor usa el Gateway y el ledger PostgreSQL compartido. Los PDF y README se generan bajo demanda y no se persisten.
 
-Las tarifas deben volver a verificarse antes de cambiar el modelo o proveedor. Para la configuración documentada, el catálogo de [Qwen 3.7 Flash en Vercel AI Gateway](https://vercel.com/ai-gateway/models/qwen3.7-flash) indica USD 0.03/M de entrada y USD 0.13/M de salida para Alibaba Cloud. El código fija el proveedor con `AI_GATEWAY_PROVIDER_ONLY=alibaba` y valida una reserva estimada por operación; SQLite conserva costos y estados históricos para auditoría, sin imponer un tope acumulado local. Los presupuestos globales se administran en Vercel AI Gateway.
+Las tarifas deben volver a verificarse antes de cambiar el modelo o proveedor. Para la configuración documentada, el catálogo de [Qwen 3.7 Flash en Vercel AI Gateway](https://vercel.com/ai-gateway/models/qwen3.7-flash) indica USD 0.03/M de entrada y USD 0.13/M de salida para Alibaba Cloud. El código fija el proveedor con `AI_GATEWAY_PROVIDER_ONLY=alibaba` y valida una reserva estimada por operación; PostgreSQL conserva costos y estados históricos para auditoría, sin imponer un tope acumulado local. Los presupuestos globales se administran en Vercel AI Gateway.
 
 ### Acceso docente local
 
-Better Auth almacena usuarios y sesiones en SQLite. `BETTER_AUTH_SECRET` debe tener al menos 32 caracteres, y `BETTER_AUTH_URL` y `PUBLIC_APP_URL` definen los dos orígenes confiables. El registro público está deshabilitado en la aplicación. Para el bootstrap local de pruebas, configura `TEACHER_TEST_EMAIL` y `TEACHER_TEST_PASSWORD` (al menos 12 caracteres) en `.env` y ejecuta `pnpm --filter @fragments/api provision:teacher`; el comando es explícito, idempotente y no imprime credenciales. Habilita `AUTH_ENABLED=true` únicamente en el entorno local que tenga el secreto y la cuenta provisionada.
+Better Auth almacena usuarios y sesiones en PostgreSQL mediante Prisma. `BETTER_AUTH_SECRET` debe tener al menos 32 caracteres, y `BETTER_AUTH_URL` y `PUBLIC_APP_URL` definen los dos orígenes confiables. El registro público está deshabilitado en la aplicación. Para el bootstrap local de pruebas, configura `TEACHER_TEST_EMAIL` y `TEACHER_TEST_PASSWORD` (al menos 12 caracteres) en `.env` y ejecuta `pnpm --filter @fragments/api provision:teacher`; el comando es explícito, idempotente y no imprime credenciales. Habilita `AUTH_ENABLED=true` únicamente en el entorno local que tenga el secreto y la cuenta provisionada.
 
 ### OAuth estudiantil GitHub
 
@@ -40,11 +40,11 @@ En producción, configura `BETTER_AUTH_URL=https://fragments.gavanti.org` y `PUB
 
 ### Registro de costos de IA
 
-La aplicación conserva en SQLite el costo estimado, el costo informado por Gateway y las reservas por operación. Antes del despacho exige modelo, proveedor fijado y tarifas válidas. Una operación `reserved`, `uncertain` o `settled` impide repetir su misma clave idempotente; una reserva `uncertain` diferente permanece registrada y no bloquea operaciones independientes. Este registro brinda trazabilidad, no es un presupuesto global: los presupuestos de gasto se configuran en Vercel AI Gateway. Vercel los describe como soft caps: la petición que cruza el umbral puede completarse y excederlo; además, el gasto BYOK queda fuera de esos presupuestos. La aplicación persiste costes, no el desglose de tokens.
+La aplicación conserva en PostgreSQL el costo estimado, el costo informado por Gateway y las reservas por operación. Antes del despacho exige modelo, proveedor fijado y tarifas válidas. Una operación `reserved`, `uncertain` o `settled` impide repetir su misma clave idempotente; una reserva `uncertain` diferente permanece registrada y no bloquea operaciones independientes. Este registro brinda trazabilidad, no es un presupuesto global: los presupuestos de gasto se configuran en Vercel AI Gateway. Vercel los describe como soft caps: la petición que cruza el umbral puede completarse y excederlo; además, el gasto BYOK queda fuera de esos presupuestos. La aplicación persiste costes, no el desglose de tokens.
 
 No exponer `AI_GATEWAY_API_KEY`, `GITHUB_TOKEN`, `BETTER_AUTH_SECRET` o contraseñas mediante `VITE_*` ni respuestas HTTP. En Docker Compose, las variables llegan al contenedor en runtime y no se incorporan a la imagen.
 
 ## Fuentes oficiales
 - Vercel AI Gateway: [crear y administrar claves](https://vercel.com/docs/ai-gateway/authentication-and-byok) y [comenzar](https://vercel.com/docs/ai-gateway/getting-started).
-- Better Auth: [SQLite](https://better-auth.com/docs/adapters/sqlite), [base de datos y validación](https://better-auth.com/docs/concepts/database) y [email/contraseña](https://better-auth.com/docs/authentication/email-password).
+- Better Auth: [adaptador Prisma](https://www.better-auth.com/docs/adapters/prisma), [base de datos y validación](https://better-auth.com/docs/concepts/database) y [email/contraseña](https://better-auth.com/docs/authentication/email-password).
 - GitHub: [administrar tokens de acceso personal](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).

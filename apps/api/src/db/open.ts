@@ -1,13 +1,10 @@
-import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { migrate } from "./migrate.js";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client.js";
 
-export function openDatabase(databasePath: string): DatabaseSync {
-  const path = resolve(databasePath);
-  mkdirSync(dirname(path), { recursive: true });
-  const database = new DatabaseSync(path, { enableForeignKeyConstraints: true, enableDoubleQuotedStringLiterals: false });
-  database.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;");
-  migrate(database);
-  return database;
+export function openDatabase(databaseUrl: string): PrismaClient {
+  if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
+    throw new Error("La API solo admite PostgreSQL mediante DATABASE_URL.");
+  }
+  const adapter = new PrismaPg({ connectionString: databaseUrl, max: 10, idleTimeoutMillis: 30_000 });
+  return new PrismaClient({ adapter });
 }

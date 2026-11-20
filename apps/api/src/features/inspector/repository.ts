@@ -1,63 +1,61 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import type { InspectorRecord, InspectorStore } from "./service.js";
 
-type Row = {
-  id: string;
-  ai_operation_key: string | null;
-  review_id: string;
-  project_id: string;
-  commit_sha: string;
-  challenge_json: string;
-  status: InspectorRecord["status"];
-  created_at: string;
-  assigned_to: string | null;
-  assigned_at: string | null;
-  superseded_by_commit_sha: string | null;
-  defense_json: string | null;
-};
-
-function fromRow(row: Row): InspectorRecord {
+function fromRow(row: {
+  id: string; aiOperationKey: string | null; reviewId: string; projectId: string; commitSha: string;
+  challengeJson: unknown; status: string; createdAt: Date; assignedTo: string | null;
+  assignedAt: Date | null; supersededByCommitSha: string | null; defenseJson: unknown;
+}): InspectorRecord {
   return {
     id: row.id,
-    ...(row.ai_operation_key ? { aiOperationKey: row.ai_operation_key } : {}),
-    reviewId: row.review_id,
-    projectId: row.project_id,
-    commitSha: row.commit_sha,
-    challenge: JSON.parse(row.challenge_json) as InspectorRecord["challenge"],
-    status: row.status,
-    createdAt: row.created_at,
-    ...(row.assigned_to ? { assignedTo: row.assigned_to } : {}),
-    ...(row.assigned_at ? { assignedAt: row.assigned_at } : {}),
-    ...(row.superseded_by_commit_sha ? { supersededByCommitSha: row.superseded_by_commit_sha } : {}),
-    ...(row.defense_json ? { defense: JSON.parse(row.defense_json) as NonNullable<InspectorRecord["defense"]> } : {}),
+    ...(row.aiOperationKey ? { aiOperationKey: row.aiOperationKey } : {}),
+    reviewId: row.reviewId,
+    projectId: row.projectId,
+    commitSha: row.commitSha,
+    challenge: row.challengeJson as InspectorRecord["challenge"],
+    status: row.status as InspectorRecord["status"],
+    createdAt: row.createdAt.toISOString(),
+    ...(row.assignedTo ? { assignedTo: row.assignedTo } : {}),
+    ...(row.assignedAt ? { assignedAt: row.assignedAt.toISOString() } : {}),
+    ...(row.supersededByCommitSha ? { supersededByCommitSha: row.supersededByCommitSha } : {}),
+    ...(row.defenseJson ? { defense: row.defenseJson as NonNullable<InspectorRecord["defense"]> } : {}),
   };
 }
 
-export function createInspectorRepository(database: DatabaseSync): InspectorStore {
-  const select = database.prepare("SELECT * FROM inspector_challenges WHERE id = ?");
-  function persist(record: InspectorRecord): void {
-    database.prepare(`INSERT INTO inspector_challenges
-      (id, ai_operation_key, review_id, project_id, commit_sha, challenge_json, status, created_at, assigned_to, assigned_at, superseded_by_commit_sha, defense_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET review_id=excluded.review_id, project_id=excluded.project_id,
-        ai_operation_key=excluded.ai_operation_key,
-        commit_sha=excluded.commit_sha, challenge_json=excluded.challenge_json, status=excluded.status,
-        created_at=excluded.created_at, assigned_to=excluded.assigned_to, assigned_at=excluded.assigned_at,
-        superseded_by_commit_sha=excluded.superseded_by_commit_sha, defense_json=excluded.defense_json`)
-      .run(record.id, record.aiOperationKey ?? null, record.reviewId, record.projectId, record.commitSha, JSON.stringify(record.challenge), record.status,
-        record.createdAt, record.assignedTo ?? null, record.assignedAt ?? null, record.supersededByCommitSha ?? null,
-        record.defense ? JSON.stringify(record.defense) : null);
-  }
+export function createInspectorRepository(database: PrismaClient): InspectorStore {
+  const data = (record: InspectorRecord) => ({
+    id: record.id,
+    aiOperationKey: record.aiOperationKey ?? null,
+    reviewId: record.reviewId,
+    projectId: record.projectId,
+    commitSha: record.commitSha,
+    challengeJson: record.challenge as Prisma.InputJsonValue,
+    status: record.status,
+    createdAt: new Date(record.createdAt),
+    assignedTo: record.assignedTo ?? null,
+    assignedAt: record.assignedAt ? new Date(record.assignedAt) : null,
+    supersededByCommitSha: record.supersededByCommitSha ?? null,
+    defenseJson: record.defense ? record.defense as Prisma.InputJsonValue : Prisma.DbNull,
+  });
 
   return {
-    async create(record) { persist(record); return record; },
+    async create(record) {
+      await database.inspectorChallenge.create({ data: data(record) });
+      return record;
+    },
     async get(id) {
-      const row = select.get(id) as Row | undefined;
+      const row = await database.inspectorChallenge.findUnique({ where: { id } });
       return row ? fromRow(row) : null;
     },
     async listByReview(reviewId) {
-      return (database.prepare("SELECT * FROM inspector_challenges WHERE review_id = ? ORDER BY created_at").all(reviewId) as Row[]).map(fromRow);
+      const rows = await database.inspectorChallenge.findMany({ where: { reviewId }, orderBy: { createdAt: "asc" } });
+      return rows.map(fromRow);
     },
-    async update(record) { persist(record); return record; },
+    async update(record) {
+      const { id, ...update } = data(record);
+      await database.inspectorChallenge.update({ where: { id }, data: update });
+      return record;
+    },
   };
 }

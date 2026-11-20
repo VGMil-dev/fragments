@@ -1,10 +1,10 @@
-import { getMigrations } from "better-auth/db/migration";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
 import { createResendPasswordResetEmailSender, type PasswordResetEmailSender } from "./resend-password-reset.js";
 import { createSafeBetterAuthLogger } from "./auth-diagnostics.js";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../generated/prisma/client.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 export interface FragmentsAuthOptions {
@@ -36,7 +36,7 @@ type StudentIdentity = { id: string; githubAccountId: string; githubLogin: strin
 type StudentAccessResult = { kind: "student"; student: StudentIdentity }
   | { kind: "session_required" | "role_not_student" | "github_account_not_linked" | "invalid_github_identity" };
 
-export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions) {
+export function createFragmentsAuth(database: PrismaClient, options: FragmentsAuthOptions) {
   if (options.secret.length < 32) throw new Error("BETTER_AUTH_SECRET debe tener al menos 32 caracteres.");
   const baseURL = options.baseURL ?? "http://localhost:3000";
   const trustedOrigins = [...new Set([baseURL, options.publicAppURL]
@@ -55,7 +55,7 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
     throw new Error("GITHUB_CLIENT_ID y GITHUB_CLIENT_SECRET deben configurarse juntos.");
   }
   return betterAuth({
-    database,
+    database: prismaAdapter(database, { provider: "postgresql" }),
     secret: options.secret,
     logger: createSafeBetterAuthLogger(),
     baseURL,
@@ -141,22 +141,7 @@ export function createFragmentsAuth(database: DatabaseSync, options: FragmentsAu
 
 export type FragmentsAuthInstance = ReturnType<typeof createFragmentsAuth>;
 
-export async function migrateFragmentsAuth(auth: FragmentsAuthInstance): Promise<void> {
-  const migration = await getMigrations(auth.options);
-  await migration.runMigrations();
-}
-
-export async function createMigratedFragmentsAuth(database: DatabaseSync, options: FragmentsAuthOptions): Promise<FragmentsAuthInstance> {
-  const migrationAuth = createFragmentsAuth(database, { ...options, validateSchema: false });
-  await migrateFragmentsAuth(migrationAuth);
-  const schema = await getMigrations(migrationAuth.options);
-  if (schema.toBeCreated.length > 0 || schema.toBeAdded.length > 0) {
-    throw new Error("La migración de Better Auth no dejó el esquema listo para iniciar el servicio.");
-  }
-  return createFragmentsAuth(database, { ...options, validateSchema: false });
-}
-
-export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
+export function createFragmentsAuthService(auth: FragmentsAuthInstance, database: PrismaClient) {
   const handle = toNodeHandler(auth);
   const passwordConfirmations = new Map<string, { attempts: number; resetAt: number }>();
   async function resolveStudent(request: IncomingMessage): Promise<StudentAccessResult> {
@@ -164,7 +149,7 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
     const user = session?.user as { id?: unknown; role?: unknown; isTeacher?: unknown; githubLogin?: unknown; image?: unknown; createdAt?: unknown } | undefined;
     if (!user || typeof user.id !== "string") return { kind: "session_required" };
     if (user.isTeacher === true || (typeof user.role === "string" && user.role.split(",").includes("admin"))) return { kind: "role_not_student" };
-    const account = auth.options.database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(user.id) as { accountId: string } | undefined;
+    const account = await database.account.findFirst({ where: { userId: user.id, providerId: "github" }, select: { accountId: true } });
     if (!account) return { kind: "github_account_not_linked" };
     if (typeof account.accountId !== "string" || !account.accountId.trim()) return { kind: "invalid_github_identity" };
     return {
@@ -204,7 +189,7 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
       if (!current?.user) return { kind: "unauthenticated" };
       const roles = typeof current.user.role === "string" ? current.user.role.split(",") : [];
       if (current.user.isTeacher !== true && !roles.includes("admin")) return { kind: "forbidden" };
-      const accounts = auth.options.database.prepare("SELECT providerId FROM account WHERE userId = ?").all(current.user.id) as Array<{ providerId: string }>;
+      const accounts = await database.account.findMany({ where: { userId: current.user.id }, select: { providerId: true } });
       return {
         kind: "ok",
         status: {
@@ -238,7 +223,7 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance) {
       if (!confirmed?.user || confirmed.user.id !== current.user.id) return { kind: "unauthenticated" };
       const confirmedRoles = typeof confirmed.user.role === "string" ? confirmed.user.role.split(",") : [];
       if (confirmed.user.isTeacher !== true && !confirmedRoles.includes("admin")) return { kind: "forbidden" };
-      const github = auth.options.database.prepare("SELECT 1 FROM account WHERE userId = ? AND providerId = 'github' LIMIT 1").get(current.user.id);
+      const github = await database.account.findFirst({ where: { userId: current.user.id, providerId: "github" }, select: { id: true } });
       if (github) return { kind: "already_linked" };
 
       passwordConfirmations.delete(current.user.id);
