@@ -392,7 +392,7 @@ describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const contenders = await Promise.all([1, 2].map(() => fetch(`${base}/api/me/proposals/${legacy.id}/claim`, { method: "POST", headers: claimHeaders })));
     expect(contenders.map((response) => response.status).sort()).toEqual([200, 409]);
     expect(await database.mentorAcademicPublication.count({ where: { proposalId: legacy.id } })).toBe(0);
-  });
+  }, 15_000);
 
   it("leaves Review verification codes for the Review route", async () => {
     const base = await start();

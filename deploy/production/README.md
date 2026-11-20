@@ -25,6 +25,18 @@ docker compose -f deploy/production/docker-compose.yml ps
 
 Compose espera a PostgreSQL saludable, ejecuta `prisma migrate deploy` por separado en `fragments_prod` y `fragments_test`, y luego inicia la API con el rol runtime de producción. PostgreSQL está en una red interna `fragments-db-private`, separada de la red web/API; el volumen persistente es `fragments-postgres-data`.
 
+## Entorno funcional y Ego Lite
+
+El perfil Compose `qa` inicia una API aislada que solo usa `fragments_test` y la web de prueba en `127.0.0.1:3002`; el API no publica un puerto y la red privada de QA está separada de la web/API productiva. Copia `.env.test-api.example` como `.env.test-api`, crea un secreto Better Auth de pruebas y una cuenta docente sintética. No uses credenciales productivas.
+
+```sh
+docker compose -f deploy/production/docker-compose.yml --profile qa run --rm bootstrap-test
+docker compose -f deploy/production/docker-compose.yml --profile qa up -d api-test web-test
+curl --fail http://127.0.0.1:3002/health
+```
+
+Desde la estación de QA abre un túnel SSH a `127.0.0.1:3002` y usa Ego Lite en `http://localhost:3002`. Las pruebas funcionales se ejecutan contra `fragments_test`; CI mantiene además su propio PostgreSQL efímero. El Compose raíz `docker-compose.prod.yml` incluye esta configuración canónica.
+
 Primero instalar el contenido de `systemd/` en `/etc/systemd/system/` y crear `/var/backups/fragments` con propietario `root:root` y modo `0700`. Después ejecutar un backup manual y habilitar el timer.
 
 El servicio `bootstrap` usa solo variables de auth y de la cuenta docente. Provisiona la cuenta en el volumen de producción con el módulo ya compilado; no habilita registro público en el API.

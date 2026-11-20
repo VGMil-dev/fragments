@@ -128,7 +128,7 @@ export function createClassroomRepository(database: PrismaClient, clock: () => D
         const classroom = await tx.classroom.findFirst({ where: { id: classroomId, teacherId, status: "active" } });
         if (!classroom) return { kind: "not_found" };
         const student = await tx.user.findFirst({ where: { id: studentId, isTeacher: false, accounts: { some: { providerId: "github" } },
-          OR: [{ role: null }, { role: { not: { contains: "admin", mode: "insensitive" } } }] }, select: { id: true } });
+          OR: [{ role: null }, { role: { not: { contains: "admin" } } }] }, select: { id: true } });
         if (!student) return { kind: "invalid_student" };
         const existing = await tx.classEnrollment.findUnique({ where: { classroomId_studentId: { classroomId, studentId } } });
         if (existing) {

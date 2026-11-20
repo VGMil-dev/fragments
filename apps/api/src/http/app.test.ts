@@ -22,8 +22,21 @@ async function testDatabase() { const database = openDatabase(databaseUrl!); dat
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
   for (const db of databases.splice(0)) {
+    await db.mentorAcademicPublication.deleteMany();
+    await db.mentorAcademicProjectModeration.deleteMany();
+    await db.mentorGalleryOptIn.deleteMany();
+    await db.mentorEvaluation.deleteMany();
+    await db.proposalRevision.deleteMany();
+    await db.proposal.deleteMany();
     await db.submission.deleteMany({ where: { kind: "review" } });
     await db.job.deleteMany({ where: { type: "review" } });
+    const fixtureUsers = await db.user.findMany({ where: { email: { in: [
+      "teacher-personal@example.test", "student-personal@example.test", "student.personal@example.test",
+      "unlinked.personal@example.test", "student-api@example.test",
+    ] } }, select: { id: true } });
+    const fixtureIds = fixtureUsers.map(({ id }) => id);
+    await db.account.deleteMany({ where: { userId: { in: fixtureIds } } });
+    await db.user.deleteMany({ where: { id: { in: fixtureIds } } });
     await db.$disconnect();
   }
 });

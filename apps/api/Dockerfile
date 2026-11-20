@@ -32,7 +32,6 @@ COPY --from=build /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 RUN rm -f \
     /app/apps/api/dist/db/migrate.* \
-    /app/apps/api/dist/features/review/sqlite-store.* \
     /app/apps/api/dist/features/mentor/repository.* \
     /app/apps/api/dist/features/mentor/academic-repository.* \
     /app/apps/api/dist/features/mentor/control-repository.* \

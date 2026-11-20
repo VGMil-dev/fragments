@@ -10,7 +10,7 @@
 7. `SubmissionSnapshot = {kind:'mentor'|'review',sourceId,score,snapshotJson,contentHash,verificationCode,rubricVersion,createdAt}`. No almacenar PDFs ni README.
 8. Idempotencia por `(projectId,commitSha,rubricVersion,evaluatorVersion)`; Mentor por JSON canónico+rúbrica.
 9. Provider drivers (`AiProvider`, `RepoDriver`, `PackerDriver`, `PdfRenderer`, `EvaluationRepository`) con fake in-memory para pruebas; no API framework coupling en dominio.
-10. Prohibido modificar packages/contracts tras congelar interfaz sin aprobación y actualización de consumidores. Evitar complejidad incidental: un solo API+worker desde misma app, una SQLite y no redis.
+10. Prohibido modificar packages/contracts tras congelar interfaz sin aprobación y actualización de consumidores. Evitar complejidad incidental: un API+worker desde la misma app, PostgreSQL con Prisma como único almacenamiento y sin Redis.
 
 ## DTOs para F02/F04/F05
 
@@ -31,7 +31,7 @@ Estos DTOs son parte del contrato versionado de `@fragments/contracts` y se envu
 - Las solicitudes de entrega usan `CreateMentorSubmissionRequest` y `CreateReviewSubmissionRequest`; sus respuestas `MentorSubmissionResponse` y `ReviewSubmissionResponse` incluyen un `id` de servidor junto al `SubmissionSnapshot` inmutable. Usa el `id` para descargar artefactos; `verificationCode` solo sirve para verificación.
 - Las descargas de README y PDF devuelven respectivamente `text/markdown` y `application/pdf` sin envoltura JSON; errores y respuestas de API normales usan `ApiResult<T>`.
 - La verificación pública usa `VerifySubmissionResponse`, un resumen mínimo de integridad, rúbrica, nota y fecha; no incluye nombre ni datos privados.
-- Better Auth expone acceso por email/contraseña docente, `POST /api/auth/sign-in/social` con GitHub estudiantil, `POST /api/auth/sign-out` y `GET /api/auth/get-session`; las sesiones usan cookies HttpOnly. La identidad docente procede del usuario SQLite (`isTeacher`) o del rol `admin`; la propiedad del estudiante usa la cuenta vinculada `providerId=github` + `accountId`. El acceso estudiantil por email no autentica rutas académicas.
+- Better Auth expone acceso por email/contraseña docente, `POST /api/auth/sign-in/social` con GitHub estudiantil, `POST /api/auth/sign-out` y `GET /api/auth/get-session`; las sesiones usan cookies HttpOnly. La identidad docente procede del usuario PostgreSQL (`isTeacher`) o del rol `admin`; la propiedad del estudiante usa la cuenta vinculada `providerId=github` + `accountId`. El acceso estudiantil por email no autentica rutas académicas.
 
 ## DTOs y permisos F15
 

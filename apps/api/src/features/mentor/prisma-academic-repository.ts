@@ -5,7 +5,7 @@ import {
 } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 
-const studentWhere = { isTeacher: false, OR: [{ role: null }, { role: { not: { contains: "admin", mode: "insensitive" as const } } }], accounts: { some: { providerId: "github" } } };
+const studentWhere = { isTeacher: false, OR: [{ role: null }, { role: { not: { contains: "admin" } } }], accounts: { some: { providerId: "github" } } };
 function avatar(value: string | null): string | null {
   if (!value) return null;
   try { const url = new URL(value); return url.protocol === "https:" && url.hostname === "avatars.githubusercontent.com" ? url.toString() : null; } catch { return null; }
