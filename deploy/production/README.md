@@ -4,8 +4,8 @@ Este overlay añade PostgreSQL privado, migraciones Prisma, el servidor estátic
 
 ## Variables y credenciales
 
-- Crear `.env.api`, `.env.postgres`, `.env.migrate`, `.env.test-migrate`, `.env.backup` y `.env.restore` a partir de sus plantillas `.example`; proteger cada archivo como `root:root`, modo `0600`.
-- Generar contraseñas URL-safe largas para el administrador inicial y los roles migrator/runtime/backup/restore. Guardar cada una solo en los archivos del servicio correspondiente. `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `BACKUP_DATABASE_URL` y `RESTORE_DATABASE_URL` usan usuarios separados; API no recibe secretos de migración, backup ni restore.
+- Mantener `.env` para los secretos de aplicación (Gateway, GitHub, Better Auth y correo), y crear `.env.api`, `.env.postgres`, `.env.migrate`, `.env.test-migrate`, `.env.backup` y `.env.restore` a partir de sus plantillas `.example`; proteger cada archivo como `root:root`, modo `0600`.
+- Generar contraseñas URL-safe largas para el administrador inicial y los roles migrator/runtime/backup/restore. Guardar cada una solo en los archivos del servicio correspondiente. `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `BACKUP_*_DATABASE_URL` y `RESTORE_DATABASE_URL` usan usuarios separados; API solo recibe su URL runtime y los secretos de aplicación que necesita.
 - PostgreSQL crea ambas bases solo al inicializar un volumen vacío. Conserva `fragments-postgres-data`; no borres el volumen para reiniciar configuración. El rol runtime no puede crear tablas; Prisma usa el rol migrator.
 - PostgreSQL solo publica `127.0.0.1:5432` en el host; no hay puerto público. Para QA desde Windows, abrir un túnel SSH a `127.0.0.1:5432` y usar exclusivamente `fragments_test_runtime` con `.env.test`.
 - Configurar `BETTER_AUTH_SECRET` con al menos 32 bytes aleatorios, `BETTER_AUTH_URL` y `PUBLIC_APP_URL` con el hostname HTTPS definitivo y `AI_GATEWAY_*` con las tarifas/modelo ya aprobados.
