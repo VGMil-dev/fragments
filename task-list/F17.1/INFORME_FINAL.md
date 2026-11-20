@@ -4,6 +4,8 @@
 
 **CONFORME en la rama local `codex/f17-mentor-polish`.** La revisión visual independiente de Agente B confirmó la composición de Idea frente a la imagen aprobada, las seis etapas y el reflow en 320, 390, 768, 1024 y 1440 px. El isotipo A-003 está implementado en `apps/web/public/icon.svg`, cabecera y favicon.
 
+Commit local: `7f164ea` (`feat(mentor): pule la experiencia visual de Mentor`).
+
 ## Cambios
 
 - Mentor presenta navegación compacta «Tu propuesta», cabecera contextual, progreso calculado desde campos obligatorios reales, campos de Idea distribuidos y acciones secundarias de Word.
@@ -26,6 +28,7 @@
 ## Integración
 
 - Base observada al iniciar: `origin/main` en `3bff674bad063ecf72893a9f469e1485373c5e07`.
+- Commit de implementación/evidencia: `7f164ea`.
 - F21 permaneció intacta en su worktree independiente.
 - PR: no creado. Las instrucciones `AGENTS.md` del repositorio prohíben push/publicación. La rama está lista para revisión local; no se hizo merge ni despliegue.
 - Producción: no modificada. La integración con `main` y cualquier despliegue quedan pendientes de realizarse cuando se permita publicar y se pueda comprobar el estado vigente de F21.

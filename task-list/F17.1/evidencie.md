@@ -1,6 +1,8 @@
 # F17.1 — Evidencia de pulido visual Mentor
 
-**Estado:** CONFORME localmente. Revisión visual independiente aprobada; verificaciones finales frescas pasan. Falta registrar el SHA del commit local.
+**Estado:** CONFORME localmente. Revisión visual independiente aprobada; verificaciones finales frescas y SHA de implementación registrados.
+
+**Commit de implementación y evidencia:** `7f164ea` (`feat(mentor): pule la experiencia visual de Mentor`). La rama no se publicó.
 
 ## Preparación
 - `origin/main` se actualizó con `git fetch origin main`; base observada: `3bff674bad063ecf72893a9f469e1485373c5e07` (20-11-2026).
