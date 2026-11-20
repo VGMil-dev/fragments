@@ -1,10 +1,10 @@
 # FRAGMENTS F18.A — RESULTADO FINAL
 
-**Estado:** PARCIAL (integrada en `main`; release F14 y verificación de producción pendientes)  
-**PR de integración:** https://github.com/VGMil-dev/fragments/pull/50 (fusionada el 2026-11-20)  
-**Release:** Ninguna para F18.A todavía; `v0.4.12` es la versión base anterior. `v0.5.0` es la versión candidata para el siguiente release si los gates F14 están habilitados.  
-**Commit de integración F17:** `d8f33bd980a88f21f9c3c971038b6e6cba3983d9`  
-**SHA de `main` tras integrar código:** `4b07d4f6b843a32d494ad75043ee1f44d6621757` (merge normal PR #50; base F17 v0.4.12 `a4aeba2474f83278c8b2076fad657f2d0842495d`)  
+**Estado:** PARCIAL (integrada en `main`; release F14 y verificación de producción pendientes)
+**PR de integración:** https://github.com/VGMil-dev/fragments/pull/50 (fusionada el 2026-11-20)
+**Release:** Ninguna para F18.A todavía; `v0.4.12` es la versión base anterior. `v0.5.0` es la versión candidata para el siguiente release si los gates F14 están habilitados.
+**Commit de integración F17:** `d8f33bd980a88f21f9c3c971038b6e6cba3983d9`
+**SHA de `main` tras integrar código:** `4b07d4f6b843a32d494ad75043ee1f44d6621757` (merge normal PR #50; base F17 v0.4.12 `a4aeba2474f83278c8b2076fad657f2d0842495d`)
 **Servidor:** No se verificó una nueva versión en producción; no se afirma disponibilidad desplegada.
 
 ## Implementación
