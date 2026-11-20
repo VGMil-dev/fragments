@@ -51,6 +51,26 @@ async function serve(handler: (request: IncomingMessage, response: ServerRespons
 }
 
 describe("Review queue worker and feature HTTP handler", () => {
+  it("requires a student session and conceals reviews owned by another account", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request, context: { ...context, studentId: "student-a" } });
+    const handler = createReviewHttp({
+      store: f.store, service: f.service,
+      resolveStudentId: async (incoming) => typeof incoming.headers["x-student-id"] === "string" ? incoming.headers["x-student-id"] as string : null,
+      resolveContext: async () => ({ ...context, studentId: "student-a" }),
+    });
+    await serve(handler, async (baseUrl) => {
+      expect((await fetch(`${baseUrl}/api/reviews/${job.id}`)).status).toBe(401);
+      expect((await fetch(`${baseUrl}/api/reviews/${job.id}`, { headers: { "x-student-id": "student-b" } })).status).toBe(404);
+      expect((await fetch(`${baseUrl}/api/reviews/${job.id}`, { headers: { "x-student-id": "student-a" } })).status).toBe(200);
+      await createReviewWorker({ store: f.store, service: f.service, workerId: "worker-owner-test" }).runOnce();
+      const submission = await f.service.createPdf(job.id);
+      expect((await fetch(`${baseUrl}/api/review-submissions/${submission.submission.id}/pdf`, { headers: { "x-student-id": "student-b" } })).status).toBe(404);
+      expect((await fetch(`${baseUrl}/api/review-submissions/${submission.submission.id}/pdf`, { headers: { "x-student-id": "student-a" } })).status).toBe(200);
+    });
+    f.database.close();
+  });
+
   it("processes an enqueued review using the typed fake AI budget and persists the completed response", async () => {
     const f = await fixture();
     const job = await f.store.enqueue({ request, context });

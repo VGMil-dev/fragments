@@ -3,6 +3,7 @@ import {
   AcademicGalleryDetailSchema,
   AcademicGalleryEntrySchema,
   AcademicGalleryPageSchema,
+  CreateProposalRequestSchema,
   HistoricalProjectsResponseSchema,
   TeacherProjectsResponseSchema,
   TeacherStudentsPageSchema,
@@ -118,21 +119,19 @@ export function createAcademicRepository(database: DatabaseSync) {
         LEFT JOIN mentor_academic_publications ap ON ap.proposal_id = r.proposal_id AND ap.proposal_version = r.version
         LEFT JOIN mentor_control_versions v ON v.version = ap.context_version
         WHERE r.proposal_id = ? ORDER BY r.version DESC`);
-      return TeacherProjectsResponseSchema.parse(rows.map((row) => ({
-        id: row.id,
-        title: (JSON.parse(row.proposal_json) as { title: string }).title,
-        ownerGithubLogin: row.githubLogin,
-        currentVersion: row.version,
-        withdrawn: row.withdrawn_at !== null,
-        withdrawalReason: row.reason,
-        withdrawnAt: row.withdrawn_at,
-        history: (history.all(row.id) as Array<{ version: number; updated_at: string; proposal_json: string; published: number; context_version: number | null; config_json: string | null }>)
-          .map((revision) => {
+      return TeacherProjectsResponseSchema.parse(rows.flatMap((row) => {
+        const revisions = (history.all(row.id) as Array<{ version: number; updated_at: string; proposal_json: string; published: number; context_version: number | null; config_json: string | null }>)
+          .flatMap((revision) => {
+            const proposal = CreateProposalRequestSchema.safeParse(JSON.parse(revision.proposal_json) as unknown);
+            if (!proposal.success) return [];
             const context = revision.config_json ? JSON.parse(revision.config_json) as { subject?: string; theme?: string; rubricTitle?: string } : null;
-            return { version: revision.version, updatedAt: revision.updated_at, proposal: JSON.parse(revision.proposal_json), published: Boolean(revision.published),
-              contextVersion: revision.context_version, subject: context?.subject ?? null, theme: context?.theme ?? null, rubricTitle: context?.rubricTitle ?? null };
-          }),
-      })));
+            return [{ version: revision.version, updatedAt: revision.updated_at, proposal: proposal.data, published: Boolean(revision.published),
+              contextVersion: revision.context_version, subject: context?.subject ?? null, theme: context?.theme ?? null, rubricTitle: context?.rubricTitle ?? null }];
+          });
+        if (revisions.length === 0) return [];
+        return [{ id: row.id, title: revisions[0]!.proposal.title, ownerGithubLogin: row.githubLogin, currentVersion: row.version,
+          withdrawn: row.withdrawn_at !== null, withdrawalReason: row.reason, withdrawnAt: row.withdrawn_at, history: revisions }];
+      }));
     },
 
     listHistoricalProjects() {

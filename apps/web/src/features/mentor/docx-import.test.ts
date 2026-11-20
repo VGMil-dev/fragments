@@ -58,7 +58,7 @@ async function filledTemplate(): Promise<Uint8Array> {
 describe("importMentorDocx", () => {
   it("reads the official blank template and ignores its prompts and placeholders", async () => {
     const result = await importMentorDocx(docxFile(await templateBytes()));
-    expect(result.fields).toEqual({ title: "", problem: "", solution: "", goals: "", skills: "", scope: "", constraints: "" });
+    expect(result.fields).toEqual({ title: "", problem: "", solution: "", description: "", purpose: "", goals: "", skills: "", technologies: "", expectedOutcome: "", scope: "", constraints: "" });
     expect(result.hasAnswers).toBe(false);
   });
 

@@ -5,6 +5,20 @@ import { createSqliteReviewStore } from "./sqlite-store.js";
 import type { ReviewRecord } from "./review.service.js";
 
 describe("SQLite Review store", () => {
+  it("binds new Review jobs to one stable student account", async () => {
+    const database = new DatabaseSync(":memory:"); migrate(database);
+    const store = createSqliteReviewStore(database);
+    const request = { owner: "student", repo: "demo", commitSha: "9".repeat(40) };
+    const context = { projectId: "student/demo", rubricVersion: "review-v1", evaluatorVersion: "reviewer-v1" };
+    const studentA = await store.enqueue({ request, context: { ...context, studentId: "student-a" } });
+    const studentB = await store.enqueue({ request, context: { ...context, studentId: "student-b" } });
+    expect(studentB.id).not.toBe(studentA.id);
+    expect(store.getStudentIdForJob(studentA.id)).toBe("student-a");
+    expect(store.getStudentIdForJob(studentB.id)).toBe("student-b");
+    expect(store.getStudentIdForJob("legacy-job")).toBeNull();
+    database.close();
+  });
+
   it("enqueues idempotently, claims only review jobs, and persists terminal results", async () => {
     const database = new DatabaseSync(":memory:");
     migrate(database);

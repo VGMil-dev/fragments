@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AiAnalysisSchema, SubmissionSnapshotSchema } from "@fragments/contracts";
 import { createMentorService, type MentorEvaluator, type PdfRenderer, type Proposal } from "./service.js";
+import { createMinimalPdfRenderer } from "./local-fakes.js";
 
 const proposal: Proposal = {
   title: "Huerto escolar",
@@ -83,15 +84,25 @@ describe("Mentor service", () => {
 
   it("renders README without score and PDF only on demand", async () => {
     let pdfCalls = 0;
-    const pdf: PdfRenderer = { ...fakePdf, async render(input) { pdfCalls++; return fakePdf.render(input); } };
+    const minimalPdf = createMinimalPdfRenderer();
+    const pdf: PdfRenderer = { ...minimalPdf, async render(input) { pdfCalls++; return minimalPdf.render(input); } };
     const service = createMentorService({ evaluator: fakeEvaluator, pdf });
-    const evaluation = await service.evaluate(proposal);
-    const submission = await service.createSubmission({ sourceId: "proposal-1", proposal, evaluation });
+    const detailedProposal = { ...proposal, technologies: ["TypeScript", "SQLite"], expectedOutcome: "Prototipo verificable para registrar cambios." };
+    const evaluation = await service.evaluate(detailedProposal);
+    const submission = await service.createSubmission({ sourceId: "proposal-1", proposal: detailedProposal, evaluation });
     expect(pdfCalls).toBe(0);
     const readme = service.renderReadme(submission);
     expect(readme).toContain("# Huerto escolar");
+    expect(readme).toContain("- TypeScript\n- SQLite");
+    expect(readme).toContain("Prototipo verificable para registrar cambios.");
     expect(readme).not.toContain("100");
-    expect((await service.renderPdf(submission)).byteLength).toBeGreaterThan(0);
+    const pdfBytes = await service.renderPdf(submission);
+    expect(pdfBytes.byteLength).toBeGreaterThan(0);
+    const pdfText = new TextDecoder().decode(pdfBytes);
+    expect(pdfText).toContain("Tecnologias previstas");
+    expect(pdfText).toContain("- TypeScript");
+    expect(pdfText).toContain("Resultado esperado");
+    expect(pdfText).toContain("Prototipo verificable para registrar cambios.");
     expect(pdfCalls).toBe(1);
   });
 

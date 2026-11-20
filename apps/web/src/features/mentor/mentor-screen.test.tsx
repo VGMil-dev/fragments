@@ -7,6 +7,11 @@ import { MentorScreen } from "./mentor-screen";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
+async function openEvaluationStage() {
+  const stage = Array.from(mountedContainer?.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button") ?? []).find((button) => button.textContent?.includes("Evaluación"));
+  await act(async () => stage?.click());
+}
+
 const proposal = {
   id: "proposal-1",
   version: 1,
@@ -14,8 +19,12 @@ const proposal = {
     title: "Diario de plantas",
     problem: "No registro los cambios del jardín.",
     solution: "Anotar observaciones por fecha.",
+    description: "Una bitácora para registrar los cambios del jardín.",
+    purpose: "Observar el crecimiento de las plantas.",
     goals: ["Guardar una observación"],
     skills: ["HTML"],
+    technologies: ["TypeScript"],
+    expectedOutcome: "Una bitácora que permita consultar observaciones.",
     tags: [],
     scope: "Una bitácora personal.",
     constraints: ["Sin cuentas de usuario"],
@@ -72,19 +81,97 @@ afterEach(() => {
 });
 
 describe("MentorScreen", () => {
+  it("shows one independent stage at a time with contextual navigation", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+    expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
+    expect(mountedContainer.querySelector(".mentor-stage-nav")).not.toBeNull();
+    expect(mountedContainer.textContent).toContain("Borrador completado: 0 %");
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => context?.click());
+    expect(mountedContainer.textContent).toContain("Proyecto personal");
+    expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
+  });
+
+  it("enables the deterministic cover prompt only for an evaluation of the current proposal version", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />); });
+    const coverStage = () => Array.from(mountedContainer?.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button") ?? []).find((button) => button.textContent?.includes("Portada"));
+    await act(async () => coverStage()?.click());
+    expect(mountedContainer.textContent).toContain("Completa una evaluación guardada para la versión actual");
+    expect(mountedContainer.querySelector('input[accept*="image"]')).toBeNull();
+
+    await act(async () => { mountedRoot?.render(<MentorScreen key="evaluated" {...actions} initialProposal={proposal} initialEvaluation={{ status: "success", data: evaluation }} onBack={vi.fn()} />); });
+    await act(async () => coverStage()?.click());
+    expect(mountedContainer.textContent).toContain("Copiar prompt");
+    expect(mountedContainer.querySelector(".mentor-cover pre")).not.toBeNull();
+  });
+
+  it("keeps a stale draft conflict visible and offers a reload path", async () => {
+    const resolveConflict = vi.fn();
+    const update = vi.fn(async () => ({ ok: false as const, error: { code: "VERSION_CONFLICT", message: "Conflicto de versión." } }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onUpdate={update} onResolveConflict={resolveConflict} onBack={vi.fn()} />); });
+    await act(async () => mountedContainer?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(mountedContainer.textContent).toContain("Tus cambios no sobrescribieron la versión actual");
+    const reload = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Volver a Mis proyectos");
+    await act(async () => reload?.click());
+    expect(resolveConflict).toHaveBeenCalledOnce();
+  });
+
   it("starts with a validated proposal form and no invented evaluation", () => {
     const html = renderToStaticMarkup(
       <MentorScreen {...actions} onBack={vi.fn()} />,
     );
 
     expect(html).toContain("Tu idea toma forma");
-    expect(html).toContain("Guardar propuesta");
+    expect(html).toContain("Guardar borrador");
     expect(html).toContain("Descargar plantilla Word");
     expect(html).toContain("/templates/fragments-mentor-propuesta.docx");
     expect(html).toContain("Importar propuesta (.docx)");
     expect(html).toContain("Crear propuesta directamente");
     expect(html).not.toContain("72/100");
     expect(html).not.toContain("scope necesita");
+  });
+
+  it("shows the personal objectives, MVP, technologies, and expected outcome in Stage 4", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />); });
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
+    await act(async () => objectives?.click());
+    expect(mountedContainer.textContent).toContain("Tecnologías que planeas usar");
+    expect(mountedContainer.textContent).toContain("Resultado esperado");
+    expect(mountedContainer.textContent).toContain("Condiciones propias del proyecto");
+    expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "TypeScript")).toBe(true);
+    expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "Una bitácora que permita consultar observaciones.")).toBe(true);
+  });
+
+  it("blocks an oversized technology list with field-level guidance", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
+    await act(async () => objectives?.click());
+    const technologyField = Array.from(mountedContainer.querySelectorAll("label")).find((label) => label.textContent?.includes("Tecnologías que planeas usar"))?.querySelector("textarea");
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(technologyField, Array.from({ length: 21 }, (_, index) => `Tecnología ${index}`).join("\n"));
+    await act(async () => technologyField?.dispatchEvent(new Event("input", { bubbles: true })));
+    const idea = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Idea"));
+    await act(async () => idea?.click());
+    await act(async () => mountedContainer?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
+    expect(actions.onSave).not.toHaveBeenCalled();
+    expect(mountedContainer.textContent).toContain("Incluye máximo 20 tecnologías");
+    expect(mountedContainer.textContent).toContain("Revisa el campo de tecnologías");
+    expect(mountedContainer.querySelector('[aria-current="step"]')?.textContent).toContain("Objetivos");
   });
 
   it("lists saved proposals and opens the selected one", () => {
@@ -169,9 +256,12 @@ describe("MentorScreen", () => {
     const form = mountedContainer.querySelector("form");
     await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
 
-    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ title: "Diario de plantas editado", expectedVersion: proposal.version }));
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ proposal: expect.objectContaining({ title: "Diario de plantas editado" }), expectedVersion: proposal.version }));
+    await openEvaluationStage();
     const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     expect(evaluate).toBeDefined();
+    expect(mountedContainer.textContent).toContain("se publica automáticamente en Galería");
+    expect(mountedContainer.textContent).toContain("no puede retirar una versión ya publicada");
     await act(async () => evaluate?.click());
     expect(actions.onEvaluate).toHaveBeenCalledWith(proposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
@@ -194,6 +284,7 @@ describe("MentorScreen", () => {
       );
     });
 
+    await openEvaluationStage();
     const evaluateButton = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     await act(async () => evaluateButton?.click());
     expect(mountedContainer.textContent).not.toContain("72/100");
@@ -230,6 +321,7 @@ describe("MentorScreen", () => {
       );
     });
 
+    await openEvaluationStage();
     const evaluateButton = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     await act(async () => evaluateButton?.click());
 

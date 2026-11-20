@@ -83,7 +83,7 @@ const inspector = createInspectorService({
 });
 const trainer = createTrainerService({
   reviews: {
-    listCompleted: async () => reviewStore.listCompleted(),
+    listCompleted: async (studentId) => studentId ? reviewStore.listCompletedForStudent(studentId) : [],
     getEvidence: (id) => inspectorReviews.getById(id),
   },
   provider: gatewayInspectorProvider,
@@ -97,11 +97,16 @@ const auth = betterAuth ? createFragmentsAuthService(betterAuth) : undefined;
 const review = {
   store: reviewStore,
   service: reviewService,
-  resolveContext: async (_request: unknown, input: { owner: string; repo: string }) => ({
-    projectId: `${input.owner}/${input.repo}`.toLowerCase(),
-    rubricVersion: "review-v1",
-    evaluatorVersion: "gateway-structured-v2",
-  }),
+  resolveStudentId: async (request: Parameters<NonNullable<typeof auth>['student']>[0]) => (await auth?.student(request))?.id ?? null,
+  resolveContext: async (request: Parameters<NonNullable<typeof auth>['student']>[0], input: { owner: string; repo: string }) => {
+    const student = await auth?.student(request);
+    return student ? {
+      projectId: `${input.owner}/${input.repo}`.toLowerCase(),
+      rubricVersion: "review-v1",
+      evaluatorVersion: "gateway-structured-v2",
+      studentId: student.id,
+    } : null;
+  },
 };
 
 const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore } });

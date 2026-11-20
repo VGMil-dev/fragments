@@ -1,22 +1,27 @@
 import {
   CreateMentorSubmissionRequestSchema,
   CreateProposalRequestSchema,
+  CreateProposalDraftRequestSchema,
   CreateReviewSubmissionRequestSchema,
   AcademicGalleryPageSchema,
   AcademicGalleryDetailSchema,
   MeResponseSchema,
   OwnedProposalsResponseSchema,
+  StudentSubmissionsResponseSchema,
   MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
   ProposalResponseSchema,
+  ProposalDraftResponseSchema,
   UpdateProposalRequestSchema,
+  UpdateProposalDraftRequestSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
   type ApiResult,
   type CreateMentorSubmissionRequest,
   type CreateProposalRequest,
+  type CreateProposalDraftRequest,
   type CreateReviewSubmissionRequest,
   type AcademicGalleryPage,
   type AcademicGalleryDetail,
@@ -25,7 +30,10 @@ import {
   type MentorPublishedConfig,
   type ProposalEvaluationResponse,
   type ProposalResponse,
+  type ProposalDraftResponse,
+  type StudentSubmissionsResponse,
   type UpdateProposalRequest,
+  type UpdateProposalDraftRequest,
   type ReviewRequest,
   type ReviewResponse,
   type ReviewSubmissionResponse,
@@ -70,8 +78,11 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
     getGallery(offset = 0, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryPage>> {
       return client.request(`/api/gallery?offset=${Math.max(0, Math.trunc(offset))}&limit=20`, AcademicGalleryPageSchema, withSignal(signal));
     },
-    getMyProposals(signal?: AbortSignal): Promise<ApiResult<ProposalResponse[]>> {
+    getMyProposals(signal?: AbortSignal): Promise<ApiResult<ProposalDraftResponse[]>> {
       return client.request("/api/me/proposals", OwnedProposalsResponseSchema, withSignal(signal));
+    },
+    getMySubmissions(signal?: AbortSignal): Promise<ApiResult<StudentSubmissionsResponse>> {
+      return client.request("/api/me/submissions", StudentSubmissionsResponseSchema, withSignal(signal));
     },
 
     getGalleryDetail(projectId: string, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryDetail>> {
@@ -84,6 +95,21 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
       const request = CreateProposalRequestSchema.safeParse(input);
       if (!request.success) return Promise.resolve(invalid<ProposalResponse>());
       return client.request("/api/proposals", ProposalResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+
+    saveProposalDraft(input: CreateProposalDraftRequest, signal?: AbortSignal): Promise<ApiResult<ProposalDraftResponse>> {
+      const request = CreateProposalDraftRequestSchema.safeParse(input);
+      if (!request.success) return Promise.resolve(invalid<ProposalDraftResponse>());
+      return client.request("/api/me/proposals/drafts", ProposalDraftResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+
+    updateProposalDraft(proposalId: string, input: UpdateProposalDraftRequest, signal?: AbortSignal): Promise<ApiResult<ProposalDraftResponse>> {
+      const id = encodeId(proposalId);
+      const request = UpdateProposalDraftRequestSchema.safeParse(input);
+      if (!id || !request.success) return Promise.resolve(invalid<ProposalDraftResponse>());
+      return client.request(`/api/me/proposals/${id}/draft`, ProposalDraftResponseSchema, {
+        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(request.data), ...withSignal(signal),
+      });
     },
 
     updateProposal(proposalId: string, input: UpdateProposalRequest, signal?: AbortSignal): Promise<ApiResult<ProposalResponse>> {

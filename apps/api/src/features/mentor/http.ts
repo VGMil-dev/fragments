@@ -3,11 +3,16 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseSync } from "node:sqlite";
 import {
   CreateMentorSubmissionRequestSchema,
+  CreateProposalDraftRequestSchema,
   CreateProposalRequestSchema,
   GalleryResponseSchema,
+  ProposalDraftResponseSchema,
+  ProposalEvaluationInputSchema,
   ProposalResponseSchema,
   UpdateProposalRequestSchema,
+  UpdateProposalDraftRequestSchema,
   SubmissionResponseSchema,
+  StudentSubmissionsResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
 import { createMentorRepository } from "./repository.js";
@@ -50,6 +55,13 @@ export function createMentorHttp(
       return "handled";
     }
 
+    if (request.method === "GET" && url.pathname === "/api/me/submissions") {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      sendJson(response, 200, { ok: true, data: StudentSubmissionsResponseSchema.parse(repository.listStudentSubmissions(student.id)) });
+      return "handled";
+    }
+
     if (request.method === "POST" && url.pathname === "/api/proposals") {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
@@ -62,6 +74,36 @@ export function createMentorHttp(
       }
       const saved = repository.createProposal(proposal.data, null, student.id);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
+      return "handled";
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/me/proposals/drafts") {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      const raw = await readJson(request, response);
+      if (raw === undefined) return "handled";
+      const input = CreateProposalDraftRequestSchema.safeParse(raw);
+      if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador."); return "handled"; }
+      const saved = repository.createProposalDraftByUser(input.data.proposal, student.id);
+      sendJson(response, 201, { ok: true, data: ProposalDraftResponseSchema.parse(saved) });
+      return "handled";
+    }
+
+    const draftMatch = url.pathname.match(/^\/api\/me\/proposals\/([A-Za-z0-9_-]{1,100})\/draft$/);
+    if (request.method === "PUT" && draftMatch) {
+      const student = await requireStudent(request, response, options.auth);
+      if (!student) return "handled";
+      const raw = await readJson(request, response);
+      if (raw === undefined) return "handled";
+      const input = UpdateProposalDraftRequestSchema.safeParse(raw);
+      if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador y la versión que editas."); return "handled"; }
+      const saved = repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, input.data.proposal);
+      if (saved.status !== "updated") {
+        if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
+        else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
+        return "handled";
+      }
+      sendJson(response, 200, { ok: true, data: ProposalDraftResponseSchema.parse(saved.proposal) });
       return "handled";
     }
 
@@ -89,7 +131,7 @@ export function createMentorHttp(
       if (!student) return "handled";
       const history = repository.getProposalHistoryByUser(historyMatch[1]!, student.id);
       if (!history) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
-      sendJson(response, 200, { ok: true, data: history.map((entry) => ProposalResponseSchema.parse(entry)) });
+      sendJson(response, 200, { ok: true, data: history.map((entry) => ProposalDraftResponseSchema.parse(entry)) });
       return "handled";
     }
 
@@ -104,8 +146,9 @@ export function createMentorHttp(
     if (recoverEvaluationMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const proposal = repository.getOwnedProposalByUser(recoverEvaluationMatch[1]!, student.id);
-      const latest = proposal ? repository.getLatestEvaluation(proposal.id, proposal.version) : null;
+      const proposal = repository.getOwnedProposalDraftByUser(recoverEvaluationMatch[1]!, student.id);
+      const complete = proposal ? ProposalEvaluationInputSchema.safeParse(proposal.proposal) : null;
+      const latest = proposal && complete?.success ? repository.getLatestEvaluation(proposal.id, proposal.version) : null;
       if (!proposal || !latest) {
         sendError(response, 404, "NOT_FOUND", "No se encontró una evaluación guardada para esta versión.");
         return "handled";
@@ -122,8 +165,13 @@ export function createMentorHttp(
     if (evaluateMatch) {
       const student = await requireStudent(request, response, options.auth);
       if (!student) return "handled";
-      const proposal = repository.getOwnedProposalByUser(evaluateMatch[1]!, student.id);
+      const savedDraft = repository.getOwnedProposalDraftByUser(evaluateMatch[1]!, student.id);
+      const parsedProposal = savedDraft ? ProposalEvaluationInputSchema.safeParse(savedDraft.proposal) : null;
+      const proposal = savedDraft && parsedProposal?.success
+        ? ProposalResponseSchema.parse({ ...savedDraft, proposal: parsedProposal.data })
+        : null;
       if (!proposal) {
+        if (savedDraft) { sendError(response, 422, "PROPOSAL_INCOMPLETE", "Completa y guarda los campos obligatorios antes de evaluar."); return "handled"; }
         sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         return "handled";
       }
