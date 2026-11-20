@@ -68,9 +68,9 @@
 - Run F14 44680764087 terminó completed/success. Release v0.5.0: tag object 79705074d95a294088bf36fba2b3694339a7e35a, peeled commit fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04. GitHub Release publicado: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.0. La publicación protegida completó sin bypass.
 - Ego Lite abrió https://fragments.gavanti.org: BuildVersion mostró v0.5.0 y SHA fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04. /health respondió HTTP 200, status=ok, database=ready; recursos JS y CSS 200.
 - Solicitudes externas sin sesión a /api/teacher/classrooms y /api/me/classrooms respondieron HTTP 401. No se inició sesión con cuentas reales ni se usaron datos reales; la ruta autenticada docente/estudiante en producción no queda certificada.
-- PR #54 de documentación del gate se fusionó; CI run 44681523200 PASS. origin/main actual: 09952a74ca0149f17063a83f2b2b50759c2a120. El tag permanece en el SHA exacto de release indicado arriba.
+- PR #54 de documentación del gate se fusionó; CI run 44681523200 PASS. origin/main actual: e09952a74ca0149f17063a83f2b2b50759c2a120. El tag permanece en el SHA exacto de release indicado arriba.
 - El informe y ZIP reflejan el estado desplegado. F18.A permanece parcial por QA integrada incompleta: no se cubrieron todos los anchos 320/768/1024 ni consola/teclado/reduced-motion para cada vista. No marcar F18 general completa.
-- ZIP regenerado con 22 entradas (20 capturas, informe y manifiesto). SHA-256: $zipHash. Manifiesto verificado sobre todos los archivos excepto sí mismo.
+- ZIP de la entrega v0.5.0: 22 entradas (20 capturas, informe y manifiesto), SHA-256 `82b61a8f0989000bc78deb1e76fd2e36df470d5343f3b7c2b3bb71c69b5780`; se reemplazó por la versión final abajo.
 
 ## Corrección de confirmaciones de acciones — 2026-11-20
 
@@ -80,4 +80,15 @@
 - Verificación fresca `pnpm exec turbo run test typecheck lint build --force`: PASS, 10/10 tareas; contracts 26/26, API 167/167, web 119/119. Typecheck, lint y build PASS; permanece el aviso Lucide `MODULE_LEVEL_DIRECTIVE`.
 - Ego local con harness SQLite y fixtures `fixture-*`: estudiante A aprobado como `active` con `source=join_code`; estudiante B asignado como `active` con `source=teacher_assignment`; `Solicitud aprobada.` visible tras recargar. Sin cuentas ni datos reales.
 - `git diff --check`: PASS. Capturas actualizadas en lista, validación, detalle, grupos, código, solicitudes, asignación, catálogo y habilitación. Las capturas 15 y 17–20 permanecen de la tanda Ego previa.
-- La corrección aún no está desplegada. La versión de producción verificada sigue en v0.5.0 hasta completar un nuevo release F14.
+- En el momento de este registro, la corrección estaba pendiente del nuevo release F14; el resultado posterior queda documentado abajo.
+
+## Release F14 v0.5.1 y verificación posterior — 2026-11-20
+
+- Commit de aplicación y evidencia: `234dc49d895869afbba9cd7f4a4bef19d06c2b2c`; commit documental: `1b269c0` (`docs(f18a): registrar corrección de confirmaciones`). PR #56 pasó `verify` en run `44762099589` y se integró normalmente. `origin/main`: `5b81542df0b4f725027a44a7bc294199f3289faa`.
+- Tag anotado `v0.5.1` publicado sobre el SHA exacto `5b81542df0b4f725027a44a7bc294199f3289faa`. Run F14 `44762449183` completó `verify-build`, imágenes ARM64, attest-package y `publish-approved-release` con éxito; la aprobación normal del entorno `fragments-production` se registró para esta publicación. GitHub Release: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.1.
+- Ego Lite sobre la landing pública muestra `v0.5.1` y el SHA completo `5b81542df0b4f725027a44a7bc294199f3289faa`. `/health` respondió 200, `status=ok`, `database=ready`; UI cargó correctamente. Requests anónimos directos a `/api/teacher/classrooms` y `/api/me/classrooms` respondieron 401.
+- Una GET docente hecha desde el contexto de Ego respondió 200 con lista vacía. El perfil podría tener cookies persistentes; no se inspeccionó la identidad ni se contó esa respuesta como anónima. Las comprobaciones anónimas válidas son las llamadas HTTP directas sin cookie, que dieron 401.
+- La aceptación sigue parcial: no se cerró la matriz visual integrada completa en 320/768/1024 ni teclado, consola y movimiento reducido para todas las vistas; tampoco se autenticó con cuentas reales. Los flujos autorizados de F18.A se verificaron localmente con fixtures sintéticos.
+- El release de producción no incluye bases temporales ni archivos del harness.
+- Evidencia final regenerada: `Fragments_F18A_Final_Evidence.zip` tiene 22 entradas (20 PNG, informe, manifest); SHA-256 `84C3E888C5C38C4EF151DD93BD1B3C26AE5BFA3653DFE50CEBFB96C86B1FC48E`. Manifiesto lista 21 archivos (capturas e informe), todos los hashes coinciden; dimensiones detectadas: 17 imágenes 1440×1000 y 3 imágenes 390×1000. No incluye datos locales ni secretos.
+- Se actualizó Notion: proyecto Fragments, fichas F18/F17 y contrato/Atlas (actualizados en la integración inicial). Los tres registros operativos reflejan v0.5.1 y aceptación parcial.

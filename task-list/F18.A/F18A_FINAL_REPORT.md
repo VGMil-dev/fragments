@@ -1,10 +1,10 @@
 # FRAGMENTS F18.A — RESULTADO DE ENTREGA
 
-**Estado:** PARCIAL (desplegada en producción; aceptación funcional completa pendiente).
-**PR de integración:** https://github.com/VGMil-dev/fragments/pull/50 (merge `4b07d4f6b843a32d494ad75043ee1f44d6621757`). **Cierre documental:** PR #53 (merge `fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04`). PR #54 registra estado del gate.
-**Release:** tag anotado `v0.5.0`, objeto `79705074d95a294088bf36fba2b3694339a7e35a`, apunta al commit `fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04`. Run F14 `44680764087` terminó `success`; GitHub Release: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.0.
-**Producción:** `https://fragments.gavanti.org` sirve build `v0.5.0`, commit `fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04`. `/health` respondió HTTP 200 (`status=ok`, `database=ready`). Los recursos JS/CSS respondieron 200. Las llamadas externas sin sesión a `/api/teacher/classrooms` y `/api/me/classrooms` respondieron 401, confirmando que requieren autenticación.
-**Main actual:** `e09952a74ca0149f17063a83f2b2b50759c2a120` (incluye documentación posterior al tag; el release v0.5.0 conserva el SHA exacto etiquetado).
+**Estado:** PARCIAL (v0.5.1 desplegada en producción; aceptación funcional integrada completa pendiente).
+**PR de integración:** https://github.com/VGMil-dev/fragments/pull/50 (merge `4b07d4f6b843a32d494ad75043ee1f44d6621757`). **Fix de confirmaciones:** PR #56 (merge `5b81542df0b4f725027a44a7bc294199f3289faa`). Cierre documental: PR #53; PR #54 registró el gate inicial.
+**Release:** tag anotado `v0.5.1`, sobre `5b81542df0b4f725027a44a7bc294199f3289faa`. Run F14 `44762449183` terminó `success` tras aprobación normal del entorno; GitHub Release: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.1. El release previo v0.5.0 se conserva.
+**Producción:** `https://fragments.gavanti.org` sirve build `v0.5.1`, SHA completo `5b81542df0b4f725027a44a7bc294199f3289faa`, observado en Ego en la landing/login pública. `/health` devolvió HTTP 200 (`status=ok`, `database=ready`). UI/recursos de la aplicación cargaron correctamente. Solicitudes directas sin cookies a `/api/teacher/classrooms` y `/api/me/classrooms` devolvieron HTTP 401.
+**Main y release:** `main`, tag v0.5.1 y versión servida coinciden en `5b81542df0b4f725027a44a7bc294199f3289faa`.
 
 ## Implementación
 
@@ -19,7 +19,8 @@ El incremento incorpora a F17: `Mis aulas` consume los endpoints académicos exi
 - F14 run `44680764087`: validación de tag/HEAD, tests, typecheck, lint, build, imágenes ARM64, atestación y publicación aprobada PASS. La publicación completó; no se usó bypass.
 - Producción comprobada en Ego Lite: versión/build y SHA coinciden con el tag; health 200 y base lista. Verificación HTTP sin sesión: API de docente y estudiante 401; JS/CSS 200.
 - Ego Lite con fixtures locales sintéticas: docente creó aulas y código, estudiante A pidió ingreso, docente aprobó, estudiante activo consultó aula y habilidad autorizada; estudiante B fue rechazado; estudiante C recibió asignación directa. Catálogo privado por docente.
-- No se autenticó con cuentas reales ni se usaron datos estudiantiles reales. Por tanto, estos recorridos locales no certifican el flujo OAuth ni el aislamiento entre cuentas reales en producción.
+- No inicié sesión manualmente con cuentas reales ni usé datos estudiantiles reales. Una llamada GET docente desde el contexto Ego respondió 200 con una lista vacía; como el perfil podría tener cookies persistentes, no la cuento como anónima ni como prueba de flujo real, y no inspeccioné la identidad asociada. Requests HTTP directos sin cookies devolvieron 401 para docente y estudiante. Los recorridos locales con fixtures no certifican OAuth ni el aislamiento entre cuentas reales en producción.
+- PR #56 corrigió notificaciones de éxito que se borraban al recargar datos después de una acción; la prueba de regresión y el recorrido Ego local pasaron. El arreglo quedó incluido en v0.5.1.
 - 20 PNG capturados desde UI real con Ego/CDP: escritorio 1440×1000 CSS px y móvil 390×1000. La aceptación integrada no cubrió todos los anchos 320/768/1024, ni revisión completa de consola, teclado/foco y movimiento reducido para cada vista. Algunas capturas CDP tuvieron timeouts intermitentes.
 
 ## Evidencia visual
