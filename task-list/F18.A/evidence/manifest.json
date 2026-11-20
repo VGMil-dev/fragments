@@ -1,0 +1,130 @@
+{
+  "generatedAt": "2026-11-20",
+  "method": "Ego Lite screenshot API; report is Markdown",
+  "files": [
+    {
+      "path": "F18A_FINAL_REPORT.md",
+      "sha256": "1f29ff5fc0817e2974f98c9888cfe17099994bde3b0f67bf1330dbb8d5cd6010"
+    },
+    {
+      "path": "screenshots/01-desktop-docente-aulas.png",
+      "sha256": "0d3ea69e62d9250fdd76e3c35d9e4dd0d23bc028f1dfc91899952037a3fcc2db",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/02-desktop-docente-aulas-vacio.png",
+      "sha256": "f8e3c4677d42a90501b3395955868f815cbd047c16cf70262fb0c62efb3d9053",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/03-desktop-docente-crear-aula.png",
+      "sha256": "b743f06aa4272e3f4303e2d2ecde63d489f4710fb4bf020ea13412ad29347ffd",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/04-desktop-docente-validacion.png",
+      "sha256": "176446dfca78a9f6243f331b7a32e4940f6aebcdf5e436a99dfd2577310e9806",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/05-desktop-docente-detalle-aula.png",
+      "sha256": "f98289e17ff8c46ffd58a4eda592e769058ee0f79af364a2bd58c7f70a784675",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/06-desktop-docente-grupos.png",
+      "sha256": "2720932f757e3a83ba574d70578c71761a20599d90b8f40661af1f41a4758851",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/07-desktop-docente-codigo.png",
+      "sha256": "60c1af2c1ece1547ee469c9431036606daf240e53c71a32cd75d08bd3bec43fe",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/08-desktop-docente-solicitudes.png",
+      "sha256": "4f8472765471ce15dbeffa8bf6465b89c037a98f96f9d731770ab10fa6cbf1db",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/09-desktop-docente-aprobacion.png",
+      "sha256": "a40e0890b6d3d2dd6e6feeeb733ee139a046bb3350727b4e425b7b250f52c204",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/10-desktop-docente-rechazo.png",
+      "sha256": "dcea96c637320882a13e02f19f0373e7d0cd3ecdfd06d491d47fc404b1768300",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/11-desktop-docente-asignacion.png",
+      "sha256": "6ac2922daf1b4cae8d2b046dce4ca121dfa565d48c1093bee112bf50e1645d4c",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/12-desktop-docente-habilidades.png",
+      "sha256": "0f8e3703c2296dfc1c2fee71186026f558e2780ad9d7ee6a3b0be65b6bb6bdf0",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/13-desktop-docente-crear-habilidad.png",
+      "sha256": "4b8545dbfc669f4e588834b8e8bb9f8c42db842d9d46705d20ebbf8ef1698b22",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/14-desktop-docente-habilidades-aula.png",
+      "sha256": "6beabb466c3330616c62e19840b6a87c11d9805973faeb5c004cbd41b9d65bf2",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/15-desktop-estudiante-mis-aulas.png",
+      "sha256": "d8e9fd51a463ccaffab6043b42a7f1d681661cb952842c0c8fa69e5ec8cb7253",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/16-desktop-estudiante-solicitud.png",
+      "sha256": "41b6dd3c7181fe9485b7f6660b9b644163653d41fde1a6f7e7a58416640de7a1",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/17-desktop-estudiante-aula-activa.png",
+      "sha256": "2a633494ddaaf5a6a316567db7a558cb986219e67435c961f691a31fb93dd01d",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/18-mobile-docente-aulas.png",
+      "sha256": "f68d2ee7e9b0163ad2b75d48aa7f8553b4d1b458496308ca4d13c206c25f3b14",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/19-mobile-docente-habilidades.png",
+      "sha256": "23229b381708547181330afe8f3c7011ea13bdba1413d1ea10ee113284c1e90a",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "path": "screenshots/20-mobile-estudiante-mis-aulas.png",
+      "sha256": "7f78f3e96f03099c8436e5a36a2bbd978d6e4ad279273897c1d27982939e0667",
+      "width": 390,
+      "height": 1000
+    }
+  ]
+}

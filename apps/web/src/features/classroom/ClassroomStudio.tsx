@@ -79,41 +79,41 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
     const data = new FormData(event.currentTarget);
     const result = await classroomApi.update(classroom.id, { title: data.get("title"), subject: data.get("subject"), groupLabel: data.get("groupLabel"), period: data.get("period") || null, context: data.get("context") || null });
     setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else { setClassroom(result.data); setMessage("Cambios guardados."); await load(); }
+    if (!result.ok) setMessage(result.error.message); else { setClassroom(result.data); await load(); setMessage("Cambios guardados."); }
   }
 
   async function createSkill(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage("");
     const result = await classroomApi.createSkill({ name: skillName, description: skillDescription || null }); setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else { setSkillName(""); setSkillDescription(""); setMessage("Habilidad creada."); await load(); }
+    if (!result.ok) setMessage(result.error.message); else { setSkillName(""); setSkillDescription(""); await load(); setMessage("Habilidad creada."); }
   }
 
   async function enrollmentAction(action: "approve" | "reject" | "remove", enrollmentId: string) {
     if (!detailId) return; setBusy(true); setMessage("");
     const result = action === "approve" ? await classroomApi.approve(detailId, enrollmentId) : action === "reject" ? await classroomApi.reject(detailId, enrollmentId) : await classroomApi.remove(detailId, enrollmentId);
-    setBusy(false); if (!result.ok) setMessage(result.error.message); else await load();
+    setBusy(false); if (!result.ok) setMessage(result.error.message); else { await load(); setMessage(action === "approve" ? "Solicitud aprobada." : action === "reject" ? "Solicitud rechazada." : "Estudiante retirado del aula."); }
   }
 
   async function directAssign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!detailId || !studentId) return; setBusy(true); setMessage("");
     const result = await classroomApi.directAssign(detailId, studentId); setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else { setStudentId(""); setMessage("Estudiante asignado y matrícula activa."); await load(); }
+    if (!result.ok) setMessage(result.error.message); else { setStudentId(""); await load(); setMessage("Estudiante asignado y matrícula activa."); }
   }
 
   async function toggleSkill(skillId: string, enabled: boolean) {
     if (!detailId) return; setBusy(true); setMessage(""); const result = await classroomApi.setSkill(detailId, skillId, enabled); setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else await load();
+    if (!result.ok) setMessage(result.error.message); else { await load(); setMessage(enabled ? "Habilidad habilitada para el aula." : "Habilidad retirada del aula."); }
   }
 
   async function archiveSkill(skillId: string) {
     setBusy(true); setMessage(""); const result = await classroomApi.archiveSkill(skillId); setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else { setMessage("Habilidad archivada; sus referencias se conservan."); await load(); }
+    if (!result.ok) setMessage(result.error.message); else { await load(); setMessage("Habilidad archivada; sus referencias se conservan."); }
   }
 
   async function saveSkill(event: FormEvent<HTMLFormElement>, skillId: string) {
     event.preventDefault(); setBusy(true); setMessage("");
     const result = await classroomApi.updateSkill(skillId, { name: editingSkillName, description: editingSkillDescription || null }); setBusy(false);
-    if (!result.ok) setMessage(result.error.message); else { setEditingSkillId(null); setMessage("Habilidad actualizada."); await load(); }
+    if (!result.ok) setMessage(result.error.message); else { setEditingSkillId(null); await load(); setMessage("Habilidad actualizada."); }
   }
 
   const visibleSkills = allSkills.filter((skill) => `${skill.name} ${skill.description ?? ""}`.toLocaleLowerCase("es").includes(skillQuery.trim().toLocaleLowerCase("es")));

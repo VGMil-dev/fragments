@@ -1,4 +1,4 @@
-# F18.A — Evidencia
+5B4FB97C8F7F2377511A48EE0522D5E6637C15F30CA8B1FA0B2DB54642A2B011# F18.A — Evidencia
 
 ## Base y preflight
 
@@ -65,9 +65,19 @@
 
 ## Publicación F14 y verificación de producción — 2026-11-20
 
-- Run F14 44680764087 terminó completed/success. Release 0.5.0: tag object 79705074d95a294088bf36fba2b3694339a7e35a, peeled commit c64eb1944d3e5c2846644fd1b95a4a3f2f58f04. GitHub Release publicado: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.0. La publicación protegida completó sin bypass.
-- Ego Lite abrió https://fragments.gavanti.org: BuildVersion mostró 0.5.0 y SHA c64eb1944d3e5c2846644fd1b95a4a3f2f58f04. /health respondió HTTP 200, status=ok, database=ready; recursos JS y CSS 200.
+- Run F14 44680764087 terminó completed/success. Release v0.5.0: tag object 79705074d95a294088bf36fba2b3694339a7e35a, peeled commit fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04. GitHub Release publicado: https://github.com/VGMil-dev/fragments/releases/tag/v0.5.0. La publicación protegida completó sin bypass.
+- Ego Lite abrió https://fragments.gavanti.org: BuildVersion mostró v0.5.0 y SHA fc64eb1944d3e5c2846644fd1b95a4a3f2f58f04. /health respondió HTTP 200, status=ok, database=ready; recursos JS y CSS 200.
 - Solicitudes externas sin sesión a /api/teacher/classrooms y /api/me/classrooms respondieron HTTP 401. No se inició sesión con cuentas reales ni se usaron datos reales; la ruta autenticada docente/estudiante en producción no queda certificada.
 - PR #54 de documentación del gate se fusionó; CI run 44681523200 PASS. origin/main actual: 09952a74ca0149f17063a83f2b2b50759c2a120. El tag permanece en el SHA exacto de release indicado arriba.
 - El informe y ZIP reflejan el estado desplegado. F18.A permanece parcial por QA integrada incompleta: no se cubrieron todos los anchos 320/768/1024 ni consola/teclado/reduced-motion para cada vista. No marcar F18 general completa.
 - ZIP regenerado con 22 entradas (20 capturas, informe y manifiesto). SHA-256: $zipHash. Manifiesto verificado sobre todos los archivos excepto sí mismo.
+
+## Corrección de confirmaciones de acciones — 2026-11-20
+
+- Commit de corrección y evidencia: `234dc49d895869afbba9cd7f4a4bef19d06c2b2c` (`fix(classroom): conservar confirmaciones de acciones`).
+- Ego local reprodujo que el refresco de datos borraba el mensaje de éxito al guardar un aula. Se corrigió el orden de actualización y se añadió una prueba de regresión en `ClassroomStudio.test.tsx`.
+- Se aplicó el mismo patrón a guardar/crear/editar/archivar habilidades, asignación directa, habilitar/quitar habilidad y aprobar/rechazar/retirar matrícula. Las acciones de matrícula ahora muestran resultado visible.
+- Verificación fresca `pnpm exec turbo run test typecheck lint build --force`: PASS, 10/10 tareas; contracts 26/26, API 167/167, web 119/119. Typecheck, lint y build PASS; permanece el aviso Lucide `MODULE_LEVEL_DIRECTIVE`.
+- Ego local con harness SQLite y fixtures `fixture-*`: estudiante A aprobado como `active` con `source=join_code`; estudiante B asignado como `active` con `source=teacher_assignment`; `Solicitud aprobada.` visible tras recargar. Sin cuentas ni datos reales.
+- `git diff --check`: PASS. Capturas actualizadas en lista, validación, detalle, grupos, código, solicitudes, asignación, catálogo y habilitación. Las capturas 15 y 17–20 permanecen de la tanda Ego previa.
+- La corrección aún no está desplegada. La versión de producción verificada sigue en v0.5.0 hasta completar un nuevo release F14.
