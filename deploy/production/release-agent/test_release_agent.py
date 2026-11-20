@@ -3,7 +3,6 @@ import gzip
 import json
 import io
 import os
-import sqlite3
 import stat
 import subprocess
 import tarfile
@@ -131,6 +130,7 @@ class ReleaseValidationTests(unittest.TestCase):
                 "config": {"Labels": {
                     "org.opencontainers.image.version": "v0.4.0",
                     "org.opencontainers.image.revision": RELEASE_SHA,
+                    **({"org.opencontainers.image.database": "postgresql"} if key == "api" else {}),
                 }},
             }, separators=(",", ":")).encode("utf-8")
         manifest = json.dumps([
@@ -249,11 +249,32 @@ class ReleaseValidationTests(unittest.TestCase):
             state = Path(directory)
             override = agent.compose_override(state, f"fragments-api:sha-{RELEASE_SHA}", f"fragments-web:sha-{RELEASE_SHA}", "v0.4.0", RELEASE_SHA)
             self.assertIn(f"image: fragments-api:sha-{RELEASE_SHA}", override.read_text(encoding="utf-8"))
+            self.assertIn(f"image: fragments-api:sha-{RELEASE_SHA}", override.read_text(encoding="utf-8").split("  api:", 1)[0])
+            self.assertNotIn("sqlite", override.read_text(encoding="utf-8").lower())
+            self.assertNotIn("fragments-data", override.read_text(encoding="utf-8"))
             with self.assertRaises(agent.AgentError):
                 agent.compose_override(state, "attacker/api:latest", f"fragments-web:sha-{RELEASE_SHA}", "v0.4.0", RELEASE_SHA)
             for invalid_version, invalid_sha in (("", RELEASE_SHA), (None, RELEASE_SHA), ("v0.4.0", None)):
                 with self.subTest(version=invalid_version, sha=invalid_sha), self.assertRaises(agent.AgentError):
                     agent.compose_override(state, f"fragments-api:sha-{RELEASE_SHA}", f"fragments-web:sha-{RELEASE_SHA}", invalid_version, invalid_sha)
+
+    def test_preflight_preserves_legacy_sqlite_and_starts_postgres_without_recreating_the_api(self):
+        backup = {"file": "fragments-emergency-sqlite-fixture.sqlite", "integrity": "sqlite_ok"}
+        with (
+            patch.object(agent, "image_info", return_value={"database": None}),
+            patch.object(agent, "preserve_initial_sqlite_emergency", return_value=backup) as preserve,
+            patch.object(agent, "run_checked", return_value="") as checked,
+            patch.object(agent, "container_health", return_value=("running", "healthy", "postgres:18.6")),
+            patch.object(agent, "fragments_postgres_volume", return_value="fragments-postgres-data"),
+        ):
+            volume, emergency = agent.ensure_postgres_ready({"composeDirectory": "/opt/fragments", "composeFile": "/opt/fragments/deploy/production/docker-compose.yml"}, "fragments-api:old")
+        preserve.assert_called_once()
+        self.assertEqual(volume, "fragments-postgres-data")
+        self.assertEqual(emergency, backup)
+        checked.assert_called_once_with([
+            "docker", "compose", "--project-directory", "/opt/fragments", "-f",
+            "/opt/fragments/deploy/production/docker-compose.yml", "up", "-d", "--no-build", "postgres",
+        ], timeout=300)
 
     def test_root_queue_accepts_one_fixed_numeric_request_file(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -304,7 +325,7 @@ class ReleaseValidationTests(unittest.TestCase):
                 "composeDirectory": str(root),
                 "composeFile": str(root / "compose.yml"),
             }
-            metadata_api = {"id": previous_ids["fragments-api-1"], "version": "v0.3.0", "revision": "5" * 40, "architecture": "arm64"}
+            metadata_api = {"id": previous_ids["fragments-api-1"], "version": "v0.3.0", "revision": "5" * 40, "architecture": "arm64", "database": "postgresql"}
             metadata_web = {"id": previous_ids["fragments-web-1"], "version": "v0.3.0", "revision": "5" * 40, "architecture": "arm64"}
             with (
                 patch.object(agent, "observe_recovery_state", side_effect=[observation, after_rollback]),
@@ -320,6 +341,19 @@ class ReleaseValidationTests(unittest.TestCase):
             result = json.loads(ledger_path.read_text(encoding="utf-8"))
             self.assertEqual(result["releases"][0]["status"], "rolled_back_manual")
             self.assertEqual(result["releases"][0]["rollback"], "code_images_restored_database_untouched")
+
+            ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+            legacy_metadata = {**metadata_api, "database": "sqlite"}
+            with (
+                patch.object(agent, "observe_recovery_state", return_value=observation),
+                patch.object(agent, "image_info", side_effect=[legacy_metadata, metadata_web]),
+                patch.object(agent, "run_checked") as checked,
+                patch.object(agent, "compose_up") as compose,
+                self.assertRaisesRegex(agent.AgentError, "solo revierte código entre releases PostgreSQL"),
+            ):
+                agent.rollback_latest(config)
+            checked.assert_not_called()
+            compose.assert_not_called()
 
     def test_manual_rollback_rejects_ineligible_latest_without_mutating_docker(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -389,16 +423,11 @@ class ReleaseValidationTests(unittest.TestCase):
                     image.assert_not_called()
                     override.assert_not_called()
 
-    def test_backup_simulation_requires_private_root_owned_integral_sqlite_snapshot(self):
+    def test_backup_simulation_requires_private_root_owned_valid_postgres_archive(self):
         with tempfile.TemporaryDirectory() as directory:
             backup_dir = Path(directory)
-            backup = backup_dir / "fragments-fixture.sqlite"
-            database = sqlite3.connect(backup)
-            try:
-                database.execute("CREATE TABLE fixture (id INTEGER PRIMARY KEY)")
-                database.execute("INSERT INTO fixture VALUES (1)")
-            finally:
-                database.close()
+            backup = backup_dir / "fragments-prod-fixture.dump"
+            backup.write_bytes(b"PGDMP synthetic pg_dump fixture")
             backup.chmod(0o600)
             original_stat = Path.stat
 
@@ -408,18 +437,18 @@ class ReleaseValidationTests(unittest.TestCase):
                     return SimpleNamespace(st_uid=0, st_mode=stat.S_IFREG | 0o600, st_mtime_ns=1, st_size=real.st_size)
                 return original_stat(path, *args, **kwargs)
 
-            config = {"backupDirectory": str(backup_dir)}
+            config = {"backupDirectory": str(backup_dir), "composeDirectory": directory, "composeFile": str(Path(directory) / "docker-compose.yml")}
             with patch.object(agent, "run_checked", return_value=""), patch.object(Path, "stat", simulated_stat):
                 result = agent.integrity_check_backup(config, set())
-            self.assertEqual(result["integrity"], "ok")
+            self.assertEqual(result["integrity"], "restored_to_temporary_database")
             self.assertEqual(result["sha256"], agent.sha256_file(backup))
 
-            backup.write_bytes(b"not a sqlite database")
+            backup.write_bytes(b"not a PostgreSQL archive")
             with patch.object(agent, "run_checked", return_value=""), patch.object(Path, "stat", simulated_stat):
                 with self.assertRaises(agent.AgentError):
                     agent.integrity_check_backup(config, set())
 
-    def run_mock_release_transaction(self, fail_health=False, fail_backup=False):
+    def run_mock_release_transaction(self, fail_health=False, fail_backup=False, previous_database="postgresql"):
         root_context = tempfile.TemporaryDirectory()
         self.addCleanup(root_context.cleanup)
         root = Path(root_context.name)
@@ -429,7 +458,7 @@ class ReleaseValidationTests(unittest.TestCase):
         backup_dir.mkdir()
         ledger_path = state / "ledger.json"
         ledger_path.write_text(json.dumps({"schemaVersion": 1, "releases": []}), encoding="utf-8")
-        archive = root / "fragments-images.tar.gz"
+        archive = state / "fragments-images.tar.gz"
         archive.write_bytes(b"synthetic-only archive")
         archive_asset = {"size": archive.stat().st_size}
         attestation = root / "attestation.jsonl"
@@ -470,7 +499,7 @@ class ReleaseValidationTests(unittest.TestCase):
         def backup(*args, **kwargs):
             if backup_error:
                 raise backup_error.pop(0)
-            return {"file": "fixture.sqlite", "bytes": 32, "sha256": "d" * 64, "integrity": "ok"}
+            return {"file": "fixture.dump", "bytes": 32, "sha256": "d" * 64, "integrity": "restored_to_temporary_database"}
 
         with (
             patch.object(agent, "get_release_assets", return_value=(manifest, release, archive_asset, archive, attestation)),
@@ -487,15 +516,20 @@ class ReleaseValidationTests(unittest.TestCase):
             patch.object(agent, "container_snapshot", return_value=neighbors),
             patch.object(agent, "image_refs_for_running", return_value=previous_images),
             patch.object(agent, "image_ids_for_running", return_value={"fragments-api-1": "sha256:" + "c" * 64, "fragments-web-1": "sha256:" + "d" * 64}),
-            patch.object(agent, "fragments_data_volume", return_value="fragments-data"),
+            patch.object(agent, "fragments_postgres_volume", return_value="fragments-postgres-data"),
+            patch.object(agent, "ensure_postgres_ready", return_value=("fragments-postgres-data", None)),
             patch.object(agent, "container_health", return_value=("running", "healthy", "fragments-api:current")),
             patch.object(agent, "integrity_check_backup", side_effect=backup),
-            patch.object(agent, "image_info", return_value={"version": "v0.3.1", "revision": "5" * 40, "architecture": "arm64"}),
+            patch.object(agent, "image_info", return_value={"version": "v0.3.1", "revision": "5" * 40, "architecture": "arm64", "database": previous_database}),
             patch.object(agent, "run_checked", return_value="") as checked_mock,
             patch.object(agent.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout="200")),
             patch.object(agent, "wait_for_health", side_effect=wait_health) as health_mock,
         ):
-            if fail_backup or fail_health:
+            if fail_backup:
+                agent.process_release(123456789, config)
+                result = json.loads(ledger_path.read_text(encoding="utf-8"))
+                return result["releases"], health_mock, checked_mock, archive
+            if fail_health:
                 with self.assertRaises(agent.AgentError):
                     agent.process_release(123456789, config)
             else:
@@ -507,7 +541,7 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_full_approved_release_transaction_simulates_only_fixed_app_services(self):
         record, health, checked, archive = self.run_mock_release_transaction()
         self.assertEqual(record["status"], "deployed")
-        self.assertEqual(record["backup"]["integrity"], "ok")
+        self.assertEqual(record["backup"]["integrity"], "restored_to_temporary_database")
         self.assertFalse(archive.exists())
         health.assert_called_once()
         compose_args = [call.args[0] for call in checked.call_args_list if "up" in call.args[0]]
@@ -525,11 +559,21 @@ class ReleaseValidationTests(unittest.TestCase):
         self.assertEqual(len(compose_args), 2)
         self.assertTrue(all(arguments[-2:] == ["api", "web"] for arguments in compose_args))
 
-    def test_backup_failure_after_deploying_requires_manual_recovery_before_compose(self):
-        record, _health, checked, archive = self.run_mock_release_transaction(fail_backup=True)
+    def test_failed_initial_cutover_does_not_restore_sqlite_images(self):
+        record, health, checked, archive = self.run_mock_release_transaction(fail_health=True, previous_database="sqlite")
         self.assertEqual(record["status"], "recovery_required")
-        self.assertEqual(record["error"], {"code": "command_failed"})
-        checked.assert_not_called()
+        self.assertEqual(record["rollback"], "not_attempted_sqlite_not_supported")
+        self.assertEqual(record["error"]["code"], "unknown_error")
+        self.assertFalse(archive.exists())
+        self.assertEqual(health.call_count, 1)
+        compose_args = [call.args[0] for call in checked.call_args_list if "up" in call.args[0]]
+        self.assertEqual(len(compose_args), 1)
+        self.assertEqual(compose_args[0][-2:], ["api", "web"])
+
+    def test_backup_failure_retries_before_recording_or_recreating_app_containers(self):
+        records, _health, checked, archive = self.run_mock_release_transaction(fail_backup=True)
+        self.assertEqual(records, [])
+        self.assertTrue(checked.called)
         self.assertFalse(archive.exists())
 
 
@@ -775,7 +819,7 @@ class TransactionRecoveryTests(unittest.TestCase):
             healthy = {"fragments-api-1": ("running", "healthy"), "fragments-web-1": ("running", "healthy")}
             observation = {
                 "imageIds": final_image_ids, "health": healthy, "httpOk": True,
-                "volume": "fragments-data", "neighbors": neighbors,
+                "volume": "fragments-postgres-data", "neighbors": neighbors,
             }
             output_asset = {"size": archive.stat().st_size}
             archive_data = {
@@ -791,10 +835,10 @@ class TransactionRecoveryTests(unittest.TestCase):
                 write_count += 1
                 if interruption == "ledger" and write_count == 1:
                     raise SystemExit("synthetic process interruption after ledger replace")
-                if interruption == "backup" and write_count == 2:
+                if interruption == "backup" and write_count == 1:
                     raise SystemExit("synthetic process interruption after backup ledger update")
 
-            def compose_effect(*_args):
+            def compose_effect(*_args, **_kwargs):
                 if interruption == "rollback" and compose.call_count == 2:
                     raise SystemExit("synthetic process interruption during rollback")
 
@@ -817,10 +861,11 @@ class TransactionRecoveryTests(unittest.TestCase):
                 stack.enter_context(patch.object(agent, "container_snapshot", return_value=neighbors))
                 stack.enter_context(patch.object(agent, "image_refs_for_running", return_value=previous_images))
                 stack.enter_context(patch.object(agent, "image_ids_for_running", return_value=previous_ids))
-                stack.enter_context(patch.object(agent, "fragments_data_volume", return_value="fragments-data"))
+                stack.enter_context(patch.object(agent, "fragments_postgres_volume", return_value="fragments-postgres-data"))
+                stack.enter_context(patch.object(agent, "ensure_postgres_ready", return_value=("fragments-postgres-data", None)))
                 stack.enter_context(patch.object(agent, "container_health", return_value=("running", "healthy", "fragments-api:current")))
-                stack.enter_context(patch.object(agent, "integrity_check_backup", return_value={"file": "fixture.sqlite", "bytes": 32, "sha256": "e" * 64, "integrity": "ok"}))
-                stack.enter_context(patch.object(agent, "image_info", return_value={"id": previous_ids["fragments-api-1"], "version": "v0.3.0", "revision": "5" * 40, "architecture": "arm64"}))
+                stack.enter_context(patch.object(agent, "integrity_check_backup", return_value={"file": "fixture.dump", "bytes": 32, "sha256": "e" * 64, "integrity": "pg_dump_archive"}))
+                stack.enter_context(patch.object(agent, "image_info", return_value={"id": previous_ids["fragments-api-1"], "version": "v0.3.0", "revision": "5" * 40, "architecture": "arm64", "database": "postgresql"}))
                 checked = stack.enter_context(patch.object(agent, "run_checked", return_value=""))
                 stack.enter_context(patch.object(agent.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout="200")))
                 stack.enter_context(patch.object(agent, "compose_override", return_value=state / "override.yml"))

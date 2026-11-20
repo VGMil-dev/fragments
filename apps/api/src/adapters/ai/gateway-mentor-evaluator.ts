@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { MentorEvaluationFailure, type MentorEvaluationFailureStage, type MentorEvaluator, type Proposal } from "../../features/mentor/service.js";
-import { AiBudgetUnavailableError, AiEvaluationInProgressError, estimateAiInputTokens, parseGatewayCostUsd, SqliteAiBudgetLedger, type AiGatewayRateCard } from "./budget-ledger.js";
+import { AiBudgetUnavailableError, AiEvaluationInProgressError, estimateAiInputTokens, parseGatewayCostUsd, type AiBudgetRunner, type AiGatewayRateCard } from "./budget-ledger.js";
 import { classifyGatewayFailure, hasConfirmedNoChargeGatewayRejection } from "./gateway-error.js";
 
 const mentorOutputSchema = z.object({
@@ -87,7 +87,7 @@ export function createGatewayMentorEvaluator(options: {
   providerOnly?: string;
   gatewayKeyConfigured: boolean;
   rates?: AiGatewayRateCard;
-  ledger: SqliteAiBudgetLedger;
+  ledger: AiBudgetRunner;
   generate?: GenerateStructured;
 }): MentorEvaluator {
   const generate = options.generate ?? generateWithGateway;

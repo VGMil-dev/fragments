@@ -1,11 +1,23 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 
 const RESERVATION_MARGIN = 2;
 const STALE_RESERVATION_MS = 5 * 60_000;
 
 export type AiGatewayRateCard = { inputUsdPerMillion: number; outputUsdPerMillion: number };
 type CostReceipt<T> = { value: T; costUsd?: number };
+export type AiBudgetRunner = {
+  run<T>(input: {
+    requestKind: string;
+    inputTokens: number;
+    outputTokens: number;
+    rates?: AiGatewayRateCard;
+    operationKey: string;
+    isConfirmedNoCharge?: (error: unknown) => boolean;
+    onReceipt?: (value: T) => void | Promise<void>;
+    invoke: () => Promise<CostReceipt<T>>;
+  }): Promise<T>;
+};
 
 export function parseGatewayCostUsd(value: unknown): number | undefined {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : undefined;
@@ -45,66 +57,60 @@ export function estimateAiCallCostMicroUsd(input: { inputTokens: number; outputT
   return Math.max(1, toMicroUsd(estimatedUsd * RESERVATION_MARGIN));
 }
 
-export class SqliteAiBudgetLedger {
-  constructor(private readonly database: DatabaseSync) {}
+export class PrismaAiBudgetLedger {
+  constructor(private readonly database: PrismaClient) {}
 
-  reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; operationKey: string; now?: number }): string {
+  async reserve(input: { id?: string; requestKind: string; estimateMicroUsd: number; operationKey: string; now?: number }): Promise<string> {
     const id = input.id ?? randomUUID();
     const now = input.now ?? Date.now();
     if (!/^[a-z][a-z0-9_-]{0,39}$/i.test(input.requestKind) || !Number.isSafeInteger(input.estimateMicroUsd)
       || input.estimateMicroUsd < 1 || !/^[a-f0-9]{64}$/.test(input.operationKey)) throw new AiBudgetUnavailableError();
-    this.database.exec("BEGIN IMMEDIATE");
-    let committed = false;
     try {
-      // Long-lived reservations are ambiguous after a process crash; never release or reuse them automatically.
-      this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE status='reserved' AND updated_at<=?")
-        .run(now, now - STALE_RESERVATION_MS);
-      const previous = this.database.prepare(`SELECT status FROM ai_budget_reservations
-        WHERE operation_key=? ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(input.operationKey) as { status: string } | undefined;
-      if (previous && previous.status !== "released") {
-        throw new AiEvaluationInProgressError();
-      }
-      this.database.prepare(`INSERT INTO ai_budget_reservations
-        (id, request_kind, reserved_microusd, actual_microusd, status, created_at, updated_at, operation_key)
-        VALUES (?, ?, ?, NULL, 'reserved', ?, ?, ?)`)
-        .run(id, input.requestKind, input.estimateMicroUsd, now, now, input.operationKey);
-      this.database.exec("COMMIT");
+      await this.database.$transaction(async (tx) => {
+        const timestamp = new Date(now);
+        // Long-lived reservations are ambiguous after a process crash; never release or reuse them automatically.
+        await tx.aiBudgetReservation.updateMany({ where: { status: "reserved", updatedAt: { lte: new Date(now - STALE_RESERVATION_MS) } }, data: { status: "uncertain", updatedAt: timestamp } });
+        const previous = await tx.aiBudgetReservation.findFirst({ where: { operationKey: input.operationKey }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { status: true } });
+        if (previous && previous.status !== "released") throw new AiEvaluationInProgressError();
+        await tx.aiBudgetReservation.create({ data: {
+          id, requestKind: input.requestKind, reservedMicrousd: BigInt(input.estimateMicroUsd), actualMicrousd: null,
+          status: "reserved", createdAt: timestamp, updatedAt: timestamp, operationKey: input.operationKey,
+        } });
+      });
       return id;
     } catch (error) {
-      if (!committed) this.database.exec("ROLLBACK");
+      if (isUniqueConstraintError(error)) throw new AiEvaluationInProgressError();
       throw error;
     }
   }
 
-  settle(id: string, costUsd: number | null, now = Date.now()): "settled" | "overrun" | "uncertain" {
+  async settle(id: string, costUsd: number | null, now = Date.now()): Promise<"settled" | "overrun" | "uncertain"> {
+    const actual = costUsd === null ? null : toMicroUsd(costUsd);
+    const row = await this.database.aiBudgetReservation.findFirst({ where: { id, status: "reserved" }, select: { reservedMicrousd: true } });
+    if (!row) throw new AiBudgetUnavailableError();
+    const changed = await this.database.aiBudgetReservation.updateMany({
+      where: { id, status: "reserved" },
+      data: { status: costUsd === null ? "uncertain" : "settled", actualMicrousd: actual === null ? null : BigInt(actual), updatedAt: new Date(now) },
+    });
+    if (changed.count !== 1) throw new AiBudgetUnavailableError();
     if (costUsd === null) {
-      const changed = this.database.prepare("UPDATE ai_budget_reservations SET status='uncertain', updated_at=? WHERE id=? AND status='reserved'").run(now, id).changes;
-      if (changed !== 1) throw new AiBudgetUnavailableError();
       return "uncertain";
     }
-    const actual = toMicroUsd(costUsd);
-    const row = this.database.prepare("SELECT reserved_microusd FROM ai_budget_reservations WHERE id=? AND status='reserved'").get(id) as { reserved_microusd: number } | undefined;
-    if (!row) throw new AiBudgetUnavailableError();
-    this.database.prepare("UPDATE ai_budget_reservations SET status='settled', actual_microusd=?, updated_at=? WHERE id=? AND status='reserved'")
-      .run(actual, now, id);
-    return actual > Number(row.reserved_microusd) ? "overrun" : "settled";
+    return BigInt(actual!) > row.reservedMicrousd ? "overrun" : "settled";
   }
 
-  releaseBeforeDispatch(id: string, now = Date.now()): boolean {
-    return this.database.prepare("UPDATE ai_budget_reservations SET status='released', updated_at=? WHERE id=? AND status='reserved'")
-      .run(now, id).changes === 1;
+  async releaseBeforeDispatch(id: string, now = Date.now()): Promise<boolean> {
+    const result = await this.database.aiBudgetReservation.updateMany({ where: { id, status: "reserved" }, data: { status: "released", updatedAt: new Date(now) } });
+    return result.count === 1;
   }
 
-  summary(): AiBudgetSummary {
-    const row = this.database.prepare(`SELECT
-      COALESCE(SUM(CASE WHEN status='settled' THEN actual_microusd ELSE 0 END),0) AS settled,
-      COALESCE(SUM(CASE WHEN status='reserved' THEN reserved_microusd ELSE 0 END),0) AS reserved,
-      COALESCE(SUM(CASE WHEN status='uncertain' THEN reserved_microusd ELSE 0 END),0) AS uncertain
-      FROM ai_budget_reservations`).get() as { settled: number; reserved: number; uncertain: number };
+  async summary(): Promise<AiBudgetSummary> {
+    const rows = await this.database.aiBudgetReservation.groupBy({ by: ["status"], _sum: { reservedMicrousd: true, actualMicrousd: true } });
+    const totals = new Map(rows.map((row) => [row.status, row._sum]));
     return {
-      settledMicroUsd: Number(row.settled),
-      reservedMicroUsd: Number(row.reserved),
-      uncertainMicroUsd: Number(row.uncertain),
+      settledMicroUsd: Number(totals.get("settled")?.actualMicrousd ?? 0n),
+      reservedMicroUsd: Number(totals.get("reserved")?.reservedMicrousd ?? 0n),
+      uncertainMicroUsd: Number(totals.get("uncertain")?.reservedMicrousd ?? 0n),
     };
   }
 
@@ -119,20 +125,24 @@ export class SqliteAiBudgetLedger {
     invoke: () => Promise<CostReceipt<T>>;
   }): Promise<T> {
     const estimateMicroUsd = estimateAiCallCostMicroUsd({ inputTokens: input.inputTokens, outputTokens: input.outputTokens, ...(input.rates ? { rates: input.rates } : {}) });
-    const reservationId = this.reserve({ requestKind: input.requestKind, estimateMicroUsd, operationKey: input.operationKey });
+    const reservationId = await this.reserve({ requestKind: input.requestKind, estimateMicroUsd, operationKey: input.operationKey });
     try {
       const receipt = await input.invoke();
       await input.onReceipt?.(receipt.value);
-      const settlement = this.settle(reservationId, receipt.costUsd ?? null);
+      const settlement = await this.settle(reservationId, receipt.costUsd ?? null);
       if (settlement === "uncertain") throw new AiBudgetUnavailableError("El proveedor no confirmó el costo de la solicitud.");
       return receipt.value;
     } catch (error) {
-      const row = this.database.prepare("SELECT status FROM ai_budget_reservations WHERE id=?").get(reservationId) as { status: string } | undefined;
+      const row = await this.database.aiBudgetReservation.findUnique({ where: { id: reservationId }, select: { status: true } });
       if (row?.status === "reserved") {
-        if (input.isConfirmedNoCharge?.(error)) this.releaseBeforeDispatch(reservationId);
-        else this.settle(reservationId, null);
+        if (input.isConfirmedNoCharge?.(error)) await this.releaseBeforeDispatch(reservationId);
+        else await this.settle(reservationId, null);
       }
       throw error;
     }
   }
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }

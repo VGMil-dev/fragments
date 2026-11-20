@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test release policy and synthetic SQLite backup
+      - name: Test release policy and synthetic PostgreSQL backup tools
         run: node --test deploy/production/release-agent/test-release-agent-scripts.mjs deploy/production/release-agent/test-backup-script.mjs
 
       - name: Test release agent state machine

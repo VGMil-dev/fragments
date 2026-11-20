@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup consistente de la base SQLite de Fragments
+Description=Backup consistente de PostgreSQL de Fragments
 Requires=docker.service
 After=docker.service
 

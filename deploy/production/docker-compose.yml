@@ -1,6 +1,49 @@
 name: fragments
 
 services:
+  postgres:
+    image: postgres:18.6
+    platform: linux/arm64
+    env_file:
+      - path: .env.postgres
+        required: true
+        format: raw
+    environment:
+      POSTGRES_USER: fragments_bootstrap
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - fragments-postgres-data:/var/lib/postgresql
+      - ./postgres-init/10-create-databases.sh:/docker-entrypoint-initdb.d/10-create-databases.sh:ro
+    networks:
+      - fragments-db
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    cpus: 1
+    mem_limit: 2g
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U fragments_bootstrap -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
   api:
     image: fragments-api:0.1.0-mvp-arm64
     platform: linux/arm64
@@ -9,19 +52,24 @@ services:
       dockerfile: apps/api/Dockerfile
       target: runtime
     env_file:
-      - path: .env
+      - path: .env.api
         required: true
         format: raw
     environment:
       API_PORT: "3000"
-      DATABASE_URL: file:/app/data/fragments.sqlite
       AUTH_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      migrate-test:
+        condition: service_completed_successfully
     expose:
       - "3000"
-    volumes:
-      - fragments-data:/app/data
     networks:
       - fragments
+      - fragments-db
     restart: unless-stopped
     init: true
     read_only: true
@@ -54,6 +102,58 @@ services:
       org.opencontainers.image.title: Fragments API
       org.opencontainers.image.version: v0.1.0-mvp
       org.opencontainers.image.revision: 4553ae204160f95dfcb0886fe9741566441f3cbc
+
+  migrate:
+    image: fragments-api:0.1.0-mvp-arm64
+    platform: linux/arm64
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    env_file:
+      - path: .env.migrate
+        required: true
+        format: raw
+    entrypoint:
+      - /app/apps/api/node_modules/.bin/prisma
+    command: [migrate, deploy, --schema, apps/api/prisma/schema.prisma]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fragments-db
+    restart: "no"
+
+  migrate-test:
+    image: fragments-api:0.1.0-mvp-arm64
+    platform: linux/arm64
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    env_file:
+      - path: .env.test-migrate
+        required: true
+        format: raw
+    entrypoint:
+      - /app/apps/api/node_modules/.bin/prisma
+    command: [migrate, deploy, --schema, apps/api/prisma/schema.prisma]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fragments-db
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    cpus: 0.4
+    mem_limit: 768m
 
   web:
     image: fragments-web:0.1.0-mvp-arm64
@@ -114,15 +214,12 @@ services:
         format: raw
     environment:
       API_PORT: "3000"
-      DATABASE_URL: file:/app/data/fragments.sqlite
       AUTH_ENABLED: "true"
     entrypoint:
       - node
       - apps/api/dist/auth/provision-better-auth-teacher.js
-    volumes:
-      - fragments-data:/app/data
     networks:
-      - fragments
+      - fragments-db
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
@@ -136,24 +233,28 @@ services:
     restart: "no"
 
   backup:
-    image: fragments-api:0.1.0-mvp-arm64
+    image: postgres:18.6
     platform: linux/arm64
     profiles:
       - maintenance
-    entrypoint:
-      - node
-      - /usr/local/bin/fragments-backup.mjs
     user: "0:0"
+    entrypoint:
+      - /usr/local/bin/fragments-backup.sh
+    env_file:
+      - path: .env.backup
+        required: true
+        format: raw
     environment:
-      DATABASE_PATH: /app/data/fragments.sqlite
       BACKUP_DIRECTORY: /backups
       RETENTION_DAYS: "14"
     volumes:
-      - fragments-data:/app/data:ro
       - /var/backups/fragments:/backups:rw
-      - ./backup.mjs:/usr/local/bin/fragments-backup.mjs:ro
+      - ./backup.sh:/usr/local/bin/fragments-backup.sh:ro
     networks:
-      - fragments
+      - fragments-db
+    depends_on:
+      postgres:
+        condition: service_healthy
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
@@ -166,11 +267,47 @@ services:
     mem_limit: 768m
     restart: "no"
 
+  restore-verify:
+    image: postgres:18.6
+    platform: linux/arm64
+    profiles:
+      - maintenance
+    user: "0:0"
+    entrypoint:
+      - /usr/local/bin/fragments-restore-verify.sh
+    env_file:
+      - path: .env.restore
+        required: true
+        format: raw
+    volumes:
+      - /var/backups/fragments:/backups:ro
+      - ./restore-verify.sh:/usr/local/bin/fragments-restore-verify.sh:ro
+    networks:
+      - fragments-db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    cpus: 0.4
+    mem_limit: 768m
+    restart: "no"
+
 networks:
   fragments:
     name: fragments-private
     driver: bridge
+  fragments-db:
+    name: fragments-db-private
+    driver: bridge
+    internal: true
 
 volumes:
-  fragments-data:
-    name: fragments-data
+  fragments-postgres-data:
+    name: fragments-postgres-data

@@ -1,39 +1,33 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { openDatabase } from "./open.js";
-import { QueueRepository } from "../queue/repository.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
 
-let directory = "";
-afterEach(() => { if (directory) rmSync(directory, { recursive: true, force: true }); directory = ""; });
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para verificar PostgreSQL y Prisma.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+let database: PrismaClient;
 
-describe("SQLite platform", () => {
-  it("opens a WAL database, applies migrations idempotently and serializes leases across connections", () => {
-    directory = mkdtempSync(join(tmpdir(), "fragments-api-"));
-    const path = join(directory, "data.sqlite");
-    const firstDb = openDatabase(path);
-    const secondDb = openDatabase(path);
-    try {
-      expect(firstDb.prepare("PRAGMA journal_mode").get()?.journal_mode).toBe("wal");
-      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(14);
-      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(14);
-      expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='trainer_attempts'").get()?.name).toBe("trainer_attempts");
-      expect(firstDb.prepare("PRAGMA table_info(proposals)").all().some((column) => column.name === "owner_hash")).toBe(true);
-      expect(firstDb.prepare("PRAGMA table_info(proposals)").all().some((column) => column.name === "owner_user_id")).toBe(true);
-      expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_budget_reservations'").get()?.name).toBe("ai_budget_reservations");
-      expect(firstDb.prepare("PRAGMA table_info(ai_budget_reservations)").all().some((column) => column.name === "operation_key")).toBe(true);
-      expect(firstDb.prepare("PRAGMA table_info(inspector_challenges)").all().some((column) => column.name === "ai_operation_key")).toBe(true);
-      expect(firstDb.prepare("PRAGMA table_info(trainer_banks)").all().some((column) => column.name === "bank_ready")).toBe(true);
-      expect(firstDb.prepare("PRAGMA table_info(trainer_banks)").all().some((column) => column.name === "generation_owner")).toBe(true);
-      expect(firstDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mentor_control_versions'").get()?.name).toBe("mentor_control_versions");
-      expect(firstDb.prepare("SELECT COUNT(*) AS count FROM mentor_control_versions").get()?.count).toBe(1);
-      expect(secondDb.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()?.count).toBe(14);
-      const first = new QueueRepository(firstDb); const second = new QueueRepository(secondDb);
-      const job = first.enqueue({ type: "fixture.echo", payload: { label: "fake-provider" }, idempotencyKey: "cross-connection" });
-      expect(first.claim("worker-a", 1000, 10)?.id).toBe(job.id);
-      expect(second.claim("worker-b", 1000, 10)).toBeNull();
-      expect(second.claim("worker-b", 1011, 10)?.id).toBe(job.id);
-    } finally { firstDb.close(); secondDb.close(); }
+describePostgres("PostgreSQL platform", () => {
+  beforeAll(async () => {
+    database = openDatabase(databaseUrl!);
+    await database.$connect();
+  });
+  afterAll(async () => { await database?.$disconnect(); });
+
+  it("connects through Prisma and confirms the versioned schema is applied", async () => {
+    const rows = await database.$queryRaw<Array<{ value: number }>>`SELECT 1 AS value`;
+    expect(Number(rows[0]?.value)).toBe(1);
+
+    const migration = await database.$queryRaw<Array<{ migration_name: string }>>`
+      SELECT migration_name FROM _prisma_migrations
+      WHERE migration_name = '20261120190000_init' AND finished_at IS NOT NULL
+    `;
+    expect(migration).toHaveLength(1);
+
+    const tables = await database.$queryRaw<Array<{ table_name: string }>>`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = current_schema() AND table_name IN ('jobs', 'trainer_banks', 'mentor_control_versions')
+    `;
+    expect(new Set(tables.map((table) => table.table_name))).toEqual(new Set(["jobs", "mentor_control_versions", "trainer_banks"]));
   });
 });

@@ -10,18 +10,26 @@
     "dev": "node --env-file=../../.env --import tsx --watch src/main.ts",
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
     "provision:teacher": "node --env-file=../../.env --import tsx src/auth/provision-better-auth-teacher.ts",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=1",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "1.7.17",
     "@fragments/contracts": "workspace:*",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "ai": "7.0.163",
-    "repomix": "1.18.1",
     "better-auth": "1.7.17",
+    "pg": "8.23.1",
+    "repomix": "1.18.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "24.10.0",
+    "prisma": "7.10.1",
     "tsx": "4.20.6",
     "typescript": "7.0.2",
     "vitest": "5.1.0"

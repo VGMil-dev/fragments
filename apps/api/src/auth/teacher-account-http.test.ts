@@ -1,20 +1,27 @@
-import { DatabaseSync } from "node:sqlite";
 import { createServer, type Server } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createHttpHandler } from "../http/app.js";
-import { createFragmentsAuthService, createMigratedFragmentsAuth } from "./better-auth.js";
+import { openDatabase } from "../db/open.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
+import { createFragmentsAuth, createFragmentsAuthService } from "./better-auth.js";
 
-const databases: DatabaseSync[] = [];
 const servers: Server[] = [];
+const createdUserIds: string[] = [];
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar las pruebas de autenticación Prisma.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+let database: PrismaClient | undefined;
+beforeAll(async () => { if (databaseUrl) { database = openDatabase(databaseUrl); await database.$connect(); } });
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))));
-  for (const database of databases.splice(0)) database.close();
+  if (database && createdUserIds.length) await database.user.deleteMany({ where: { id: { in: createdUserIds.splice(0) } } });
 });
+afterAll(async () => { await database?.$disconnect(); });
 
 async function setup() {
-  const database = new DatabaseSync(":memory:");
-  databases.push(database);
-  const instance = await createMigratedFragmentsAuth(database, {
+  const db = database!;
+  const instance = createFragmentsAuth(db, {
     secret: "teacher-link-test-secret-0123456789",
     baseURL: "http://localhost:3000",
     publicAppURL: "http://localhost:5173",
@@ -22,8 +29,8 @@ async function setup() {
     githubClientId: "fake-github-client-id",
     githubClientSecret: "fake-github-client-secret",
   });
-  const auth = createFragmentsAuthService(instance);
-  const server = createServer(createHttpHandler(database, { auth }));
+  const auth = createFragmentsAuthService(instance, db);
+  const server = createServer(createHttpHandler(db, { auth }));
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -31,17 +38,19 @@ async function setup() {
   const base = `http://127.0.0.1:${address.port}`;
 
   async function createUser(email: string, isTeacher: boolean) {
-    const signup = await instance.api.signUpEmail({ body: { name: "Cuenta de prueba", email, password: "fixture-password-2026" } });
-    database.prepare("UPDATE user SET isTeacher = ? WHERE id = ?").run(isTeacher ? 1 : 0, signup.user.id);
-    const login = await instance.api.signInEmail({ returnHeaders: true, body: { email, password: "fixture-password-2026" } });
+    const fixtureEmail = `${email.split("@")[0]}-${randomUUID()}@example.test`;
+    const signup = await instance.api.signUpEmail({ body: { name: "Cuenta de prueba", email: fixtureEmail, password: "fixture-password-2026" } });
+    createdUserIds.push(signup.user.id);
+    await db.user.update({ where: { id: signup.user.id }, data: { isTeacher } });
+    const login = await instance.api.signInEmail({ returnHeaders: true, body: { email: fixtureEmail, password: "fixture-password-2026" } });
     const cookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
     return { id: signup.user.id, cookie };
   }
 
-  return { database, instance, base, createUser };
+  return { database: db, instance, base, createUser };
 }
 
-describe("Cuenta docente y vinculación explícita de GitHub", () => {
+describePostgres("Cuenta docente y vinculación explícita de GitHub (Prisma)", () => {
   it("mantiene el enlace implícito desactivado y bloquea el endpoint genérico", async () => {
     const { instance, base, createUser } = await setup();
     const teacher = await createUser("teacher-link@example.test", true);
@@ -93,7 +102,7 @@ describe("Cuenta docente y vinculación explícita de GitHub", () => {
       method: "POST", headers: { ...headers, origin: "http://localhost:5173" }, body: JSON.stringify({ password: "wrong-password" }),
     });
     expect(rateLimited.status).toBe(429);
-    expect(database.prepare("SELECT COUNT(*) AS count FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.id)).toMatchObject({ count: 0 });
+    expect(await database.account.count({ where: { userId: teacher.id, providerId: "github" } })).toBe(0);
   });
 
   it("requiere contraseña válida y sesión docente; inicia OAuth sin crear aún una cuenta GitHub", async () => {
@@ -121,15 +130,14 @@ describe("Cuenta docente y vinculación explícita de GitHub", () => {
     expect(authorization.searchParams.get("client_id")).toBe("fake-github-client-id");
     expect(authorization.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/auth/callback/github");
     expect(authorization.toString()).not.toContain("fake-github-client-secret");
-    expect(database.prepare("SELECT COUNT(*) AS count FROM account WHERE userId = ? AND providerId = 'github'").get(teacher.id)).toMatchObject({ count: 0 });
-    expect(database.prepare("SELECT isTeacher FROM user WHERE id = ?").get(teacher.id)).toMatchObject({ isTeacher: 1 });
+    expect(await database.account.count({ where: { userId: teacher.id, providerId: "github" } })).toBe(0);
+    expect(await database.user.findUnique({ where: { id: teacher.id }, select: { isTeacher: true } })).toEqual({ isTeacher: true });
   });
 
   it("no permite volver a vincular GitHub a una cuenta docente ya asociada", async () => {
     const { database, base, createUser } = await setup();
     const teacher = await createUser("teacher-linked@example.test", true);
-    database.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
-      .run("existing-github-link", "fake-github-user-id", teacher.id, Date.now(), Date.now());
+    await database.account.create({ data: { id: `existing-${randomUUID()}`, accountId: "fake-github-user-id", providerId: "github", userId: teacher.id } });
 
     const response = await fetch(`${base}/api/teacher/account/github/link`, {
       method: "POST",
@@ -138,6 +146,6 @@ describe("Cuenta docente y vinculación explícita de GitHub", () => {
     });
 
     expect(response.status).toBe(409);
-    expect(database.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").all(teacher.id)).toEqual([{ accountId: "fake-github-user-id" }]);
+    expect(await database.account.findMany({ where: { userId: teacher.id, providerId: "github" }, select: { accountId: true } })).toEqual([{ accountId: "fake-github-user-id" }]);
   });
 });

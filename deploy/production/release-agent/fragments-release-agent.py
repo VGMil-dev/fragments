@@ -521,6 +521,7 @@ def image_info(image: str) -> dict:
         "architecture": details.get("Architecture"),
         "version": config.get("Labels", {}).get("org.opencontainers.image.version"),
         "revision": config.get("Labels", {}).get("org.opencontainers.image.revision"),
+        "database": config.get("Labels", {}).get("org.opencontainers.image.database"),
     }
 
 
@@ -529,7 +530,7 @@ def container_snapshot() -> dict:
     result: dict[str, dict] = {}
     for line in output.splitlines():
         container_id, name = line.split("|", 1)
-        if name.startswith("pits") or name.startswith("postgres"):
+        if name.startswith("pits") or name.startswith("postgres") or name.startswith("fragments-postgres"):
             state = run_checked(["docker", "inspect", "--format", "{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}", name])
             result[name] = {"id": container_id, "state": state}
     return result
@@ -546,13 +547,89 @@ def container_image_id(container: str) -> str:
     return value
 
 
-def fragments_data_volume() -> str:
+def fragments_postgres_volume() -> str:
+    output = run_checked(["docker", "inspect", "--format", "{{json .Mounts}}", "fragments-postgres-1"])
+    mounts = json.loads(output)
+    data_mount = [mount for mount in mounts if mount.get("Destination") == "/var/lib/postgresql"]
+    if len(data_mount) != 1 or data_mount[0].get("Type") != "volume":
+        raise AgentError("No se confirmó el volumen PostgreSQL persistente de Fragments.")
+    return data_mount[0].get("Name", "")
+
+
+def initial_sqlite_source_volume() -> str:
     output = run_checked(["docker", "inspect", "--format", "{{json .Mounts}}", "fragments-api-1"])
     mounts = json.loads(output)
     data_mount = [mount for mount in mounts if mount.get("Destination") == "/app/data"]
     if len(data_mount) != 1 or data_mount[0].get("Type") != "volume":
-        raise AgentError("No se confirmó el volumen SQLite persistente de Fragments.")
+        raise AgentError("No se confirmó el volumen SQLite anterior para crear la copia de emergencia.")
     return data_mount[0].get("Name", "")
+
+
+def preserve_initial_sqlite_emergency(config: dict, api_image: str) -> dict:
+    volume = initial_sqlite_source_volume()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", volume):
+        raise AgentError("El nombre del volumen SQLite anterior no es válido.")
+    backup_directory = Path(config["backupDirectory"])
+    backup_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(backup_directory, 0o700)
+    name = "fragments-emergency-sqlite.sqlite"
+    destination = backup_directory / name
+    if not destination.exists():
+        node_script = (
+            "process.umask(0o077);"
+            "const {DatabaseSync}=require('node:sqlite');"
+            "const source=new DatabaseSync('/source/fragments.sqlite',{readOnly:true});"
+            f"try{{source.exec(\"VACUUM INTO '/backups/{name}'\")}}finally{{source.close()}}"
+        )
+        run_checked([
+            "docker", "run", "--rm", "--user", "0:0", "--network", "none", "--read-only",
+            "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m",
+            "--mount", f"type=volume,source={volume},target=/source,readonly",
+            "--mount", f"type=bind,source={backup_directory},target=/backups",
+            "--entrypoint", "node", api_image, "--disable-warning=ExperimentalWarning", "-e", node_script,
+        ], timeout=300)
+    if not destination.is_file():
+        raise AgentError("No se creó el backup SQLite de emergencia antes de la migración.")
+    os.chmod(destination, 0o600)
+    info = destination.stat()
+    if info.st_uid != 0 or info.st_mode & 0o077:
+        raise AgentError("El backup SQLite de emergencia no tiene propietario/permisos privados.")
+    database = None
+    try:
+        uri = f"file:{urllib.parse.quote(str(destination))}?mode=ro"
+        database = sqlite3.connect(uri, uri=True, timeout=10)
+        result = database.execute("PRAGMA integrity_check").fetchone()
+    except sqlite3.Error as error:
+        raise AgentError("No se pudo verificar el backup SQLite de emergencia.") from error
+    finally:
+        if database is not None:
+            database.close()
+    if result != ("ok",):
+        raise AgentError("El backup SQLite de emergencia no pasó integrity_check.")
+    return {"file": name, "bytes": info.st_size, "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(), "integrity": "sqlite_ok"}
+
+
+def ensure_postgres_ready(config: dict, previous_api_image: str) -> tuple[str, dict | None]:
+    emergency_backup = None
+    if image_info(previous_api_image).get("database") != "postgresql":
+        emergency_backup = preserve_initial_sqlite_emergency(config, previous_api_image)
+    run_checked([
+        "docker", "compose", "--project-directory", config["composeDirectory"],
+        "-f", config["composeFile"], "up", "-d", "--no-build", "postgres",
+    ], timeout=300)
+    deadline = time.monotonic() + 180
+    while time.monotonic() < deadline:
+        try:
+            observed = container_health("fragments-postgres-1")
+            if observed[0] == "running" and observed[1] == "healthy":
+                volume = fragments_postgres_volume()
+                if not volume:
+                    raise AgentError("PostgreSQL no tiene un volumen persistente identificable.")
+                return volume, emergency_backup
+        except AgentError:
+            pass
+        time.sleep(3)
+    raise AgentError("PostgreSQL no alcanzó estado saludable durante el preflight.", code="command_timeout")
 
 
 def container_health(container: str) -> tuple[str, str, str]:
@@ -574,6 +651,8 @@ def wait_for_health(tag: str, sha: str, previous_images: dict[str, str], rollbac
                     info = image_info(observed[2])
                     if expected_version is not None and (info["version"], info["revision"], info["architecture"]) != (expected_version, expected_sha, "arm64"):
                         raise AgentError("Labels o arquitectura del contenedor nuevo no coinciden con el release.")
+                    if expected_version is not None and container == "fragments-api-1" and info.get("database") != "postgresql":
+                        raise AgentError("La imagen API del release no declara persistencia PostgreSQL.")
                     if rollback and observed[2] != previous_images[container]:
                         raise AgentError("Rollback no restauró la referencia de imagen previa.")
                 status = subprocess.run(["curl", "--silent", "--show-error", "--output", "/dev/null", "--write-out", "%{http_code}", "http://127.0.0.1:3001/health"], capture_output=True, text=True, timeout=10, check=False)
@@ -605,12 +684,16 @@ def compose_override(
         raise AgentError("Referencia de imagen fuera del espacio de nombres Fragments.")
     content = (
         "services:\n"
+        "  migrate:\n"
+        f"    image: {api_image}\n"
+        "  migrate-test:\n"
+        f"    image: {api_image}\n"
         "  api:\n"
         f"    image: {api_image}\n"
         "    labels:\n"
         f"      org.opencontainers.image.version: \"{api_version}\"\n"
         f"      org.opencontainers.image.revision: \"{api_sha}\"\n"
-        "  web:\n"
+        + "  web:\n"
         f"    image: {web_image}\n"
         "    labels:\n"
         f"      org.opencontainers.image.version: \"{web_version}\"\n"
@@ -624,7 +707,9 @@ def compose_override(
     return path
 
 
-def compose_up(config: dict, override: Path) -> None:
+def compose_up(config: dict, override: Path, run_migrations: bool = True) -> None:
+    if run_migrations:
+        prisma_migrate_deploy(config, override)
     run_checked([
         "docker", "compose", "--project-directory", config["composeDirectory"],
         "-f", config["composeFile"], "-f", str(override),
@@ -632,29 +717,34 @@ def compose_up(config: dict, override: Path) -> None:
     ], timeout=300)
 
 
+def prisma_migrate_deploy(config: dict, override: Path) -> None:
+    for service in ("migrate", "migrate-test"):
+        run_checked([
+            "docker", "compose", "--project-directory", config["composeDirectory"],
+            "-f", config["composeFile"], "-f", str(override),
+            "run", "--rm", "--no-deps", service,
+        ], timeout=300)
+
+
 def integrity_check_backup(config: dict, existing: set[str]) -> dict:
     run_checked(["systemctl", "start", "fragments-backup.service"], timeout=300)
-    candidates = [path for path in Path(config["backupDirectory"]).glob("fragments-*.sqlite") if path.is_file() and str(path) not in existing]
+    candidates = [path for path in Path(config["backupDirectory"]).glob("fragments-prod-*.dump") if path.is_file() and str(path) not in existing]
     if not candidates:
-        raise AgentError("El servicio de backup no produjo un snapshot nuevo.")
+        raise AgentError("El servicio de backup no produjo un snapshot PostgreSQL nuevo.")
     backup = max(candidates, key=lambda path: path.stat().st_mtime_ns)
     info = backup.stat()
     if info.st_uid != 0 or info.st_mode & 0o077:
-        raise AgentError("El snapshot no tiene propietario root ni permisos privados.")
-    uri = f"file:{urllib.parse.quote(str(backup))}?mode=ro"
-    database = None
-    try:
-        database = sqlite3.connect(uri, uri=True, timeout=10)
-        result = database.execute("PRAGMA integrity_check").fetchone()
-    except sqlite3.Error as error:
-        raise AgentError("No se pudo validar la integridad del backup SQLite.") from error
-    finally:
-        if database is not None:
-            database.close()
-    if result != ("ok",):
-        raise AgentError("PRAGMA integrity_check del backup no devolvió ok.")
-    digest = hashlib.sha256(backup.read_bytes()).hexdigest()
-    return {"file": backup.name, "bytes": info.st_size, "sha256": digest, "integrity": "ok"}
+        raise AgentError("El dump PostgreSQL no tiene propietario root ni permisos privados.")
+    backup_bytes = backup.read_bytes()
+    if len(backup_bytes) < 5 or backup_bytes[:5] != b"PGDMP":
+        raise AgentError("El backup no tiene el formato archive custom de pg_dump.")
+    digest = hashlib.sha256(backup_bytes).hexdigest()
+    run_checked([
+        "docker", "compose", "--project-directory", config["composeDirectory"],
+        "-f", config["composeFile"], "--profile", "maintenance",
+        "run", "--rm", "--no-deps", "restore-verify",
+    ], timeout=900)
+    return {"file": backup.name, "bytes": info.st_size, "sha256": digest, "integrity": "restored_to_temporary_database"}
 
 
 def get_release_assets(release_id: int, config: dict, state_dir: Path) -> tuple[dict, dict, dict, Path, Path]:
@@ -730,7 +820,7 @@ def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: s
         raise AgentError("No se pudo ejecutar docker load.", code="command_failed") from error
     for image_name in ("api", "web"):
         info = image_info(images[image_name])
-        if info.get("id") != archived_images[images[image_name]]["id"] or (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit):
+        if info.get("id") != archived_images[images[image_name]]["id"] or (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit) or info.get("database") != archived_images[images[image_name]].get("database"):
             raise AgentError("Identidad, labels o arquitectura de imagen no coinciden con el artefacto aprobado.", code="artifact_invalid")
 
 
@@ -773,8 +863,11 @@ def archive_image_info(archive_path: Path, images: dict[str, str], tag: str, com
                     "version": labels.get("org.opencontainers.image.version"),
                     "revision": labels.get("org.opencontainers.image.revision"),
                 }
-                if (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit):
+                database_engine = labels.get("org.opencontainers.image.database")
+                expected_database = "postgresql" if reference.startswith("fragments-api:") else None
+                if (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit) or database_engine != expected_database:
                     raise AgentError("Labels o arquitectura del archivo no coinciden con la metadata aprobada.", code="artifact_invalid")
+                info["database"] = database_engine
                 result[reference] = info
             if set(result) != expected_refs:
                 raise AgentError("El archivo Docker no enlaza exactamente las imágenes aprobadas.", code="artifact_invalid")
@@ -883,7 +976,7 @@ def observe_recovery_state() -> dict:
         "imageIds": image_ids_for_running(),
         "health": health,
         "httpOk": _health_endpoint_is_ok(),
-        "volume": fragments_data_volume(),
+        "volume": fragments_postgres_volume(),
         "neighbors": container_snapshot(),
     }
 
@@ -1073,16 +1166,21 @@ def process_release(release_id: int, config: dict) -> None:
                 return
 
             load_archive(archive_path, manifest["images"], tag, commit)
-            before_neighbors = container_snapshot()
             previous_images = image_refs_for_running()
             previous_image_ids = image_ids_for_running()
-            previous_volume = fragments_data_volume()
+            previous_volume, emergency_sqlite_backup = ensure_postgres_ready(config, previous_images["fragments-api-1"])
+            override = compose_override(state_dir, manifest["images"]["api"], manifest["images"]["web"], tag, commit)
+            run_checked(["docker", "compose", "--project-directory", config["composeDirectory"], "-f", config["composeFile"], "-f", str(override), "config", "--quiet"], timeout=60)
+            prisma_migrate_deploy(config, override)
+            before_neighbors = container_snapshot()
             if not previous_volume:
                 raise AgentError("El volumen persistente no tiene nombre verificable.", code="unknown_error", observed_tag=tag)
             for container in ("fragments-api-1", "fragments-web-1"):
                 observed_health = container_health(container)
                 if observed_health[0] != "running" or observed_health[1] != "healthy":
                     raise AgentError("El servicio previo de Fragments no está saludable; se cancela el cambio.", code="unknown_error", observed_tag=tag)
+            existing_backups = {str(path) for path in Path(config["backupDirectory"]).glob("fragments-prod-*.dump")}
+            backup = integrity_check_backup(config, existing_backups)
 
             record = {
                 "releaseId": release_id,
@@ -1097,7 +1195,10 @@ def process_release(release_id: int, config: dict) -> None:
                 "previousImageIds": previous_image_ids,
                 "previousVolume": previous_volume,
                 "beforeNeighbors": before_neighbors,
+                "backup": backup,
             }
+            if emergency_sqlite_backup is not None:
+                record["emergencySqliteBackup"] = emergency_sqlite_backup
             ledger["releases"].append(record)
             write_ledger(ledger_path, ledger)
         except TransientError as error:
@@ -1109,6 +1210,10 @@ def process_release(release_id: int, config: dict) -> None:
         except AgentError as error:
             if error.observed_tag is None:
                 error.observed_tag = tag
+            if error.code in {"command_failed", "command_timeout"} and pending is None:
+                report_retry(release_id, tag, error)
+                _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
+                return
             _record_permanent_validation_failure(ledger, ledger_path, release_id, error, pending)
             _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
             return
@@ -1126,18 +1231,12 @@ def process_release(release_id: int, config: dict) -> None:
 
         deployment_started = False
         try:
-            existing_backups = {str(path) for path in Path(config["backupDirectory"]).glob("fragments-*.sqlite")}
-            backup = integrity_check_backup(config, existing_backups)
-            record["backup"] = backup
-            write_ledger(ledger_path, ledger)
-
             override = compose_override(state_dir, images["api"], images["web"], tag, commit)
-            run_checked(["docker", "compose", "--project-directory", config["composeDirectory"], "-f", config["composeFile"], "-f", str(override), "config", "--quiet"], timeout=60)
             deployment_started = True
-            compose_up(config, override)
+            compose_up(config, override, run_migrations=False)
             wait_for_health(tag, commit, previous_images)
-            if fragments_data_volume() != previous_volume:
-                raise AgentError("El volumen SQLite cambió durante el despliegue.")
+            if fragments_postgres_volume() != previous_volume:
+                raise AgentError("El volumen PostgreSQL cambió durante el despliegue.")
             if container_snapshot() != before_neighbors:
                 raise AgentError("Cambió el estado o la identidad de un contenedor vecino.")
             for url, expected in (("http://127.0.0.1:8081/", "200"),):
@@ -1152,18 +1251,25 @@ def process_release(release_id: int, config: dict) -> None:
             if deployment_started:
                 try:
                     old_api = image_info(previous_images["fragments-api-1"])
-                    old_web = image_info(previous_images["fragments-web-1"])
-                    rollback_override = compose_override(
-                        state_dir, previous_images["fragments-api-1"], previous_images["fragments-web-1"],
-                        old_api["version"], old_api["revision"], old_web["version"], old_web["revision"],
-                    )
-                    compose_up(config, rollback_override)
-                    wait_for_health(tag, commit, previous_images, rollback=True)
-                    record["status"] = "rolled_back"
-                    record["rollback"] = "code_images_restored_database_untouched"
+                    if old_api.get("database") != "postgresql":
+                        record["status"] = "recovery_required"
+                        record["rollback"] = "not_attempted_sqlite_not_supported"
+                        recovery_error = error if isinstance(error, AgentError) else AgentError("Falló el primer corte PostgreSQL; no se restaura SQLite automáticamente.", code="unknown_error", observed_tag=tag)
+                        record["error"] = error_record(recovery_error)
+                    else:
+                        old_web = image_info(previous_images["fragments-web-1"])
+                        rollback_override = compose_override(
+                            state_dir, previous_images["fragments-api-1"], previous_images["fragments-web-1"],
+                            old_api["version"], old_api["revision"], old_web["version"], old_web["revision"],
+                        )
+                        compose_up(config, rollback_override, run_migrations=False)
+                        wait_for_health(tag, commit, previous_images, rollback=True)
+                        record["status"] = "rolled_back"
+                        record["rollback"] = "code_images_restored_database_untouched"
                 except Exception:
-                    record["status"] = "rollback_failed"
-                    record["rollback"] = "manual_intervention_required"
+                    if record.get("status") != "recovery_required":
+                        record["status"] = "rollback_failed"
+                        record["rollback"] = "manual_intervention_required"
             else:
                 record["status"] = "recovery_required"
                 stable_error = error if isinstance(error, AgentError) else AgentError("Fallo no clasificado antes de cambiar servicios.", code="unknown_error")
@@ -1225,6 +1331,8 @@ def rollback_latest(config: dict) -> None:
         previous_image_ids = record["previousImageIds"]
         api_info = image_info(previous_images["fragments-api-1"])
         web_info = image_info(previous_images["fragments-web-1"])
+        if api_info.get("database") != "postgresql":
+            raise AgentError("F14 solo revierte código entre releases PostgreSQL; SQLite no forma parte del rollback permanente.")
         if api_info.get("id") != previous_image_ids["fragments-api-1"] or web_info.get("id") != previous_image_ids["fragments-web-1"]:
             raise AgentError("Una imagen previa ya no apunta al ID inmutable registrado.")
         override = compose_override(
@@ -1242,7 +1350,7 @@ def rollback_latest(config: dict) -> None:
         ], timeout=60)
         previous_images = record.get("previousImages")
         try:
-            compose_up(config, override)
+            compose_up(config, override, run_migrations=False)
             wait_for_health(record["tag"], record["commit"], previous_images, rollback=True)
             after = observe_recovery_state()
             if (

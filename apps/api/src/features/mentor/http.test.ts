@@ -1,16 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { DatabaseSync } from "node:sqlite";
-import { migrate } from "../../db/migrate.js";
+import { openDatabase } from "../../db/open.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createHttpHandler } from "../../http/app.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
-import { createMentorRepository } from "./repository.js";
+import { createPrismaMentorRepository } from "./prisma-repository.js";
 import { createMentorService, MentorEvaluationFailure, type MentorEvaluator } from "./service.js";
 
 const servers: Server[] = [];
-const databases: DatabaseSync[] = [];
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para Mentor HTTP PostgreSQL.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const databases: PrismaClient[] = [];
 const draft = {
   title: "Huerto de aula", problem: "El curso necesita registrar el crecimiento de las plantas.",
   solution: "Una bitácora permite anotar riegos y comparar el crecimiento de cada planta.",
@@ -20,13 +23,10 @@ const draft = {
 };
 
 async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), logFailure?: (entry: Record<string, unknown>) => void) {
-  const database = new DatabaseSync(":memory:"); databases.push(database); migrate(database);
-  database.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, image TEXT, role TEXT DEFAULT 'user', isTeacher INTEGER DEFAULT 0, githubLogin TEXT, createdAt TEXT);
-    CREATE TABLE account (id TEXT PRIMARY KEY, accountId TEXT NOT NULL, providerId TEXT NOT NULL, userId TEXT NOT NULL);`);
+  const database = openDatabase(databaseUrl!); databases.push(database); await database.$connect();
   for (const [id, login] of [["student-1", "student-one"], ["student-2", "student-two"], ["teacher-1", "teacher-one"]]) {
-    database.prepare("INSERT INTO user(id, email, name, image, role, isTeacher, githubLogin, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(id, `${login}@example.test`, login, null, "user", id === "teacher-1" ? 1 : 0, login, "2026-11-01T00:00:00.000Z");
-    if (id !== "teacher-1") database.prepare("INSERT INTO account(id, accountId, providerId, userId) VALUES (?, ?, 'github', ?)").run(`account-${id}`, `github-${id}`, id);
+    await database.user.upsert({ where: { id }, create: { id, email: `${login}@example.test`, name: login, emailVerified: true, isTeacher: id === "teacher-1", githubLogin: login }, update: { isTeacher: id === "teacher-1", githubLogin: login } });
+    if (id !== "teacher-1") await database.account.upsert({ where: { providerId_accountId: { providerId: "github", accountId: `github-${id}` } }, create: { id: `account-${id}`, accountId: `github-${id}`, providerId: "github", userId: id }, update: { userId: id } });
   }
   const service = createMentorService({ evaluator, pdf: createMinimalPdfRenderer() });
   const auth = {
@@ -36,8 +36,9 @@ async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), 
     async student(request: { headers: Record<string, string | undefined> }) {
       const id = request.headers["x-fixture-user"];
       if (!id) return null;
-      const row = database.prepare("SELECT u.id, u.githubLogin, u.image, u.createdAt, a.accountId FROM user u JOIN account a ON a.userId=u.id AND a.providerId='github' WHERE u.id=? AND u.isTeacher=0").get(id) as { id: string; githubLogin: string; image: string | null; createdAt: string; accountId: string } | undefined;
-      return row ? { id: row.id, githubAccountId: row.accountId, githubLogin: row.githubLogin, avatarUrl: row.image, registeredAt: row.createdAt } : null;
+      const row = await database.user.findFirst({ where: { id, isTeacher: false, accounts: { some: { providerId: "github" } } }, include: { accounts: { where: { providerId: "github" }, take: 1 } } });
+      const account = row?.accounts[0];
+      return row && account ? { id: row.id, githubAccountId: account.accountId, githubLogin: row.githubLogin, avatarUrl: row.image, registeredAt: row.createdAt.toISOString() } : null;
     },
     githubOAuthConfigured: true,
   } as unknown as FragmentsAuthService;
@@ -60,17 +61,26 @@ async function createProposal(base: string, owner = "student-1") {
 
 afterEach(async () => {
   for (const server of servers.splice(0)) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  for (const database of databases.splice(0)) database.close();
+  for (const database of databases.splice(0)) {
+    await database.mentorAcademicPublication.deleteMany();
+    await database.proposal.deleteMany({ where: { OR: [{ ownerUserId: { in: ["student-1", "student-2"] } }, { ownerHash: { not: null } }] } });
+    await database.mentorControlDraft.deleteMany();
+    await database.mentorControlVersion.deleteMany();
+    await database.submission.deleteMany({ where: { kind: "review", sourceId: "review-1" } });
+    await database.account.deleteMany({ where: { userId: { in: ["student-1", "student-2", "teacher-1"] } } });
+    await database.user.deleteMany({ where: { id: { in: ["student-1", "student-2", "teacher-1"] } } });
+    await database.$disconnect();
+  }
 });
 
-describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
+describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
   it("requires GitHub session before creating proposals and never accepts a client owner", async () => {
     const base = await start();
     const anonymous = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
     expect(anonymous.status).toBe(401);
     const forged = await fetch(`${base}/api/proposals`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "student-1" }, body: JSON.stringify({ ...draft, ownerUserId: "student-2" }) });
     expect(forged.status).toBe(400);
-    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) AS count FROM proposals").get()!.count)).toBe(0);
+    expect(await databases.at(-1)!.proposal.count({ where: { ownerUserId: { in: ["student-1", "student-2"] } } })).toBe(0);
   });
 
   it("requires the student's session to read the account-scoped submission list", async () => {
@@ -152,7 +162,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(secondResponse.status).toBe(200);
     expect(evaluationCalls).toBe(1);
     expect(secondBody.data.evaluationId).toBe(firstBody.data.evaluationId);
-    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(1);
+    expect(await databases.at(-1)!.mentorEvaluation.count({ where: { proposal: { ownerUserId: "student-1" } } })).toBe(1);
   });
 
   it("reports a budget reservation failure without dispatching or hiding its diagnostic", async () => {
@@ -188,7 +198,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
       retry_after_ms: null,
     });
     expect(diagnostics[0]).toHaveProperty("duration_ms");
-    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+    expect(await databases.at(-1)!.mentorEvaluation.count({ where: { proposal: { ownerUserId: "student-1" } } })).toBe(0);
   });
 
   it("preserves a Gateway HTTP 402 without retrying or storing an evaluation", async () => {
@@ -215,7 +225,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(evaluationCalls).toBe(1);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({ http_status: 402, provider_http_status: 402, provider_code: "budget_exceeded" });
-    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(0);
+    expect(await databases.at(-1)!.mentorEvaluation.count({ where: { proposal: { ownerUserId: "student-1" } } })).toBe(0);
   });
 
   it("recovers the latest persisted evaluation without evaluating again", async () => {
@@ -245,7 +255,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(await recovered.json()).toEqual(saved);
     expect(denied.status).toBe(401);
     expect(evaluationCalls).toBe(1);
-    expect(Number(databases.at(-1)!.prepare("SELECT COUNT(*) count FROM mentor_evaluations").get()!.count)).toBe(1);
+    expect(await databases.at(-1)!.mentorEvaluation.count({ where: { proposal: { ownerUserId: "student-1" } } })).toBe(1);
 
     await fetch(`${base}/api/proposals/${proposal.id}`, {
       method: "PUT",
@@ -351,7 +361,7 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const database = databases.at(-1)!;
     const draftProposal = await createProposal(base, "student-1");
     const token = "legacy-owner-cookie-token-that-is-long-enough-0123456789";
-    const legacy = createMentorRepository(database).createProposal(draft, createHash("sha256").update(token).digest("hex"));
+    const legacy = await createPrismaMentorRepository(database).createProposal(draft, createHash("sha256").update(token).digest("hex"));
     const anonymous = await fetch(`${base}/api/teacher/students`);
     const studentDenied = await fetch(`${base}/api/teacher/students`, { headers: { "x-fixture-user": "student-1" } });
     expect(anonymous.status).toBe(401);
@@ -375,17 +385,15 @@ describe("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const claimHeaders = { "x-fixture-user": "student-1", cookie: `fragments_proposal_owner=${token}` };
     const contenders = await Promise.all([1, 2].map(() => fetch(`${base}/api/me/proposals/${legacy.id}/claim`, { method: "POST", headers: claimHeaders })));
     expect(contenders.map((response) => response.status).sort()).toEqual([200, 409]);
-    expect(Number(database.prepare("SELECT COUNT(*) AS count FROM mentor_academic_publications WHERE proposal_id = ?").get(legacy.id)!.count)).toBe(0);
+    expect(await database.mentorAcademicPublication.count({ where: { proposalId: legacy.id } })).toBe(0);
   });
 
   it("leaves Review verification codes for the Review route", async () => {
     const base = await start();
     const database = databases.at(-1)!;
-    database.prepare(`INSERT INTO submissions
-      (id, kind, source_id, score, snapshot_json, content_hash, verification_code, rubric_version, created_at)
-      VALUES (?, 'review', ?, ?, ?, ?, ?, ?, ?)`)
-      .run("review-submission", "review-1", 80, JSON.stringify({ commitSha: "a".repeat(40), findings: [], limitations: [] }),
-        "b".repeat(64), "c".repeat(32), "review-test-v1", "2026-11-04T00:00:00.000Z");
+    await database.submission.create({ data: { id: `review-submission-${Date.now()}`, kind: "review", sourceId: "review-1", score: 80,
+      snapshotJson: { commitSha: "a".repeat(40), findings: [], limitations: [] }, contentHash: "b".repeat(64), verificationCode: "c".repeat(32),
+      rubricVersion: "review-test-v1", createdAt: new Date("2026-11-04T00:00:00.000Z") } });
 
     const response = await fetch(`${base}/api/verify/${"c".repeat(32)}`);
     expect(response.status).toBe(404);

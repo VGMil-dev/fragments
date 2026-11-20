@@ -1,0 +1,49 @@
+# F21 — Evidencia
+
+Estado: EN DESARROLLO. No se realizaron cambios en VPS ni producción.
+
+## Fuentes y preflight
+- Objetivo local leído desde el attachment F21.
+- Notion F21 consultada: estado inicial `Especificada`; migración limpia aprobada; dos bases/roles separados en una instancia PostgreSQL nueva; exposición pública prohibida; PR/F14 protegidos; QA dos sesiones y fixtures de prueba solicitados.
+- Notion ER-03 consultado: tablas Better Auth, propuestas/revisiones, publicaciones Mentor, trabajos/attempts, Inspector, Trainer y ledger IA; límites FK para IDs polimórficos; `jsonb`, tiempos PostgreSQL y pruebas de concurrencia.
+- Notion F14 consultada: tag anotada únicamente, SHA ascendente en `main`, workflow idéntico, attestation ARM64, entorno `fragments-production` y agente pull.
+- Checkout origen tenía cambios sin confirmar fuera del alcance (`.codex-work/`, plantilla DOCX); se preservaron. Se creó worktree limpio desde `origin/main` `3bff674bad063ecf72893a9f469e1485373c5e07`, rama `codex/f21-postgres-prisma`.
+- `git status --short --branch` en el worktree nuevo: rama limpia al inicio.
+
+## VPS: solo lectura
+Comando SSH con `BatchMode=yes` y `StrictHostKeyChecking=yes` (`servidor`), usando `sudo -n` solo para consultas Docker.
+- Arquitectura `aarch64`, Docker 29.9.2, Compose 5.6.1.
+- `fragments-api-1` y `fragments-web-1` en healthy; imágenes de revisión `5b81542df0b4f725027a44a7bc294199f3289faa`.
+- Producción usa el volumen SQLite existente `fragments-data`; PostgreSQL visto en `pits-development-postgres-1` pertenece a Pits y no se usará ni modificará.
+- No se encontró listener del host en 5432; sólo loopback 3000/3001 para Fragments y loopback 8081 de Pits. El contenedor de PostgreSQL Pits declara 5432 interno sin publicación al host.
+- Timers/paths de backup y agente F14 activos. Web local `127.0.0.1:3001` responde 200. API no se publica al host; su healthcheck interno está healthy.
+- Se observó permiso Docker sólo vía `sudo`; no se accedió a `.env`, bases activas ni secretos.
+
+## Implementación inicial
+- Añadidos Prisma ORM 7.10.1, adaptador `pg`, modelo PostgreSQL con migración inicial y validación para las entidades de F21; el cliente se genera en el build de API.
+- La imagen runtime lleva esquema y migraciones Prisma. Compose de producción crea `fragments_prod` y `fragments_test` en PostgreSQL 18 con roles separados de migración, runtime, backup y restore; la API solo recibe su URL runtime. PostgreSQL no tiene puerto público; el host publica 5432 solo en loopback para túnel SSH. Volumen PostgreSQL persistente nuevo. Compose no declara ni monta el volumen SQLite anterior.
+- `.env.api`, `.env.postgres`, `.env.migrate`, `.env.test-migrate`, `.env.backup` y `.env.restore` separan credenciales por servicio; las plantillas están versionadas sin claves reales. `.env.bootstrap` usa solo runtime y auth.
+- Compose espera la base saludable, corre migrations Prisma en prod y test, luego API. Antes del primer corte, F14 conserva un único archivo `fragments-emergency-sqlite.sqlite` con `VACUUM INTO` + `integrity_check`; no importa filas ni intenta volver a SQLite. Luego levanta PostgreSQL sin recrear API/web, aplica migraciones, produce dumps `pg_dump` de ambas bases y los restaura a bases temporales antes del cutover. El rollback de imagen solo acepta API PostgreSQL anterior; si el primer corte falla, F14 marca `recovery_required` para recuperación operativa. Se agregaron labels de motor de base a API y validación en release workflow/agente.
+- Conversión Prisma de ledger IA, Better Auth, Inspector, Trainer, cola, Classroom, Review y Mentor en curso; cola usa `FOR UPDATE SKIP LOCKED`, Classroom serializa intentos por código y Review guarda claims/reintentos/finalización/historial. Repositorios Prisma de Mentor, control y rutas académicas (galería, proyectos, estudiantes, reclamo y retiro) implementados. `main.ts`, HTTP, Academic y Mentor ya reciben solo `PrismaClient`; la imagen elimina los módulos de repositorio SQLite heredados y no crea `/app/data`.
+- Prueba PostgreSQL de cola ampliada para reclamar concurrentemente desde dos clientes; Inspector distingue ausencia SQL de JSON `null` mediante `Prisma.DbNull`.
+- `pnpm --filter @fragments/contracts build`: pasó.
+- `pnpm --filter @fragments/api exec prisma validate`: pasó (20-nov-2026).
+- `pnpm --filter @fragments/api typecheck` y `pnpm --filter @fragments/api build`: pasaron (20-nov-2026) después de hacer Prisma-only los handlers productivos; firma Prisma de `createApiServer` válida.
+- `pnpm --filter @fragments/api exec vitest run src/platform/config.test.ts`: pasó, 5 pruebas.
+- YAML de `.github/workflows/ci.yml` y `.github/workflows/release.yml`: parseados correctamente.
+- `pnpm exec turbo run lint build`: pasó (20-nov-2026); 5 tareas OK. Vite mostró solo advertencias de directiva `use client` en dependencias `lucide-react`.
+- Agente F14: `python -m unittest test_release_agent.py` pasó, 43 pruebas, 1 omitida (20-nov-2026), incluida la comprobación de que un fallo del corte inicial no restaura una imagen SQLite.
+- Suite completa de API `pnpm --filter @fragments/api test --reporter=dot`: PASS 16 archivos, 71 pruebas; 14 archivos/62 pruebas PostgreSQL omitidos al no tener `DATABASE_URL` en este Windows. Build API y validación Prisma PASS. No se declara aprobada la integración ni CI; se necesita la ejecución Linux con PostgreSQL efímero.
+- Avance de suites (20-nov-2026): cinco integraciones Prisma (presupuesto IA, DB, cola, Inspector y Trainer) fallan explícitamente en CI si falta `DATABASE_URL`; sin DB local omiten únicamente la parte de integración. Better Auth se sustituyó por un test PostgreSQL de signup/login/sesión docente con namespace aislado y guardia equivalente. Suites unitarias de proveedores IA usan un ledger falso etiquetado, y Trainer service usa store en memoria. Verificación local posterior: API typecheck/build pasan; Better Auth (omitido localmente por ausencia de DB), presupuesto IA y Trainer service suman 7 pruebas pasadas y 7 integraciones omitidas. La suite global se interrumpió tras evidenciar fallos en `classroom/http`, `classroom/persistence`, `mentor/control-http`, `trainer/http` y `http/app`; requiere conversión y rerun completo.
+- Port posterior (20-nov-2026): `classroom/http`, `classroom/persistence`, `mentor/control-http`, `mentor/repository`, `trainer/http`, `review/worker-http` y `http/app` ya usan Prisma en PostgreSQL, sin `DatabaseSync`, migradores SQLite ni store Review SQLite. Sus datos de test se aíslan con UUID. `pnpm --filter @fragments/api typecheck` pasó; Vitest ejecutó los 7 archivos afectados como 7 suites omitidas/29 pruebas omitidas por no tener `DATABASE_URL`. No es evidencia de integración aprobada. Faltan Mentor HTTP, Mentor Academic repository y retirar suites/implementaciones SQLite obsoletas restantes.
+- `docker info` confirma que el daemon Docker Desktop no está disponible en esta máquina. Por ello, todavía no se ejecutó PostgreSQL real localmente; el job CI definido levanta PostgreSQL 18 efímero, aplica migraciones, ejecuta Vitest con `DATABASE_URL` requerido y hace roundtrip real de backup/restore.
+- `git diff --check`: pasó el 20-nov-2026 tras los cambios actuales. Pruebas locales de backup/restore omitidas por falta de shell POSIX en Windows; se ejecutan en Ubuntu CI.
+- Suites heredadas SQLite retiradas: se eliminaron `db/migrate.ts`, los tres repositorios SQLite de Mentor, el Review SQLite store y sus tests; sus usos productivos ya están cubiertos por repositorios Prisma y sus integraciones PostgreSQL. Verificación `rg` en `apps/api/src`: no quedan `DatabaseSync`, `node:sqlite`, `createSqliteReviewStore`, `createMigratedFragmentsAuth` ni `migrate.ts`.
+- El package script API ahora serializa Vitest con `--maxWorkers=1` para que suites PostgreSQL que ejercitan el singleton de control Mentor no compitan ni borren el estado de otra prueba. Guard probado: Vitest con `CI=true` y sin `DATABASE_URL` falla al cargar `db/open.test.ts` con mensaje explícito, como se requiere.
+- Backup/restore F14: `node --test deploy/production/release-agent/test-backup-script.mjs` pasó, 3 pruebas usando herramientas PostgreSQL etiquetadas falsas. `sh -n` validó backup, restore e inicialización de roles.
+- `docker compose config --quiet` pasó para Compose de desarrollo con valores de validación solo en el proceso y para producción con env files temporales vacíos; no quedó ningún `.env` temporal.
+- `git diff --check`: pasó en chequeo anterior; repetir tras cambios infra recientes.
+- No hay daemon Docker local (`docker info` no conecta a Docker Desktop), por lo que aún no se ejecutó suite real PostgreSQL ni restore contra un servidor. CI contiene roundtrip real `pg_dump`→`pg_restore` en PostgreSQL efímero.
+
+## Verificaciones pendientes
+Auditar y retirar las ramas SQLite de los handlers/repositorios heredados; ampliar tests de integración para cada persistencia Prisma y ejecutarlos en `fragments_test` CI/VPS; verificar roles y restores reales en ambas bases; actualizar/configurar el agente F14 en VPS, conservar el único backup SQLite de emergencia, Ego Lite con dos perfiles, aprobar release, desplegar y comprobar producción. Crear `F21_EVIDENCIAS` con máximo 20 archivos, completar informe, capturas y Notion. No se tocó VPS ni producción en esta etapa.

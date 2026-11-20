@@ -1,27 +1,33 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
-import { DatabaseSync } from "node:sqlite";
+import { randomUUID } from "node:crypto";
+import { openDatabase } from "../db/open.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
 import { createHttpHandler } from "./app.js";
-import { migrate } from "../db/migrate.js";
-import { createMigratedFragmentsAuth, createFragmentsAuthService } from "../auth/better-auth.js";
+import { createFragmentsAuth, createFragmentsAuthService } from "../auth/better-auth.js";
 import { createMentorService } from "../features/mentor/service.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../features/mentor/local-fakes.js";
 import { createInspectorService, type ReviewEvidence } from "../features/inspector/service.js";
 import { createInspectorRepository } from "../features/inspector/repository.js";
 import { createReviewService } from "../features/review/review.service.js";
-import { createSqliteReviewStore } from "../features/review/sqlite-store.js";
+import { createPrismaReviewStore } from "../features/review/prisma-store.js";
 
 const servers: ReturnType<typeof createServer>[] = [];
-const databases: DatabaseSync[] = [];
+const databaseUrl = process.env.DATABASE_URL;
+if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar la API con PostgreSQL.");
+const describePostgres = databaseUrl ? describe : describe.skip;
+const namespace = randomUUID();
+const databases: PrismaClient[] = [];
+async function testDatabase() { const database = openDatabase(databaseUrl!); databases.push(database); await database.$connect(); return database; }
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
-  for (const db of databases.splice(0)) db.close();
+  for (const db of databases.splice(0)) await db.$disconnect();
 });
 
-describe("HTTP API", () => {
+describePostgres("HTTP API — PostgreSQL integration", () => {
   it("registra el panel Mentor antes del catch-all académico y conserva 401/403 por rol", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
-    const authInstance = await createMigratedFragmentsAuth(db, {
+    const db = await testDatabase();
+    const authInstance = createFragmentsAuth(db, {
       secret: "http-test-mentor-routing-secret-0123456789",
       baseURL: "http://localhost:3000",
       publicAppURL: "http://localhost:5173",
@@ -31,14 +37,14 @@ describe("HTTP API", () => {
     });
     async function signedIn(email: string, isTeacher: boolean) {
       const created = await authInstance.api.signUpEmail({ body: { name: "Fixture", email, password: "fixture-password-2026" } });
-      db.prepare("UPDATE user SET isTeacher = ? WHERE id = ?").run(isTeacher ? 1 : 0, created.user.id);
+      await db.user.update({ where: { id: created.user.id }, data: { isTeacher } });
       const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email, password: "fixture-password-2026" } });
       return login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
     }
     const teacherCookie = await signedIn("teacher-personal@example.test", true);
     const studentCookie = await signedIn("student-personal@example.test", false);
     const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
-    const auth = createFragmentsAuthService(authInstance);
+    const auth = createFragmentsAuthService(authInstance, db);
     const server = createServer(createHttpHandler(db, { auth, mentor })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -55,8 +61,8 @@ describe("HTTP API", () => {
   });
 
   it("reconoce identidad GitHub personal por la asociación estable aunque falte el login visible", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
-    const authInstance = await createMigratedFragmentsAuth(db, {
+    const db = await testDatabase();
+    const authInstance = createFragmentsAuth(db, {
       secret: "http-test-student-identity-secret-0123456789",
       baseURL: "http://localhost:3000",
       publicAppURL: "http://localhost:5173",
@@ -65,14 +71,13 @@ describe("HTTP API", () => {
       githubClientSecret: "fake-github-client-secret",
     });
     const created = await authInstance.api.signUpEmail({ body: { name: "Fixture estudiante", email: "student.personal@example.test", password: "fixture-password-2026" } });
-    db.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
-      .run("github-personal-fixture", "github-stable-personal-id", created.user.id, Date.now(), Date.now());
+    await db.account.create({ data: { id: `github-personal-${namespace}`, accountId: `github-stable-${namespace}`, providerId: "github", userId: created.user.id } });
     const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "student.personal@example.test", password: "fixture-password-2026" } });
     const cookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
     const unlinked = await authInstance.api.signUpEmail({ body: { name: "Fixture sin enlace", email: "unlinked.personal@example.test", password: "fixture-password-2026" } });
     const unlinkedLogin = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "unlinked.personal@example.test", password: "fixture-password-2026" } });
     const unlinkedCookie = unlinkedLogin.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
-    const auth = createFragmentsAuthService(authInstance);
+    const auth = createFragmentsAuthService(authInstance, db);
     const server = createServer(createHttpHandler(db, { auth })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -81,8 +86,8 @@ describe("HTTP API", () => {
     const response = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie, "x-real-ip": "198.51.100.42" } });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ ok: true, data: { authenticated: true, id: created.user.id, githubLogin: null, profileUrl: null } });
-    expect(db.prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'").get(created.user.id))
-      .toEqual({ accountId: "github-stable-personal-id" });
+    expect((await db.account.findFirst({ where: { userId: created.user.id, providerId: "github" }, select: { accountId: true } }))?.accountId)
+      .toBe(`github-stable-${namespace}`);
     const unlinkedResponse = await fetch(`http://127.0.0.1:${address.port}/api/me`, { headers: { cookie: unlinkedCookie, "x-real-ip": "198.51.100.42" } });
     expect(await unlinkedResponse.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "github_account_not_linked" } });
     expect(unlinked.user.id).not.toBe(created.user.id);
@@ -90,8 +95,8 @@ describe("HTTP API", () => {
     expect(await anonymous.json()).toMatchObject({ ok: true, data: { authenticated: false, reason: "session_required" } });
   });
 
-  it("reports SQLite readiness without exposing environment secrets", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+  it("reports PostgreSQL readiness without exposing environment secrets", async () => {
+    const db = await testDatabase();
     const server = createServer(createHttpHandler(db)); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -102,8 +107,8 @@ describe("HTTP API", () => {
   });
 
   it("registers Review HTTP routes in the composed API and persists an enqueued job", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
-    const store = createSqliteReviewStore(db);
+    const db = await testDatabase();
+    const store = createPrismaReviewStore(db);
     const service = createReviewService({
       repository: { async getCommitSnapshot() { throw new Error("The queued job is not processed in this test."); } },
       packer: { async pack() { throw new Error("The queued job is not processed in this test."); } },
@@ -131,13 +136,13 @@ describe("HTTP API", () => {
     expect(created.status).toBe(202);
     const body = await created.json() as { data: { id: string; status: string } };
     expect(body.data.status).toBe("queued");
-    expect(store.getJob(body.data.id)).toMatchObject({ status: "queued", owner: "VGMil-dev", repo: "fragments-test-app" });
+    expect(await store.getJob(body.data.id)).toMatchObject({ status: "queued", owner: "VGMil-dev", repo: "fragments-test-app" });
     const read = await fetch(`${base}/api/reviews/${body.data.id}`);
     expect(await read.json()).toMatchObject({ ok: true, data: { id: body.data.id, status: "queued" } });
   });
 
   it("returns a uniform non-reflecting envelope for unknown paths", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const db = await testDatabase();
     const server = createServer(createHttpHandler(db)); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -150,7 +155,7 @@ describe("HTTP API", () => {
   });
 
   it("does not expose Better Auth endpoints when authentication is not configured", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const db = await testDatabase();
     const server = createServer(createHttpHandler(db)); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -161,21 +166,20 @@ describe("HTTP API", () => {
   });
 
   it("runs the Mentor proposal-to-delivery and public verification flow", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const db = await testDatabase();
     const mentor = createMentorService({ evaluator: createLocalMentorEvaluator(), pdf: createMinimalPdfRenderer() });
-    const authInstance = await createMigratedFragmentsAuth(db, {
+    const authInstance = createFragmentsAuth(db, {
       secret: "http-test-student-session-secret-0123456789",
       baseURL: "http://localhost:3000",
       publicAppURL: "http://localhost:5173",
       allowSignUp: true,
     });
     const account = await authInstance.api.signUpEmail({ body: { name: "Estudiante fixture", email: "student-api@example.test", password: "fixture-password-2026" } });
-    db.prepare("UPDATE user SET githubLogin = ? WHERE id = ?").run("student-api-fixture", account.user.id);
-    db.prepare("INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?)")
-      .run("github-fixture-link", "github-stable-fixture-id", account.user.id, Date.now(), Date.now());
+    await db.user.update({ where: { id: account.user.id }, data: { githubLogin: "student-api-fixture" } });
+    await db.account.create({ data: { id: `github-link-${namespace}`, accountId: `github-stable-${namespace}`, providerId: "github", userId: account.user.id } });
     const login = await authInstance.api.signInEmail({ returnHeaders: true, body: { email: "student-api@example.test", password: "fixture-password-2026" } });
     const sessionCookie = login.headers.getSetCookie().map((part) => part.split(";", 1)[0]).join("; ");
-    const auth = createFragmentsAuthService(authInstance);
+    const auth = createFragmentsAuthService(authInstance, db);
     const server = createServer(createHttpHandler(db, { mentor, auth })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -233,7 +237,7 @@ describe("HTTP API", () => {
   });
 
   it("protects Inspector private data and persists a teacher challenge through assignment and defense", async () => {
-    const db = new DatabaseSync(":memory:"); databases.push(db); migrate(db);
+    const db = await testDatabase();
     const digest = "c".repeat(64);
     const review: ReviewEvidence = {
       id: "review-1", projectId: "project-1", commitSha: "a".repeat(40),
@@ -265,13 +269,13 @@ describe("HTTP API", () => {
       createId: () => "challenge-1",
       now: () => new Date("2026-11-04T12:00:00.000Z"),
     });
-    const authInstance = await createMigratedFragmentsAuth(db, {
+    const authInstance = createFragmentsAuth(db, {
       secret: "http-test-better-auth-secret-0123456789",
       baseURL: "http://localhost:3000",
       publicAppURL: "http://localhost:5173",
       allowSignUp: true,
     });
-    const auth = createFragmentsAuthService(authInstance);
+    const auth = createFragmentsAuthService(authInstance, db);
     const server = createServer(createHttpHandler(db, { auth, inspector })); servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
@@ -288,7 +292,7 @@ describe("HTTP API", () => {
     });
     expect(signup.status).toBe(200);
     const signupBody = await signup.json() as { user: { id: string } };
-    db.prepare("UPDATE user SET isTeacher = 1 WHERE id = ?").run(signupBody.user.id);
+    await db.user.update({ where: { id: signupBody.user.id }, data: { isTeacher: true } });
     const login = await fetch(`${base}/api/auth/sign-in/email`, {
       method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:5173" },
       body: JSON.stringify({ email: "teacher@example.test", password: "fixture-password-2026" }),

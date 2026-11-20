@@ -10,9 +10,9 @@ import {
 } from "@fragments/contracts";
 import { reviewIdempotencyKey, type ReviewContext } from "./review.service.js";
 import type { createReviewService } from "./review.service.js";
-import type { ReviewJobView, createSqliteReviewStore } from "./sqlite-store.js";
+import type { ReviewJobView, createPrismaReviewStore } from "./prisma-store.js";
 
-type Store = ReturnType<typeof createSqliteReviewStore>;
+type Store = ReturnType<typeof createPrismaReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
 type RouteResult = "handled" | "unhandled";
 export type ReviewContextResolver = (request: IncomingMessage, input: ReturnType<typeof ReviewRequestSchema.parse>) => Promise<ReviewContext | null>;
@@ -26,7 +26,7 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Review.");
       return "handled";
     }
-    const ownsJob = (id: string) => !options.resolveStudentId || Boolean(studentId && options.store.getStudentIdForJob(id) === studentId);
+    const ownsJob = async (id: string) => !options.resolveStudentId || Boolean(studentId && await options.store.getStudentIdForJob(id) === studentId);
 
     if (request.method === "POST" && url.pathname === "/api/reviews") {
       const raw = await readJson(request, response);
@@ -61,12 +61,12 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
     const retryMatch = request.method === "POST" && url.pathname.match(/^\/api\/reviews\/([A-Za-z0-9_-]{1,100})\/retry$/);
     if (retryMatch) {
       try {
-        const current = options.store.getJob(retryMatch[1]!);
+        const current = await options.store.getJob(retryMatch[1]!);
         if (!current) {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
         }
-        if (!ownsJob(current.id)) {
+        if (!await ownsJob(current.id)) {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
         }
@@ -76,7 +76,7 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
         }
-        const retry = options.store.retryFailed(retryMatch[1]!);
+        const retry = await options.store.retryFailed(retryMatch[1]!);
         if (retry.kind === "missing") {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
@@ -98,12 +98,12 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
 
     const reviewMatch = request.method === "GET" && url.pathname.match(/^\/api\/reviews\/([A-Za-z0-9_-]{1,100})$/);
     if (reviewMatch) {
-      const job = options.store.getJob(reviewMatch[1]!);
+      const job = await options.store.getJob(reviewMatch[1]!);
       if (!job) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión.");
         return "handled";
       }
-      if (!ownsJob(job.id)) {
+      if (!await ownsJob(job.id)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión.");
         return "handled";
       }
@@ -120,12 +120,12 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         sendError(response, 400, "INVALID_INPUT", "Revisa los datos de la entrega.");
         return "handled";
       }
-      const review = options.store.getJob(parsed.data.reviewId);
+      const review = await options.store.getJob(parsed.data.reviewId);
       if (!review) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
         return "handled";
       }
-      if (!ownsJob(review.id)) {
+      if (!await ownsJob(review.id)) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
         return "handled";
       }
@@ -144,12 +144,12 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
 
     const pdfMatch = request.method === "GET" && url.pathname.match(/^\/api\/review-submissions\/([A-Za-z0-9_-]{1,100})\/pdf$/);
     if (pdfMatch) {
-      const submission = options.store.getReviewSubmission(pdfMatch[1]!);
+      const submission = await options.store.getReviewSubmission(pdfMatch[1]!);
       if (!submission) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega Review.");
         return "handled";
       }
-      if (options.resolveStudentId && (!studentId || !ownsJob(submission.sourceId))) {
+      if (options.resolveStudentId && (!studentId || !await ownsJob(submission.sourceId))) {
         sendError(response, 404, "NOT_FOUND", "No se encontró la entrega Review.");
         return "handled";
       }
