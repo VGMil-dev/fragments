@@ -51,7 +51,7 @@ const EMPTY_DRAFT: ProposalDraftFields = {
   constraints: "",
 };
 
-const MENTOR_STAGES = ["Idea", "Contexto", "Habilidades", "Objetivos", "Evaluación", "Portada"] as const;
+const MENTOR_STAGES = ["Idea", "Contexto", "Habilidades", "Objetivos y alcance", "Evaluación", "Portada"] as const;
 
 function fieldsFromProposal(proposal: ProposalDraftResponse): ProposalDraftFields {
   return {
@@ -151,6 +151,8 @@ export function MentorScreen({
   const evaluationReady = validateProposalDraft(fields).ok;
   const coverReady = evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version;
   const coverPrompt = `Ilustración geométrica para “${fields.title.trim()}”, con formas simples que representen ${fields.problem.trim().slice(0, 180)}. Paleta Fragments azul cobalto, lima y azul noche. Sin texto, formato horizontal.`;
+  const activeStageLabel = MENTOR_STAGES[activeStage];
+  const stageHeadings = ["Tu idea toma forma", "Un contexto para tu proyecto", "Habilidades para practicar", "Objetivos y alcance", "El siguiente paso de tu idea", "Presenta tu proyecto"];
 
   async function copyCoverPrompt() {
     try {
@@ -306,22 +308,32 @@ export function MentorScreen({
 
   return (
     <main className="student-screen mentor-screen" aria-labelledby="mentor-title">
-      <header className="student-screen__header">
-        <div>
-          <button className="mentor-screen__back" type="button" onClick={onBack}>← Volver a la galería</button>
-          <p className="student-screen__eyebrow">MENTOR · PROPUESTA</p>
-          <h1 id="mentor-title">Tu idea toma forma</h1>
-          <p className="student-screen__lead">Desarrolla tu propuesta por etapas. Guardar conserva el borrador sin solicitar evaluación.</p>
+      <header className="student-screen__header mentor-screen__header">
+        <div className="mentor-screen__heading">
+          <p className="student-screen__eyebrow">MENTOR <span aria-hidden="true">·</span> TU PROPUESTA</p>
+          <h1 id="mentor-title">{stageHeadings[activeStage]}</h1>
+          <p className="student-screen__lead">{activeStage === 0 ? "Define el núcleo de tu propuesta: el problema, la solución y su propósito." : `Etapa ${activeStage + 1} de ${MENTOR_STAGES.length} · ${activeStageLabel}`}</p>
         </div>
-        <DataSourceBadge mode={mode} {...(evaluation?.status === "success" ? { modelId: evaluation.data.analysis.modelId } : {})} />
+        <section className="mentor-progress-card" aria-label="Progreso del borrador">
+          <p>Borrador completado: <strong>{draftProgress} %</strong></p>
+          <div className="mentor-progress-card__track" role="progressbar" aria-label="Campos obligatorios completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={draftProgress}>
+            <span style={{ width: `${draftProgress}%` }} />
+          </div>
+          <DataSourceBadge mode={mode} {...(evaluation?.status === "success" ? { modelId: evaluation.data.analysis.modelId } : {})} />
+        </section>
       </header>
 
       <div className="mentor-stage-layout">
       <nav className="mentor-stage-nav" aria-label="Etapas de tu propuesta">
-        <p className="student-screen__eyebrow">TU PROPUESTA</p>
-        {MENTOR_STAGES.map((label, index) => <button key={label} type="button" aria-current={index === activeStage ? "step" : undefined} onClick={() => setActiveStage(index)}>{index + 1}. {label}</button>)}
-        <p className="mentor-progress" role="status">Borrador completado: {draftProgress} %</p>
-        <label className="mentor-stage-nav__mobile"><span>Etapa</span><select value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{label}</option>)}</select></label>
+        <h2><span aria-hidden="true">▱</span> Tu propuesta</h2>
+        <ol>
+          {MENTOR_STAGES.map((label, index) => <li key={label}>
+            <button type="button" aria-current={index === activeStage ? "step" : undefined} onClick={() => setActiveStage(index)}>
+              <span className="mentor-stage-nav__number" aria-hidden="true">{index + 1}</span><span>{label}</span>
+            </button>
+          </li>)}
+        </ol>
+        <label className="mentor-stage-nav__mobile"><span>Etapa</span><select aria-label="Seleccionar etapa de la propuesta" value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}</select></label>
         <div className="mentor-stage-nav__mobile mentor-stage-nav__controls"><button type="button" disabled={activeStage === 0} onClick={() => setActiveStage((value) => Math.max(0, value - 1))}>Anterior</button><button type="button" disabled={activeStage === MENTOR_STAGES.length - 1} onClick={() => setActiveStage((value) => Math.min(MENTOR_STAGES.length - 1, value + 1))}>Siguiente</button></div>
       </nav>
       <div className="mentor-stage-content">
@@ -371,35 +383,35 @@ export function MentorScreen({
 
       <form className="mentor-form" onSubmit={(event) => void saveProposal(event)} noValidate>
         {activeStage === 0 ? <><label className="mentor-field mentor-field--wide">
-          <span>Título de la propuesta</span>
-          <input ref={titleInput} value={fields.title} maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />
+          <span>Título de la propuesta <b aria-hidden="true">*</b></span>
+          <input ref={titleInput} value={fields.title} placeholder="Ej. Huerto escolar inteligente" maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />
           {fieldErrors.title ? <small id="mentor-title-error" role="alert">{fieldErrors.title}</small> : null}
         </label>
 
-        <label className="mentor-field">
-          <span>Describe brevemente tu proyecto</span>
-          <textarea rows={3} value={fields.description} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("description", event.target.value)} />
+        <label className="mentor-field mentor-field--wide">
+          <span>Problema <b aria-hidden="true">*</b></span>
+          <textarea rows={3} value={fields.problem} placeholder="Describe la situación o necesidad que quieres abordar." maxLength={3000} disabled={formBusy} onChange={(event) => updateField("problem", event.target.value)} aria-invalid={Boolean(fieldErrors.problem)} aria-describedby={fieldErrors.problem ? "mentor-problem-error" : undefined} />
+          {fieldErrors.problem ? <small id="mentor-problem-error" role="alert">{fieldErrors.problem}</small> : null}
         </label>
 
-        <label className="mentor-field">
-          <span>¿Para qué quieres construirlo?</span>
-          <textarea rows={3} value={fields.purpose} maxLength={1000} disabled={formBusy} onChange={(event) => updateField("purpose", event.target.value)} />
+        <label className="mentor-field mentor-field--wide">
+          <span>Solución <b aria-hidden="true">*</b></span>
+          <textarea rows={3} value={fields.solution} placeholder="Explica de forma breve tu idea de solución." maxLength={3000} disabled={formBusy} onChange={(event) => updateField("solution", event.target.value)} aria-invalid={Boolean(fieldErrors.solution)} aria-describedby={fieldErrors.solution ? "mentor-solution-error" : undefined} />
+          {fieldErrors.solution ? <small id="mentor-solution-error" role="alert">{fieldErrors.solution}</small> : null}
         </label></> : null}
 
-        {activeStage === 0 ? <label className="mentor-field">
-          <span>¿Qué problema quieres resolver?</span>
-          <textarea rows={4} value={fields.problem} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("problem", event.target.value)} aria-invalid={Boolean(fieldErrors.problem)} aria-describedby={fieldErrors.problem ? "mentor-problem-error" : undefined} />
-          {fieldErrors.problem ? <small id="mentor-problem-error" role="alert">{fieldErrors.problem}</small> : null}
+        {activeStage === 0 ? <label className="mentor-field mentor-field--wide">
+          <span>Descripción <b aria-hidden="true">*</b></span>
+          <textarea rows={3} value={fields.description} placeholder="Amplía tu propuesta: cómo funciona, qué la hace innovadora y qué la diferencia de otras ideas." maxLength={3000} disabled={formBusy} onChange={(event) => updateField("description", event.target.value)} />
         </label> : null}
 
-        {activeStage === 0 ? <label className="mentor-field">
-          <span>¿Cómo ayudará tu proyecto?</span>
-          <textarea rows={4} value={fields.solution} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("solution", event.target.value)} aria-invalid={Boolean(fieldErrors.solution)} aria-describedby={fieldErrors.solution ? "mentor-solution-error" : undefined} />
-          {fieldErrors.solution ? <small id="mentor-solution-error" role="alert">{fieldErrors.solution}</small> : null}
+        {activeStage === 0 ? <label className="mentor-field mentor-field--wide">
+          <span>Propósito <b aria-hidden="true">*</b></span>
+          <textarea rows={3} value={fields.purpose} placeholder="Indica el objetivo principal de tu propuesta y el impacto que esperas lograr." maxLength={1000} disabled={formBusy} onChange={(event) => updateField("purpose", event.target.value)} />
         </label> : null}
 
         {activeStage === 3 ? <label className="mentor-field">
-          <span>Objetivos, uno por línea</span>
+          <span>Objetivos <b aria-hidden="true">*</b></span>
           <textarea rows={3} value={fields.goals} disabled={formBusy} onChange={(event) => updateField("goals", event.target.value)} aria-invalid={Boolean(fieldErrors.goals)} aria-describedby={fieldErrors.goals ? "mentor-goals-help mentor-goals-error" : "mentor-goals-help"} />
           <small id="mentor-goals-help">Escribe al menos un objetivo concreto.</small>
           {fieldErrors.goals ? <small id="mentor-goals-error" role="alert">{fieldErrors.goals}</small> : null}
@@ -408,7 +420,7 @@ export function MentorScreen({
         {activeStage === 2 ? <div className="mentor-context"><h2>Habilidades</h2><p>El catálogo autorizado de habilidades de aula aún no está disponible. No puedes marcar habilidades docentes hasta que F18 lo proporcione.</p></div> : null}
 
         {activeStage === 3 ? <label className="mentor-field">
-          <span>¿Qué incluirá la primera versión?</span>
+          <span>Alcance <b aria-hidden="true">*</b></span>
           <textarea rows={4} value={fields.scope} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("scope", event.target.value)} aria-invalid={Boolean(fieldErrors.scope)} aria-describedby={fieldErrors.scope ? "mentor-scope-error" : undefined} />
           {fieldErrors.scope ? <small id="mentor-scope-error" role="alert">{fieldErrors.scope}</small> : null}
         </label> : null}
@@ -431,11 +443,19 @@ export function MentorScreen({
           {fieldErrors.constraints ? <small id="mentor-constraints-error" role="alert">{fieldErrors.constraints}</small> : null}
         </label> : null}
 
+        {activeStage === 4 ? <aside className="mentor-publication-note" aria-label="Política de publicación en la Galería">
+          <p><strong>Publicación en la Galería.</strong> Si la evaluación cumple los criterios actuales, esta versión se publica automáticamente. La verán estudiantes con sesión y docentes. Se comparten la propuesta, objetivos, habilidades, etiquetas y temas, alcance, restricciones, perfil de GitHub y contexto de materia, consigna y rúbrica; no se comparten la nota ni los comentarios privados.</p>
+          <p>Desde el portal no hay opt-out ni puedes retirar una versión publicada. Guardar cambios no la retira; una versión nueva requiere su propia evaluación elegible. Un docente puede retirar una ficha con registro de auditoría.</p>
+        </aside> : null}
+
         <div className="mentor-form__footer">
-          <p>{activeStage === 4 ? "La orientación es formativa; no equivale a aprobación docente." : "Tu borrador se guarda sin solicitar una evaluación."}</p>
-          <button className="button button--primary" type="submit" disabled={formBusy}>
-            {saving ? "Guardando…" : "Guardar borrador"}
-          </button>
+          <p>{activeStage === 4 ? "La orientación es formativa; no equivale a aprobación docente." : activeStage === 0 || activeStage === 3 ? "* Campo necesario para evaluar. Guarda los cambios con «Guardar borrador»." : "Guarda los cambios con «Guardar borrador»."}</p>
+          <div className="mentor-form__actions">
+            <button className="button button--secondary" type="submit" disabled={formBusy}>
+              {saving ? "Guardando…" : "Guardar borrador"}
+            </button>
+            {activeStage < MENTOR_STAGES.length - 1 ? <button className="button button--primary" type="button" onClick={() => setActiveStage((value) => Math.min(MENTOR_STAGES.length - 1, value + 1))}>Continuar <span aria-hidden="true">→</span></button> : null}
+          </div>
         </div>
       </form>
 
