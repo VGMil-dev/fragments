@@ -36,6 +36,7 @@ Agente B: **PASS visual e interacción local con fixtures**. Sin overflow a 320/
 - La revisión visual local independiente registró que el foco `:focus-visible` no quedó confirmado en su captura. La regla CSS está definida en `apps/web/src/features/mentor/mentor-screen.css`; no se afirma aquí una comprobación visual de teclado/foco en producción.
 
 ## Commits
+- Cierre de verificación autenticada: `7b77a824650d79a971a8074d42189e03f81e33cc`.
 - UI inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
 - Merge base UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
 - CSS responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.

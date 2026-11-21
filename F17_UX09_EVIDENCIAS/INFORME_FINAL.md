@@ -29,6 +29,7 @@ Después, Ego Lite verificó la sesión autenticada en `/student/mentor`, viewpo
 La revisión visual local independiente de Agente B dio PASS en 320, 390, 768, 1024, 1440 y 1672 px con fixtures; véase `REVISION_AGENT_B_POST_UX08.md`. El foco `:focus-visible` no quedó confirmado visualmente por esa revisión; la regla CSS sí está presente en `apps/web/src/features/mentor/mentor-screen.css`. Se revisó la skill disponible `vercel-react-best-practices` y no se requirieron cambios adicionales.
 
 ## Commits UX-09
+- Cierre de evidencia autenticada: `7b77a824650d79a971a8074d42189e03f81e33cc`.
 - UI y evidencia inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
 - Sincronización y resolución UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
 - Ajuste responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
