@@ -32,6 +32,6 @@ La carpeta raíz `F17_UX06_EVIDENCIAS/` contiene 12 archivos incluyendo `INFORME
 - Tag anotada `v0.5.6`, tag object `4e793495238f699914afe9a1d7967641aeae405b`.
 - F14 run `44925403964` success; release `453828612`, agente reportó `release_deployed`.
 - Producción: API/web healthy con v0.5.6 y SHA exacto, `/health` 200, bundle verificado con Ego Lite. Detalle en `F17_UX06_EVIDENCIAS/PRODUCCION_F14.md`.
-- Notion UX-06: se actualizará después del PR documental de cierre.
+- Notion UX-06 actualizada con PR #72, SHA de merge, release F14, referencia aprobada y enlace al paquete final.
 
 Paquete raíz `F17_UX06_EVIDENCIAS/`: 12 archivos de máximo 20.
