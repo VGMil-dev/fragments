@@ -27,8 +27,13 @@ Agente B: **PASS visual e interacción local con fixtures**. Sin overflow a 320/
 - Verificación pública posterior: `GET /health` HTTP 200, `status=ok`, `database=ready`; `/` y bundle JS `/assets/index-DmKyggnV.js` HTTP 200, 522334 bytes. El bundle contiene `v0.5.8` y el SHA completo `527b8f66440819e72f73366014f78e0a3aa5a991`.
 - Ego Lite abrió `/student/mentor` en producción en modo no destructivo. La app devolvió la pantalla pública «Continúa con GitHub» y el indicador de build muestra `v0.5.8 · 527b8f6`; el flujo de evaluación no fue visible porque esta sesión no tenía autenticación. Captura `ego-produccion-v058.png`. No se inició OAuth ni se hicieron escrituras en producción.
 
-## Pendiente
-La etapa de Evaluación aún requiere un recorrido visual autenticado en producción. Ego Lite llegó correctamente a la pantalla de inicio de sesión, sin autenticar ni modificar datos. No declarar la validación visual de la ruta autenticada hasta que se complete ese recorrido.
+## Verificación visual autenticada en producción
+- Con Ego Lite, una vez autenticada la sesión existente, se abrió `/student/mentor` en el viewport de 1672 px y se seleccionó la etapa 5 «Evaluación». La producción muestra el stepper horizontal con Evaluación activa y el build `v0.5.8` con SHA completo `527b8f66440819e72f73366014f78e0a3aa5a991`.
+- La cuenta no tenía una propuesta guardada: la rueda mostró 0 %, «Evaluar propuesta» estuvo deshabilitado y «Guardar borrador» disponible. Es el estado vacío real; no se introdujo contenido ni se guardó, evaluó o publicó nada en producción.
+- Captura auténtica `ego-produccion-v058.png`, recortada para retirar identidad y pie de página, conservando navegación y pantalla. Evidencia total del directorio: 20 archivos incluido el informe.
+- Esto verifica renderizado autenticado, navegación y gating en producción. No verifica una evaluación productiva con datos ni una escritura de punta a punta. Persistencia, aislamiento por usuario y versión están cubiertos por pruebas API/UI locales y la base PostgreSQL aislada `fragments_test`, con proveedor de evaluación controlado.
+- Se instaló y leyó la skill disponible `vercel-react-best-practices` (nombre del registro), y se revisaron las reglas aplicables de estado derivado, actualizaciones funcionales, componentes y cargas. El diseño existente ya las cumple; no hizo falta refactor.
+- La revisión visual local independiente registró que el foco `:focus-visible` no quedó confirmado en su captura. La regla CSS está definida en `apps/web/src/features/mentor/mentor-screen.css`; no se afirma aquí una comprobación visual de teclado/foco en producción.
 
 ## Commits
 - UI inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
