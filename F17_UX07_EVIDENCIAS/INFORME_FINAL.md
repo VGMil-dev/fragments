@@ -1,6 +1,6 @@
 # F17.3 / UX-07 — Mentor · Habilidades
 
-**Estado:** implementación local y gates de código/QA aprobados. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb` en `codex/f17-ux07-habilidades`, sincronizados con `origin/main` mediante merge normal `010402a`. PR #75 está abierto contra `main`; checks obligatorios pendientes. F14 pendiente de integración.
+**Estado:** F17.3 / UX-07 completada e integrada por PR #75; desplegada como `v0.5.7` mediante F14. QA local PostgreSQL y Ego Lite B PASS. Salud pública y bundle con versión/SHA exactos verificados.
 
 ## Resultado
 
@@ -30,10 +30,14 @@ La carpeta contiene 15 archivos: esta nota, la referencia aprobada y capturas Eg
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/skills-http.test.ts --reporter=dot` con URL temporal solo de prueba — **1/1 PASS**, `fragments_test`.
 - `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx --reporter=dot` — **19/19 PASS**.
 - `git diff --check` — **PASS**.
+- PR #75: `Fragments CI` `verify` run `44945430592` SUCCESS en SHA `bfa7ca2a3066db07efb72b21d448fc338cc397d1`. Un primer run (`44945066486`) encontró fixtures previas a UX-07 que enviaban habilidades libres; se corrigieron en `bfa7ca2` y el run siguiente pasó.
 - Skills usadas: Ego Lite y Vercel React Best Practices. No se usó Playwright.
 
 ## Artefactos y release
 
 - Imagen aprobada: `Fragments_F17_UX07_Habilidades_Referencia_Aprobada.png`, 1672×941, SHA-256 `6f067ed50875a15e10d8d889ba93f98f49d76653a48f5db972e0de911e3c015a`.
 - Resumen de QA y referencia adjuntos a la ficha UX-07 en Notion: https://app.notion.com/p/41ecd5fa7ed781798689e1d75db17da5
-- PR #75 está abierto y figura integrable; al actualizar este informe los checks remotos aún no se habían publicado. Merge protegido y F14 siguen pendientes. No hay SHA integrado, tag, release, health o versión productiva verificados.
+- PR [#75](https://github.com/VGMil-dev/fragments/pull/75), merge normal `fb22285391fa3b234aeeeb2951e462c8709d00af`; check obligatorio `verify` run `44945430592` SUCCESS.
+- Tag anotada `v0.5.7`, objeto `a4fde0625470e43a1beac501ab52fe3dcedbf72e`, apunta al SHA del merge. F14 run `44945760230` completó `verify-build`, `attest-package` y `publish-approved-release`; GitHub Release `453959855` contiene tar ARM64, manifiesto y atestación.
+- Producción verificada por HTTP: `/health` 200 (`status=ok`, `database=ready`); `/` 200; bundle `/assets/index-BBtS6vKT.js` 200, 510418 bytes, contiene `v0.5.7`, el SHA `fb22285391fa3b234aeeeb2951e462c8709d00af` y los textos de UX-07. `/api/me/classrooms` sin sesión devuelve 401. La lectura y escrituras sintéticas de QA permanecieron en `fragments_test`; no se añadió migración Prisma.
+- Commits de tarea integrados: contrato `962ef80`, implementación `11b7ff4`, fixtures CI `bfa7ca2`; el cierre documental local previo está en `713e8cb`, `7d93673` y `ba912e1`.
