@@ -579,7 +579,10 @@ class ReleaseValidationTests(unittest.TestCase):
                 manifest["images"]["api"]: {"id": "sha256:" + "a" * 64},
                 manifest["images"]["web"]: {"id": "sha256:" + "b" * 64},
             }),
-            patch.object(agent, "load_archive"),
+            patch.object(agent, "load_archive", side_effect=lambda _archive, refs, _tag, _commit: {
+                refs["api"]: {"id": "sha256:" + "a" * 64},
+                refs["web"]: {"id": "sha256:" + "b" * 64},
+            }),
             patch.object(agent, "container_snapshot", return_value=neighbors),
             patch.object(agent, "image_refs_for_running", return_value=previous_images),
             patch.object(agent, "image_ids_for_running", return_value={"fragments-api-1": "sha256:" + "c" * 64, "fragments-web-1": "sha256:" + "d" * 64}),
@@ -924,7 +927,10 @@ class TransactionRecoveryTests(unittest.TestCase):
                 stack.enter_context(patch.object(agent, "ensure_archive_available"))
                 stack.enter_context(patch.object(agent, "verify_attestation"))
                 stack.enter_context(patch.object(agent, "archive_image_info", return_value=archive_data))
-                stack.enter_context(patch.object(agent, "load_archive"))
+                stack.enter_context(patch.object(agent, "load_archive", side_effect=lambda _archive, refs, _tag, _commit: {
+                    refs["api"]: {"id": target_ids["fragments-api-1"]},
+                    refs["web"]: {"id": target_ids["fragments-web-1"]},
+                }))
                 stack.enter_context(patch.object(agent, "container_snapshot", return_value=neighbors))
                 stack.enter_context(patch.object(agent, "image_refs_for_running", return_value=previous_images))
                 stack.enter_context(patch.object(agent, "image_ids_for_running", return_value=previous_ids))
