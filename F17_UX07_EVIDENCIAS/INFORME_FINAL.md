@@ -1,6 +1,6 @@
 # F17.3 / UX-07 — Mentor · Habilidades
 
-**Estado:** implementación local y gates de código/QA aprobados. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb` en `codex/f17-ux07-habilidades`, sincronizados con `origin/main` mediante merge normal `010402a`. El `AGENTS.md` vigente permite publicar la rama y abrir PR; integración remota/F14 pendientes.
+**Estado:** implementación local y gates de código/QA aprobados. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb` en `codex/f17-ux07-habilidades`, sincronizados con `origin/main` mediante merge normal `010402a`. PR #75 está abierto contra `main`; checks obligatorios pendientes. F14 pendiente de integración.
 
 ## Resultado
 
@@ -36,4 +36,4 @@ La carpeta contiene 15 archivos: esta nota, la referencia aprobada y capturas Eg
 
 - Imagen aprobada: `Fragments_F17_UX07_Habilidades_Referencia_Aprobada.png`, 1672×941, SHA-256 `6f067ed50875a15e10d8d889ba93f98f49d76653a48f5db972e0de911e3c015a`.
 - Resumen de QA y referencia adjuntos a la ficha UX-07 en Notion: https://app.notion.com/p/41ecd5fa7ed781798689e1d75db17da5
-- PR, CI remota y F14 se ejecutarán ahora conforme a la autorización del brief y el `AGENTS.md` vigente. Aún no hay SHA integrado, tag, release, health o versión productiva verificados.
+- PR #75 está abierto y figura integrable; al actualizar este informe los checks remotos aún no se habían publicado. Merge protegido y F14 siguen pendientes. No hay SHA integrado, tag, release, health o versión productiva verificados.

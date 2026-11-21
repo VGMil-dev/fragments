@@ -2,7 +2,7 @@
 
 ## Estado
 
-IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb`; base sincronizada con `origin/main` mediante merge normal `010402a`. Siguiente paso: publicar la rama propia y abrir PR, permitido por el `AGENTS.md` vigente; F14 queda pendiente de integración.
+IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb`; base sincronizada con `origin/main` mediante merge normal `010402a`. PR #75 abierto contra `main`; esperando checks obligatorios antes del merge. F14 queda pendiente de integración.
 
 ## Contrato y persistencia
 
@@ -44,4 +44,4 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 ## Integración pendiente
 
 - Commits de tarea: `962ef80` (`feat(f17.3): define vínculo de habilidades del borrador`), `11b7ff4` (`feat(f17.3): conecta habilidades autorizadas de Mentor`) y `713e8cb` (`docs(f17.3): registra cierre local de UX-07`). El merge `010402a` incorpora la actualización reciente de `origin/main` sin reescribir historia.
-- El `AGENTS.md` vigente permite publicar esta rama `codex/*` y abrir PR hacia `main`; no se hará push directo a `main`, force-push ni bypass de protecciones. PR/CI remoto/F14/tag/release/health/versión productiva siguen sin verificar hasta completar la integración.
+- PR #75: https://github.com/VGMil-dev/fragments/pull/75, rama `codex/f17-ux07-habilidades` hacia `main`, abierta e integrable al momento de consulta. Los checks remotos siguen pendientes; no se hará push directo a `main`, force-push ni bypass de protecciones. F14/tag/release/health/versión productiva siguen pendientes hasta integrar.
