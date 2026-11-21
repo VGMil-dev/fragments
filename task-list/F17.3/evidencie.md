@@ -2,7 +2,7 @@
 
 ## Estado
 
-IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb`; base sincronizada con `origin/main` mediante merge normal `010402a`. PR #75 abierto contra `main`; esperando checks obligatorios antes del merge. F14 queda pendiente de integración.
+COMPLETADA. Implementación, QA visual independiente B **PASS**, integración por PR #75 y despliegue F14 `v0.5.7` verificados. Merge de `main`: `fb22285391fa3b234aeeeb2951e462c8709d00af`.
 
 ## Contrato y persistencia
 
@@ -34,6 +34,7 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/skills-http.test.ts --reporter=dot` (URL temporal restringida a `fragments_test`) — **1/1 PASS**.
 - `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx --reporter=dot` — **19/19 PASS**.
 - `git diff --check` — **PASS**.
+- PR #75 inicialmente encontró fixtures de tres pruebas PostgreSQL que enviaban nombres libres de habilidades; se adaptaron a una selección explícita vacía en `bfa7ca2`. CI final en SHA `bfa7ca2a3066db07efb72b21d448fc338cc397d1`: `Fragments CI` run `44945430592`, check `verify` **SUCCESS**. El run previo `44945066486` falló en esas fixtures antiguas y no se ocultó.
 
 ## Archivos y Notion
 
@@ -41,7 +42,10 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 - Referencia 1672×941 verificada: SHA-256 `6f067ed50875a15e10d8d889ba93f98f49d76653a48f5db972e0de911e3c015a`.
 - Ficha UX-07 actualizada: referencia aprobada adjunta, banner corregido, resultado F17.3 y QA B PASS registrados. [Abrir UX-07 en Notion](https://app.notion.com/p/41ecd5fa7ed781798689e1d75db17da5).
 
-## Integración pendiente
+## Integración y despliegue verificados
 
-- Commits de tarea: `962ef80` (`feat(f17.3): define vínculo de habilidades del borrador`), `11b7ff4` (`feat(f17.3): conecta habilidades autorizadas de Mentor`) y `713e8cb` (`docs(f17.3): registra cierre local de UX-07`). El merge `010402a` incorpora la actualización reciente de `origin/main` sin reescribir historia.
-- PR #75: https://github.com/VGMil-dev/fragments/pull/75, rama `codex/f17-ux07-habilidades` hacia `main`, abierta e integrable al momento de consulta. Los checks remotos siguen pendientes; no se hará push directo a `main`, force-push ni bypass de protecciones. F14/tag/release/health/versión productiva siguen pendientes hasta integrar.
+- PR [#75](https://github.com/VGMil-dev/fragments/pull/75), integrado mediante merge normal `fb22285391fa3b234aeeeb2951e462c8709d00af`; `main` contiene contrato `962ef80`, implementación `11b7ff4`, fixtures compatibles `bfa7ca2` y documentación previa `713e8cb`/`7d93673`/`ba912e1`.
+- Check obligatorio `verify` del SHA integrado: `Fragments CI` run `44945430592` **SUCCESS**.
+- Tag anotada `v0.5.7`, tag object `a4fde0625470e43a1beac501ab52fe3dcedbf72e`, apuntando al SHA exacto de merge. F14 run `44945760230`: `verify-build`, `attest-package` y `publish-approved-release` **SUCCESS**; release GitHub `453959855` con paquete ARM64, manifiesto y atestación.
+- Verificación pública posterior: `GET https://fragments.gavanti.org/health` HTTP 200, `status=ok`, `database=ready`; `/` HTTP 200; bundle `/assets/index-BBtS6vKT.js` HTTP 200 (510418 bytes) contiene `v0.5.7`, SHA `fb22285391fa3b234aeeeb2951e462c8709d00af`, Habilidades para practicar, estado «Sin asignación» y «Mostrar más». `GET /api/me/classrooms` sin sesión HTTP 401.
+- QA y escrituras sintéticas ocurrieron solo en `fragments_test`. No se sembraron ni limpiaron filas productivas y no se añadió migración Prisma. Notion UX-07 refleja resultado, PR, F14 y health/bundle verificados.
