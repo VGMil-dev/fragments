@@ -2,26 +2,28 @@
 
 Fecha: 2026-11-21
 Rama: `codex/f17-ux09-evaluation`
-Base: `origin/main` `1cdeae04b0e0930663c79cde7ef72efe6f8c6054`
+Base sincronizada: `origin/main` `c384998` (incluye merge protegido de UX-08 PR #77)
 
 ## Implementado localmente
-- Rediseño de Mentor · Evaluación conforme a la referencia aprobada; navegación horizontal en escritorio y alternativa compacta accesible.
-- Resumen ordenado del borrador, contexto de solo lectura, rueda de preparación derivada de validaciones y controles existentes de guardado/evaluación.
-- Sin cambiar contratos, API, reglas de publicación, generación de entregas ni servicios DOCX de otras pantallas.
+- Etapa 5 de Mentor conforme a la referencia visual aprobada, con stepper horizontal en escritorio y selector compacto accesible en anchos pequeños.
+- Resumen en orden Idea, Contexto (solo lectura), Habilidades/Tecnologías y Objetivos/Alcance; panel de preparación con rueda calculada por validaciones y CTA existentes.
+- Ajuste responsive: el panel se apila debajo del resumen entre 761 y 1100 px; conserva layout lateral desde 1101 px.
+- UX-08 se integró antes de UX-09. Se preservan catálogo de tecnologías, objetivos, MVP y resultado esperado.
 
 ## Comprobado
-- Referencia de 1672 × 941: SHA-256 `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c`.
-- Web: 128 pruebas pasaron; typecheck, lint, build y `git diff --check` pasaron. Ver `VERIFICACION_LOCAL.txt`.
-- Revisión independiente Ego Lite: PASS visual/interacción local en 320, 390, 768, 1024, 1440 y 1672 px; sin overflow ni errores de consola. Ver `REVISION_AGENT_B_FINAL.md` y las seis capturas `ego-review-r5-*.png`.
-- La revisión usó fixtures sintéticas y bloqueó escrituras. No contactó IA pagada ni DB.
+- Referencia 1672 × 941: SHA-256 `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c`.
+- Base de datos de prueba efímera: preflight `fragments_test|fragments_test`, migraciones aplicadas y contenedor eliminado tras pruebas. No se contactó una IA pagada ni se escribió a producción.
+- `pnpm exec turbo run test typecheck lint build --force`: 11/11 tareas. Contracts 26, Web 132, API 148; total 306 tests.
+- Después del ajuste tablet: Web 132 tests, typecheck, lint, build y `git diff --check` pasaron.
+- Agente A revisó la resolución de merge, sin hallazgos.
+- Agente B emitió **PASS visual/interacción local** con fixtures Ego Lite en 320, 390, 768, 1024, 1440 y 1672 px. Cero overflow; aviso de Galería una vez; panel legible a 1024; navegación compacta por teclado comprobada; 13 GET y dos writes interceptados/bloqueados (405), cero escrituras persistidas o reenviadas; consola/runtime sin errores. El foco `:focus-visible` no quedó confirmado. Ver `REVISION_AGENT_B_POST_UX08.md` y `ego-post-ux08-*.png`.
+- Evidencias totales: 19 archivos de máximo 20, incluido este informe.
 
-## No comprobado
-- Persistencia real de borradores/resultados, aislamiento de usuarios y control de versión en PostgreSQL `fragments_test`.
-- Suite API/DB: no ejecutada porque el worktree carece de configuración QA segura; la URL disponible no apuntaba a `fragments_test` y se rechazó antes de conexión.
-- Revisión del PR/CI integrado, comportamiento después de reconciliar UX-08 y validación del build de release.
+## Estado de integración y despliegue
+UX-08 PR #77 ya está integrado en `main`. UX-09 todavía no tiene PR propio ni CI remoto. No hay merge de UX-09, release F14, tag, versión publicada ni revisión en producción. No se declara terminada la meta hasta que pasen PR/CI, F14 y Ego Lite en producción.
 
-## Integración y despliegue
-Commit local de implementación/evidencia: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`. No hay PR de esta rama, merge, release, F14, versión publicada ni revisión de producción. PR #77 de UX-08 continúa abierto y solapa archivos de Mentor. Las instrucciones locales del repositorio prohíben hacer push; por ello la integración y el despliegue siguen pendientes y la meta no se declara completa.
-
-## Evidencia
-`referencia-aprobada.png`; `ego-review-r5-{320,390,768,1024,1440,1672}.png`; `REVISION_AGENT_B_FINAL.md`; `REVISION_AGENT_B_RONDA1.md`; `VERIFICACION_LOCAL.txt`.
+## Commits UX-09
+- UI y evidencia inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
+- Sincronización y resolución UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
+- Ajuste responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
+- El siguiente commit registrará el cierre documental y el hash final.

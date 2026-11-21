@@ -1,32 +1,31 @@
 # UX-09 — Evidencia
 
 ## Estado
-Implementación local lista para revisión de integración. Rama `codex/f17-ux09-evaluation`, worktree aislado desde `origin/main` en `1cdeae04b0e0930663c79cde7ef72efe6f8c6054` (2026-11-21). No integrada, no desplegada. PR #77 de UX-08 sigue abierto y solapa los archivos compartidos de Mentor; las instrucciones de repositorio prohíben push.
+Implementación en rama `codex/f17-ux09-evaluation`, sincronizada con `origin/main` `c384998` tras integrar UX-08 PR #77. Resolución de UX-09 + UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`. Ajuste tablet: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`. Sin PR propio, CI remoto, despliegue o versión productiva aún.
 
 ## Referencia aprobada
-SHA requerido: `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c`.
-La primera copia `image-1.png` no coincidió (`C2C58453DC33CF82D85036DA2F4A3E8EEC661019B79CA824C4E8BCC2DE3B984E`) y fue descartada. La imagen `Evaluación de propuesta en modo nocturno.png` coincide exactamente. La copia de evidencia es `F17_UX09_EVIDENCIAS/referencia-aprobada.png`.
+SHA-256 `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c` (1672 × 941), verificada contra `referencia-aprobada.png`. La primera imagen `image-1.png` no coincidió y fue descartada.
 
 ## Implementado
-- Etapa Evaluación con stepper horizontal para escritorio y selector compacto accesible en anchos pequeños.
-- Resumen del borrador, navegación a etapas de edición y contexto de solo lectura; rueda calculada desde validaciones, estados de guardado y evaluación existentes.
-- Conserva carga, error/recuperación, persistencia, guardado, control de versión y prevención de doble envío existentes. Retira solo elementos visuales prohibidos en UX-09; no elimina servicios DOCX compartidos.
+- Evaluación con stepper horizontal desktop, selector compacto accesible y CTA; resumen Idea → Contexto solo lectura → Habilidades/Tecnologías → Objetivos/Alcance.
+- Rueda desde validaciones reales, guardado y control de versión existentes; mantiene flujo de resultados/recovery y generación de entrega.
+- Panel apilado entre 761–1100 px; diseño lateral se mantiene desde 1101 px.
+- Coexiste con UX-08: objetivos, MVP, resultado esperado y selector de catálogo preservados; no se cambiaron contratos o API en UX-09.
 
-## Verificación local
-- `pnpm --filter @fragments/web test`: 26 archivos, 128 pruebas pasaron.
-- `pnpm --filter @fragments/web typecheck`: pasó.
-- `pnpm lint`: pasó (el workspace solo configuró la tarea contracts).
-- `pnpm --filter @fragments/web build`: pasó; permanece el aviso conocido de chunk principal mayor a 500 kB y directivas `use client` en el bundle de lucide.
-- `git diff --check`: pasó.
-- Salida completa: `F17_UX09_EVIDENCIAS/VERIFICACION_LOCAL.txt`.
+## Verificación técnica
+- PostgreSQL desechable con `current_database() = fragments_test`, `current_user = fragments_test`; migraciones aplicadas y contenedor eliminado al terminar.
+- `pnpm exec turbo run test typecheck lint build --force`: 11/11 tareas; Contracts 26, Web 132, API 148 (306 tests). Incluye tests de API Mentor con borrador parcial persistido, aislamiento por usuario, versión obsoleta y evaluación incompleta.
+- Tras ajuste responsive: `pnpm --filter @fragments/web test` 27 archivos/132 tests; web typecheck, lint, build y `git diff --check` PASS.
+- Build avisa por bundle de 522.29 kB y directivas `use client` de lucide; termina con éxito. Detalle en `VERIFICACION_CI_LOCAL_POST_UX08.txt`.
 
-## Revisión independiente Ego Lite
-`REVISION_AGENT_B_FINAL.md`: **PASS visual e interacción local; REVISAR global** hasta QA de persistencia/permisos en `fragments_test`. Capturas finales para 320, 390, 768, 1024, 1440 y 1672 px. Sin overflow horizontal, errores de consola ni proveedor IA. Interacciones verificadas con fixtures sintéticas; todos los writes fueron bloqueados. El POST de evaluación intencionalmente bloqueado mostró el error recuperable.
+## Revisión Ego Lite independiente
+Agente B: **PASS visual e interacción local con fixtures**. Sin overflow a 320/390/768/1024/1440/1672; panel legible a 1024; CTA presente, aviso de Galería único; ArrowUp y botones cambian etapas. 13 GET sintéticos; PUT guardar y POST evaluar interceptados con 405; cero escrituras persistidas/enviadas al servidor; consola/runtime sin errores. `:focus-visible` no quedó confirmado. Guardado UI persistido, evaluación real, aislamiento y permisos de PostgreSQL no se probaron en browser; la suite API sí cubre persistencia/ACL/versiones contra la DB de test. Reporte/capturas: `REVISION_AGENT_B_POST_UX08.md`, `ego-post-ux08-*.png`.
 
-## Pendiente
-No se pudo localizar una configuración segura `fragments_test`/túnel DB en este worktree; la configuración disponible no nombraba esa base y se rechazó antes de conectar o ejecutar consultas/escrituras. No se probaron guardado/resultados persistidos ni aislamiento/versionado contra PostgreSQL. No se ejecutó suite API ni se hizo escritura en ninguna base.
+## Pendiente para la meta completa
+Crear PR de UX-09, pasar CI requerido, integrar por PR, publicar tag autorizada y completar F14; después verificar versión/health/recursos e interfaz productiva mediante Ego Lite. No declarar completo antes de esas evidencias.
 
-PR, CI de integración, merge, F14, versión desplegada y comprobación en producción: pendientes. UX-08 PR #77 comparte archivos de Mentor y sigue abierto; integrar antes de reconciliarlo expondría conflictos. No se declara la meta completa.
-
-## Registro de commits
-Commit local de implementación/evidencia: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`. Commit posterior registra este SHA en la evidencia y task list.
+## Commits
+- UI inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
+- Merge base UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
+- CSS responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
+- Hash final documental pendiente de registrar.
