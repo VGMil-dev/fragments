@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ClassroomSummary, SkillCatalogEntry } from "@fragments/contracts";
 import { MentorScreen } from "./mentor-screen";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -69,6 +70,22 @@ const actions = {
   onPdf: vi.fn(async () => ({ ok: true as const, data: new Blob(["pdf"]) })),
 };
 
+const classroom: ClassroomSummary = {
+  id: "class-a",
+  title: "Aula de programación",
+  subject: "Programación",
+  groupLabel: "Grupo A",
+  period: "2026-2",
+  status: "active",
+  createdAt: "2026-08-01T12:00:00.000Z",
+  updatedAt: "2026-08-01T12:00:00.000Z",
+};
+
+function skillFixture(index: number): SkillCatalogEntry {
+  const stamp = "2026-08-01T12:00:00.000Z";
+  return { id: "skill-" + index, name: "Habilidad " + String(index).padStart(3, "0"), description: null, archived: false, createdAt: stamp, updatedAt: stamp };
+}
+
 let mountedRoot: ReturnType<typeof createRoot> | undefined;
 let mountedContainer: HTMLDivElement | undefined;
 
@@ -81,6 +98,69 @@ afterEach(() => {
 });
 
 describe("MentorScreen", () => {
+  it("loads the authorized catalog, expands incrementally, searches, preserves selection, and saves IDs", async () => {
+    const skills = Array.from({ length: 100 }, (_, index) => skillFixture(index + 1));
+    const loadSkills = vi.fn(async () => ({ ok: true as const, data: skills }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />);
+    });
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    expect(loadSkills).toHaveBeenCalledWith(classroom.id);
+    expect(mountedContainer.textContent).toContain("Revisa las habilidades de tu actividad y elige en cuáles quieres enfocarte.");
+    expect(mountedContainer.textContent).toContain("Descargar plantilla Word");
+    expect(mountedContainer.textContent).toContain("Importar propuesta (.docx)");
+    expect(mountedContainer.textContent).toContain("100 disponibles");
+    expect(mountedContainer.textContent).toContain("No hay habilidades marcadas como obligatorias");
+    expect(mountedContainer.querySelectorAll(".mentor-skills__option")).toHaveLength(6);
+    const more = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__more")).find((button) => button.textContent?.includes("Mostrar más"));
+    await act(async () => more?.click());
+    expect(mountedContainer.querySelectorAll(".mentor-skills__option")).toHaveLength(12);
+
+    const firstSkill = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__option")).find((button) => button.textContent?.includes("Habilidad 001"));
+    await act(async () => firstSkill?.click());
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Habilidad 001");
+
+    const search = mountedContainer.querySelector<HTMLInputElement>(".mentor-skills__search input");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(search, "sin coincidencias");
+    await act(async () => search?.dispatchEvent(new Event("input", { bubbles: true })));
+    expect(mountedContainer.textContent).toContain("No encontramos habilidades con ese nombre");
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Habilidad 001");
+
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos y alcance"));
+    await act(async () => objectives?.click());
+    await act(async () => skillsStage?.click());
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Habilidad 001");
+
+    const form = mountedContainer.querySelector("form");
+    await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({
+      expectedVersion: proposal.version,
+      proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["skill-1"] } }),
+    }));
+    expect(loadSkills).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a recoverable catalog error and retries the same classroom", async () => {
+    const loadSkills = vi.fn()
+      .mockResolvedValueOnce({ ok: false as const, error: { code: "NETWORK_ERROR", message: "hidden" } })
+      .mockResolvedValueOnce({ ok: true as const, data: [skillFixture(1), skillFixture(2), skillFixture(3)] });
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(mountedContainer.textContent).toContain("No pudimos consultar las habilidades");
+    const retry = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__state button")).find((button) => button.textContent?.includes("Volver a cargar"));
+    await act(async () => { retry?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(loadSkills).toHaveBeenCalledTimes(2);
+    expect(mountedContainer.querySelectorAll(".mentor-skills__option")).toHaveLength(3);
+  });
   it("shows one independent stage at a time with contextual navigation", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);

@@ -79,8 +79,9 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
       const result = rows.map(row => {
         const history = row.revisions.flatMap(revision => {
           const parsed = CreateProposalRequestSchema.safeParse(revision.proposalJson); if (!parsed.success) return [];
+          const { mentorSkills: _privateClassroomSelection, ...teacherProposal } = parsed.data;
           const context = parseJson(revision.publication?.context.configJson);
-          return [{ version: revision.version, updatedAt: revision.updatedAt.toISOString(), proposal: parsed.data, published: Boolean(revision.publication), contextVersion: revision.publication?.contextVersion ?? null, subject: context.subject ?? null, theme: context.theme ?? null, rubricTitle: context.rubricTitle ?? null }];
+          return [{ version: revision.version, updatedAt: revision.updatedAt.toISOString(), proposal: teacherProposal, published: Boolean(revision.publication), contextVersion: revision.publication?.contextVersion ?? null, subject: context.subject ?? null, theme: context.theme ?? null, rubricTitle: context.rubricTitle ?? null }];
         });
         return history.length ? { id: row.id, title: history[0]!.proposal.title, ownerGithubLogin: row.owner?.githubLogin ?? null, currentVersion: row.version, withdrawn: Boolean(row.moderation), withdrawalReason: row.moderation?.reason ?? null, withdrawnAt: row.moderation?.withdrawnAt.toISOString() ?? null, history } : null;
       }).filter(Boolean);

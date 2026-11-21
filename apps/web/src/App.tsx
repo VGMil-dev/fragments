@@ -86,7 +86,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   }, [path, navigate, authReload]);
 
   useEffect(() => {
-    if (!(["/student/dashboard", "/student/classrooms"].includes(path)) || !student) return;
+    if (!(["/student/dashboard", "/student/classrooms", "/student/mentor"].includes(path)) || !student) return;
     let active = true;
     setClassroomsLoading(true);
     setClassroomsError(null);
@@ -270,6 +270,11 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               proposalsLoading={proposalsLoading}
               proposalsError={proposalsError}
               onRetryProposals={() => setProposalsReload((value) => value + 1)}
+              classrooms={myClassrooms}
+              classroomsLoading={classroomsLoading}
+              classroomsError={classroomsError}
+              onRetryClassrooms={() => setClassroomsReload((value) => value + 1)}
+              onLoadClassroomSkills={studentApi.getMyClassroomSkills}
               onResolveConflict={() => { setSelectedProposal(undefined); setProposalsReload((value) => value + 1); navigate("/student/projects"); }}
               onOpenProposal={setSelectedProposal}
               onSave={async (draft) => {

@@ -7,6 +7,8 @@ import type {
   MentorPublishedConfig,
   ProposalEvaluationResponse,
   ProposalDraftResponse,
+  ClassroomSummary,
+  SkillCatalogEntry,
   UpdateProposalDraftRequest,
 } from "@fragments/contracts";
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
@@ -25,6 +27,11 @@ export interface MentorScreenProps {
   proposalsLoading: boolean;
   proposalsError?: boolean;
   onRetryProposals?: () => void;
+  classrooms?: ClassroomSummary[];
+  classroomsLoading?: boolean;
+  classroomsError?: string | null;
+  onRetryClassrooms?: () => void;
+  onLoadClassroomSkills?: (classroomId: string) => Promise<ApiResult<SkillCatalogEntry[]>>;
   onResolveConflict?: () => void;
   onOpenProposal: (proposal: ProposalDraftResponse) => void;
   onSave: (draft: CreateProposalDraftRequest) => Promise<ApiResult<ProposalDraftResponse>>;
@@ -55,6 +62,7 @@ const EMPTY_DRAFT: ProposalDraftFields = {
 
 const MENTOR_STAGES = ["Idea", "Contexto", "Habilidades", "Objetivos y alcance", "Evaluación", "Portada"] as const;
 const EMPTY_MENTOR_CONTEXT: AsyncState<MentorPublishedConfig> = { status: "empty" };
+type SkillCatalogState = { status: "loading" } | { status: "success"; data: SkillCatalogEntry[] } | { status: "error" };
 
 function MentorContextStage({ state }: { state: AsyncState<MentorPublishedConfig> }) {
   if (state.status === "loading") {
@@ -152,7 +160,6 @@ function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
     title: fields.title.trim(), problem: fields.problem.trim(), solution: fields.solution.trim(),
     description: fields.description.trim(), purpose: fields.purpose.trim(),
     goals: fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
-    skills: fields.skills.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
     technologies: fields.technologies.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
     expectedOutcome: fields.expectedOutcome.trim(),
     scope: fields.scope.trim(), constraints: fields.constraints.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
@@ -167,6 +174,11 @@ export function MentorScreen({
   proposalsLoading,
   proposalsError = false,
   onRetryProposals,
+  classrooms = [],
+  classroomsLoading = false,
+  classroomsError = null,
+  onRetryClassrooms,
+  onLoadClassroomSkills,
   onResolveConflict,
   onOpenProposal,
   onSave,
@@ -184,6 +196,17 @@ export function MentorScreen({
   const [activeStage, setActiveStage] = useState(() => initialEvaluation || restoreEvaluation ? 4 : 0);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProposalDraftFields, string>>>({});
   const [proposal, setProposal] = useState<ProposalDraftResponse | undefined>(initialProposal);
+  const [skillClassroomId, setSkillClassroomId] = useState<string | null>(() => initialProposal?.proposal.mentorSkills?.classroomId ?? null);
+  const [skillSelections, setSkillSelections] = useState<Record<string, string[]>>(() => {
+    const selection = initialProposal?.proposal.mentorSkills;
+    return selection?.classroomId ? { [selection.classroomId]: selection.selectedSkillIds } : {};
+  });
+  const [skillCatalogs, setSkillCatalogs] = useState<Record<string, SkillCatalogState>>({});
+  const skillCatalogsRef = useRef<Record<string, SkillCatalogState>>({});
+  const [skillSearch, setSkillSearch] = useState("");
+  const [skillLimit, setSkillLimit] = useState(6);
+  const [skillRetry, setSkillRetry] = useState(0);
+  const [skillsChanged, setSkillsChanged] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -214,7 +237,26 @@ export function MentorScreen({
     ? "Define el núcleo de tu propuesta: el problema, la solución y su propósito."
     : activeStage === 1
       ? "Relaciona tu idea con la materia, la consigna y las condiciones de tu aula."
+      : activeStage === 2
+        ? "Revisa las habilidades de tu actividad y elige en cuáles quieres enfocarte."
       : `Etapa ${activeStage + 1} de ${MENTOR_STAGES.length} · ${activeStageLabel}`;
+  const selectedSkillIds = skillClassroomId ? skillSelections[skillClassroomId] ?? [] : [];
+  const activeSkillCatalogState = skillClassroomId ? skillCatalogs[skillClassroomId] : undefined;
+  const showClassroomSelect = classrooms.length > 1 || (classrooms.length === 1 && !skillClassroomId) || Boolean(skillClassroomId && !classrooms.some((classroom) => classroom.id === skillClassroomId));
+  const activeSkillCatalog = activeSkillCatalogState?.status === "success" ? activeSkillCatalogState.data : [];
+  const normalizedSkillSearch = skillSearch.trim().toLocaleLowerCase("es");
+  const matchingSkills = normalizedSkillSearch
+    ? activeSkillCatalog.filter((skill) => skill.name.toLocaleLowerCase("es").includes(normalizedSkillSearch))
+    : activeSkillCatalog;
+  const visibleSkills = matchingSkills.slice(0, skillLimit);
+  const skillNameById = new Map(activeSkillCatalog.map((skill) => [skill.id, skill.name]));
+  const savedSkillSelection = proposal?.proposal.mentorSkills;
+  if (savedSkillSelection?.classroomId === skillClassroomId) {
+    savedSkillSelection.selectedSkillIds.forEach((id, index) => {
+      if (!skillNameById.has(id) && proposal?.proposal.skills?.[index]) skillNameById.set(id, proposal.proposal.skills[index]!);
+    });
+  }
+  const savedSkillsUnavailable = selectedSkillIds.filter((id) => !activeSkillCatalog.some((skill) => skill.id === id));
 
   async function copyCoverPrompt() {
     try {
@@ -232,6 +274,29 @@ export function MentorScreen({
     return () => { active = false; };
   }, [restoreEvaluation, initialProposal, initialEvaluation, onRecoverEvaluation]);
 
+  useEffect(() => {
+    if (proposal?.proposal.mentorSkills !== undefined || skillsChanged || skillClassroomId || classrooms.length !== 1) return;
+    setSkillClassroomId(classrooms[0]!.id);
+  }, [proposal?.proposal.mentorSkills, skillsChanged, skillClassroomId, classrooms]);
+
+  useEffect(() => {
+    if (activeStage !== 2 || !skillClassroomId || !onLoadClassroomSkills) return;
+    const current = skillCatalogsRef.current[skillClassroomId];
+    if (current?.status === "loading" || current?.status === "success") return;
+    const loadingState = { ...skillCatalogsRef.current, [skillClassroomId]: { status: "loading" } as const };
+    skillCatalogsRef.current = loadingState;
+    setSkillCatalogs(loadingState);
+    void onLoadClassroomSkills(skillClassroomId).then((result) => {
+      const next = { ...skillCatalogsRef.current, [skillClassroomId]: result.ok ? { status: "success", data: result.data } as const : { status: "error" } as const };
+      skillCatalogsRef.current = next;
+      setSkillCatalogs(next);
+    }).catch(() => {
+      const next = { ...skillCatalogsRef.current, [skillClassroomId]: { status: "error" } as const };
+      skillCatalogsRef.current = next;
+      setSkillCatalogs(next);
+    });
+  }, [activeStage, skillClassroomId, onLoadClassroomSkills, skillRetry]);
+
   function updateField(field: keyof ProposalDraftFields, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
@@ -242,6 +307,37 @@ export function MentorScreen({
     setSaveError(null);
     setVersionConflict(false);
     setImportMessage(null);
+  }
+
+  function markSkillsChanged() {
+    setSkillsChanged(true);
+    setIsDirty(true);
+    setEvaluation(null);
+    setSubmission(null);
+    setSaveMessage(null);
+    setSaveError(null);
+    setVersionConflict(false);
+  }
+
+  function chooseSkillClassroom(value: string) {
+    setSkillClassroomId(value || null);
+    setSkillSearch("");
+    setSkillLimit(6);
+    markSkillsChanged();
+  }
+
+  function toggleSkill(skillId: string) {
+    if (!skillClassroomId) return;
+    setSkillSelections((current) => {
+      const currentSelection = current[skillClassroomId] ?? [];
+      const currentlySelected = currentSelection.includes(skillId);
+      if (!currentlySelected && currentSelection.length >= 20) return current;
+      const nextSelection = currentlySelected
+        ? currentSelection.filter((id) => id !== skillId)
+        : [...currentSelection, skillId];
+      return { ...current, [skillClassroomId]: nextSelection };
+    });
+    markSkillsChanged();
   }
 
   async function importProposal(file?: File) {
@@ -283,7 +379,10 @@ export function MentorScreen({
     }
     setSaving(true);
     try {
-      const payload = draftPayload(fields);
+      const basePayload = draftPayload(fields);
+      const payload: CreateProposalDraftRequest = !proposal || skillsChanged
+        ? { ...basePayload, proposal: { ...basePayload.proposal, mentorSkills: { classroomId: skillClassroomId, selectedSkillIds } } }
+        : basePayload;
       const result = proposal
         ? await onUpdate(proposal.id, { ...payload, expectedVersion: proposal.version })
         : await onSave(payload);
@@ -292,11 +391,14 @@ export function MentorScreen({
         setVersionConflict(conflicted);
         setSaveError(conflicted
           ? "Otra versión se guardó antes. Tus cambios no sobrescribieron la versión actual. Recarga el proyecto antes de continuar."
-          : "No pudimos guardar tu propuesta. Revisa la conexión e inténtalo de nuevo.");
+          : result.error.code === "INVALID_SKILL_SELECTION"
+            ? "No pudimos validar esas habilidades. Elige un aula activa y revisa que las habilidades sigan disponibles."
+            : "No pudimos guardar tu propuesta. Revisa la conexión e inténtalo de nuevo.");
         return;
       }
       setProposal(result.data);
       setFields(fieldsFromProposal(result.data));
+      setSkillsChanged(false);
       setIsDirty(false);
       setEvaluation(null);
       setSubmission(null);
@@ -478,7 +580,89 @@ export function MentorScreen({
           {fieldErrors.goals ? <small id="mentor-goals-error" role="alert">{fieldErrors.goals}</small> : null}
         </label> : null}
 
-        {activeStage === 2 ? <div className="mentor-context"><h2>Habilidades</h2><p>El catálogo autorizado de habilidades de aula aún no está disponible. No puedes marcar habilidades docentes hasta que F18 lo proporcione.</p></div> : null}
+        {activeStage === 2 ? <section className="mentor-skills" aria-label="Habilidades para practicar">
+          <div className="mentor-skills__available" role="status">
+            <span className="mentor-skills__available-check" aria-hidden="true">✓</span>
+            <strong>{activeSkillCatalogState?.status === "success"
+              ? "Catálogo autorizado para el aula seleccionada."
+              : activeSkillCatalogState?.status === "loading"
+                ? "Consultando las habilidades autorizadas del aula."
+                : activeSkillCatalogState?.status === "error"
+                  ? "No pudimos confirmar el acceso al catálogo."
+                  : classroomsLoading
+                    ? "Consultando tus aulas."
+                    : skillClassroomId
+                      ? "El catálogo del aula aún no se ha consultado."
+                      : "Elige un aula para consultar sus habilidades."}</strong>
+            <span className="mentor-skills__source">{activeSkillCatalogState?.status === "success" ? "Aula activa" : "Sin catálogo"}</span>
+          </div>
+
+          <section className="mentor-skills__required" aria-labelledby="mentor-skills-required-title">
+            <div className="mentor-skills__section-heading">
+              <span className="mentor-skills__section-icon" aria-hidden="true">▱</span>
+              <div><h2 id="mentor-skills-required-title">Habilidades requeridas</h2><p>No hay habilidades marcadas como obligatorias por una fuente académica para esta actividad.</p></div>
+              <span className="mentor-skills__count">Sin asignación</span>
+            </div>
+          </section>
+
+          <section className="mentor-skills__reinforce" aria-labelledby="mentor-skills-reinforce-title" aria-busy={Boolean(skillClassroomId && activeSkillCatalogState?.status === "loading")}>
+            <div className="mentor-skills__section-heading">
+              <span className="mentor-skills__section-icon mentor-skills__section-icon--star" aria-hidden="true">☆</span>
+              <div><h2 id="mentor-skills-reinforce-title">Quiero reforzar</h2><p>Elige habilidades disponibles de tu aula en las que te gustaría profundizar.</p></div>
+              <span className="mentor-skills__count">{activeSkillCatalog.length} disponibles</span>
+            </div>
+
+            {classroomsLoading ? <p className="mentor-skills__state" role="status">Cargando tus aulas…</p> : null}
+            {classroomsError ? <div className="mentor-skills__state mentor-skills__state--error" role="alert"><p>{classroomsError}</p>{onRetryClassrooms ? <button type="button" onClick={onRetryClassrooms}>Volver a intentar</button> : null}</div> : null}
+            {!classroomsLoading && !classroomsError && classrooms.length === 0 ? <div className="mentor-skills__state"><p>Aún no tienes matrícula activa en un aula con catálogo de habilidades. Puedes continuar con tu propuesta sin seleccionar habilidades.</p></div> : null}
+
+            {showClassroomSelect ? <label className="mentor-skills__classroom"><span>Aula</span><select aria-label="Seleccionar aula de habilidades" value={skillClassroomId ?? ""} disabled={formBusy || classroomsLoading} onChange={(event) => chooseSkillClassroom(event.target.value)}>
+              <option value="">Elige un aula</option>
+              {skillClassroomId && !classrooms.some((classroom) => classroom.id === skillClassroomId) ? <option value={skillClassroomId} disabled>Aula guardada sin acceso activo</option> : null}
+              {classrooms.map((classroom) => <option key={classroom.id} value={classroom.id}>{classroom.title} · {classroom.subject} · {classroom.groupLabel}</option>)}
+            </select></label> : null}
+            {classrooms.length === 1 && skillClassroomId === classrooms[0]!.id ? <p className="mentor-skills__classroom-label">Aula: <strong>{classrooms[0]!.title}</strong> · {classrooms[0]!.subject}</p> : null}
+
+            {selectedSkillIds.length ? <div className="mentor-skills__selected" aria-label={`${selectedSkillIds.length} habilidades seleccionadas`}>
+              <strong>{selectedSkillIds.length} seleccionadas</strong>
+              <div className="mentor-skills__chips">{selectedSkillIds.map((id) => <span className="mentor-skills__chip" key={id}>
+                {skillNameById.get(id) ?? "Habilidad guardada"}
+                <button type="button" aria-label={`Quitar ${skillNameById.get(id) ?? "habilidad guardada"}`} disabled={formBusy} onClick={() => toggleSkill(id)}>×</button>
+              </span>)}</div>
+            </div> : null}
+
+            {savedSkillsUnavailable.length ? <p className="mentor-skills__notice" role="status">Hay habilidades seleccionadas que ya no están disponibles en el aula. Quítalas para guardar esta selección.</p> : null}
+            {selectedSkillIds.length >= 20 ? <p className="mentor-skills__notice" role="status">Puedes seleccionar hasta 20 habilidades.</p> : null}
+
+            {skillClassroomId ? <label className="mentor-skills__search"><span className="sr-only">Buscar habilidades por nombre</span><span aria-hidden="true">⌕</span><input type="search" value={skillSearch} placeholder="Buscar habilidades por nombre…" disabled={formBusy || activeSkillCatalogState?.status !== "success"} onChange={(event) => { setSkillSearch(event.target.value); setSkillLimit(6); }} /></label> : null}
+
+            {skillClassroomId && activeSkillCatalogState?.status === "loading" ? <p className="mentor-skills__state" role="status">Cargando habilidades del aula…</p> : null}
+            {skillClassroomId && activeSkillCatalogState?.status === "error" ? <div className="mentor-skills__state mentor-skills__state--error" role="alert"><p>No pudimos consultar las habilidades de esta aula. Tu borrador sigue disponible.</p><button type="button" onClick={() => setSkillRetry((value) => value + 1)}>Volver a cargar habilidades</button></div> : null}
+            {!skillClassroomId && classrooms.length > 1 ? <p className="mentor-skills__state">Elige un aula para consultar las habilidades autorizadas.</p> : null}
+            {skillClassroomId && activeSkillCatalogState?.status === "success" && activeSkillCatalog.length === 0 ? <p className="mentor-skills__state">Esta aula aún no tiene habilidades disponibles.</p> : null}
+            {skillClassroomId && activeSkillCatalogState?.status === "success" && activeSkillCatalog.length > 0 ? <>
+              {visibleSkills.length ? <div className="mentor-skills__list" aria-label="Habilidades disponibles">{visibleSkills.map((skill) => {
+                const selected = selectedSkillIds.includes(skill.id);
+                return <button className={`mentor-skills__option${selected ? " is-selected" : ""}`} type="button" key={skill.id} aria-pressed={selected} disabled={formBusy || (!selected && selectedSkillIds.length >= 20)} onClick={() => toggleSkill(skill.id)}>
+                  <span className="mentor-skills__checkbox" aria-hidden="true">{selected ? "✓" : ""}</span><span className="mentor-skills__option-mark" aria-hidden="true">✳</span><span>{skill.name}</span>
+                </button>;
+              })}</div> : <p className="mentor-skills__state">No encontramos habilidades con ese nombre.</p>}
+              {matchingSkills.length > visibleSkills.length ? <button className="mentor-skills__more" type="button" onClick={() => setSkillLimit((value) => value + 6)}>⌄ <span>Mostrar más ({matchingSkills.length - visibleSkills.length})</span></button> : null}
+            </> : null}
+          </section>
+        </section> : null}
+
+        {activeStage === 2 ? <section className="mentor-choices mentor-choices--skills" aria-label="Acciones de Word">
+          <div className="mentor-choices__template">
+            <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">Descargar plantilla Word</a>
+            <label className="button button--light mentor-choices__upload">
+              Importar propuesta (.docx)
+              <input ref={importInput} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={formBusy} onChange={(event) => void importProposal(event.currentTarget.files?.[0])} aria-label="Importar propuesta (.docx)" />
+            </label>
+          </div>
+          {importMessage ? <p className="mentor-screen__success" role="status">{importMessage}</p> : null}
+          {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
+        </section> : null}
 
         {activeStage === 3 ? <label className="mentor-field">
           <span>Alcance <b aria-hidden="true">*</b></span>
