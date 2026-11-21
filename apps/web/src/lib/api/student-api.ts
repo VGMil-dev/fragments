@@ -13,6 +13,7 @@ import {
   StudentClassroomRequestSchema,
   JoinClassroomRequestSchema,
   SkillCatalogResponseSchema,
+  TechnologyCatalogPageSchema,
   MentorPublishedConfigSchema,
   MentorSubmissionResponseSchema,
   ProposalEvaluationResponseSchema,
@@ -40,6 +41,7 @@ import {
   type ClassroomSummary,
   type StudentClassroomRequest,
   type SkillCatalogEntry,
+  type TechnologyCatalogPage,
   type UpdateProposalRequest,
   type UpdateProposalDraftRequest,
   type ReviewRequest,
@@ -107,6 +109,17 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
       const id = encodeId(classroomId);
       if (!id) return Promise.resolve(invalid<SkillCatalogEntry[]>());
       return client.request(`/api/me/classrooms/${id}/skills`, SkillCatalogResponseSchema, withSignal(signal));
+    },
+    getTechnologyCatalog(query = "", cursor?: string, selectedIds: string[] = [], signal?: AbortSignal): Promise<ApiResult<TechnologyCatalogPage>> {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      if (cursor) params.set("cursor", cursor);
+      if (selectedIds.length) params.set("selectedIds", selectedIds.join(","));
+      return client.request(`/api/mentor/technology-catalog?${params}`, TechnologyCatalogPageSchema, withSignal(signal));
+    },
+    getSuggestedTechnologies(cursor?: string, signal?: AbortSignal): Promise<ApiResult<TechnologyCatalogPage>> {
+      const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+      return client.request(`/api/mentor/suggested-technologies${params}`, TechnologyCatalogPageSchema, withSignal(signal));
     },
 
     getGalleryDetail(projectId: string, signal?: AbortSignal): Promise<ApiResult<AcademicGalleryDetail>> {

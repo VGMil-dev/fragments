@@ -206,6 +206,7 @@ const ProposalDraftSchema = z.object({
   goals: z.array(nonEmptyText.max(240)).min(1).max(12),
   skills: z.array(nonEmptyText.max(80)).max(20),
   technologies: z.array(nonEmptyText.max(80)).max(20).optional(),
+  technologyIds: z.array(identifier).max(20).optional(),
   expectedOutcome: z.string().max(3000).optional(),
   tags: z.array(nonEmptyText.max(50)).max(20).default([]),
   scope: nonEmptyText.max(3000),
@@ -320,6 +321,14 @@ export const SkillCreateRequestSchema = z.object({ name: classroomText(100), des
 export const SkillUpdateRequestSchema = SkillCreateRequestSchema.partial().strict().refine((input) => Object.keys(input).length > 0, "Indica al menos un campo para actualizar.");
 export const ClassroomSkillsResponseSchema = z.array(SkillCatalogEntrySchema.extend({ enabled: z.boolean() })).max(500);
 export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifier, skillId: identifier, enabled: z.boolean(), updatedAt: z.iso.datetime() }).strict();
+export const TechnologyCatalogEntrySchema = z.object({
+  id: identifier, slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120), name: classroomText(100), description: z.string().trim().max(1000).nullable(),
+}).strict();
+export const TechnologyCatalogQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(), cursor: identifier.optional(), selectedIds: z.array(identifier).max(20).optional(),
+}).strict();
+export const TechnologyCatalogPageSchema = z.object({ items: z.array(TechnologyCatalogEntrySchema).max(70), nextCursor: identifier.nullable() }).strict();
+export const SuggestedTechnologiesPageSchema = TechnologyCatalogPageSchema;
 export const ClassroomJoinCodeRevocationSchema = z.object({ revoked: z.literal(true) }).strict();
 export const ClassEnrollmentTransitionSchema = z.object({ status: z.enum(["active", "rejected", "removed"]) }).strict();
 export const TeacherProjectSchema = z.object({
@@ -356,6 +365,7 @@ export const ProposalDraftFieldsSchema = z.object({
   goals: z.array(nonEmptyText.max(240)).max(12).optional(),
   skills: z.array(nonEmptyText.max(80)).max(20).optional(),
   technologies: z.array(nonEmptyText.max(80)).max(20).optional(),
+  technologyIds: z.array(identifier).max(20).optional(),
   expectedOutcome: z.string().max(3000).optional(),
   tags: z.array(nonEmptyText.max(50)).max(20).optional(),
   scope: z.string().max(3000).optional(),
@@ -513,6 +523,10 @@ export type ClassEnrollment = z.infer<typeof ClassEnrollmentSchema>;
 export type StudentClassroomRequest = z.infer<typeof StudentClassroomRequestSchema>;
 export type SkillCatalogEntry = z.infer<typeof SkillCatalogEntrySchema>;
 export type ClassroomSkills = z.infer<typeof ClassroomSkillsResponseSchema>;
+export type TechnologyCatalogEntry = z.infer<typeof TechnologyCatalogEntrySchema>;
+export type TechnologyCatalogQuery = z.infer<typeof TechnologyCatalogQuerySchema>;
+export type TechnologyCatalogPage = z.infer<typeof TechnologyCatalogPageSchema>;
+export type SuggestedTechnologiesPage = z.infer<typeof SuggestedTechnologiesPageSchema>;
 export type ClassEnrollmentTransition = z.infer<typeof ClassEnrollmentTransitionSchema>;
 export type TeacherProject = z.infer<typeof TeacherProjectSchema>;
 export type TeacherProjectsResponse = z.infer<typeof TeacherProjectsResponseSchema>;

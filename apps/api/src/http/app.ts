@@ -18,6 +18,7 @@ import { createTrainerHttp } from "../features/trainer/http.js";
 import { createTrainerRepository } from "../features/trainer/repository.js";
 import type { createTrainerService } from "../features/trainer/service.js";
 import { createClassroomHttp } from "../features/classroom/http.js";
+import { createTechnologyCatalogHttp } from "../features/mentor/technology-catalog-http.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -36,6 +37,7 @@ export function createHttpHandler(database: PrismaClient, options: {
 } = {}) {
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
+  const technologyCatalogHandler = createTechnologyCatalogHttp(database, options.auth);
   const teacherAccountHandler = options.auth ? createTeacherAccountHttp(options.auth) : undefined;
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor, {
     ...(options.auth ? { auth: options.auth } : {}),
@@ -61,6 +63,7 @@ export function createHttpHandler(database: PrismaClient, options: {
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
     if (classroomHandler && await classroomHandler(request, response) === "handled") return;
+    if (await technologyCatalogHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");
     if (request.method === "GET" && request.url === "/health") {

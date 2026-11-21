@@ -14,6 +14,7 @@ import {
   SubmissionResponseSchema,
   StudentSubmissionsResponseSchema,
   VerifySubmissionResponseSchema,
+  type ProposalDraftFields,
 } from "@fragments/contracts";
 import { createPrismaMentorRepository } from "./prisma-repository.js";
 import { createPrismaMentorControlRepository } from "./prisma-control-repository.js";
@@ -72,7 +73,11 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta.");
         return "handled";
       }
-      const saved = await repository.createProposal(proposal.data, null, student.id);
+      const normalized = await normalizeTechnologySelection(database, proposal.data, null);
+      if (!normalized) { sendError(response, 400, "INVALID_TECHNOLOGY_SELECTION", "Revisa las tecnologías seleccionadas del catálogo."); return "handled"; }
+      const canonical = CreateProposalRequestSchema.safeParse(normalized);
+      if (!canonical.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta."); return "handled"; }
+      const saved = await repository.createProposal(canonical.data, null, student.id);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
       return "handled";
     }
@@ -84,7 +89,9 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = CreateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador."); return "handled"; }
-      const saved = await repository.createProposalDraftByUser(input.data.proposal, student.id);
+      const normalized = await normalizeTechnologySelection(database, input.data.proposal, null);
+      if (!normalized) { sendError(response, 400, "INVALID_TECHNOLOGY_SELECTION", "Revisa las tecnologías del catálogo y conserva máximo 20 selecciones o etiquetas importadas."); return "handled"; }
+      const saved = await repository.createProposalDraftByUser(normalized, student.id);
       sendJson(response, 201, { ok: true, data: ProposalDraftResponseSchema.parse(saved) });
       return "handled";
     }
@@ -97,7 +104,12 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador y la versión que editas."); return "handled"; }
-      const saved = await repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, input.data.proposal);
+      const current = await repository.getOwnedProposalDraftByUser(draftMatch[1]!, student.id);
+      if (!current) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      if (current.version !== input.data.expectedVersion) { sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar."); return "handled"; }
+      const normalized = await normalizeTechnologySelection(database, input.data.proposal, current.proposal);
+      if (!normalized) { sendError(response, 400, "INVALID_TECHNOLOGY_SELECTION", "Revisa las tecnologías del catálogo y conserva máximo 20 selecciones o etiquetas importadas."); return "handled"; }
+      const saved = await repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, normalized);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -115,7 +127,15 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta y la versión que editas."); return "handled"; }
-      const saved = await repository.updateProposalByUser(proposalMatch[1]!, student.id, input.data.expectedVersion, input.data);
+      const current = await repository.getOwnedProposalByUser(proposalMatch[1]!, student.id);
+      if (!current) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta."); return "handled"; }
+      const { expectedVersion, ...proposal } = input.data;
+      if (current.version !== expectedVersion) { sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar."); return "handled"; }
+      const normalized = await normalizeTechnologySelection(database, proposal, current.proposal);
+      if (!normalized) { sendError(response, 400, "INVALID_TECHNOLOGY_SELECTION", "Revisa las tecnologías seleccionadas del catálogo."); return "handled"; }
+      const canonical = UpdateProposalRequestSchema.safeParse({ ...normalized, expectedVersion });
+      if (!canonical.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta."); return "handled"; }
+      const saved = await repository.updateProposalByUser(proposalMatch[1]!, student.id, expectedVersion, canonical.data);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -312,6 +332,28 @@ export function createMentorHttp(
 
     return "unhandled";
   };
+}
+
+async function normalizeTechnologySelection(
+  database: PrismaClient,
+  incoming: ProposalDraftFields,
+  previous: ProposalDraftFields | null,
+): Promise<ProposalDraftFields | null> {
+  const previousIds = previous?.technologyIds ?? [];
+  const previousNames = previous?.technologies ?? [];
+  const ids = incoming.technologyIds ?? previousIds;
+  const names = incoming.technologies ?? previousNames;
+  if (new Set(ids).size !== ids.length || ids.length > 20) return null;
+  const relevantIds = [...new Set([...ids, ...previousIds])];
+  const rows = relevantIds.length ? await database.technologyCatalogItem.findMany({ where: { id: { in: relevantIds } }, select: { id: true, name: true } }) : [];
+  const byId = new Map(rows.map((row) => [row.id, row.name]));
+  if (ids.some((id) => !byId.has(id))) return null;
+  const oldCatalogNames = new Set(previousIds.flatMap((id) => byId.has(id) ? [byId.get(id)!] : []));
+  const selectedNames = ids.map((id) => byId.get(id)!);
+  const legacyNames = names.filter((name) => !selectedNames.includes(name) && !oldCatalogNames.has(name));
+  const nextNames = [...new Set([...selectedNames, ...legacyNames])];
+  if (nextNames.length > 20) return null;
+  return { ...incoming, technologyIds: ids, technologies: nextNames };
 }
 
 async function requireStudent(request: IncomingMessage, response: ServerResponse, auth?: FragmentsAuthService): Promise<{ id: string } | null> {
