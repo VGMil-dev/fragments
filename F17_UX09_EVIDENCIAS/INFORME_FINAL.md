@@ -24,9 +24,12 @@ UX-09 quedó integrada mediante PR #78; `verify` run `44956236067` pasó y el me
 
 Producción responde `/health` 200 (`status=ok`, `database=ready`), y `/` y `/assets/index-DmKyggnV.js` responden 200. El bundle (522334 bytes) contiene la versión `v0.5.8` y el SHA completo `527b8f66440819e72f73366014f78e0a3aa5a991`. Ego Lite abrió `/student/mentor` sin acciones destructivas: la sesión no autenticada fue dirigida a «Continúa con GitHub»; el indicador visible confirma `v0.5.8 · 527b8f6`. No se inició OAuth ni se mutó producción. Captura: `ego-produccion-v058.png`.
 
-La revisión visual autenticada de la etapa Evaluación queda pendiente porque el acceso productivo exige iniciar sesión y no se completó autenticación durante esta verificación. La revisión visual local independiente de Agente B sí dio PASS en 320, 390, 768, 1024, 1440 y 1672 px con fixtures; véase `REVISION_AGENT_B_POST_UX08.md`.
+Después, Ego Lite verificó la sesión autenticada en `/student/mentor`, viewport de 1672 px, seleccionó la etapa 5 «Evaluación» y confirmó el stepper horizontal, la etapa activa y el build `v0.5.8` con SHA completo. La cuenta no tenía propuesta guardada: se mostró 0 % y «Evaluar propuesta» deshabilitado. No se guardó ni evaluó información, ni hubo escrituras en producción. La captura auténtica `ego-produccion-v058.png` se recortó para proteger la identidad visible. Esto cierra la comprobación del renderizado autenticado y del estado vacío, no una evaluación productiva con una propuesta real.
+
+La revisión visual local independiente de Agente B dio PASS en 320, 390, 768, 1024, 1440 y 1672 px con fixtures; véase `REVISION_AGENT_B_POST_UX08.md`. El foco `:focus-visible` no quedó confirmado visualmente por esa revisión; la regla CSS sí está presente en `apps/web/src/features/mentor/mentor-screen.css`. Se revisó la skill disponible `vercel-react-best-practices` y no se requirieron cambios adicionales.
 
 ## Commits UX-09
+- Cierre de evidencia autenticada: `7b77a824650d79a971a8074d42189e03f81e33cc`.
 - UI y evidencia inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
 - Sincronización y resolución UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
 - Ajuste responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
