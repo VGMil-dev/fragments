@@ -1,6 +1,6 @@
 # F17.2 — Evidencia
 
-**Estado:** Implementada y validada localmente; pendiente integración y despliegue F14.
+**Estado:** COMPLETA; integrada, verificada y desplegada mediante F14.
 
 ## Verificación de origen y proceso
 
@@ -21,15 +21,17 @@
 
 ## Evidencia y límites
 
-La carpeta raíz `F17_UX06_EVIDENCIAS/` contiene 11 archivos incluyendo este informe de trabajo, referencia, capturas, comparación y resultados QA (máximo permitido: 20). El guardado funcional usó un proveedor local en memoria etiquetado QA; no se tocaron datos productivos. Las 62 pruebas omitidas dependen de una instancia PostgreSQL; no se levantó ni modificó F21.
+La carpeta raíz `F17_UX06_EVIDENCIAS/` contiene 12 archivos incluyendo `INFORME_FINAL.md`, referencia, capturas, comparación, resultados QA y verificación de producción (máximo permitido: 20). El guardado funcional usó un proveedor local en memoria etiquetado QA; no se tocaron datos productivos. Las 62 pruebas omitidas localmente dependen de una instancia PostgreSQL; F14 las ejecutó en su PostgreSQL desechable sin modificar F21 productivo.
 
 ## Integración / producción
 
 - Commit de implementación: `cc60def010e01fd2f4dd7abb1e2dbe1b2b48a87b` (`feat(mentor): implementa contexto UX-06`).
-- Commit de evidencia/integración: pendiente.
-- PR / CI: pendientes.
-- SHA de merge y release/tag F14: pendientes.
-- Salud y versión productiva verificadas con Ego Lite: pendiente.
-- Notion UX-06: actualizar con enlaces reales una vez completados merge y F14.
+- Commit documental previo: `79ea73dcdf97a655db44e18597d4652d3feb01da` (`docs(mentor): registra QA y estado F17.2`).
+- PR #72 integrado; CI run `44925110965` success.
+- SHA de merge: `00b548cc715c7b04e862e985a63f5bb265e0a54e`.
+- Tag anotada `v0.5.6`, tag object `4e793495238f699914afe9a1d7967641aeae405b`.
+- F14 run `44925403964` success; release `453828612`, agente reportó `release_deployed`.
+- Producción: API/web healthy con v0.5.6 y SHA exacto, `/health` 200, bundle verificado con Ego Lite. Detalle en `F17_UX06_EVIDENCIAS/PRODUCCION_F14.md`.
+- Notion UX-06: se actualizará después del PR documental de cierre.
 
-El cierre y sus enlaces se añadirán después de ejecutarlos. No declarar despliegue por anticipado.
+Paquete raíz `F17_UX06_EVIDENCIAS/`: 12 archivos de máximo 20.
