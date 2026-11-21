@@ -2,14 +2,14 @@
 
 ## Estado
 
-Implementación y QA local completados; commit de implementación registrado. Publicación de rama, PR y CI pendientes. No hay despliegue productivo declarado.
+Implementación y QA local completados. UX-07 fue integrado desde `origin/main`; conflictos resueltos y validados. Rama publicada, PR #77 abierta; CI validado en `40dcf25fce800c7a5bfe5e9058bffce2625a98af`: SUCCESS. No hay despliegue productivo declarado.
 
 ## Base y aislamiento
 
 - Rama: `codex/f17-ux08`.
 - Worktree: `C:\Users\vgmil\.codex\worktrees\f17-ux08\Fragments`.
-- Base inicial: `3f4e39b87f9979fe69fac799af1c837e16725c3a` (`origin/main`, 2026-11-21).
-- UX-07 permaneció intacto en su worktree separado.
+- Base inicial: `3f4e39b87f9979fe69fac799af1c837e16725c3a`. Integración de UX-07 desde `origin/main` (`1cdeae04b0e0930663c79cde7ef72efe6f8c6054`) mediante merge `40dcf25fce800c7a5bfe5e9058bffce2625a98af`; no se reescribió historia.
+- UX-07 permaneció intacto en su worktree separado. Tras integrarlo en `main`, UX-08 se actualizó y volvió a probarse con la habilidad y tecnología guardadas en conjunto.
 - Antes de cada suite con escrituras, se confirmó `current_database() = fragments_test`; la base `fragments_prod` no existía en el PostgreSQL aislado. No hubo conexión o escritura productiva.
 - Migración aplicada únicamente en el contenedor local de `fragments_test`: `20261121160000_mentor_technology_catalog`.
 - Se preservaron fixtures sintéticos UX-08 para revisión/reapertura en `fragments_test`; no incluyen datos productivos.
@@ -26,7 +26,7 @@ Implementación y QA local completados; commit de implementación registrado. Pu
 ## Pruebas
 
 - `pnpm exec turbo run test typecheck lint build --force`: 11/11 tareas exitosas.
-- Contratos: 26 tests; Web: 125; API: 138; total: 289 tests aprobados.
+- Suite integrada final: contratos 26 tests; Web 127; API 148; total 301 tests aprobados.
 - Tras ampliar el fixture de segunda aula activa, integración PostgreSQL catálogo aislada: 1/1 test aprobado; contempla estados de matrícula/aula, solicitud anónima, parámetro `classroomId` manipulado y deduplicación entre aulas activas.
 - DOCX: suite automatizada de 6 tests aprobada. Prueba web de actualización confirma conservación de `constraints` históricos; el campo no se muestra en UX-08.
 - El build emite una advertencia de chunk web mayor a 500 kB y advertencias del paquete `lucide-react`; build y typecheck terminan correctamente.
@@ -43,7 +43,9 @@ Implementación y QA local completados; commit de implementación registrado. Pu
 ## Integración y despliegue
 
 - Commit de implementación: `2152598904d4fac21b804f27a27fcd14b24fca37`.
-- PR: pendiente de publicar.
-- CI remoto: pendiente.
+- PR #77: https://github.com/VGMil-dev/fragments/pull/77 (abierta; no fusionada).
+- HEAD publicado: `40dcf25fce800c7a5bfe5e9058bffce2625a98af`; integración UX-07: `40dcf25fce800c7a5bfe5e9058bffce2625a98af`.
+- CI GitHub Actions `verify`, run `44948601060`: SUCCESS; conclusión confirmada en GitHub Actions.
+- CI remoto: SUCCESS (run 44948601060; SHA `40dcf25fce800c7a5bfe5e9058bffce2625a98af`).
 - Despliegue: pendiente. La migración nueva requiere el gate F14/F21 y provisión del catálogo en producción; no se aplicó ni se tocaron datos productivos.
 - No se afirma uso en producción; el comportamiento con datos fue validado sólo en `fragments_test`.
