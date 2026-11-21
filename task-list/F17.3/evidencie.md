@@ -2,7 +2,7 @@
 
 ## Estado
 
-IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Pendiente commit local y luego integración remota/release F14; el `AGENTS.md` del repositorio prohíbe `push`.
+IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commit de implementación `11b7ff4` en `codex/f17-ux07-habilidades`. Pendiente integración remota/release F14; el `AGENTS.md` del repositorio prohíbe `push`.
 
 ## Contrato y persistencia
 
@@ -42,5 +42,5 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 
 ## Integración pendiente
 
-- Aún sin commit/PR/CI remoto/F14, tag, release, health o versión productiva verificados.
+- Commit local: `11b7ff4` (`feat(f17.3): conecta habilidades autorizadas de Mentor`). Aún sin PR/CI remoto/F14, tag, release, health o versión productiva verificados.
 - `D:\Dev\Trabajo\Fragments\AGENTS.md` establece no hacer push. El trabajo permanece en el worktree y rama `codex/f17-ux07-habilidades`, derivados de `origin/main`; no se tocó la rama principal ni el checkout abierto.

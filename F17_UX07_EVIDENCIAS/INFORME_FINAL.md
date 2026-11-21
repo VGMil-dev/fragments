@@ -1,6 +1,6 @@
 # F17.3 / UX-07 — Mentor · Habilidades
 
-**Estado:** implementación local y gates de código/QA aprobados. Integración remota y release F14 pendientes por la prohibición de `push` en el `AGENTS.md` del repositorio.
+**Estado:** implementación local y gates de código/QA aprobados. Commit `11b7ff4` en `codex/f17-ux07-habilidades`. Integración remota y release F14 pendientes por la prohibición de `push` en el `AGENTS.md` del repositorio.
 
 ## Resultado
 
