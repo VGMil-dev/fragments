@@ -1,8 +1,8 @@
 # F17.1 — Evidencia de pulido visual Mentor
 
-**Estado:** CONFORME localmente. Revisión visual independiente aprobada; verificaciones finales frescas y SHA de implementación registrados.
+**Estado:** IMPLEMENTADA EN `main`. PR #65 integrado con checks verdes; producción no desplegada por preflight F21 pendiente.
 
-**Commits:** `7f164ea` implementación/evidencia; `84c2d8f` cierre documental; `7771380` merge normal de `origin/main` vigente. La rama se actualizará con detalles del PR tras publicarla.
+**Commits:** `7f164ea` implementación/evidencia; `84c2d8f` cierre documental; `7771380` sync normal con `main`; `adb7f73` informe previo al PR; merge PR #65 `88f2040eaf83737f1c4beb84470bf167fcd24a79`.
 
 ## Preparación
 - `origin/main` se actualizó con `git fetch origin main`; base observada: `3bff674bad063ecf72893a9f469e1485373c5e07` (20-11-2026).
@@ -57,7 +57,10 @@
 Las capturas Ego Lite reales y `INFORME_FINAL.md` se conservan en esta carpeta. Total: 19 archivos (15 PNG y 4 documentos), bajo el máximo de 20. No se creó ZIP.
 
 ## Riesgos / límites
-- F21 está activa en un worktree separado; la integración debe revalidarse contra `main` vigente antes de cualquier PR/deploy.
-- PR aún no creado en el momento de estas verificaciones; la rama está autorizada para push normal y PR a `main` según el `AGENTS.md` vigente. No se hizo merge a `main` ni despliegue. La aprobación protegida de producción no se solicitó ni se eludió.
-- Notion: se añadió actualización en la ficha F17 con resultado QA local y en A-004 como nota de cambio local pendiente de integración; no se cambió el estado canónico del asset en `main`.
+- F21 ya está integrada en `main`. No desplegar el bundle hasta completar el preflight F21 de producción: el VPS aún requiere actualización F14/Compose, corte PostgreSQL/backup, QA y aprobación protegida.
+- PR #65: [feat(mentor): pulido visual responsive de Mentor](https://github.com/VGMil-dev/fragments/pull/65), integrado por merge normal el 20-11-2026. Check `Fragments CI` run `44840604739` pasó (job `verify`; Compose, migración PostgreSQL efímera, backup/restore, release-agent, tests/typecheck/lint/build).
+- PR documental #66: check `verify` run `44841253487` y reintento de job `136651767925` terminaron en success. GitHub rechazó dos intentos de merge normal con `Required status check "verify" is expected`, aunque el ruleset activo requiere ese contexto del mismo GitHub Actions (integration `15368`). PR sigue abierto; no se eludió la protección.
+- `main` quedó en `88f2040eaf83737f1c4beb84470bf167fcd24a79`; la rama `codex/f17-mentor-polish` se conservó y su árbol de trabajo quedó limpio al cierre.
+- No se creó tag ni se desplegó. F21 está integrada en código, pero sus evidencias indican que el VPS conserva Compose/agente F14 y timer SQLite anteriores; falta el preflight de F21 y su aprobación protegida. No modificar producción hasta completar esa preparación.
+- Notion: ficha F17 actualizada con PR/merge, QA y límite de despliegue; A-004 indica que el registro es histórico y que el nuevo icono aún no se ha desplegado.
 - La captura del propietario es la referencia compositiva para la etapa Idea; los flujos de las otras etapas siguen las fichas canónicas funcionales de Notion.
