@@ -1,0 +1,33 @@
+.technology-picker { display: grid; gap: .8rem; min-width: 0; }
+.technology-picker__selected, .technology-picker__list, .technology-picker__explore { min-width: 0; padding: .85rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); background: var(--f16-surface); }
+.technology-picker__explore { display: grid; align-content: start; gap: .65rem; }
+.technology-picker__selected h3, .technology-picker__selected h4, .technology-picker__list h3, .technology-picker__explore > h3 { margin: 0 0 .55rem; font-size: 1rem; }
+.technology-picker__list h3 { display: flex; align-items: center; gap: .45rem; }
+.technology-picker__list h3 svg { flex: 0 0 auto; color: var(--f16-info); }
+.technology-picker__list--embedded { padding: 0; border: 0; background: transparent; }
+.technology-picker__list--embedded h3 { margin: 0 0 .45rem; }
+.technology-picker__selected { padding: .15rem 0; border: 0; background: transparent; }
+.technology-picker__selected h4 { margin: 0 0 .35rem; }
+.technology-picker__selected ul, .technology-picker__list ul { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.technology-picker__selected li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem .55rem; border-radius: var(--f16-radius-control); background: var(--f16-surface-raised); overflow-wrap: anywhere; }
+.technology-picker__selected button, .technology-picker__list > button { flex: 0 0 auto; color: var(--f16-text-primary); border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); padding: .35rem .55rem; background: transparent; }
+.technology-picker__search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .45rem; }
+.technology-picker__search { display: flex; min-width: 0; align-items: center; gap: .4rem; font-weight: 700; }
+.technology-picker__search input { min-width: 0; padding: .65rem .75rem; color: var(--f16-text-primary); border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); background: var(--f16-surface); }
+.technology-picker__sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.technology-picker__browse { min-height: 2.65rem; padding: .4rem .7rem; border: 1px solid var(--f16-lime); border-radius: 999px; color: var(--f16-text-primary); background: transparent; }
+.technology-picker__browse-hint { margin: 0; color: var(--f16-text-secondary); }
+.technology-picker__columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .75rem; }
+.technology-picker__options, .technology-picker__selected-list { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .45rem; }
+.technology-picker__list .technology-picker__options { display: flex; max-height: 14rem; overflow: auto; align-content: flex-start; }
+.technology-picker__selected .technology-picker__selected-list { display: flex; margin: 0; padding: 0; list-style: none; }
+.technology-picker__options li, .technology-picker__selected-list li { min-width: 0; max-width: 100%; }
+.technology-picker__option { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; min-height: 2rem; padding: .35rem .7rem; border: 1px solid var(--f16-info); border-radius: 999px; color: var(--f16-text-primary); background: var(--f16-surface-raised); overflow-wrap: anywhere; text-align: left; }
+.technology-picker__option > span { color: var(--f16-info); font-weight: 800; }
+.technology-picker__option.is-selected { border-color: var(--f16-lime); background: color-mix(in srgb, var(--f16-lime) 10%, var(--f16-surface)); }
+.technology-picker__selected-list li { display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .35rem .25rem .7rem; border: 1px solid var(--f16-info); border-radius: 999px; background: var(--f16-surface-raised); overflow-wrap: anywhere; }
+.technology-picker__selected-list button { display: inline-grid; width: 1.4rem; min-width: 1.4rem; min-height: 1.4rem; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--f16-text-primary); background: transparent; font-size: 1.1rem; line-height: 1; }
+.technology-picker__selected-list small { display: block; margin-top: .15rem; color: var(--f16-text-secondary); line-height: 1.4; }
+.technology-picker button:focus-visible, .technology-picker input:focus-visible { outline: 3px solid var(--f16-lime); outline-offset: 2px; }
+@media (max-width: 760px) { .technology-picker__columns { grid-template-columns: minmax(0, 1fr); } }
+@container mentor-stage (max-width: 56rem) { .technology-picker__columns { grid-template-columns: minmax(0, 1fr); } }

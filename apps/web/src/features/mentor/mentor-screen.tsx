@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Code2, Flag, Layers3, Target, Trash2 } from "lucide-react";
 import type {
   ApiResult,
   CreateMentorSubmissionRequest,
@@ -17,6 +18,7 @@ import { coverTemplateFor, ProjectCover } from "../covers/project-cover";
 import { SubmissionDownloads } from "../submissions/submission-downloads";
 import { validateProposalDraft, validateTechnologyList, type ProposalDraftFields } from "./proposal-validation";
 import { importMentorDocx, MentorDocxImportError } from "./docx-import";
+import { TechnologyPicker } from "./technology-picker";
 import "./mentor-screen.css";
 
 export interface MentorScreenProps {
@@ -155,12 +157,21 @@ function evidenceLabel(evidence: ProposalEvaluationResponse["analysis"]["finding
     : `Campo de propuesta: ${evidence.field}`;
 }
 
+function moveGoal(rows: string[], from: number, to: number): string {
+  if (to < 0 || to >= rows.length) return rows.join("\n");
+  const next = [...rows];
+  const [goal] = next.splice(from, 1);
+  next.splice(to, 0, goal ?? "");
+  return next.join("\n");
+}
+
 function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
   return { proposal: {
     title: fields.title.trim(), problem: fields.problem.trim(), solution: fields.solution.trim(),
     description: fields.description.trim(), purpose: fields.purpose.trim(),
     goals: fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
     technologies: fields.technologies.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
+    technologyIds: [],
     expectedOutcome: fields.expectedOutcome.trim(),
     scope: fields.scope.trim(), constraints: fields.constraints.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   } };
@@ -193,6 +204,7 @@ export function MentorScreen({
   contextState = EMPTY_MENTOR_CONTEXT,
 }: MentorScreenProps) {
   const [fields, setFields] = useState<ProposalDraftFields>(() => initialProposal ? fieldsFromProposal(initialProposal) : EMPTY_DRAFT);
+  const [technologyIds, setTechnologyIds] = useState<string[]>(() => initialProposal?.proposal.technologyIds ?? []);
   const [activeStage, setActiveStage] = useState(() => initialEvaluation || restoreEvaluation ? 4 : 0);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProposalDraftFields, string>>>({});
   const [proposal, setProposal] = useState<ProposalDraftResponse | undefined>(initialProposal);
@@ -221,6 +233,7 @@ export function MentorScreen({
   const [coverCopyMessage, setCoverCopyMessage] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
   const validText = (value: string, max: number) => value.trim().length > 0 && value.trim().length <= max;
+  const goalRows = fields.goals.length ? fields.goals.split(/\r?\n/) : [];
   const goals = fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const completedRequiredFields = [
     validText(fields.title, 160), validText(fields.problem, 3000), validText(fields.solution, 3000),
@@ -347,6 +360,7 @@ export function MentorScreen({
     try {
       const result = await importMentorDocx(file);
       setFields(result.fields);
+      setTechnologyIds([]);
       setFieldErrors({});
       setIsDirty(true);
       setEvaluation(null);
@@ -381,8 +395,9 @@ export function MentorScreen({
     try {
       const basePayload = draftPayload(fields);
       const payload: CreateProposalDraftRequest = !proposal || skillsChanged
-        ? { ...basePayload, proposal: { ...basePayload.proposal, mentorSkills: { classroomId: skillClassroomId, selectedSkillIds } } }
+        ? { ...basePayload, proposal: { ...basePayload.proposal, mentorSkills: { classroomId: skillClassroomId, selectedSkillIds: skillClassroomId ? skillSelections[skillClassroomId] ?? [] : [] } } }
         : basePayload;
+      payload.proposal.technologyIds = technologyIds;
       const result = proposal
         ? await onUpdate(proposal.id, { ...payload, expectedVersion: proposal.version })
         : await onSave(payload);
@@ -398,6 +413,7 @@ export function MentorScreen({
       }
       setProposal(result.data);
       setFields(fieldsFromProposal(result.data));
+      setTechnologyIds(result.data.proposal.technologyIds ?? []);
       setSkillsChanged(false);
       setIsDirty(false);
       setEvaluation(null);
@@ -573,12 +589,20 @@ export function MentorScreen({
           <textarea rows={3} value={fields.purpose} placeholder="Indica el objetivo principal de tu propuesta y el impacto que esperas lograr." maxLength={1000} disabled={formBusy} onChange={(event) => updateField("purpose", event.target.value)} />
         </label> : null}
 
-        {activeStage === 3 ? <label className="mentor-field">
-          <span>Objetivos <b aria-hidden="true">*</b></span>
-          <textarea rows={3} value={fields.goals} disabled={formBusy} onChange={(event) => updateField("goals", event.target.value)} aria-invalid={Boolean(fieldErrors.goals)} aria-describedby={fieldErrors.goals ? "mentor-goals-help mentor-goals-error" : "mentor-goals-help"} />
-          <small id="mentor-goals-help">Escribe al menos un objetivo concreto.</small>
+        {activeStage === 3 ? <fieldset className="mentor-field mentor-objectives" aria-describedby={fieldErrors.goals ? "mentor-goals-help mentor-goals-error" : "mentor-goals-help"}>
+          <legend><Target className="mentor-objectives__icon" aria-hidden="true" size={22} /> Mis objetivos <b aria-hidden="true">*</b></legend>
+          <small id="mentor-goals-help">Escribe entre 1 y 12 objetivos concretos, hasta 240 caracteres cada uno.</small>
+          {!goalRows.length ? <p>Agrega un objetivo para empezar.</p> : null}
+          {goalRows.map((goal, index, rows) => <div className="mentor-objectives__row" key={index}>
+            <span className="mentor-objectives__number" aria-hidden="true">{index + 1}</span>
+            <label className="mentor-objectives__label" htmlFor={`mentor-goal-${index}`}>Objetivo {index + 1}</label>
+            <input id={`mentor-goal-${index}`} maxLength={240} value={goal} disabled={formBusy} aria-invalid={Boolean(fieldErrors.goals)} aria-describedby={fieldErrors.goals ? "mentor-goals-help mentor-goals-error" : "mentor-goals-help"} onChange={(event) => updateField("goals", rows.map((row, rowIndex) => rowIndex === index ? event.target.value : row).join("\n"))} />
+            <button type="button" className="mentor-objectives__remove" aria-label={`Quitar objetivo ${index + 1}`} disabled={formBusy} onClick={() => updateField("goals", rows.filter((_, rowIndex) => rowIndex !== index).join("\n"))}><Trash2 aria-hidden="true" size={18} /></button>
+            <div className="mentor-objectives__order"><button type="button" aria-label={`Mover objetivo ${index + 1} arriba`} disabled={formBusy || index === 0} onClick={() => updateField("goals", moveGoal(rows, index, index - 1))}>↑</button><button type="button" aria-label={`Mover objetivo ${index + 1} abajo`} disabled={formBusy || index === rows.length - 1} onClick={() => updateField("goals", moveGoal(rows, index, index + 1))}>↓</button></div>
+          </div>)}
+          <button className="button button--secondary" type="button" disabled={formBusy || goalRows.length >= 12} onClick={() => updateField("goals", fields.goals ? `${fields.goals}\n` : " ")}>Agregar objetivo</button>
           {fieldErrors.goals ? <small id="mentor-goals-error" role="alert">{fieldErrors.goals}</small> : null}
-        </label> : null}
+        </fieldset> : null}
 
         {activeStage === 2 ? <section className="mentor-skills" aria-label="Habilidades para practicar">
           <div className="mentor-skills__available" role="status">
@@ -664,29 +688,27 @@ export function MentorScreen({
           {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
         </section> : null}
 
-        {activeStage === 3 ? <label className="mentor-field">
-          <span>Alcance <b aria-hidden="true">*</b></span>
-          <textarea rows={4} value={fields.scope} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("scope", event.target.value)} aria-invalid={Boolean(fieldErrors.scope)} aria-describedby={fieldErrors.scope ? "mentor-scope-error" : undefined} />
-          {fieldErrors.scope ? <small id="mentor-scope-error" role="alert">{fieldErrors.scope}</small> : null}
-        </label> : null}
+        {activeStage === 3 ? <div className="mentor-project-outcomes" aria-label="Alcance y resultado del proyecto">
+          <label className="mentor-field mentor-project-outcomes__card">
+            <span className="mentor-project-outcomes__title"><Layers3 aria-hidden="true" size={22} /> Alcance del MVP <b aria-hidden="true">*</b></span>
+            <small>Define qué incluirá la primera versión de tu proyecto.</small>
+            <textarea rows={5} value={fields.scope} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("scope", event.target.value)} aria-invalid={Boolean(fieldErrors.scope)} aria-describedby={fieldErrors.scope ? "mentor-scope-error" : undefined} />
+            {fieldErrors.scope ? <small id="mentor-scope-error" role="alert">{fieldErrors.scope}</small> : null}
+          </label>
+          <label className="mentor-field mentor-project-outcomes__card">
+            <span className="mentor-project-outcomes__title"><Flag aria-hidden="true" size={22} /> Resultado esperado</span>
+            <small>¿Qué podrá observar o hacer alguien cuando termines?</small>
+            <textarea rows={5} value={fields.expectedOutcome} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("expectedOutcome", event.target.value)} />
+          </label>
+        </div> : null}
 
-        {activeStage === 3 ? <label className="mentor-field">
-          <span>Tecnologías que planeas usar, una por línea</span>
-          <textarea rows={3} value={fields.technologies} disabled={formBusy} onChange={(event) => updateField("technologies", event.target.value)} aria-invalid={Boolean(fieldErrors.technologies)} aria-describedby={fieldErrors.technologies ? "mentor-technologies-help mentor-technologies-error" : "mentor-technologies-help"} />
-          <small id="mentor-technologies-help">Máximo 20 tecnologías, hasta 80 caracteres por línea.</small>
+        {activeStage === 3 ? <div className="mentor-field mentor-technologies" role="group" aria-labelledby="mentor-technologies-title" aria-describedby={fieldErrors.technologies ? "mentor-technologies-error" : undefined}>
+          <h2 id="mentor-technologies-title"><Code2 aria-hidden="true" size={22} /> Tecnologías</h2>
+          <p>Elige opciones del catálogo. Los nombres antiguos que no están en él se conservan hasta que los quites.</p>
+          <TechnologyPicker disabled={formBusy} selectedIds={technologyIds} legacyNames={fields.technologies.split(/\r?\n/).map((name) => name.trim()).filter(Boolean)} onRemoveLegacy={(name) => updateField("technologies", fields.technologies.split(/\r?\n/).filter((entry) => entry.trim() !== name).join("\n"))} onSelectedIdsChange={(ids, _entries, removed) => { setTechnologyIds(ids); if (removed) updateField("technologies", fields.technologies.split(/\r?\n/).filter((entry) => entry.trim() !== removed.name).join("\n")); else { setIsDirty(true); setEvaluation(null); setSubmission(null); setSaveMessage(null); } }} />
           {fieldErrors.technologies ? <small id="mentor-technologies-error" role="alert">{fieldErrors.technologies}</small> : null}
-        </label> : null}
+        </div> : null}
 
-        {activeStage === 3 ? <label className="mentor-field">
-          <span>Resultado esperado</span>
-          <textarea rows={3} value={fields.expectedOutcome} maxLength={3000} disabled={formBusy} onChange={(event) => updateField("expectedOutcome", event.target.value)} />
-        </label> : null}
-
-        {activeStage === 3 ? <label className="mentor-field">
-          <span>Condiciones propias del proyecto, una por línea</span>
-          <textarea rows={3} value={fields.constraints} disabled={formBusy} onChange={(event) => updateField("constraints", event.target.value)} aria-invalid={Boolean(fieldErrors.constraints)} aria-describedby={fieldErrors.constraints ? "mentor-constraints-error" : undefined} />
-          {fieldErrors.constraints ? <small id="mentor-constraints-error" role="alert">{fieldErrors.constraints}</small> : null}
-        </label> : null}
 
         {activeStage === 4 ? <aside className="mentor-publication-note" aria-label="Política de publicación en la Galería">
           <p><strong>Publicación en la Galería.</strong> Si la evaluación cumple los criterios actuales, esta versión se publica automáticamente. La verán estudiantes con sesión y docentes. Se comparten la propuesta, objetivos, habilidades, etiquetas y temas, alcance, restricciones, perfil de GitHub y contexto de materia, consigna y rúbrica; no se comparten la nota ni los comentarios privados.</p>
@@ -694,8 +716,8 @@ export function MentorScreen({
         </aside> : null}
 
         <div className="mentor-form__footer">
-          {activeStage === 1
-            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage(0)}><span aria-hidden="true">←</span> Anterior</button>
+          {activeStage > 0
+            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage((value) => Math.max(0, value - 1))}><span aria-hidden="true">←</span> Anterior</button>
             : <p>{activeStage === 4 ? "La orientación es formativa; no equivale a aprobación docente." : activeStage === 0 || activeStage === 3 ? "* Campo necesario para evaluar. Guarda los cambios con «Guardar borrador»." : "Guarda los cambios con «Guardar borrador»."}</p>}
           <div className="mentor-form__actions">
             <button className="button button--secondary" type="submit" disabled={formBusy}>

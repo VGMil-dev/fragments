@@ -297,7 +297,7 @@
 }
 .mentor-stage-nav li button[aria-current="step"] .mentor-stage-nav__number { border-color: var(--f16-lime); background: var(--f16-lime); color: var(--f16-text-inverse); }
 .mentor-stage-nav button:focus-visible, .mentor-stage-nav select:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
-.mentor-stage-content { display: flex; flex-direction: column; gap: .85rem; }
+.mentor-stage-content { display: flex; flex-direction: column; gap: .85rem; container-type: inline-size; container-name: mentor-stage; }
 .mentor-choices { order: 2; margin: 0; padding: .25rem .15rem; border: 0; background: transparent; }
 .mentor-choices__template { gap: .7rem 1.15rem; }
 .mentor-choices .button { min-height: 36px; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--f16-text-secondary); font-size: .9rem; text-decoration: underline; text-underline-offset: .2em; }
@@ -446,6 +446,36 @@
 .mentor-context__personal-icon { grid-row: span 2; display: grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid var(--f16-border-strong); border-radius: 50%; color: var(--f16-info); font-size: 1.4rem; }
 .mentor-context--state .button { margin-top: .15rem; }
 .mentor-choices--context { margin: .55rem 0 0; }
+.mentor-objectives { min-width: 0; margin: 0; padding: .9rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-card); background: var(--f16-surface); }
+.mentor-objectives legend { display: flex; align-items: center; gap: .45rem; padding: 0 .35rem; font-weight: 800; }
+.mentor-objectives__icon { color: #ed72e8; }
+.mentor-objectives > small { display: block; color: var(--f16-text-secondary); }
+.mentor-objectives__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .4rem; margin: .45rem 0; }
+.mentor-objectives__number { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border: 1px solid var(--f16-border-strong); border-radius: 50%; color: var(--f16-text-primary); }
+.mentor-objectives__label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.mentor-objectives__row input { min-width: 0; width: 100%; min-height: 2.25rem; padding: .4rem .6rem; }
+.mentor-objectives__remove { display: grid; width: 2.25rem; min-width: 2.25rem; min-height: 2.25rem; place-items: center; padding: 0; border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); color: var(--f16-text-primary); background: var(--f16-surface-raised); }
+.mentor-objectives__order { display: flex; gap: .2rem; }
+.mentor-objectives__order button { min-width: 2.25rem; min-height: 2.25rem; border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); color: var(--f16-text-primary); background: var(--f16-surface-raised); }
+.mentor-objectives button:focus-visible, .mentor-objectives input:focus-visible { outline: 3px solid var(--f16-lime); outline-offset: 2px; }
+.mentor-project-outcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .8rem; grid-column: 1 / -1; }
+.mentor-project-outcomes__card { min-width: 0; align-content: start; padding: .9rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-card); background: linear-gradient(145deg, var(--f16-surface-raised), var(--f16-surface)); }
+.mentor-project-outcomes__card > span { font-weight: 800; }
+.mentor-project-outcomes__title { display: flex; align-items: center; gap: .45rem; }
+.mentor-project-outcomes__title svg { flex: 0 0 auto; color: var(--f16-info); }
+.mentor-project-outcomes__card > small { color: var(--f16-text-secondary); }
+.mentor-technologies { grid-column: 1 / -1; min-width: 0; }
+.mentor-technologies h2 { display: flex; align-items: center; gap: .45rem; margin: 0; font-size: 1.08rem; }
+.mentor-technologies h2 svg { flex: 0 0 auto; color: var(--f16-info); }
+.mentor-technologies > p { margin: 0; color: var(--f16-text-secondary); }
+@media (max-width: 760px) {
+  .mentor-objectives__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .mentor-objectives__number { display: none; }
+  .mentor-objectives__row input { grid-column: 1; }
+  .mentor-objectives__remove { grid-column: 2; grid-row: 1; }
+  .mentor-objectives__order { grid-column: 1 / -1; }
+  .mentor-project-outcomes__card { padding: .75rem; }
+}
 @media (max-width: 760px) {
   .mentor-form--context { gap: .65rem; padding: .85rem; }
   .mentor-context--academic { gap: .65rem; }

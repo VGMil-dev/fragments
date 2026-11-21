@@ -101,12 +101,13 @@ describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
     let evaluations = 0;
     const local = createLocalMentorEvaluator();
     const base = await start({ async evaluate(input) { evaluations += 1; return local.evaluate(input); } });
+    await databases.at(-1)!.technologyCatalogItem.upsert({ where: { id: "ux08-tech-typescript" }, create: { id: "ux08-tech-typescript", slug: "ux08-typescript", name: "TypeScript" }, update: {} });
     const headers = { "x-fixture-user": "student-1", "content-type": "application/json" };
-    const partial = { title: "Mi idea", problem: "", solution: "", description: "", purpose: "", goals: [], skills: [], mentorSkills: { classroomId: null, selectedSkillIds: [] }, scope: "", constraints: [] };
+    const partial = { title: "Mi idea", problem: "", solution: "", description: "", purpose: "", goals: [], skills: [], mentorSkills: { classroomId: null, selectedSkillIds: [] }, technologies: ["AngularJS (importada)"], scope: "", constraints: [] };
     const created = await fetch(`${base}/api/me/proposals/drafts`, { method: "POST", headers, body: JSON.stringify({ proposal: partial }) });
     expect(created.status).toBe(201);
     const createdData = (await created.json() as { data: { id: string; version: number; proposal: typeof partial } }).data;
-    expect(createdData.proposal).toEqual(partial);
+    expect(createdData.proposal).toMatchObject({ ...partial, technologyIds: [] });
 
     const listed = await fetch(`${base}/api/me/proposals`, { headers });
     expect(listed.status).toBe(200);
@@ -118,11 +119,24 @@ describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(incompleteEvaluation.status).toBe(422);
     expect(evaluations).toBe(0);
 
+    const invalidTechnology = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
+      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: { ...draft, technologyIds: ["missing-catalog-id"], technologies: ["Forged label"] } }),
+    });
+    expect(invalidTechnology.status).toBe(400);
+
     const complete = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
-      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: draft }),
+      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: { ...draft, technologies: ["AngularJS (importada)"], technologyIds: ["ux08-tech-typescript"] } }),
     });
     expect(complete.status).toBe(200);
-    expect((await complete.json() as { data: { version: number } }).data.version).toBe(2);
+    const savedDraft = (await complete.json() as { data: { version: number; proposal: { technologies?: string[]; technologyIds?: string[] } } }).data;
+    expect(savedDraft.version).toBe(2);
+    expect(savedDraft.proposal).toMatchObject({ technologyIds: ["ux08-tech-typescript"], technologies: ["TypeScript", "AngularJS (importada)"] });
+    const reloadedDraft = await fetch(`${base}/api/me/proposals`, { headers });
+    expect((await reloadedDraft.json() as { data: Array<{ id: string; proposal: { technologyIds?: string[]; technologies?: string[] } }> }).data.find((item) => item.id === createdData.id)?.proposal).toMatchObject({ technologyIds: ["ux08-tech-typescript"], technologies: ["TypeScript", "AngularJS (importada)"] });
+    const removeTechnology = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
+      method: "PUT", headers, body: JSON.stringify({ expectedVersion: 2, proposal: { technologyIds: [], technologies: [] } }),
+    });
+    expect((await removeTechnology.json() as { data: { proposal: { technologyIds?: string[]; technologies?: string[] } } }).data.proposal).toMatchObject({ technologyIds: [], technologies: [] });
     const stale = await fetch(`${base}/api/me/proposals/${createdData.id}/draft`, {
       method: "PUT", headers, body: JSON.stringify({ expectedVersion: 1, proposal: partial }),
     });

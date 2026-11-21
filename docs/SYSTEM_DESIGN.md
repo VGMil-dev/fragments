@@ -30,10 +30,12 @@ S0 base funcional web/API/health/contratos. S1 propuesta Mentor end-to-end: pant
 
 ## Endpoints mínimos propuestos (sujetos a contrato fijado por planner)
 `GET /health`, `GET /api/gallery`, `POST /api/proposals`, `POST /api/proposals/:id/review`, `POST /api/mentor-submissions`, `GET /api/mentor-submissions/:id/readme`, `GET /api/mentor-submissions/:id/pdf`, `POST /api/reviews`, `GET /api/reviews/:id`, `POST /api/review-submissions`, `GET /api/review-submissions/:id/pdf`, `GET /api/verify/:code`, `GET /api/inspector/:reviewId/challenges`, `POST /api/inspector/:reviewId/challenges`, `POST /api/inspector/challenges/:id/assign`, `POST /api/inspector/challenges/:id/record`.
+UX-08 incorpora `GET /api/mentor/technology-catalog?q=&cursor=&selectedIds=` y `GET /api/mentor/suggested-technologies?cursor=`. La búsqueda es paginada sobre PostgreSQL; las sugerencias se derivan en servidor de aulas activas y matrículas activas de la sesión estudiantil. El cliente nunca envía IDs de aula para ampliar su acceso.
 La ruta pública de verificación da solo microinforme no sensible. Todas las rutas Inspector requieren sesión docente en backend, no cachean sus respuestas y validan entrada/salida con `packages/contracts`; el hint docente nunca sale en la respuesta estudiantil.
 
 ## Invariantes de datos
 - Propuesta editable = borrador; al pulsar Generar entrega se crea snapshot inmutable con campos necesarios para reconstruir README y PDF; no basta título+nota+hash.
+- UX-08 mantiene `technologyIds` como identidades estables del catálogo y `technologies` como etiquetas de compatibilidad para evaluación/exportación. La selección vive en el JSON del borrador; `TechnologyCatalogItem` almacena el catálogo global y `ClassroomTechnologyAvailability` relaciona recomendaciones con aulas. Las migraciones de estas tablas requieren validar el esquema por F14/F21 antes de publicar.
 - `sha256` del JSON canónico verifica integridad; token aleatorio de alta entropía sirve para lookup. Hash ≠ token secreto.
 - PDF y README bajo demanda, no almacenados. Fecha/plantilla y versión de rúbrica fijadas en snapshot para reproducción semántica; PDF bytes no necesariamente idénticos si cambia renderer, registrar rendererVersion.
 - Review ata rúbrica+versión+commit SHA+versión evaluador+input digest. Nuevo commit = nuevo análisis; igual commit/criterio = caché; reintentos solo en errores transitorios.

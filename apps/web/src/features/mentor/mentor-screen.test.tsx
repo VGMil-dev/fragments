@@ -3,6 +3,10 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("../../lib/api/student-api-instance", () => ({ studentApi: {
+  getTechnologyCatalog: vi.fn(async () => ({ ok: true, data: { items: [], nextCursor: null } })),
+  getSuggestedTechnologies: vi.fn(async () => ({ ok: true, data: { items: [], nextCursor: null } })),
+} }));
 import type { ClassroomSummary, SkillCatalogEntry } from "@fragments/contracts";
 import { MentorScreen } from "./mentor-screen";
 
@@ -22,7 +26,7 @@ const proposal = {
     solution: "Anotar observaciones por fecha.",
     description: "Una bitácora para registrar los cambios del jardín.",
     purpose: "Observar el crecimiento de las plantas.",
-    goals: ["Guardar una observación"],
+    goals: ["Guardar una observación", "Comparar crecimiento"],
     skills: ["HTML"],
     technologies: ["TypeScript"],
     expectedOutcome: "Una bitácora que permita consultar observaciones.",
@@ -286,38 +290,38 @@ describe("MentorScreen", () => {
     expect(html).not.toContain("scope necesita");
   });
 
-  it("shows the personal objectives, MVP, technologies, and expected outcome in Stage 4", async () => {
+  it("shows editable objectives, MVP, expected outcome, catalog technologies, and hides personal constraints", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />); });
     const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
     await act(async () => objectives?.click());
-    expect(mountedContainer.textContent).toContain("Tecnologías que planeas usar");
+    expect(mountedContainer.textContent).toContain("Tecnologías");
     expect(mountedContainer.textContent).toContain("Resultado esperado");
-    expect(mountedContainer.textContent).toContain("Condiciones propias del proyecto");
-    expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "TypeScript")).toBe(true);
+    expect(mountedContainer.textContent).not.toContain("Condiciones propias del proyecto");
+    expect(mountedContainer.querySelectorAll(".mentor-objectives__row input").length).toBeGreaterThan(0);
+    expect(mountedContainer.textContent).toContain("Etiquetas sin identidad de catálogo");
+    expect(mountedContainer.textContent).toContain("TypeScript");
+    expect(mountedContainer.textContent).toContain("Alcance del MVP");
+    expect(mountedContainer.textContent).toContain("Resultado esperado");
     expect(Array.from(mountedContainer.querySelectorAll("textarea")).some((field) => (field as HTMLTextAreaElement).value === "Una bitácora que permita consultar observaciones.")).toBe(true);
   });
 
-  it("blocks an oversized technology list with field-level guidance", async () => {
+  it("keeps each objective editable and preserves its order when moved", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
-    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />); });
     const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos"));
     await act(async () => objectives?.click());
-    const technologyField = Array.from(mountedContainer.querySelectorAll("label")).find((label) => label.textContent?.includes("Tecnologías que planeas usar"))?.querySelector("textarea");
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(technologyField, Array.from({ length: 21 }, (_, index) => `Tecnología ${index}`).join("\n"));
-    await act(async () => technologyField?.dispatchEvent(new Event("input", { bubbles: true })));
-    const idea = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Idea"));
-    await act(async () => idea?.click());
-    await act(async () => mountedContainer?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-
-    expect(actions.onSave).not.toHaveBeenCalled();
-    expect(mountedContainer.textContent).toContain("Incluye máximo 20 tecnologías");
-    expect(mountedContainer.textContent).toContain("Revisa el campo de tecnologías");
-    expect(mountedContainer.querySelector('[aria-current="step"]')?.textContent).toContain("Objetivos");
+    const fields = Array.from(mountedContainer.querySelectorAll<HTMLInputElement>(".mentor-objectives__row input"));
+    expect(fields).toHaveLength(2);
+    expect(fields[0]?.value).toBe("Guardar una observación");
+    expect(fields[1]?.value).toBe("Comparar crecimiento");
+    const moveUp = mountedContainer.querySelector<HTMLButtonElement>('[aria-label="Mover objetivo 2 arriba"]');
+    await act(async () => moveUp?.click());
+    expect(Array.from(mountedContainer.querySelectorAll<HTMLInputElement>(".mentor-objectives__row input")).map((field) => field.value)).toEqual(["Comparar crecimiento", "Guardar una observación"]);
   });
 
   it("lists saved proposals and opens the selected one", () => {
@@ -402,7 +406,7 @@ describe("MentorScreen", () => {
     const form = mountedContainer.querySelector("form");
     await act(async () => form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
 
-    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ proposal: expect.objectContaining({ title: "Diario de plantas editado" }), expectedVersion: proposal.version }));
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ proposal: expect.objectContaining({ title: "Diario de plantas editado", constraints: ["Sin cuentas de usuario"] }), expectedVersion: proposal.version }));
     await openEvaluationStage();
     const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     expect(evaluate).toBeDefined();

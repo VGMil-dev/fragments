@@ -328,6 +328,7 @@ model Classroom {
   joinCodes         ClassJoinCode[]
   enrollments       ClassEnrollment[]
   skillAvailability ClassroomSkillAvailability[]
+  technologyAvailability ClassroomTechnologyAvailability[]
 
   @@unique([id, teacherId])
   @@unique([teacherId, identityKey])
@@ -425,4 +426,28 @@ model ClassroomSkillAvailability {
 
   @@id([classroomId, skillId])
   @@map("classroom_skill_availability")
+}
+
+model TechnologyCatalogItem {
+  id             String                          @id
+  slug           String                          @unique
+  name           String
+  description    String?
+  availability   ClassroomTechnologyAvailability[]
+
+  @@index([name, id], map: "technology_catalog_name_id")
+  @@map("technology_catalog_items")
+}
+
+model ClassroomTechnologyAvailability {
+  classroomId  String               @map("classroom_id")
+  technologyId String               @map("technology_id")
+  enabled      Boolean              @default(false)
+  updatedAt    DateTime             @map("updated_at") @db.Timestamptz(3)
+  classroom    Classroom            @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  technology   TechnologyCatalogItem @relation(fields: [technologyId], references: [id], onDelete: Restrict)
+
+  @@id([classroomId, technologyId])
+  @@index([technologyId, enabled], map: "classroom_technology_availability_enabled")
+  @@map("classroom_technology_availability")
 }
