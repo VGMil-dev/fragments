@@ -197,6 +197,14 @@ export const SubmissionSnapshotSchema = z
   })
   .strict();
 
+export const ProposalMentorSkillsSchema = z.object({
+  classroomId: identifier.nullable(),
+  selectedSkillIds: z.array(identifier).max(20).refine((ids) => new Set(ids).size === ids.length, "No repitas habilidades seleccionadas."),
+}).strict().refine((selection) => selection.classroomId !== null || selection.selectedSkillIds.length === 0, {
+  message: "Elige un aula antes de seleccionar habilidades.",
+  path: ["selectedSkillIds"],
+});
+
 const ProposalDraftSchema = z.object({
   title: nonEmptyText.max(160),
   problem: nonEmptyText.max(3000),
@@ -205,6 +213,7 @@ const ProposalDraftSchema = z.object({
   purpose: nonEmptyText.max(1000).optional(),
   goals: z.array(nonEmptyText.max(240)).min(1).max(12),
   skills: z.array(nonEmptyText.max(80)).max(20),
+  mentorSkills: ProposalMentorSkillsSchema.optional(),
   technologies: z.array(nonEmptyText.max(80)).max(20).optional(),
   expectedOutcome: z.string().max(3000).optional(),
   tags: z.array(nonEmptyText.max(50)).max(20).default([]),
@@ -333,7 +342,7 @@ export const TeacherProjectSchema = z.object({
   history: z.array(z.object({
     version: z.number().int().positive(),
     updatedAt: z.iso.datetime(),
-    proposal: ProposalDraftSchema,
+    proposal: ProposalDraftSchema.omit({ mentorSkills: true }),
     published: z.boolean(),
     contextVersion: z.number().int().positive().nullable(),
     subject: nonEmptyText.max(120).nullable(),
@@ -355,6 +364,7 @@ export const ProposalDraftFieldsSchema = z.object({
   purpose: z.string().max(1000).optional(),
   goals: z.array(nonEmptyText.max(240)).max(12).optional(),
   skills: z.array(nonEmptyText.max(80)).max(20).optional(),
+  mentorSkills: ProposalMentorSkillsSchema.optional(),
   technologies: z.array(nonEmptyText.max(80)).max(20).optional(),
   expectedOutcome: z.string().max(3000).optional(),
   tags: z.array(nonEmptyText.max(50)).max(20).optional(),
