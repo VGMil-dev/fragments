@@ -68,3 +68,17 @@ CI actual de la rama: run `44832898084`, job `verify` **PASS**: PostgreSQL efím
 - Regresión `ReleaseValidationTests.test_archive_image_info_binds_config_digest_tags_and_labels`: PASS local, incluyendo Docker clásico, OCI y blob OCI con digest inválido rechazado. `git diff --check`: PASS. La CI de la corrección y el siguiente release siguen pendientes.
 - VPS revalidada después de la aprobación: PostgreSQL, QA y el servicio actual de producción sanos; producción sin cambio, `fragments_prod` con 0 tablas y `fragments_test` con 28 tablas y migración `20261120190000_init`. El timer PostgreSQL está activo; no se creó aún snapshot SQLite de emergencia ni se eliminaron respaldos históricos porque F14 no inició el corte.
 - Carpeta `F21_EVIDENCIAS`: 14 archivos, incluido el informe provisional. Actualizar el informe, Notion y este registro tras el release final. La lista de pendientes anterior en este archivo refleja el estado pre-release y queda reemplazada por esta actualización en cuanto al release actual.
+
+F21 — Release v0.5.4 y recuperación F14 (21-nov-2026)
+- PR #69 se integró en `main` como `064fd63606d6fc17322912eacee67d14c4454dc9`; CI run `44871029938` verify PASS.
+- El archivo real de imágenes `v0.5.3` se inspeccionó desde el asset público y reveló configuración OCI bajo `blobs/sha256/<digest>`. El validador corregido acepta ambas formas y verifica el digest. Regression test local PASS y PR CI PASS.
+- Tag anotada `v0.5.4` sobre SHA `064fd63606d6fc17322912eacee67d14c4454dc9`; release run `44871213660` verify-build y attestation PASS. Job protegido `publish-approved-release` está `waiting` por aprobación humana.
+- Agente instalado en VPS actualizado atómicamente desde código de `main`; SHA-256 verificado: `513f1fe317262f8e2225f50d5a7880ca60ece21ea5d5bbd91dcebda434a46a31`; `fragments-release-poll.timer` permanece activo.
+- Aún no se desplegó; producción continúa v0.5.1 y la base `fragments_prod` permanece vacía. No se modificó el ledger terminal de v0.5.3.
+
+## Diagnóstico del segundo rechazo (21-nov-2026)
+
+- Run `44871213660` terminó verify-build, atestación y aprobación, pero el agente F14 rechazó `v0.5.4` como `artifact_invalid` antes de tocar producción.
+- Se descargó el artefacto público exacto `v0.5.4` y su SHA coincide con `release-manifest.json`. El validador OCI lo procesa y verifica etiquetas ARM64, versión y commit correctamente.
+- Hallazgo: en el host, `docker load` normalizó los blobs OCI y creó IDs de imagen diferentes a los SHA de config extraídos directamente del archivo. Las imágenes cargadas tienen las etiquetas aprobadas y API declara PostgreSQL. La comparación previa de IDs crudos con IDs de Docker provocó el segundo rechazo.
+- Corrección en preparación: validar versión/commit/arquitectura/motor contra el artefacto firmado y contra las imágenes importadas; registrar en F14 los IDs reales devueltos por Docker. Los contenedores activos siguen en v0.5.1; el ledger conserva el rechazo terminal de v0.5.4.
