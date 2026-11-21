@@ -91,8 +91,74 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).toContain("Borrador completado: 0 %");
     const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
     await act(async () => context?.click());
-    expect(mountedContainer.textContent).toContain("Proyecto personal");
+    expect(mountedContainer.textContent).toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-context--academic")).toBeNull();
+  });
+
+  it("shows only the authorized read-only academic context when one is published", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} contextState={{ status: "success", data: {
+        version: 3,
+        publishedAt: "2026-11-20T12:00:00.000Z",
+        config: {
+          subject: "Proyectos de aula",
+          theme: "Investigación escolar",
+          assignment: "Delimita un problema observable y plantea una solución inicial.",
+          requirements: ["Entrega individual", "Entrega individual"],
+          expectedLevel: "Proyecto inicial con alcance acotado.",
+          rubricTitle: "Propuesta inicial",
+          criteria: [{ id: "scope", title: "Alcance", description: "Define un resultado verificable.", weight: 30 }],
+        },
+      } }} />);
+    });
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => context?.click());
+    expect(mountedContainer.querySelector("#mentor-title")?.textContent).toBe("Tu proyecto en contexto");
+    expect(mountedContainer.querySelector(".student-screen__lead")?.textContent).toBe("Relaciona tu idea con la materia, la consigna y las condiciones de tu aula.");
+    expect(mountedContainer.textContent).toContain("Contexto académico disponible");
+    expect(mountedContainer.textContent).toContain("Proyectos de aula");
+    expect(mountedContainer.textContent).toContain("Investigación escolar");
+    expect(mountedContainer.textContent).toContain("Delimita un problema observable");
+    expect(mountedContainer.querySelectorAll(".mentor-context__requirements li")).toHaveLength(2);
+    expect(mountedContainer.querySelector("#mentor-context-criteria-title")?.textContent).toContain("Restricciones y criterios");
+    expect(mountedContainer.querySelector("#mentor-context-objectives-title")?.textContent).toContain("Orientación del docente");
+    const contextCards = Array.from(mountedContainer.querySelectorAll(".mentor-context__grid > .mentor-context__card"));
+    expect(contextCards.map((card) => card.classList.contains("mentor-context__card--subject"))).toEqual([true, false, false]);
+    expect(contextCards.map((card) => card.classList.contains("mentor-context__card--criteria"))).toEqual([false, true, false]);
+    expect(contextCards.map((card) => card.classList.contains("mentor-context__card--orientation"))).toEqual([false, false, true]);
+    expect(mountedContainer.querySelector(".mentor-context__card--orientation")?.textContent).toContain("Nivel esperado: Proyecto inicial con alcance acotado.");
+    expect(mountedContainer.textContent).not.toContain("Modo personal");
+    expect(mountedContainer.querySelector(".mentor-context--academic input, .mentor-context--academic textarea, .mentor-context--academic select")).toBeNull();
+    const contextForm = mountedContainer.querySelector(".mentor-form--context");
+    expect(contextForm?.querySelector(".mentor-context--academic")).not.toBeNull();
+    expect(contextForm?.querySelector(".mentor-form__footer")).not.toBeNull();
+    expect(contextForm?.closest(".mentor-stage-layout")?.querySelector(".mentor-choices--context")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-choices--context")?.closest(".mentor-stage-layout")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-form__footer > button")?.textContent).toContain("Anterior");
+    expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar borrador");
+    expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Continuar");
+    expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).not.toContain("Anterior");
+    expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).not.toContain("Guarda los cambios");
+  });
+
+  it("keeps context loading and failures distinct from personal mode", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} contextState={{ status: "loading" }} />); });
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => context?.click());
+    expect(mountedContainer.querySelector('[role="status"]')?.textContent).toContain("Cargando el contexto académico");
+    expect(mountedContainer.textContent).not.toContain("Modo personal");
+    expect(mountedContainer.textContent).not.toContain("Contexto académico disponible");
+
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} contextState={{ status: "error", retry: vi.fn() }} />); });
+    expect(mountedContainer.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar el contexto académico");
+    expect(mountedContainer.textContent).not.toContain("Modo personal");
   });
 
   it("enables the deterministic cover prompt only for an evaluation of the current proposal version", async () => {

@@ -2,7 +2,7 @@ import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
 import { ClipboardCheck, Code2, Dumbbell, Folder, GraduationCap, Home, Image, Lightbulb, MoreHorizontal, Rocket, Sparkles, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { AcademicGalleryDetail, AcademicGalleryEntry, ClassroomSummary, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
+import type { AcademicGalleryDetail, AcademicGalleryEntry, ClassroomSummary, MentorPublishedConfig, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
 import { createStudentApi } from "./lib/api/student-api";
 import { GalleryScreen } from "./features/gallery";
@@ -43,6 +43,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [proposalsReload, setProposalsReload] = useState(0);
   const [submissions, setSubmissions] = useState<AsyncState<StudentSubmissionsResponse>>({ status: "loading" });
   const [submissionsReload, setSubmissionsReload] = useState(0);
+  const [mentorContext, setMentorContext] = useState<AsyncState<MentorPublishedConfig>>({ status: "loading" });
+  const [mentorContextReload, setMentorContextReload] = useState(0);
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [galleryOffset, setGalleryOffset] = useState(0);
@@ -157,6 +159,28 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     return () => { active = false; };
   }, [path, student, submissionsReload, navigate]);
 
+  useEffect(() => {
+    if (path !== "/student/mentor" || !student) return;
+    let active = true;
+    const controller = new AbortController();
+    setMentorContext({ status: "loading" });
+    void studentApi.getMentorContext(controller.signal).then((result) => {
+      if (!active) return;
+      if (result.ok) {
+        setMentorContext({ status: "success", data: result.data });
+      } else if (result.error.code === "CONFIG_UNAVAILABLE") {
+        setMentorContext({ status: "empty" });
+      } else if (result.error.code === "AUTH_REQUIRED") {
+        navigate("/student/login");
+      } else {
+        setMentorContext({ status: "error", message: "No pudimos consultar el contexto docente autorizado.", retry: () => setMentorContextReload((value) => value + 1) });
+      }
+    }).catch(() => {
+      if (active) setMentorContext({ status: "error", message: "No pudimos consultar el contexto docente autorizado.", retry: () => setMentorContextReload((value) => value + 1) });
+    });
+    return () => { active = false; controller.abort(); };
+  }, [path, student, mentorContextReload, navigate]);
+
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
   if (!student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
@@ -241,6 +265,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               key={selectedProposal?.id ?? "new-proposal"}
               initialProposal={selectedProposal}
               restoreEvaluation={Boolean(selectedProposal)}
+              contextState={mentorContext}
             savedProposals={ownedProposals}
               proposalsLoading={proposalsLoading}
               proposalsError={proposalsError}
