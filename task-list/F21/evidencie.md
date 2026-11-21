@@ -82,3 +82,13 @@ F21 — Release v0.5.4 y recuperación F14 (21-nov-2026)
 - Se descargó el artefacto público exacto `v0.5.4` y su SHA coincide con `release-manifest.json`. El validador OCI lo procesa y verifica etiquetas ARM64, versión y commit correctamente.
 - Hallazgo: en el host, `docker load` normalizó los blobs OCI y creó IDs de imagen diferentes a los SHA de config extraídos directamente del archivo. Las imágenes cargadas tienen las etiquetas aprobadas y API declara PostgreSQL. La comparación previa de IDs crudos con IDs de Docker provocó el segundo rechazo.
 - Corrección en preparación: validar versión/commit/arquitectura/motor contra el artefacto firmado y contra las imágenes importadas; registrar en F14 los IDs reales devueltos por Docker. Los contenedores activos siguen en v0.5.1; el ledger conserva el rechazo terminal de v0.5.4.
+
+## Cierre productivo F21 — 2026-11-21
+
+- PR #59 integrada; PR #70 adapta F14 y quedó en `main` (`0d016e75ce9a56e01c66925f58d9dc3ab90a19f3`). CI `44872882470` y release `44873098815`: success. La release `v0.5.5` pasó verify-build, atestación Sigstore y publicación del paquete ARM64 con aprobación del environment.
+- CI usa PostgreSQL 18.6 efímero, ejecuta `prisma migrate deploy` y las suites de integración Prisma con `DATABASE_URL` requerido; las pruebas abortan si falta. Suites cubren cola, auth, Trainer, Inspector, Mentor y Classroom. Backup/restore, typecheck, lint y build pasaron.
+- Producción v0.5.5 sobre PostgreSQL; API/web/PostgreSQL healthy, público `/` y `/health` 200. `fragments_prod` y `fragments_test`: 28 tablas y una migración completada cada una; datos previos SQLite no importados.
+- F14 respaldó y restauró un dump PostgreSQL. Se generó y verificó el único snapshot SQLite de emergencia. Retirados 49 archivos/sidecars históricos de SQLite; solo queda ese snapshot y el timer permanente respalda PostgreSQL.
+- QA Ego Lite guardado en `F21_EVIDENCIAS` incluye docente, estudiante, aula/matrícula y Mentor/Review/Trainer/Inspector. OAuth GitHub real e IA pagada no probados.
+- Incidente operativo: el primer apply dejó `rejected/unknown_error`; después ejecuté accidentalmente la función F14 real con ledger temporal al intentar un preflight. El release aprobado fue desplegado; informé la discrepancia y reconcilié por la ruta oficial `deploying` de F14, que revalidó procedencia y solo observó el estado sin migrar ni recrear contenedores. El rechazo original permanece en `previousAttempt`. Registro detallado en `F21_EVIDENCIAS/20-f14-recuperacion.txt`.
+- No quedan pendientes técnicos F21. SHA de cierre desplegado: `0d016e75ce9a56e01c66925f58d9dc3ab90a19f3`.
