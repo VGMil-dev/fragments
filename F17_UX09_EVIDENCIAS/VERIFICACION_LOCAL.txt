@@ -1,0 +1,80 @@
+
+> pnpm --filter @fragments/web test
+$ vitest run
+
+ RUN  v5.1.0 C:/Users/vgmil/.codex/worktrees/f17-ux09-evaluation/Fragments/apps/web
+
+
+ Test Files  26 passed (26)
+      Tests  128 passed (128)
+   Start at  16:44:28
+   Duration  2.44s (environment 61%, import 21%, tests 14%, transform 3%, worker 1%)
+
+    Isolate  26 workers spawned · ~615ms startup each (spawn + environment, per file)
+             at least ~839ms faster with isolate: false — reuses workers across files instead of one per file
+EXIT_CODE=0
+
+> pnpm --filter @fragments/web typecheck
+$ tsc -p tsconfig.json
+EXIT_CODE=0
+
+> pnpm lint
+$ turbo lint
+
+   • turbo 2.11.10
+   • Packages in scope: @fragments/api, @fragments/contracts, @fragments/web
+   • Running lint in 3 packages
+   • Remote caching disabled, using shared worktree cache
+
+@fragments/contracts:lint: cache hit, replaying logs d2d538cc67fc850d
+@fragments/contracts:lint: $ tsc --noEmit -p tsconfig.json
+
+ Tasks:    1 successful, 1 total
+Cached:    1 cached, 1 total
+  Time:    22ms >>> FULL TURBO
+EXIT_CODE=0
+
+> pnpm --filter @fragments/web build
+$ vite build
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 2238 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            1.30 kB │ gzip:   0.60 kB
+dist/assets/index-DbEUQO7L.css           113.81 kB │ gzip:  20.31 kB
+dist/assets/jszip.min-BoSsQ7f2.js         95.92 kB │ gzip:  28.47 kB
+dist/assets/mammoth.browser-CLQSSAUd.js  491.75 kB │ gzip: 118.69 kB
+dist/assets/index-Ds0Qg47G.js            513.35 kB │ gzip: 144.29 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/context.mjs" may not be preserved when bundling.
+   ╭─[ ../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/context.mjs:2:1 ]
+   │
+ 2 │ "use client";
+   │ ──────┬──────  
+   │       ╰──────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs" may not be preserved when bundling.
+   ╭─[ ../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs:2:1 ]
+   │
+ 2 │ "use client";
+   │ ──────┬──────  
+   │       ╰──────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+✓ built in 507ms
+EXIT_CODE=0
+
+> git diff --check
+
+EXIT_CODE=0
