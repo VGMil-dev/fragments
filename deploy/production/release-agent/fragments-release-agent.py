@@ -845,7 +845,11 @@ def archive_image_info(archive_path: Path, images: dict[str, str], tag: str, com
                     raise AgentError("El manifest Docker tiene referencias ambiguas.", code="artifact_invalid")
                 reference = entry["RepoTags"][0]
                 config_name = entry.get("Config")
-                if reference not in expected_refs or reference in result or not isinstance(config_name, str) or not config_name.endswith(".json") or "/" in config_name or "\\" in config_name or config_name in {".", ".."}:
+                if not isinstance(config_name, str):
+                    raise AgentError("El manifest Docker contiene una referencia o ruta no permitida.", code="artifact_invalid")
+                classic_config = re.fullmatch(r"[A-Za-z0-9_.-]+\.json", config_name)
+                oci_config = re.fullmatch(r"blobs/sha256/([0-9a-f]{64})", config_name)
+                if reference not in expected_refs or reference in result or not (classic_config or oci_config):
                     raise AgentError("El manifest Docker contiene una referencia o ruta no permitida.", code="artifact_invalid")
                 config_member = archive.getmember(config_name)
                 if not config_member.isfile() or not 0 < config_member.size <= 16_000_000:
@@ -854,6 +858,8 @@ def archive_image_info(archive_path: Path, images: dict[str, str], tag: str, com
                 if config_stream is None:
                     raise AgentError("Falta configuración de una imagen Docker.", code="artifact_invalid")
                 config_bytes = config_stream.read(16_000_001)
+                if oci_config and hashlib.sha256(config_bytes).hexdigest() != oci_config.group(1):
+                    raise AgentError("El digest OCI de la configuración de imagen no coincide.", code="artifact_invalid")
                 config = json.loads(config_bytes)
                 labels = config.get("config", {}).get("Labels", {})
                 image_id = f"sha256:{hashlib.sha256(config_bytes).hexdigest()}"

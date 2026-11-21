@@ -148,6 +148,44 @@ class ReleaseValidationTests(unittest.TestCase):
             self.assertEqual(result[refs["api"]]["id"], "sha256:" + agent.hashlib.sha256(config_blobs["api.json"]).hexdigest())
             self.assertEqual(result[refs["web"]]["architecture"], "arm64")
 
+            oci_paths = {
+                key: f"blobs/sha256/{agent.hashlib.sha256(data).hexdigest()}"
+                for key, data in config_blobs.items()
+            }
+            oci_manifest = json.dumps([
+                {"Config": oci_paths["api.json"], "RepoTags": [refs["api"]]},
+                {"Config": oci_paths["web.json"], "RepoTags": [refs["web"]]},
+            ]).encode("utf-8")
+            oci_archive_path = Path(directory) / "oci-images.tar.gz"
+            with tarfile.open(oci_archive_path, mode="w:gz") as archive:
+                entries = {"manifest.json": oci_manifest, **{
+                    oci_paths[key]: data for key, data in config_blobs.items()
+                }}
+                for name, data in entries.items():
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    archive.addfile(info, io.BytesIO(data))
+            oci_result = agent.archive_image_info(oci_archive_path, refs, "v0.4.0", RELEASE_SHA)
+            self.assertEqual(oci_result[refs["api"]]["id"], result[refs["api"]]["id"])
+            self.assertEqual(oci_result[refs["web"]]["id"], result[refs["web"]]["id"])
+
+            bad_oci_manifest = json.dumps([
+                {"Config": "blobs/sha256/" + "0" * 64, "RepoTags": [refs["api"]]},
+                {"Config": oci_paths["web.json"], "RepoTags": [refs["web"]]},
+            ]).encode("utf-8")
+            bad_oci_path = Path(directory) / "invalid-oci-images.tar.gz"
+            with tarfile.open(bad_oci_path, mode="w:gz") as archive:
+                entries = {"manifest.json": bad_oci_manifest, **{
+                    oci_paths[key]: data for key, data in config_blobs.items()
+                }}
+                for name, data in entries.items():
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    archive.addfile(info, io.BytesIO(data))
+            with self.assertRaises(agent.AgentError) as raised:
+                agent.archive_image_info(bad_oci_path, refs, "v0.4.0", RELEASE_SHA)
+            self.assertEqual(raised.exception.code, "artifact_invalid")
+
             invalid_config = json.dumps({"architecture": "arm64", "config": {"Labels": []}}).encode("utf-8")
             invalid_path = Path(directory) / "invalid.tar.gz"
             with tarfile.open(invalid_path, mode="w:gz") as archive:
