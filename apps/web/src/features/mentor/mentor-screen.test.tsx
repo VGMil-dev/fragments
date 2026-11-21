@@ -102,6 +102,104 @@ afterEach(() => {
 });
 
 describe("MentorScreen", () => {
+  it("muestra la evaluación con navegación horizontal, resumen real y rueda derivada del borrador", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+
+    await openEvaluationStage();
+
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Evalúa tu propuesta");
+    expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
+    expect(mountedContainer.querySelector("[aria-label='Preparación de la propuesta']")?.getAttribute("aria-valuenow")).toBe("100");
+    const evaluationForm = mountedContainer.querySelector<HTMLFormElement>(".mentor-form--evaluation");
+    expect(evaluationForm?.childElementCount).toBe(0);
+    expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-save-button")?.getAttribute("form")).toBe(evaluationForm?.id);
+    expect(mountedContainer.textContent).toContain("Diario de plantas");
+    expect(mountedContainer.textContent).toContain("Una bitácora para registrar los cambios del jardín.");
+    expect(mountedContainer.textContent).toContain("Observar el crecimiento de las plantas.");
+    expect(mountedContainer.textContent).toContain("TypeScript");
+    expect(mountedContainer.textContent).toContain("Guardar borrador");
+    expect(mountedContainer.textContent).toContain("Si cumple los criterios, la propuesta se publicará automáticamente");
+    expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(false);
+    expect(mountedContainer.querySelector(".mentor-progress-card")).toBeNull();
+    expect(mountedContainer.textContent).not.toContain("Descargar plantilla Word");
+    expect(mountedContainer.textContent).not.toContain("Importar propuesta (.docx)");
+  });
+
+  it("no habilita evaluar con un borrador incompleto y mantiene la etapa pendiente", async () => {
+    const incomplete = { ...proposal, proposal: { title: "Diario de plantas" } } as typeof proposal;
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={incomplete} onBack={vi.fn()} />));
+
+    await openEvaluationStage();
+
+    expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(true);
+    expect(mountedContainer.querySelector("[aria-label='Preparación de la propuesta']")?.getAttribute("aria-valuenow")).toBe("14");
+    expect(mountedContainer.querySelectorAll(".mentor-stage-nav li button.is-complete")).toHaveLength(2);
+  });
+
+  it("bloquea la evaluación cuando hay cambios pendientes de guardar", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+    const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Diario cambiado");
+    await act(async () => title?.dispatchEvent(new Event("input", { bubbles: true })));
+
+    await openEvaluationStage();
+
+    expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(true);
+    expect(mountedContainer.textContent).toContain("Tienes cambios pendientes de guardar.");
+  });
+
+  it("lleva Editar y Ver contexto a la etapa correspondiente", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+    await openEvaluationStage();
+
+    await act(async () => mountedContainer?.querySelectorAll<HTMLButtonElement>(".mentor-summary-row button")[0]?.click());
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
+    await openEvaluationStage();
+    await act(async () => mountedContainer?.querySelectorAll<HTMLButtonElement>(".mentor-summary-row button")[1]?.click());
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
+    expect(mountedContainer.querySelector(".mentor-context--personal")).not.toBeNull();
+    expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
+  });
+
+  it("el resumen mantiene tecnologías y textos persistidos mientras hay cambios sin guardar", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+
+    const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Título sin guardar");
+    await act(async () => title?.dispatchEvent(new Event("input", { bubbles: true })));
+    const objectives = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos y alcance"));
+    await act(async () => objectives?.click());
+    const scope = mountedContainer.querySelector<HTMLTextAreaElement>(".mentor-project-outcomes__card textarea");
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(scope, "Alcance sin guardar");
+    await act(async () => scope?.dispatchEvent(new Event("input", { bubbles: true })));
+    await openEvaluationStage();
+
+    expect(mountedContainer.textContent).toContain("Diario de plantas");
+    expect(mountedContainer.textContent).not.toContain("Título sin guardar");
+    expect(mountedContainer.textContent).toContain("TypeScript");
+    expect(mountedContainer.textContent).toContain("Una bitácora personal.");
+    expect(mountedContainer.textContent).not.toContain("Alcance sin guardar");
+    expect(mountedContainer.textContent).toContain("Observar el crecimiento de las plantas.");
+    expect(mountedContainer.textContent).toContain("Tienes cambios pendientes de guardar.");
+    await act(async () => mountedContainer?.querySelector<HTMLButtonElement>(".mentor-save-button")?.click());
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ expectedVersion: proposal.version }));
+  });
+
   it("loads the authorized catalog, expands incrementally, searches, preserves selection, and saves IDs", async () => {
     const skills = Array.from({ length: 100 }, (_, index) => skillFixture(index + 1));
     const loadSkills = vi.fn(async () => ({ ok: true as const, data: skills }));
@@ -410,8 +508,7 @@ describe("MentorScreen", () => {
     await openEvaluationStage();
     const evaluate = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Evaluar propuesta");
     expect(evaluate).toBeDefined();
-    expect(mountedContainer.textContent).toContain("se publica automáticamente en Galería");
-    expect(mountedContainer.textContent).toContain("no puede retirar una versión ya publicada");
+    expect(mountedContainer.textContent).toContain("se publicará automáticamente en Galería después de evaluarla");
     await act(async () => evaluate?.click());
     expect(actions.onEvaluate).toHaveBeenCalledWith(proposal.id);
     expect(mountedContainer.textContent).toContain("72/100");

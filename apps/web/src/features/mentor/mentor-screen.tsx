@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Code2, Flag, Layers3, Target, Trash2 } from "lucide-react";
+
 import type {
   ApiResult,
   CreateMentorSubmissionRequest,
@@ -225,6 +226,7 @@ export function MentorScreen({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [versionConflict, setVersionConflict] = useState(false);
   const [evaluation, setEvaluation] = useState<AsyncState<ProposalEvaluationResponse> | null>(initialEvaluation ?? null);
+  const evaluationPendingRef = useRef(false);
   const [submission, setSubmission] = useState<AsyncState<MentorSubmissionResponse> | null>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
@@ -235,18 +237,33 @@ export function MentorScreen({
   const validText = (value: string, max: number) => value.trim().length > 0 && value.trim().length <= max;
   const goalRows = fields.goals.length ? fields.goals.split(/\r?\n/) : [];
   const goals = fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const completedRequiredFields = [
+  const parseLines = (value: string) => value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const technologyEntries = parseLines(fields.technologies);
+  const skillEntries = parseLines(fields.skills);
+  const constraintEntries = parseLines(fields.constraints);
+  const optionalProgressChecks = [
+    ...(technologyEntries.length ? [technologyEntries.length <= 20 && technologyEntries.every((item) => item.length <= 80)] : []),
+    ...(fields.expectedOutcome.trim() ? [fields.expectedOutcome.trim().length <= 3000] : []),
+    ...(skillEntries.length ? [skillEntries.length <= 20 && skillEntries.every((item) => item.length <= 80)] : []),
+    ...(constraintEntries.length ? [constraintEntries.length <= 20 && constraintEntries.every((item) => item.length <= 500)] : []),
+  ];
+  const progressChecks = [
     validText(fields.title, 160), validText(fields.problem, 3000), validText(fields.solution, 3000),
     validText(fields.description, 3000), validText(fields.purpose, 1000),
     goals.length >= 1 && goals.length <= 12 && goals.every((goal) => goal.length <= 240), validText(fields.scope, 3000),
-  ].filter(Boolean).length;
-  const draftProgress = Math.round(completedRequiredFields / 7 * 100);
+  ];
+  const allProgressChecks = [...progressChecks, ...optionalProgressChecks];
+  const draftProgress = Math.round(allProgressChecks.filter(Boolean).length / allProgressChecks.length * 100);
   const evaluationReady = validateProposalDraft(fields).ok;
+  const savedCurrentVersion = Boolean(proposal && !isDirty && !skillsChanged && !saving);
+  const canEvaluate = Boolean(proposal && evaluationReady && savedCurrentVersion && evaluation?.status !== "loading");
   const coverReady = evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version;
   const coverPrompt = `Ilustración geométrica para “${fields.title.trim()}”, con formas simples que representen ${fields.problem.trim().slice(0, 180)}. Paleta Fragments azul cobalto, lima y azul noche. Sin texto, formato horizontal.`;
   const activeStageLabel = MENTOR_STAGES[activeStage];
-  const stageHeadings = ["Tu idea toma forma", "Tu proyecto en contexto", "Habilidades para practicar", "Objetivos y alcance", "El siguiente paso de tu idea", "Presenta tu proyecto"];
-  const stageDescription = activeStage === 0
+  const stageHeadings = ["Tu idea toma forma", "Tu proyecto en contexto", "Habilidades para practicar", "Objetivos y alcance", "Evalúa tu propuesta", "Presenta tu proyecto"];
+  const stageDescription = activeStage === 4
+    ? "Revisa y solicita la evaluación de tu propuesta antes de publicarla en Galería."
+    : activeStage === 0
     ? "Define el núcleo de tu propuesta: el problema, la solución y su propósito."
     : activeStage === 1
       ? "Relaciona tu idea con la materia, la consigna y las condiciones de tu aula."
@@ -264,12 +281,24 @@ export function MentorScreen({
   const visibleSkills = matchingSkills.slice(0, skillLimit);
   const skillNameById = new Map(activeSkillCatalog.map((skill) => [skill.id, skill.name]));
   const savedSkillSelection = proposal?.proposal.mentorSkills;
+  const proposalClassroom = classrooms.find((classroom) => classroom.id === proposal?.proposal.mentorSkills?.classroomId);
   if (savedSkillSelection?.classroomId === skillClassroomId) {
     savedSkillSelection.selectedSkillIds.forEach((id, index) => {
       if (!skillNameById.has(id) && proposal?.proposal.skills?.[index]) skillNameById.set(id, proposal.proposal.skills[index]!);
     });
   }
   const savedSkillsUnavailable = selectedSkillIds.filter((id) => !activeSkillCatalog.some((skill) => skill.id === id));
+  const completedStage = (index: number) => {
+    switch (index) {
+      case 0: return [fields.title, fields.problem, fields.solution, fields.description, fields.purpose].every((value) => validText(value, 3000));
+      case 1: return contextState.status === "success" || contextState.status === "empty";
+      case 2: return Boolean(proposal && !isDirty && !skillsChanged);
+      case 3: return validText(fields.scope, 3000) && Boolean(goals.length) && !validateTechnologyList(fields.technologies);
+      case 4: return Boolean(evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version && savedCurrentVersion);
+      case 5: return coverReady;
+      default: return false;
+    }
+  };
 
   async function copyCoverPrompt() {
     try {
@@ -444,7 +473,8 @@ export function MentorScreen({
   }
 
   async function evaluateProposal() {
-    if (!proposal) return;
+    if (!proposal || !canEvaluate || evaluationPendingRef.current) return;
+    evaluationPendingRef.current = true;
     setEvaluation({ status: "loading" });
     try {
       const result = await onEvaluate(proposal.id);
@@ -465,6 +495,8 @@ export function MentorScreen({
       setSubmission(null);
     } catch {
       await recoverEvaluation();
+    } finally {
+      evaluationPendingRef.current = false;
     }
   }
 
@@ -494,22 +526,22 @@ export function MentorScreen({
           <h1 id="mentor-title">{stageHeadings[activeStage]}</h1>
           <p className="student-screen__lead">{stageDescription}</p>
         </div>
-        <section className="mentor-progress-card" aria-label="Progreso del borrador">
+        {activeStage === 4 ? null : <section className="mentor-progress-card" aria-label="Progreso del borrador">
           <p>Borrador completado: <strong>{draftProgress} %</strong></p>
           <div className="mentor-progress-card__track" role="progressbar" aria-label="Campos obligatorios completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={draftProgress}>
             <span style={{ width: `${draftProgress}%` }} />
           </div>
           <DataSourceBadge mode={mode} {...(evaluation?.status === "success" ? { modelId: evaluation.data.analysis.modelId } : {})} />
-        </section>
+        </section>}
       </header>
 
-      <div className="mentor-stage-layout">
-      <nav className="mentor-stage-nav" aria-label="Etapas de tu propuesta">
+      <div className={`mentor-stage-layout${activeStage === 4 ? " mentor-stage-layout--evaluation" : ""}`}>
+      <nav className={`mentor-stage-nav${activeStage === 4 ? " mentor-stage-nav--horizontal" : ""}`} aria-label="Etapas de tu propuesta">
         <h2><span aria-hidden="true">▱</span> Tu propuesta</h2>
         <ol>
           {MENTOR_STAGES.map((label, index) => <li key={label}>
-            <button type="button" aria-current={index === activeStage ? "step" : undefined} onClick={() => setActiveStage(index)}>
-              <span className="mentor-stage-nav__number" aria-hidden="true">{index + 1}</span><span>{label}</span>
+            <button className={completedStage(index) ? "is-complete" : ""} type="button" aria-current={index === activeStage ? "step" : undefined} onClick={() => setActiveStage(index)}>
+              <span className="mentor-stage-nav__number" aria-hidden="true">{completedStage(index) ? "✓" : index + 1}</span><span>{label}</span>
             </button>
           </li>)}
         </ol>
@@ -559,7 +591,7 @@ export function MentorScreen({
         ) : <p>Aún no tienes propuestas guardadas.</p>}
       </section> : null}
 
-      <form className={`mentor-form${activeStage === 1 ? " mentor-form--context" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
+      <form id="mentor-proposal-form" className={`mentor-form${activeStage === 1 ? " mentor-form--context" : ""}${activeStage === 4 ? " mentor-form--evaluation" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
         {activeStage === 1 ? <MentorContextStage state={contextState} /> : null}
         {activeStage === 0 ? <><label className="mentor-field mentor-field--wide">
           <span>Título de la propuesta <b aria-hidden="true">*</b></span>
@@ -710,14 +742,10 @@ export function MentorScreen({
         </div> : null}
 
 
-        {activeStage === 4 ? <aside className="mentor-publication-note" aria-label="Política de publicación en la Galería">
-          <p><strong>Publicación en la Galería.</strong> Si la evaluación cumple los criterios actuales, esta versión se publica automáticamente. La verán estudiantes con sesión y docentes. Se comparten la propuesta, objetivos, habilidades, etiquetas y temas, alcance, restricciones, perfil de GitHub y contexto de materia, consigna y rúbrica; no se comparten la nota ni los comentarios privados.</p>
-          <p>Desde el portal no hay opt-out ni puedes retirar una versión publicada. Guardar cambios no la retira; una versión nueva requiere su propia evaluación elegible. Un docente puede retirar una ficha con registro de auditoría.</p>
-        </aside> : null}
+        {activeStage !== 4 ? <div className="mentor-form__footer">
+          {activeStage === 1
+            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage(0)}><span aria-hidden="true">←</span> Anterior</button>
 
-        <div className="mentor-form__footer">
-          {activeStage > 0
-            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage((value) => Math.max(0, value - 1))}><span aria-hidden="true">←</span> Anterior</button>
             : <p>{activeStage === 4 ? "La orientación es formativa; no equivale a aprobación docente." : activeStage === 0 || activeStage === 3 ? "* Campo necesario para evaluar. Guarda los cambios con «Guardar borrador»." : "Guarda los cambios con «Guardar borrador»."}</p>}
           <div className="mentor-form__actions">
             <button className="button button--secondary" type="submit" disabled={formBusy}>
@@ -725,7 +753,7 @@ export function MentorScreen({
             </button>
             {activeStage < MENTOR_STAGES.length - 1 ? <button className="button button--primary" type="button" onClick={() => setActiveStage((value) => Math.min(MENTOR_STAGES.length - 1, value + 1))}>Continuar <span aria-hidden="true">→</span></button> : null}
           </div>
-        </div>
+        </div> : null}
       </form>
 
       {saveMessage ? <p className="mentor-screen__success" role="status">{saveMessage}</p> : null}
@@ -733,79 +761,47 @@ export function MentorScreen({
 
       {activeStage === 4 ? <section className="mentor-evaluation" aria-labelledby="mentor-evaluation-title">
         <section className="mentor-review-summary" aria-label="Resumen de tu propuesta">
-          <h2>{fields.title.trim() || "Tu idea"}</h2>
-          <dl><dt>Problema</dt><dd>{fields.problem.trim() || "Aún sin completar"}</dd><dt>Solución</dt><dd>{fields.solution.trim() || "Aún sin completar"}</dd><dt>Descripción</dt><dd>{fields.description.trim() || "Aún sin completar"}</dd><dt>Propósito</dt><dd>{fields.purpose.trim() || "Aún sin completar"}</dd><dt>Objetivos</dt><dd>{goals.length ? goals.join(" · ") : "Aún sin completar"}</dd><dt>Alcance</dt><dd>{fields.scope.trim() || "Aún sin completar"}</dd><dt>Tecnologías</dt><dd>{fields.technologies || "Aún sin completar"}</dd><dt>Resultado esperado</dt><dd>{fields.expectedOutcome.trim() || "Aún sin completar"}</dd></dl>
+          <h2>Resumen de tu propuesta</h2>
+          <h3>{proposal?.proposal.title ?? (fields.title.trim() || "Tu idea")}</h3>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">◉</span><div><h4>Idea y propósito</h4><p>{proposal?.proposal.description || fields.description.trim() || "Aún no has completado la descripción."}</p><small>{proposal?.proposal.purpose || fields.purpose.trim() || "Propósito aún sin completar."}</small></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(0)}>Editar</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Contexto de clase</h4><p>{contextState.status === "success" ? [proposalClassroom?.title, contextState.data.config.subject].filter(Boolean).join(" · ") : contextState.status === "empty" ? "Modo personal; no hay contexto de aula asociado." : contextState.status === "loading" ? "Cargando el contexto de clase." : "No pudimos cargar el contexto de clase."}</p>{contextState.status === "success" ? <small>{contextState.data.config.assignment}</small> : null}</div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(1)}>Ver contexto</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">⌘</span><div><h4>Habilidades y tecnologías</h4><p>{proposal?.proposal.skills?.length ? proposal.proposal.skills.join(" · ") : "No hay habilidades guardadas."}</p><div className="mentor-summary-tags">{(proposal?.proposal.technologies ?? []).map((item) => <span key={item}>{item}</span>)}</div></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(2)}>Editar</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Objetivos y alcance</h4><ul>{proposal?.proposal.goals?.length ? proposal.proposal.goals.map((goal) => <li key={goal}>{goal}</li>) : <li>Aún no has definido objetivos.</li>}</ul><p><strong>Alcance MVP:</strong> {proposal?.proposal.scope || "Aún sin completar."}</p></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(3)}>Editar</button></article>
         </section>
-        <div className="mentor-evaluation__heading">
-          <div>
-            <p className="student-screen__eyebrow">SIGUIENTE PASO</p>
-            <h2 id="mentor-evaluation-title">Revisa tu propuesta</h2>
-            <p>Guarda los cambios antes de pedir una nueva evaluación.</p>
+        <aside className="mentor-evaluation__panel" aria-labelledby="mentor-evaluation-title">
+          <div className="mentor-preparation">
+            <div className="mentor-preparation__wheel" role="progressbar" aria-label="Preparación de la propuesta" aria-valuemin={0} aria-valuemax={100} aria-valuenow={draftProgress} style={{ "--mentor-progress": `${draftProgress}%` } as CSSProperties}><span>{draftProgress}<small>%</small></span></div>
+            <div><h2 id="mentor-evaluation-title">Preparación de la propuesta</h2><p>{evaluationReady ? "Tu propuesta está lista para guardar y solicitar una evaluación." : "Completa los campos obligatorios para preparar tu propuesta."}</p></div>
           </div>
-          <button className="button button--light" type="button" disabled={!proposal || !evaluationReady || isDirty || saving || evaluation?.status === "loading" || evaluation?.status === "error"} onClick={() => void evaluateProposal()}>
-            {evaluation?.status === "success" ? "Reevaluar" : "Evaluar propuesta"}
+          {isDirty ? <p className="mentor-screen__hint" role="status">Tienes cambios pendientes de guardar.</p> : saveMessage ? <p className="mentor-screen__success" role="status">{saveMessage}</p> : null}
+          {proposal && !evaluationReady ? <p className="mentor-screen__hint">Completa título, problema, solución, descripción, propósito, al menos un objetivo y alcance.</p> : null}
+          {!proposal ? <p className="mentor-screen__hint">Guarda tu propuesta antes de solicitar una evaluación.</p> : null}
+          {isDirty && evaluationReady ? <p className="mentor-screen__hint">Guarda los cambios para evaluar la versión actual.</p> : null}
+          <button className="button button--primary mentor-evaluate-button" type="button" disabled={!canEvaluate} onClick={() => void evaluateProposal()}>
+            {evaluation?.status === "loading" ? "Evaluando propuesta…" : evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version ? "Reevaluar" : "Evaluar propuesta"}
           </button>
-        </div>
-        <p className="mentor-screen__hint" role="note">Al guardar una evaluación elegible, esta versión se publica automáticamente en Galería. El estudiante no puede retirar una versión ya publicada; un docente puede hacerlo con registro de auditoría.</p>
-        {!proposal ? <p className="mentor-screen__hint">Guarda tu propuesta para poder evaluarla.</p> : null}
-        {proposal && !evaluationReady ? <p className="mentor-screen__hint">Completa título, problema, solución, descripción, propósito, al menos un objetivo y alcance antes de evaluar.</p> : null}
-        {evaluation ? (
-          <AsyncStateView
-            state={evaluation}
-            retryLabel="Recuperar evaluación"
-            render={(result) => (
-              <section className="mentor-result" aria-label="Resultado de la evaluación">
-                <div className="mentor-result__summary">
-                  <div>
-                    <p className="mentor-result__label">Orientación formativa</p>
-                    <h3>{viabilityLabel(result.viability)}</h3>
-                  </div>
-                  <p className="mentor-result__score">{result.analysis.score}/100</p>
-                </div>
-                {result.mentorContextVersion ? <p className="mentor-screen__hint">Evaluación con la versión {result.mentorContextVersion} de la rúbrica.</p> : null}
-                {result.criterionBreakdown?.length ? <ul className="mentor-findings" aria-label="Puntaje por criterio">
-                  {result.criterionBreakdown.map((criterion) => <li key={criterion.criterionId}>
-                    <p className="mentor-finding__status">{criterion.title} · {criterion.points}/{criterion.weight}</p>
-                    <p>{criterion.reason}</p>
-                  </li>)}
-                </ul> : null}
-                {result.analysis.findings.length > 0 ? (
-                  <ul className="mentor-findings">
-                    {result.analysis.findings.map((finding, index) => (
-                      <li key={`${finding.criterionId}-${index}`}>
-                        <p className="mentor-finding__status">{findingStatusLabel(finding.status)}</p>
-                        <p>{finding.reason}</p>
-                        <ul className="mentor-finding__evidence">
-                          {finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}>{evidenceLabel(item)}</li>)}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {result.guidance.length > 0 ? (
-                  <div className="mentor-guidance">
-                    <h3>Ideas para seguir</h3>
-                    <ul>{result.guidance.map((suggestion, index) => <li key={`${index}-${suggestion}`}>{suggestion}</li>)}</ul>
-                  </div>
-                ) : null}
-                {result.similarityMatches.length > 0 ? (
-                  <div className="mentor-similarity">
-                    <h3>Proyectos parecidos de la galería</h3>
-                    <ul>{result.similarityMatches.map((match) => <li key={match.galleryId}><strong>{match.title}</strong><span>{match.reason}</span></li>)}</ul>
-                  </div>
-                ) : null}
-                {result.analysis.limitations.length > 0 ? (
-                  <p className="mentor-screen__hint">Límites de esta orientación: {result.analysis.limitations.join(" ")}</p>
-                ) : null}
-                <button className="button button--primary" type="button" disabled={submission?.status === "loading"} onClick={() => void generateSubmission()}>
-                  {submission?.status === "loading" ? "Preparando entrega…" : "Generar entrega"}
-                </button>
-              </section>
-            )}
-          />
-        ) : (
-          <p className="mentor-screen__hint">Al evaluar, verás solo la orientación devuelta por el servicio.</p>
-        )}
+          <button className="button button--secondary mentor-save-button" type="submit" form="mentor-proposal-form" disabled={formBusy}>{saving ? "Guardando…" : "Guardar borrador"}</button>
+          <p className="mentor-screen__hint" role="note">Si cumple los criterios, la propuesta se publicará automáticamente en Galería después de evaluarla.</p>
+          {evaluation ? (
+            <AsyncStateView
+              state={evaluation}
+              retryLabel="Recuperar evaluación"
+              render={(result) => (
+                <section className="mentor-result" aria-label="Resultado de la evaluación">
+                  <div className="mentor-result__summary"><div><p className="mentor-result__label">Orientación formativa</p><h3>{viabilityLabel(result.viability)}</h3></div><p className="mentor-result__score">{result.analysis.score}/100</p></div>
+                  {result.mentorContextVersion ? <p className="mentor-screen__hint">Evaluación con la versión {result.mentorContextVersion} de la rúbrica.</p> : null}
+                  {result.criterionBreakdown?.length ? <ul className="mentor-findings" aria-label="Puntaje por criterio">{result.criterionBreakdown.map((criterion) => <li key={criterion.criterionId}><p className="mentor-finding__status">{criterion.title} · {criterion.points}/{criterion.weight}</p><p>{criterion.reason}</p></li>)}</ul> : null}
+                  {result.analysis.findings.length ? <ul className="mentor-findings">{result.analysis.findings.map((finding, index) => <li key={`${finding.criterionId}-${index}`}><p className="mentor-finding__status">{findingStatusLabel(finding.status)}</p><p>{finding.reason}</p><ul className="mentor-finding__evidence">{finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}>{evidenceLabel(item)}</li>)}</ul></li>)}</ul> : null}
+                  {result.guidance.length ? <div className="mentor-guidance"><h3>Ideas para seguir</h3><ul>{result.guidance.map((suggestion, index) => <li key={`${index}-${suggestion}`}>{suggestion}</li>)}</ul></div> : null}
+                  {result.similarityMatches.length ? <div className="mentor-similarity"><h3>Proyectos parecidos de la galería</h3><ul>{result.similarityMatches.map((match) => <li key={match.galleryId}><strong>{match.title}</strong><span>{match.reason}</span></li>)}</ul></div> : null}
+                  {result.analysis.limitations.length ? <p className="mentor-screen__hint">Límites de esta orientación: {result.analysis.limitations.join(" ")}</p> : null}
+                  <button className="button button--primary" type="button" disabled={submission?.status === "loading"} onClick={() => void generateSubmission()}>{submission?.status === "loading" ? "Preparando entrega…" : "Generar entrega"}</button>
+                </section>
+              )}
+            />
+          ) : null}
+          <button type="button" className="mentor-evaluation__previous" onClick={() => setActiveStage(3)}><span aria-hidden="true">←</span> Anterior</button>
+        </aside>
       </section> : null}
 
       {activeStage === 5 ? <section className="mentor-cover" aria-labelledby="mentor-cover-title"><p className="student-screen__eyebrow">PERSONALIZA TU PROYECTO</p><h2 id="mentor-cover-title">Portada</h2>

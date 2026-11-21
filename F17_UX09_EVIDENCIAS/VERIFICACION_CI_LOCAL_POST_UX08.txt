@@ -1,0 +1,29 @@
+# UX-09 — verificación integrada tras UX-08
+
+Fecha: 2026-11-21
+Rama: `codex/f17-ux09-evaluation`
+Base integrada: `origin/main` `c384998` (merge del PR #77, UX-08)
+Commit de integración local: `8617dbb23325e257d44e886b340f012dbe3c8bc5`
+
+## Base de datos de prueba
+Se levantó un contenedor PostgreSQL desechable e independiente llamado `fragments-ux09-test-db`. Antes de migrar o ejecutar tests se consultó `current_database() || '|' || current_user`; el resultado fue `fragments_test|fragments_test`. Se aplicaron las dos migraciones del repositorio; Prisma confirmó que no quedaron migraciones pendientes. El contenedor se eliminó al terminar. No se usó `.env`, QA compartido ni producción, y no se llamó a proveedores IA.
+
+## Comandos y resultado
+- `pnpm --filter @fragments/api prisma:migrate:deploy`: PASS, base `fragments_test`.
+- `pnpm exec turbo run test typecheck lint build --force`: PASS, 11/11 tareas.
+- Contracts: 26 tests; Web: 132 tests; API: 148 tests. Total: 306 tests.
+- Typecheck, lint, builds web y API: PASS.
+- `git diff --check`: PASS.
+- Las pruebas PostgreSQL de `apps/api/src/features/mentor/http.test.ts` incluyen persistencia de borradores parciales, aislamiento entre `student-1` y `student-2`, rechazo de versión desactualizada y bloqueo de evaluación incompleta. Pasaron como parte de los 148 tests de API.
+
+## Avisos de build
+Vite reporta el chunk principal en 522.29 kB (límite de aviso 500 kB) y las directivas `use client` del bundle de lucide. El build termina con éxito.
+
+## Revalidación después del ajuste responsive
+Agente A modificó únicamente `apps/web/src/features/mentor/mentor-screen.css`: entre 761–1100 px el panel de preparación se coloca debajo del resumen.
+- `pnpm --filter @fragments/web test`: 27 archivos, 132 tests PASS.
+- `pnpm --filter @fragments/web typecheck`: PASS.
+- `pnpm lint`: PASS (solo tarea `@fragments/contracts` configurada).
+- `pnpm --filter @fragments/web build`: PASS; mantiene avisos ya descritos.
+- `git diff --check`: PASS.
+- Ego Lite 1024 CSS px: documento 1008 px (diferencia del scrollbar), resumen 720 px; panel debajo del resumen, texto de preparación 577 px; CTA habilitado para fixture válida; 0 writes.
