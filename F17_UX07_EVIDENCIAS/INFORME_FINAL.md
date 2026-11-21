@@ -1,6 +1,6 @@
 # F17.3 / UX-07 — Mentor · Habilidades
 
-**Estado:** implementación local y gates de código/QA aprobados. Commit `11b7ff4` en `codex/f17-ux07-habilidades`. Integración remota y release F14 pendientes por la prohibición de `push` en el `AGENTS.md` del repositorio.
+**Estado:** implementación local y gates de código/QA aprobados. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb` en `codex/f17-ux07-habilidades`, sincronizados con `origin/main` mediante merge normal `010402a`. El `AGENTS.md` vigente permite publicar la rama y abrir PR; integración remota/F14 pendientes.
 
 ## Resultado
 
@@ -26,6 +26,7 @@ La carpeta contiene 15 archivos: esta nota, la referencia aprobada y capturas Eg
 ## Verificación
 
 - `pnpm exec turbo run test typecheck lint build --force --output-logs=errors-only` — **11/11 tareas PASS** (API, web y contracts).
+- Reejecución tras integrar la actualización de `origin/main` por merge normal `010402a`: **11/11 PASS**, 0 tareas en caché (16.169 s).
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/skills-http.test.ts --reporter=dot` con URL temporal solo de prueba — **1/1 PASS**, `fragments_test`.
 - `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx --reporter=dot` — **19/19 PASS**.
 - `git diff --check` — **PASS**.
@@ -35,4 +36,4 @@ La carpeta contiene 15 archivos: esta nota, la referencia aprobada y capturas Eg
 
 - Imagen aprobada: `Fragments_F17_UX07_Habilidades_Referencia_Aprobada.png`, 1672×941, SHA-256 `6f067ed50875a15e10d8d889ba93f98f49d76653a48f5db972e0de911e3c015a`.
 - Resumen de QA y referencia adjuntos a la ficha UX-07 en Notion: https://app.notion.com/p/41ecd5fa7ed781798689e1d75db17da5
-- No se creó PR ni se ejecutó CI remota, F14 o health/version de producción. El `AGENTS.md` local prohíbe hacer `push`; se conserva el trabajo en la rama de tarea para continuar cuando ese límite se resuelva.
+- PR, CI remota y F14 se ejecutarán ahora conforme a la autorización del brief y el `AGENTS.md` vigente. Aún no hay SHA integrado, tag, release, health o versión productiva verificados.

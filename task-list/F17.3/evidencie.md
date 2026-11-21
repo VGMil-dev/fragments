@@ -2,7 +2,7 @@
 
 ## Estado
 
-IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commit de implementación `11b7ff4` en `codex/f17-ux07-habilidades`. Pendiente integración remota/release F14; el `AGENTS.md` del repositorio prohíbe `push`.
+IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS**. Commits de tarea `962ef80`, `11b7ff4` y `713e8cb`; base sincronizada con `origin/main` mediante merge normal `010402a`. Siguiente paso: publicar la rama propia y abrir PR, permitido por el `AGENTS.md` vigente; F14 queda pendiente de integración.
 
 ## Contrato y persistencia
 
@@ -30,6 +30,7 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 ## Verificación fresca
 
 - `pnpm exec turbo run test typecheck lint build --force --output-logs=errors-only` — **11/11 tareas PASS** en API, web y contracts.
+- Reejecución tras sincronizar la rama con `origin/main` en merge `010402a`: **11/11 PASS**, 0 tareas en caché, 16.169 s.
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/skills-http.test.ts --reporter=dot` (URL temporal restringida a `fragments_test`) — **1/1 PASS**.
 - `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx --reporter=dot` — **19/19 PASS**.
 - `git diff --check` — **PASS**.
@@ -42,5 +43,5 @@ IMPLEMENTACIÓN LOCAL Y QA COMPLETADOS. Revisión visual independiente B: **PASS
 
 ## Integración pendiente
 
-- Commit local: `11b7ff4` (`feat(f17.3): conecta habilidades autorizadas de Mentor`). Aún sin PR/CI remoto/F14, tag, release, health o versión productiva verificados.
-- `D:\Dev\Trabajo\Fragments\AGENTS.md` establece no hacer push. El trabajo permanece en el worktree y rama `codex/f17-ux07-habilidades`, derivados de `origin/main`; no se tocó la rama principal ni el checkout abierto.
+- Commits de tarea: `962ef80` (`feat(f17.3): define vínculo de habilidades del borrador`), `11b7ff4` (`feat(f17.3): conecta habilidades autorizadas de Mentor`) y `713e8cb` (`docs(f17.3): registra cierre local de UX-07`). El merge `010402a` incorpora la actualización reciente de `origin/main` sin reescribir historia.
+- El `AGENTS.md` vigente permite publicar esta rama `codex/*` y abrir PR hacia `main`; no se hará push directo a `main`, force-push ni bypass de protecciones. PR/CI remoto/F14/tag/release/health/versión productiva siguen sin verificar hasta completar la integración.
