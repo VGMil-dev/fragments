@@ -33,6 +33,7 @@ Commit de implementación: `7f164ea` (`feat(mentor): pule la experiencia visual 
 - PR [#65](https://github.com/VGMil-dev/fragments/pull/65), mergeado en `main` con SHA `88f2040eaf83737f1c4beb84470bf167fcd24a79`; run CI `44840604739` pasó.
 - F21 permaneció intacta en su worktree independiente.
 - Integración: completa mediante PR #65 y merge normal. No se creó tag ni se desplegó.
+- Cierre documental: PR #66 actualiza la ficha y el índice. Su check `verify` pasó (incluido reintento), pero GitHub sigue rechazando el merge normal porque informa que espera ese check; PR permanece abierto bajo protección.
 - Producción: no modificada. La evidencia F21 registra que VPS aún tiene configuración F14/SQLite antigua y requiere un preflight de migración antes de un despliegue seguro. Además, F14 exige la aprobación humana protegida; no se solicitó ni se eludió.
 
 ## Archivos
