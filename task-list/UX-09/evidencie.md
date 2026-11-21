@@ -1,7 +1,7 @@
 # UX-09 — Evidencia
 
 ## Estado
-Implementación en rama `codex/f17-ux09-evaluation`, sincronizada con `origin/main` `c384998` tras integrar UX-08 PR #77. Resolución de UX-09 + UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`. Ajuste tablet: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`. Sin PR propio, CI remoto, despliegue o versión productiva aún.
+Implementación integrada mediante PR #78 y desplegada como `v0.5.8` por F14. Merge commit de UX-09: `527b8f66440819e72f73366014f78e0a3aa5a991`. Tag anotada: objeto `46e3e80a3ef7fae8d929b7dc593a9cce7806ee9b`, apuntando al merge exacto.
 
 ## Referencia aprobada
 SHA-256 `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c` (1672 × 941), verificada contra `referencia-aprobada.png`. La primera imagen `image-1.png` no coincidió y fue descartada.
@@ -21,8 +21,14 @@ SHA-256 `76a1b15c63ba87ce655f2e63f193beb1dd7d8242e62adb7599e73c0c3c11330c` (1672
 ## Revisión Ego Lite independiente
 Agente B: **PASS visual e interacción local con fixtures**. Sin overflow a 320/390/768/1024/1440/1672; panel legible a 1024; CTA presente, aviso de Galería único; ArrowUp y botones cambian etapas. 13 GET sintéticos; PUT guardar y POST evaluar interceptados con 405; cero escrituras persistidas/enviadas al servidor; consola/runtime sin errores. `:focus-visible` no quedó confirmado. Guardado UI persistido, evaluación real, aislamiento y permisos de PostgreSQL no se probaron en browser; la suite API sí cubre persistencia/ACL/versiones contra la DB de test. Reporte/capturas: `REVISION_AGENT_B_POST_UX08.md`, `ego-post-ux08-*.png`.
 
-## Pendiente para la meta completa
-Crear PR de UX-09, pasar CI requerido, integrar por PR, publicar tag autorizada y completar F14; después verificar versión/health/recursos e interfaz productiva mediante Ego Lite. No declarar completo antes de esas evidencias.
+## Integración, release y producción
+- PR #78 `feat(mentor): rediseña etapa evaluación UX-09`: merge normal a `main`; check obligatorio `verify`, run `44956236067`, SUCCESS; merge `527b8f66440819e72f73366014f78e0a3aa5a991`.
+- F14 `v0.5.8`, run `44956744577`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Paquete ARM64 publicado con manifiesto y bundle Sigstore; no se modificó configuración de infraestructura.
+- Verificación pública posterior: `GET /health` HTTP 200, `status=ok`, `database=ready`; `/` y bundle JS `/assets/index-DmKyggnV.js` HTTP 200, 522334 bytes. El bundle contiene `v0.5.8` y el SHA completo `527b8f66440819e72f73366014f78e0a3aa5a991`.
+- Ego Lite abrió `/student/mentor` en producción en modo no destructivo. La app devolvió la pantalla pública «Continúa con GitHub» y el indicador de build muestra `v0.5.8 · 527b8f6`; el flujo de evaluación no fue visible porque esta sesión no tenía autenticación. Captura `ego-produccion-v058.png`. No se inició OAuth ni se hicieron escrituras en producción.
+
+## Pendiente
+La etapa de Evaluación aún requiere un recorrido visual autenticado en producción. Ego Lite llegó correctamente a la pantalla de inicio de sesión, sin autenticar ni modificar datos. No declarar la validación visual de la ruta autenticada hasta que se complete ese recorrido.
 
 ## Commits
 - UI inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
