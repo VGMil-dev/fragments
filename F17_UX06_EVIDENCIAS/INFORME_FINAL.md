@@ -31,4 +31,4 @@ Pruebas, typecheck, lint, build, interacción de teclado, guardado y persistenci
 
 ## Registro documental
 
-La página UX-06 se actualizará con los enlaces del PR, referencia y paquete final.
+La ficha UX-06 de Notion quedó actualizada con PR #72, SHA, release F14, enlace al PNG aprobado y al paquete de evidencias.
