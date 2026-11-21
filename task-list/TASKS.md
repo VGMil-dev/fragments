@@ -16,7 +16,7 @@ Regla: marcar `[x]` únicamente cuando `task-list/<ID>/evidencie.md` contiene co
 | F09 | PLANNER | F02,F04 | Descarga de plantilla DOCX e importación local editable en Mentor; pruebas del flujo existente | [x] |
 | F10 | PLANNER | F08,F09 | Trainer: Review→sorteo→reto→pistas→progreso→historial→repaso; separación Inspector, Ego Lite y paquete de evidencia local ≤20 archivos | [x] |
 | F10.1 | PLANNER | F10 | Completar banco variado de retos desde Review verificado; reutilizarlo, admitir repaso, probar concurrencia y recorrer fixture pública sin ejecutar su código; evidencia local ≤20 archivos; commits `4133219a`/`3cda9a4` | [x] |
-| UX-09 | PLANNER | F17, F18.A | UI integrada con UX-08; 306/306 local tests; Ego Lite PASS en 6 anchos; PR/CI/F14 pendientes | [ ] |
+| UX-09 | PLANNER | F17, F18.A | PR/CI/F14 pendientes; commits `6288011` + evidencia `7ac89f14d9d38a3cada4d73f1bf511a084d3bb41`; 306 tests y Ego Lite PASS | [ ] |
 | F11 | PLANNER | F10 | Control docente Mentor: editar y publicar una configuración temática/rúbrica; evaluación estructurada con puntaje de servidor, deduplicación y consulta histórica versionada | [x] |
 | F12 | PLANNER | F10.1,F11 | Integración local v0.3.0: migraciones unificadas, recorridos Mentor→Review→Trainer→Inspector, QA funcional y evidencia privada ≤20 archivos | [x] |
 | F13 | PLANNER | F12 | Indicador de versión web con metadata del build validada contra tag anotada, SHA exacto y `origin/main`; build candidato manual sin despliegue | [x] |

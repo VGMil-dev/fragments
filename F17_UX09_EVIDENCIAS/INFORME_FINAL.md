@@ -26,4 +26,4 @@ UX-08 PR #77 ya está integrado en `main`. UX-09 todavía no tiene PR propio ni 
 - UI y evidencia inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
 - Sincronización y resolución UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
 - Ajuste responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
-- El siguiente commit registrará el cierre documental y el hash final.
+- Cierre de evidencia y PASS de revisión: `7ac89f14d9d38a3cada4d73f1bf511a084d3bb41`.

@@ -28,4 +28,4 @@ Crear PR de UX-09, pasar CI requerido, integrar por PR, publicar tag autorizada 
 - UI inicial: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`.
 - Merge base UX-08: `8617dbb23325e257d44e886b340f012dbe3c8bc5`.
 - CSS responsive: `6288011d11ac6679d5cbd84abd4bfe9818ba1221`.
-- Hash final documental pendiente de registrar.
+- Cierre de evidencia y PASS de revisión: `7ac89f14d9d38a3cada4d73f1bf511a084d3bb41`.
