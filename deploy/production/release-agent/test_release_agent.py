@@ -121,6 +121,35 @@ class ReleaseValidationTests(unittest.TestCase):
                             agent.load_archive(archive, {"api": "fragments-api:target", "web": "fragments-web:target"}, "v0.4.0", RELEASE_SHA)
                         self.assertEqual(raised.exception.code, expected_code)
 
+    def test_load_archive_uses_imported_docker_ids_and_still_checks_signed_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "images.tar.gz"
+            with gzip.open(archive, "wb") as stream:
+                stream.write(b"signed synthetic archive")
+            refs = {"api": "fragments-api:target", "web": "fragments-web:target"}
+            archived = {
+                refs["api"]: {"id": "sha256:" + "a" * 64, "architecture": "arm64", "version": "v0.4.0", "revision": RELEASE_SHA, "database": "postgresql"},
+                refs["web"]: {"id": "sha256:" + "b" * 64, "architecture": "arm64", "version": "v0.4.0", "revision": RELEASE_SHA, "database": None},
+            }
+            imported = [
+                {"id": "sha256:" + "c" * 64, "architecture": "arm64", "version": "v0.4.0", "revision": RELEASE_SHA, "database": "postgresql"},
+                {"id": "sha256:" + "d" * 64, "architecture": "arm64", "version": "v0.4.0", "revision": RELEASE_SHA, "database": None},
+            ]
+            with patch.object(agent, "archive_image_info", return_value=archived), \
+                 patch.object(agent.subprocess, "run"), \
+                 patch.object(agent, "image_info", side_effect=imported):
+                result = agent.load_archive(archive, refs, "v0.4.0", RELEASE_SHA)
+            self.assertEqual(result[refs["api"]]["id"], "sha256:" + "c" * 64)
+            self.assertEqual(result[refs["web"]]["id"], "sha256:" + "d" * 64)
+
+            bad_import = dict(imported[0], database="sqlite")
+            with patch.object(agent, "archive_image_info", return_value=archived), \
+                 patch.object(agent.subprocess, "run"), \
+                 patch.object(agent, "image_info", side_effect=[bad_import, imported[1]]):
+                with self.assertRaises(agent.AgentError) as raised:
+                    agent.load_archive(archive, refs, "v0.4.0", RELEASE_SHA)
+            self.assertEqual(raised.exception.code, "artifact_invalid")
+
     def test_archive_image_info_binds_config_digest_tags_and_labels(self):
         refs = {"api": "fragments-api:sha-" + RELEASE_SHA, "web": "fragments-web:sha-" + RELEASE_SHA}
         config_blobs = {}
@@ -550,7 +579,10 @@ class ReleaseValidationTests(unittest.TestCase):
                 manifest["images"]["api"]: {"id": "sha256:" + "a" * 64},
                 manifest["images"]["web"]: {"id": "sha256:" + "b" * 64},
             }),
-            patch.object(agent, "load_archive"),
+            patch.object(agent, "load_archive", side_effect=lambda _archive, refs, _tag, _commit: {
+                refs["api"]: {"id": "sha256:" + "a" * 64},
+                refs["web"]: {"id": "sha256:" + "b" * 64},
+            }),
             patch.object(agent, "container_snapshot", return_value=neighbors),
             patch.object(agent, "image_refs_for_running", return_value=previous_images),
             patch.object(agent, "image_ids_for_running", return_value={"fragments-api-1": "sha256:" + "c" * 64, "fragments-web-1": "sha256:" + "d" * 64}),
@@ -895,7 +927,10 @@ class TransactionRecoveryTests(unittest.TestCase):
                 stack.enter_context(patch.object(agent, "ensure_archive_available"))
                 stack.enter_context(patch.object(agent, "verify_attestation"))
                 stack.enter_context(patch.object(agent, "archive_image_info", return_value=archive_data))
-                stack.enter_context(patch.object(agent, "load_archive"))
+                stack.enter_context(patch.object(agent, "load_archive", side_effect=lambda _archive, refs, _tag, _commit: {
+                    refs["api"]: {"id": target_ids["fragments-api-1"]},
+                    refs["web"]: {"id": target_ids["fragments-web-1"]},
+                }))
                 stack.enter_context(patch.object(agent, "container_snapshot", return_value=neighbors))
                 stack.enter_context(patch.object(agent, "image_refs_for_running", return_value=previous_images))
                 stack.enter_context(patch.object(agent, "image_ids_for_running", return_value=previous_ids))

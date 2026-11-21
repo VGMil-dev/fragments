@@ -797,7 +797,7 @@ def _get_release_assets_for_release(release_id: int, release: dict, config: dict
     return manifest, release, archive_asset, archive_path, attestation_path
 
 
-def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> None:
+def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> dict[str, dict]:
     archived_images = archive_image_info(archive_path, images, tag, commit)
     try:
         with gzip.open(archive_path, "rb") as image_stream:
@@ -818,10 +818,16 @@ def load_archive(archive_path: Path, images: dict[str, str], tag: str, commit: s
         raise AgentError("El paquete de imágenes no es un gzip válido.", code="artifact_invalid") from error
     except OSError as error:
         raise AgentError("No se pudo ejecutar docker load.", code="command_failed") from error
+    loaded_images: dict[str, dict] = {}
     for image_name in ("api", "web"):
         info = image_info(images[image_name])
-        if info.get("id") != archived_images[images[image_name]]["id"] or (info["architecture"], info["version"], info["revision"]) != ("arm64", tag, commit) or info.get("database") != archived_images[images[image_name]].get("database"):
+        expected = archived_images[images[image_name]]
+        if (info["architecture"], info["version"], info["revision"], info.get("database")) != (
+            expected["architecture"], expected["version"], expected["revision"], expected.get("database"),
+        ):
             raise AgentError("Identidad, labels o arquitectura de imagen no coinciden con el artefacto aprobado.", code="artifact_invalid")
+        loaded_images[images[image_name]] = info
+    return loaded_images
 
 
 def archive_image_info(archive_path: Path, images: dict[str, str], tag: str, commit: str) -> dict[str, dict]:
@@ -1147,13 +1153,12 @@ def process_release(release_id: int, config: dict) -> None:
             verify_git_source(Path(config["gitDirectory"]), tag, tag_object, commit)
             ensure_archive_available(archive_asset, archive_path, archive_digest)
             verify_attestation(archive_path, tag, commit, run_id, archive_digest, attestation_path, state_dir)
-            archived_image_data = archive_image_info(archive_path, manifest["images"], tag, commit)
-            target_image_ids = {
-                "fragments-api-1": archived_image_data[manifest["images"]["api"]]["id"],
-                "fragments-web-1": archived_image_data[manifest["images"]["web"]]["id"],
-            }
-
             if pending is not None:
+                loaded_image_data = load_archive(archive_path, manifest["images"], tag, commit)
+                target_image_ids = {
+                    "fragments-api-1": loaded_image_data[manifest["images"]["api"]]["id"],
+                    "fragments-web-1": loaded_image_data[manifest["images"]["web"]]["id"],
+                }
                 if target_image_ids != pending.get("targetImageIds") or manifest["images"] != pending.get("targetImages"):
                     raise AgentError("La identidad de imagen aprobada contradice el baseline pendiente.", code="provenance_mismatch", observed_tag=tag)
                 status = reconcile_deploying_record(ledger, ledger_path, pending)
@@ -1171,7 +1176,11 @@ def process_release(release_id: int, config: dict) -> None:
                 _cleanup_release_files(release_id, state_dir, archive_path, attestation_path)
                 return
 
-            load_archive(archive_path, manifest["images"], tag, commit)
+            loaded_image_data = load_archive(archive_path, manifest["images"], tag, commit)
+            target_image_ids = {
+                "fragments-api-1": loaded_image_data[manifest["images"]["api"]]["id"],
+                "fragments-web-1": loaded_image_data[manifest["images"]["web"]]["id"],
+            }
             previous_images = image_refs_for_running()
             previous_image_ids = image_ids_for_running()
             previous_volume, emergency_sqlite_backup = ensure_postgres_ready(config, previous_images["fragments-api-1"])
