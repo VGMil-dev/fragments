@@ -23,7 +23,7 @@ Pruebas, typecheck, lint, build, interacción de teclado, guardado y persistenci
 ## Integración y producción
 
 - Rama: `codex/f17-ux06-context`, basada en `origin/main` actualizado.
-- Commit: pendiente.
+- Commit de implementación: `cc60def010e01fd2f4dd7abb1e2dbe1b2b48a87b`.
 - PR y CI: pendientes.
 - SHA de merge / tag: pendientes.
 - F14 y verificación Ego Lite en producción: pendientes. El éxito de producción no se declara hasta completar estas comprobaciones.

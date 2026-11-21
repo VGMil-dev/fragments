@@ -25,7 +25,8 @@ La carpeta raíz `F17_UX06_EVIDENCIAS/` contiene 11 archivos incluyendo este inf
 
 ## Integración / producción
 
-- Commit: pendiente.
+- Commit de implementación: `cc60def010e01fd2f4dd7abb1e2dbe1b2b48a87b` (`feat(mentor): implementa contexto UX-06`).
+- Commit de evidencia/integración: pendiente.
 - PR / CI: pendientes.
 - SHA de merge y release/tag F14: pendientes.
 - Salud y versión productiva verificadas con Ego Lite: pendiente.
