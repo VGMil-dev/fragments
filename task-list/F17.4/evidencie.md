@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación y QA local completados; lista para publicar y abrir PR. No hay despliegue productivo declarado. El PR y CI se registrarán al confirmarse.
+Implementación y QA local completados; commit de implementación registrado. Publicación de rama, PR y CI pendientes. No hay despliegue productivo declarado.
 
 ## Base y aislamiento
 
@@ -42,7 +42,7 @@ Implementación y QA local completados; lista para publicar y abrir PR. No hay d
 
 ## Integración y despliegue
 
-- Commit de implementación: pendiente.
+- Commit de implementación: `2152598904d4fac21b804f27a27fcd14b24fca37`.
 - PR: pendiente de publicar.
 - CI remoto: pendiente.
 - Despliegue: pendiente. La migración nueva requiere el gate F14/F21 y provisión del catálogo en producción; no se aplicó ni se tocaron datos productivos.
