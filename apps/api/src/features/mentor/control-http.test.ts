@@ -18,7 +18,7 @@ const studentId = `student-fixture-${namespace}`;
 const teacherId = `teacher-fixture-${namespace}`;
 const proposalDraft = {
   title: "Mapa de plantas", problem: "El grupo no recuerda dónde sembró cada planta.",
-  solution: "Un mapa local registra cada siembra.", description: "Un mapa local para ubicar plantas.", purpose: "Ayudar al grupo a cuidar el jardín.", goals: ["Ubicar las plantas"], skills: ["TypeScript"], tags: [],
+  solution: "Un mapa local registra cada siembra.", description: "Un mapa local para ubicar plantas.", purpose: "Ayudar al grupo a cuidar el jardín.", goals: ["Ubicar las plantas"], skills: [], mentorSkills: { classroomId: null, selectedSkillIds: [] }, tags: [],
   scope: "Registrar y consultar plantas en un aula.", constraints: ["Funciona sin conexión"],
 };
 
