@@ -1,6 +1,6 @@
 # F17.2 — Mentor · Contexto (UX-06)
 
-**Estado:** Implementación y QA PASS; PR, merge y despliegue F14 pendientes.
+**Estado:** PASS; integrado y desplegado en producción mediante F14.
 
 ## Implementación
 
@@ -24,10 +24,11 @@ Pruebas, typecheck, lint, build, interacción de teclado, guardado y persistenci
 
 - Rama: `codex/f17-ux06-context`, basada en `origin/main` actualizado.
 - Commit de implementación: `cc60def010e01fd2f4dd7abb1e2dbe1b2b48a87b`.
-- PR y CI: pendientes.
-- SHA de merge / tag: pendientes.
-- F14 y verificación Ego Lite en producción: pendientes. El éxito de producción no se declara hasta completar estas comprobaciones.
+- PR #72 y CI run `44925110965`: success.
+- SHA de merge: `00b548cc715c7b04e862e985a63f5bb265e0a54e`.
+- Release F14 `v0.5.6`, run `44925403964`: success; release ID `453828612`, tag anotada sobre el SHA de merge.
+- Producción comprobada: API/web `healthy`, versión `v0.5.6`, `/health` HTTP 200 y bundle público verificado con Ego Lite. Datos de usuario productivos no fueron modificados.
 
-## Pendientes de cierre
+## Registro documental
 
-Actualizar este informe, `task-list/F17.2/evidencie.md`, `task-list/TASKS.md` y la página UX-06 con PR, SHA, release, comprobación productiva y enlaces reales al finalizar F14.
+La página UX-06 se actualizará con los enlaces del PR, referencia y paquete final.
