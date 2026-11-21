@@ -563,6 +563,11 @@
   .mentor-stage-nav--horizontal ol { display: none; }
   .mentor-stage-nav--horizontal .mentor-stage-nav__mobile { display: grid; gap: .4rem; }
   .mentor-stage-nav--horizontal .mentor-stage-nav__controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .mentor-evaluation { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .mentor-preparation { grid-template-columns: 6rem minmax(0, 1fr); gap: .8rem; }
+  .mentor-preparation__wheel { width: 5.3rem; }
+  .mentor-preparation__wheel::before { width: 4rem; }
+  .mentor-preparation__wheel > span { font-size: 1.15rem; }
 }
 @media (min-width: 1101px) {
   .student-workspace:has(.mentor-stage-layout--evaluation) .student-workspace__content > .mentor-screen.student-screen {
