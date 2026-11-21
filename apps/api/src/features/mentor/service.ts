@@ -109,6 +109,11 @@ function validateProposal(value: unknown): Proposal {
   return parsed.data;
 }
 
+function proposalWithoutClassroomIds(value: unknown): Proposal {
+  const { mentorSkills: _privateClassroomSelection, ...proposal } = validateProposal(value);
+  return proposal;
+}
+
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object") {
@@ -196,10 +201,10 @@ export function createMentorService(options: Options) {
   const token = options.token ?? (() => randomBytes(24).toString("base64url"));
 
   return {
-    proposalDigest(rawProposal: unknown): string { return digest(validateProposal(rawProposal)); },
+    proposalDigest(rawProposal: unknown): string { return digest(proposalWithoutClassroomIds(rawProposal)); },
 
     async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorControlConfig; version: number; operationKey?: string }): Promise<MentorEvaluation> {
-      const proposal = validateProposal(rawProposal);
+      const proposal = proposalWithoutClassroomIds(rawProposal);
       const proposalDigest = digest(proposal);
       const config = MentorControlConfigSchema.parse(context?.config ?? defaultMentorConfig);
       const contextVersion = context?.version ?? 1;
@@ -235,7 +240,7 @@ export function createMentorService(options: Options) {
     },
 
     async createSubmission(input: { sourceId: string; proposal: unknown; evaluation: MentorEvaluation }): Promise<SubmissionSnapshot> {
-      const proposal = validateProposal(input.proposal);
+      const proposal = proposalWithoutClassroomIds(input.proposal);
       if (!input.sourceId.trim() || input.sourceId.length > 160) throw new MentorInputError("Indica un identificador válido para la propuesta.");
       const createdAt = now().toISOString();
       const snapshotJson = {

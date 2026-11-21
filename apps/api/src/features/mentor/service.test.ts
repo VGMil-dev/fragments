@@ -57,6 +57,22 @@ describe("Mentor service", () => {
     expect(result.guidance).toHaveLength(1);
   });
 
+  it("omits internal classroom and skill IDs from evaluator input and delivery snapshots", async () => {
+    let evaluatorProposal: unknown;
+    const evaluator: MentorEvaluator = {
+      async evaluate(input) {
+        evaluatorProposal = input.proposal;
+        return fakeEvaluator.evaluate(input);
+      },
+    };
+    const linkedProposal = { ...proposal, mentorSkills: { classroomId: "class-fixture-a", selectedSkillIds: ["skill-fixture-a"] } };
+    const service = createMentorService({ evaluator, pdf: fakePdf });
+    const evaluation = await service.evaluate(linkedProposal);
+    expect(evaluatorProposal).not.toHaveProperty("mentorSkills");
+    const submission = await service.createSubmission({ sourceId: "proposal-linked", proposal: linkedProposal, evaluation });
+    expect(submission.snapshotJson.proposal).not.toHaveProperty("mentorSkills");
+  });
+
   it("ranks opt-in gallery proposals by normalized topic similarity", async () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     const result = await service.evaluate(proposal, [

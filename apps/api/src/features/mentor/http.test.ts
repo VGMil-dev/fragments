@@ -19,7 +19,7 @@ const draft = {
   solution: "Una bitácora permite anotar riegos y comparar el crecimiento de cada planta.",
   description: "Una bitácora para registrar y consultar el crecimiento de cada planta.",
   purpose: "Ayudar al curso a observar cambios en su huerto.",
-  goals: ["Registrar riegos"], skills: ["TypeScript"], scope: "Una pantalla registra plantas y medidas.", constraints: ["Funciona sin conexión"],
+  goals: ["Registrar riegos"], skills: [], mentorSkills: { classroomId: null, selectedSkillIds: [] }, scope: "Una pantalla registra plantas y medidas.", constraints: ["Funciona sin conexión"],
 };
 
 async function start(evaluator: MentorEvaluator = createLocalMentorEvaluator(), logFailure?: (entry: Record<string, unknown>) => void) {
@@ -102,7 +102,7 @@ describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
     const local = createLocalMentorEvaluator();
     const base = await start({ async evaluate(input) { evaluations += 1; return local.evaluate(input); } });
     const headers = { "x-fixture-user": "student-1", "content-type": "application/json" };
-    const partial = { title: "Mi idea", problem: "", solution: "", description: "", purpose: "", goals: [], skills: [], scope: "", constraints: [] };
+    const partial = { title: "Mi idea", problem: "", solution: "", description: "", purpose: "", goals: [], skills: [], mentorSkills: { classroomId: null, selectedSkillIds: [] }, scope: "", constraints: [] };
     const created = await fetch(`${base}/api/me/proposals/drafts`, { method: "POST", headers, body: JSON.stringify({ proposal: partial }) });
     expect(created.status).toBe(201);
     const createdData = (await created.json() as { data: { id: string; version: number; proposal: typeof partial } }).data;

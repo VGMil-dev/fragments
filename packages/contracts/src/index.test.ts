@@ -13,6 +13,7 @@ import {
   ProposalDraftFieldsSchema,
   ProposalDraftResponseSchema,
   ProposalEvaluationInputSchema,
+  ProposalMentorSkillsSchema,
   GalleryOptInRequestSchema,
   CreateReviewSubmissionRequestSchema,
   EvidenceReferenceSchema,
@@ -354,6 +355,11 @@ describe("shared API contracts", () => {
     expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso." }).success).toBe(true);
     expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso.", technologies: ["TypeScript"], expectedOutcome: "MVP demostrable" }).success).toBe(true);
     expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial, ownerUserId: "spoofed" }).success).toBe(false);
+    const mentorSkills = { classroomId: "classroom-1", selectedSkillIds: ["skill-1", "skill-2"] };
+    expect(ProposalMentorSkillsSchema.safeParse(mentorSkills).success).toBe(true);
+    expect(ProposalDraftFieldsSchema.safeParse({ ...partial, mentorSkills }).success).toBe(true);
+    expect(ProposalMentorSkillsSchema.safeParse({ classroomId: "classroom-1", selectedSkillIds: ["skill-1", "skill-1"] }).success).toBe(false);
+    expect(ProposalMentorSkillsSchema.safeParse({ classroomId: null, selectedSkillIds: ["skill-1"] }).success).toBe(false);
   });
 
   it("validates evidence-backed Mentor evaluation and similarity matches", () => {

@@ -14,12 +14,15 @@ import {
   SubmissionResponseSchema,
   StudentSubmissionsResponseSchema,
   VerifySubmissionResponseSchema,
+  type ProposalDraftFields,
 } from "@fragments/contracts";
 import { createPrismaMentorRepository } from "./prisma-repository.js";
 import { createPrismaMentorControlRepository } from "./prisma-control-repository.js";
 import { proposalEvaluationResponse } from "./evaluation-response.js";
 import { MentorEvaluationFailure, MentorInputError, type createMentorService } from "./service.js";
+import { validateStudentSkillSelection } from "./skills-validation.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
+import { createClassroomRepository } from "../classroom/repository.js";
 
 type MentorService = ReturnType<typeof createMentorService>;
 type RouteResult = "handled" | "unhandled";
@@ -44,6 +47,7 @@ export function createMentorHttp(
   options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void; auth?: FragmentsAuthService } = {},
 ) {
   const repository = createPrismaMentorRepository(database);
+  const classrooms = createClassroomRepository(database);
   const control = createPrismaMentorControlRepository(database);
   const pending = new Map<string, Promise<{ id: string; evaluation: Awaited<ReturnType<MentorService["evaluate"]>>; evaluatedAt: string }>>();
   const logFailure = options.logFailure ?? ((diagnostic: MentorEvaluationDiagnostic) => console.error(JSON.stringify(diagnostic)));
@@ -72,7 +76,9 @@ export function createMentorHttp(
         sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta.");
         return "handled";
       }
-      const saved = await repository.createProposal(proposal.data, null, student.id);
+      const validatedSkills = await validateStudentSkillSelection(classrooms, proposal.data, student.id, true);
+      if (!validatedSkills.ok) { sendError(response, 400, "INVALID_SKILL_SELECTION", "Revisa las habilidades seleccionadas para tu aula."); return "handled"; }
+      const saved = await repository.createProposal(validatedSkills.proposal as typeof proposal.data, null, student.id);
       sendJson(response, 201, { ok: true, data: ProposalResponseSchema.parse(saved) });
       return "handled";
     }
@@ -84,7 +90,9 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = CreateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador."); return "handled"; }
-      const saved = await repository.createProposalDraftByUser(input.data.proposal, student.id);
+      const validatedSkills = await validateStudentSkillSelection(classrooms, input.data.proposal, student.id, true);
+      if (!validatedSkills.ok) { sendError(response, 400, "INVALID_SKILL_SELECTION", "Revisa las habilidades seleccionadas para tu aula."); return "handled"; }
+      const saved = await repository.createProposalDraftByUser(validatedSkills.proposal, student.id);
       sendJson(response, 201, { ok: true, data: ProposalDraftResponseSchema.parse(saved) });
       return "handled";
     }
@@ -97,7 +105,9 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador y la versión que editas."); return "handled"; }
-      const saved = await repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, input.data.proposal);
+      const validatedSkills = await validateStudentSkillSelection(classrooms, input.data.proposal, student.id, false);
+      if (!validatedSkills.ok) { sendError(response, 400, "INVALID_SKILL_SELECTION", "Revisa las habilidades seleccionadas para tu aula."); return "handled"; }
+      const saved = await repository.updateProposalDraftByUser(draftMatch[1]!, student.id, input.data.expectedVersion, validatedSkills.proposal);
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
@@ -115,7 +125,10 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = UpdateProposalRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos de tu propuesta y la versión que editas."); return "handled"; }
-      const saved = await repository.updateProposalByUser(proposalMatch[1]!, student.id, input.data.expectedVersion, input.data);
+      const { expectedVersion, ...proposal } = input.data;
+      const validatedSkills = await validateStudentSkillSelection(classrooms, proposal, student.id, false);
+      if (!validatedSkills.ok) { sendError(response, 400, "INVALID_SKILL_SELECTION", "Revisa las habilidades seleccionadas para tu aula."); return "handled"; }
+      const saved = await repository.updateProposalByUser(proposalMatch[1]!, student.id, expectedVersion, { ...validatedSkills.proposal, expectedVersion });
       if (saved.status !== "updated") {
         if (saved.status === "not_found") sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta.");
         else sendError(response, 409, "VERSION_CONFLICT", "La propuesta cambió. Actualiza su versión antes de guardar.");
