@@ -47,7 +47,7 @@ dist/assets/jszip.min-BoSsQ7f2.js         95.92 kB │ gzip:  28.47 kB
 dist/assets/mammoth.browser-CLQSSAUd.js  491.75 kB │ gzip: 118.69 kB
 dist/assets/index-Ds0Qg47G.js            513.35 kB │ gzip: 144.29 kB
 
-[plugin builtin:vite-reporter] 
+[plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
@@ -56,9 +56,9 @@ dist/assets/index-Ds0Qg47G.js            513.35 kB │ gzip: 144.29 kB
    ╭─[ ../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/context.mjs:2:1 ]
    │
  2 │ "use client";
-   │ ──────┬──────  
+   │ ──────┬──────
    │       ╰──────── module level directive may not be preserved
-   │ 
+   │
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
@@ -66,9 +66,9 @@ dist/assets/index-Ds0Qg47G.js            513.35 kB │ gzip: 144.29 kB
    ╭─[ ../../node_modules/.pnpm/lucide-react@1.73.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs:2:1 ]
    │
  2 │ "use client";
-   │ ──────┬──────  
+   │ ──────┬──────
    │       ╰──────── module level directive may not be preserved
-   │ 
+   │
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 

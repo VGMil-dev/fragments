@@ -29,4 +29,4 @@ No se pudo localizar una configuración segura `fragments_test`/túnel DB en est
 PR, CI de integración, merge, F14, versión desplegada y comprobación en producción: pendientes. UX-08 PR #77 comparte archivos de Mentor y sigue abierto; integrar antes de reconciliarlo expondría conflictos. No se declara la meta completa.
 
 ## Registro de commits
-Se añadirá el hash local después del commit de implementación y documentación.
+Commit local de implementación/evidencia: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`. Commit posterior registra este SHA en la evidencia y task list.

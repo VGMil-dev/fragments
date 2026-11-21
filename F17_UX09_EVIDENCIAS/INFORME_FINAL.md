@@ -21,7 +21,7 @@ Base: `origin/main` `1cdeae04b0e0930663c79cde7ef72efe6f8c6054`
 - Revisión del PR/CI integrado, comportamiento después de reconciliar UX-08 y validación del build de release.
 
 ## Integración y despliegue
-No hay PR de esta rama, merge, release, F14, versión publicada ni revisión de producción. PR #77 de UX-08 continúa abierto y solapa archivos de Mentor. Las instrucciones locales del repositorio prohíben hacer push; por ello la integración y el despliegue siguen pendientes y la meta no se declara completa.
+Commit local de implementación/evidencia: `8f88ab8fc654275f00cf0dc478b321703c64b5bc`. No hay PR de esta rama, merge, release, F14, versión publicada ni revisión de producción. PR #77 de UX-08 continúa abierto y solapa archivos de Mentor. Las instrucciones locales del repositorio prohíben hacer push; por ello la integración y el despliegue siguen pendientes y la meta no se declara completa.
 
 ## Evidencia
 `referencia-aprobada.png`; `ego-review-r5-{320,390,768,1024,1440,1672}.png`; `REVISION_AGENT_B_FINAL.md`; `REVISION_AGENT_B_RONDA1.md`; `VERIFICACION_LOCAL.txt`.

@@ -40,5 +40,3 @@ Las diferencias de 17 px corresponden al ancho de la barra vertical del navegado
 El stub respondió `/api/me`, propuestas, aulas y contexto; todas las llamadas `POST/PUT/PATCH/DELETE` quedaron bloqueadas. Por ello esta revisión no prueba guardado persistente, evaluación persistida/resultados, aislamiento entre usuarios ni controles de versión frente a PostgreSQL. Hace falta ejecutar esas comprobaciones desde el coordinador exclusivamente contra `fragments_test`, y anexar evidencia de ese resultado. No se inspeccionó ni modificó una base de datos. La URL configurada localmente no identificó `fragments_test`; el preflight la rechazó antes de conexión o consulta.
 
 La ronda inicial REVISAR y sus capturas anteriores documentan los problemas que se corrigieron: formulario vacío visible, desbordamiento y navegación de tablet ilegible. Esta ronda final ya no reproduce esos defectos; el estado global sigue REVISAR solo por las verificaciones de backend pendientes.
-
-
