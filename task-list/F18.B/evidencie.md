@@ -229,3 +229,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Aplicación por el mecanismo pull normal: API/web healthy en imagen `sha-411747c5...`; `/health` status ok/database ready. Bundle cache-bypass `/assets/index-NaEOWqTZ.js` contiene v0.5.23, SHA exacto y la etiqueta de versiones.
 - Ego Lite: perfil estudiante y TaskSpace existentes permanecieron abiertos. `/student/classrooms` muestra Programación Móvil sin misiones publicadas y 0 tarjetas. La etiqueta y su posición fuera del disclosure quedan NO COMPROBADAS porque no hubo una tarjeta que observar. No se guardó ni alteró nada.
 - El recorrido misión→propuesta→Mentor sobre recursos reales y calidad IA siguen NO COMPROBADOS; no se crearon habilidades ni misiones productivas.
+
+## Revalidación del recorrido académico en PostgreSQL desechable · 2026-11-22
+
+- Sobre `fcfe599185dcc4700577159552c8206ac5a08075` se levantó un contenedor PostgreSQL 18.6 temporal, sin volumen y publicado únicamente en `127.0.0.1:55444`. Se aplicaron las cinco migraciones vigentes solo en la base `fragments_test`; `current_database()` confirmó ese nombre antes de ejecutar el test.
+- `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS. Recorrió HTTP: acceso anónimo y docente ajeno denegados, misión v1 publicada, estudiante sin matrícula denegado, matrícula activa y misión visible, draft ligado a `assignmentVersionId`, publicación docente v2 y recuperación/evaluación Mentor fake con snapshot/contexto v1 preservados.
+- La prueba usa auth fixture y `fake/local-heuristic-v1`; confirma integración de rutas/repositorios/PostgreSQL, no Better Auth ni proveedor IA reales. El contenedor temporal se detuvo y eliminó sin volumen persistente.
+- **NO COMPROBADO:** UI con misión activa en Ego Lite, persistencia en producción, Better Auth real y calidad de puntuación IA real. La vista Ego Lite sigue mostrando un aula sin misiones, por lo que el label visual permanece NO COMPROBADO.
