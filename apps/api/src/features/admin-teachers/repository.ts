@@ -12,7 +12,15 @@ export function createAdminTeachersRepository(database: Pick<PrismaClient, "user
     async listPage(query): Promise<AdminTeacherRepositoryPage> {
       const conditions: Prisma.UserWhereInput[] = [
         { isTeacher: true },
-        { OR: [{ role: null }, { role: { not: "admin" } }] },
+        { OR: [
+          { role: null },
+          { NOT: [
+            { role: "admin" },
+            { role: { startsWith: "admin," } },
+            { role: { contains: ",admin," } },
+            { role: { endsWith: ",admin" } },
+          ] },
+        ] },
       ];
       if (query.after) {
         const createdAt = new Date(query.after.createdAt);

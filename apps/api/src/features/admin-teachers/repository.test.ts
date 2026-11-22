@@ -16,7 +16,12 @@ describe("admin teacher directory repository with fake Prisma", () => {
     expect(findMany).toHaveBeenCalledWith({
       where: { AND: [
         { isTeacher: true },
-        { OR: [{ role: null }, { role: { not: "admin" } }] },
+        { OR: [{ role: null }, { NOT: [
+          { role: "admin" },
+          { role: { startsWith: "admin," } },
+          { role: { contains: ",admin," } },
+          { role: { endsWith: ",admin" } },
+        ] }] },
         { OR: [{ createdAt: { lt: new Date("2026-11-22T18:00:00.000Z") } }, { createdAt: new Date("2026-11-22T18:00:00.000Z"), id: { lt: "teacher-fake-z" } }] },
       ] },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -42,6 +47,12 @@ describe("admin teacher directory repository with fake Prisma", () => {
     const args = findMany.mock.calls[0]?.[0] as Record<string, any>;
     expect(args.take).toBe(51);
     expect(args.where.AND[0]).toEqual({ isTeacher: true });
+    expect(args.where.AND[1]).toEqual({ OR: [{ role: null }, { NOT: [
+      { role: "admin" },
+      { role: { startsWith: "admin," } },
+      { role: { contains: ",admin," } },
+      { role: { endsWith: ",admin" } },
+    ] }] });
     expect(args.select).toEqual({ id: true, name: true, email: true, createdAt: true });
   });
 });

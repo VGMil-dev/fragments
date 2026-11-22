@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AdminTeachersApi, AdminTeacherPage } from "./admin-teachers-api.js";
+import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-teachers.css";
 
 type State = { status: "loading" } | { status: "ready"; page: AdminTeacherPage } | { status: "error" };
@@ -22,9 +23,11 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
     return () => { active = false; };
   }, [api, cursor, reload]);
 
-  function resetAndReload() {
-    setCursorHistory([undefined]);
-    setPageIndex(0);
+  function refresh() {
+    if (state.status !== "error") {
+      setCursorHistory([undefined]);
+      setPageIndex(0);
+    }
     setReload((value) => value + 1);
   }
 
@@ -39,7 +42,8 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
       <p className="admin-teachers__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-teachers-title">Cuentas docentes</h1>
       <p>Directorio de cuentas con rol docente. Esta vista es de solo lectura y no muestra sesiones ni credenciales.</p>
-      <button type="button" onClick={resetAndReload} disabled={state.status === "loading"}>
+      <AdminConsoleNavigation current="teachers" />
+      <button type="button" onClick={refresh} disabled={state.status === "loading"}>
         {state.status === "loading" ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}
       </button>
     </header>
@@ -60,7 +64,10 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
         <span>Página {pageIndex + 1}</span>
         <button type="button" aria-label="Siguiente página" onClick={() => state.page.nextCursor && nextPage(state.page.nextCursor)} disabled={!state.page.nextCursor}>Siguiente</button>
       </nav>
-    </> : null}
+    </> : pageIndex > 0 ? <nav className="admin-teachers__pagination" aria-label="Páginas del directorio">
+      <button type="button" aria-label="Página anterior" onClick={() => setPageIndex((value) => Math.max(0, value - 1))}>Anterior</button>
+      <span>Página {pageIndex + 1}</span>
+    </nav> : null}
   </section>;
 }
 

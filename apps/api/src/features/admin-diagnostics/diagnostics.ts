@@ -7,7 +7,7 @@ export const REQUEST_DIAGNOSTICS_MAX_PAGE_SIZE = 50;
 
 export const REQUEST_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD", "OTHER"] as const;
 export type DiagnosticMethod = (typeof REQUEST_METHODS)[number];
-export const ROUTE_FAMILIES = ["health", "auth", "classrooms", "assignments", "mentor", "review", "trainer", "inspector", "admin.diagnostics", "admin.requests", "admin.queue", "admin.audit_log", "other"] as const;
+export const ROUTE_FAMILIES = ["health", "auth", "classrooms", "assignments", "mentor", "review", "trainer", "inspector", "admin.diagnostics", "admin.requests", "admin.queue", "admin.audit_log", "admin.teachers", "other"] as const;
 export type RouteFamily = (typeof ROUTE_FAMILIES)[number];
 
 export type RequestDiagnosticEvent = {
@@ -32,6 +32,7 @@ export function classifyRouteFamily(pathname: string): RouteFamily {
   if (path === "/api/admin/classroom-requests") return "admin.requests";
   if (path === "/api/admin/queue/summary") return "admin.queue";
   if (path === "/api/admin/audit-log") return "admin.audit_log";
+  if (path === "/api/admin/teachers") return "admin.teachers";
   if ((path === "/api/teacher/classrooms" || path === "/api/me/classrooms" || path.startsWith("/api/teacher/classrooms/") || path.startsWith("/api/me/classrooms/")) && path.includes("/assignments")) return "assignments";
   if (path.startsWith("/api/teacher/assignments/") || path.startsWith("/api/me/assignments/")) return "assignments";
   if (path === "/api/teacher/classrooms" || path === "/api/me/classrooms" || path.startsWith("/api/teacher/classrooms/") || path.startsWith("/api/me/classrooms/")) return "classrooms";

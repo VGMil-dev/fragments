@@ -6,7 +6,10 @@ import { AdminAuditLogScreen } from "./AdminAuditLogScreen.js";
 import type { AdminAuditLogApi } from "./admin-audit-log-api.js";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-const events = [{ requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652d", event: "admin.queue_summary.read" as const, occurredAt: "2026-11-22T15:00:00.000Z", actorType: "admin" as const }];
+const events = [
+  { requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652d", event: "admin.queue_summary.read" as const, occurredAt: "2026-11-22T15:00:00.000Z", actorType: "admin" as const },
+  { requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652e", event: "admin.teachers.list" as const, occurredAt: "2026-11-22T15:05:00.000Z", actorType: "admin" as const },
+];
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
 afterEach(() => { if (root) act(() => root?.unmount()); root = undefined; container?.remove(); container = undefined; });
@@ -26,6 +29,7 @@ describe("AdminAuditLogScreen", () => {
     expect(view.textContent).toContain(events[0]!.requestId);
     expect(view.textContent).toContain("desde el último inicio del API");
     expect(view.querySelector('a[href="/admin/audit-log"]')?.getAttribute("aria-current")).toBe("page");
+    expect(view.textContent).toContain("Cuentas docentes consultadas");
     expect(view.textContent).not.toContain("adminActorId");
     await act(async () => view.querySelector("button")?.click());
     expect(read).toHaveBeenCalledTimes(2);

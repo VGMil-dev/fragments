@@ -61,4 +61,27 @@ describe("AdminTeachersPanel with fake API", () => {
     expect(list).toHaveBeenNthCalledWith(2, { limit: 20, cursor: "next-fake-cursor" });
     expect(list).toHaveBeenNthCalledWith(3, { limit: 20 });
   });
+
+  it("retries the same later cursor and keeps a way back after a page failure", async () => {
+    const secondPage: AdminTeacherPage = { items: [{ accountId: "teacher-fake-2", displayName: "Segunda Docente", email: "second@example.test", createdAt: "2026-11-21T17:00:00.000Z" }], nextCursor: null };
+    const list = vi.fn()
+      .mockResolvedValueOnce({ ok: true, data: { ...fakeTeacherPage, nextCursor: "next-fake-cursor" } })
+      .mockRejectedValueOnce(new Error("fake-later-page-failure"))
+      .mockResolvedValueOnce({ ok: true, data: secondPage })
+      .mockResolvedValueOnce({ ok: true, data: { ...fakeTeacherPage, nextCursor: "next-fake-cursor" } });
+    const view = await render({ list });
+
+    await act(async () => view.querySelector<HTMLButtonElement>('button[aria-label="Siguiente página"]')?.click());
+    expect(view.textContent).toContain("No se pudieron cargar las cuentas docentes");
+    expect(view.querySelector<HTMLButtonElement>('button[aria-label="Página anterior"]')?.disabled).toBe(false);
+    expect(view.textContent).toContain("Página 2");
+
+    await act(async () => view.querySelector<HTMLButtonElement>(".admin-teachers__header button")?.click());
+    expect(list).toHaveBeenNthCalledWith(3, { limit: 20, cursor: "next-fake-cursor" });
+    expect(view.textContent).toContain("Segunda Docente");
+
+    await act(async () => view.querySelector<HTMLButtonElement>('button[aria-label="Página anterior"]')?.click());
+    expect(list).toHaveBeenNthCalledWith(4, { limit: 20 });
+    expect(view.textContent).toContain("Docente Fake");
+  });
 });
