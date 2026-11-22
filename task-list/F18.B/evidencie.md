@@ -159,3 +159,5 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Fuente: `ClassroomAssignment.versions` existente. Sin cambios a contratos, rutas compartidas, schema, migraciones, APIs, datos o `TASKS.md`.
 - Commit de este incremento: `6b92166929c027a00d88821bf84ee81fa21dd030`; no hay QA visual ni verificación en producción.
+
+- Revisión independiente de 6b92166/6de9961: PASS, sin defectos accionables. Confirmó origen ClassroomAssignment.versions, snapshots publicados en orden ascendente, disclosure nativo cerrado y sin edición. Límite: el revisor no repitió tests/typecheck ni Ego Lite; la prueba verifica contenido y cerrado inicial, no apertura/teclado.
