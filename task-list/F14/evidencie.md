@@ -240,3 +240,4 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Aplicación automática verificada desde el sitio público: `/health` status `ok`, database `ready`; `/assets/index-DQ4oYmnp.js` contiene versión `v0.5.20` y el SHA exacto. No se realizó deploy manual, SSH, reinicio ni cambio de infraestructura.
 - `Required reviewers` sigue OFF según decisión F14; no se alteró configuración del entorno. Ledger/archivo y hash de backup/labels del host NO COMPROBADOS.
 - Commit de reconciliación de evidencias: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado en PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
+- Estado de integración registrado en `beedba8acaf86e62ccd9fd2d8c9326dc327544c2`.
