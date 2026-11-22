@@ -97,3 +97,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api typecheck` y `git diff --check` — PASS.
 - Bloqueo concreto: el proceso no dispone de `DATABASE_URL`; por lo tanto no se puede confirmar `fragments_test`, ejecutar la integración HTTP contra PostgreSQL ni completar preflight/migración local. Ningún endpoint ni base de producción fue contactado; no se usaron sesiones Ego Lite.
 - Commit del seguimiento HTTP: `f9b2c4456badb7c08770013e52e0ab57c55d792b` (`test(f18b): cover authenticated mentor HTTP mission flow`).
+
+## Incremento UI estudiantil — contexto académico de misión — 2026-11-22
+
+- Se sincronizó la rama del PR mediante fast-forward con su update de GitHub y luego con `origin/main` actualizado a `3911d401326027898991cde4ad1b8fbd5ed6444a`; sin rebase ni force. El worktree estaba limpio antes del cambio de feature.
+- En `apps/web/src/features/assignments/AssignmentsPanel.tsx`, cada misión estudiante ahora tiene un disclosure accesible, cerrado inicialmente, «Contexto para tu propuesta · versión N». Al abrirlo muestra tema, consigna contextual, nivel esperado y requisitos del snapshot Mentor F11 ligado a esa versión. El CTA de propuesta conserva el objeto `StudentAssignment` exacto. No se exponen criterios/pesos ni se modifica la rúbrica.
+- TDD: la prueba se añadió primero y falló por ausencia del panel/versión; tras la implementación pasó y verifica contenido del snapshot, disclosure cerrado/abierto y que no presenta el texto de criterios.
+- Verificación fresca: `pnpm --filter @fragments/web test` — 36 archivos / 154 pruebas PASS; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- No se tocaron contratos, esquema/migraciones, routing compartido, API ni infraestructura. No se ejecutó Ego Lite ni se hicieron escrituras/consultas productivas; QA visual queda NO COMPROBADO.
+- Commit del slice UI: `9ea9125` (`feat(f18b): mostrar contexto académico de misión`); commit de evidencia: `6d9a1b9`. PR #104 se cerró y mergeó en el head anterior `3fef959`; el slice quedó en PR #106 (`https://github.com/VGMil-dev/fragments/pull/106`), abierto y no mergeado. CI del head `6d9a1b95d91f6f2a5d7e7613e2730a3df80bf059`: run `45049914126` SUCCESS; job `verify` SUCCESS.
