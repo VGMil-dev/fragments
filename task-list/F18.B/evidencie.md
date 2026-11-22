@@ -148,4 +148,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Cuando no hay habilidades activas, el enlace aparece tanto si el aula está vacía como si conserva solo habilidades archivadas. Las filas archivadas y su mensaje de referencias conservadas permanecen visibles.
 - Prueba nueva: `ClassroomStudio` renderiza una habilidad fixture archivada, confirma su nombre y nota, y comprueba el enlace contextual. La prueba falló antes del ajuste porque faltaba el enlace.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
-- Commit incremental pendiente de registrarse; no hubo push ni cambios fuera del alcance.
+- Commit incremental: `72cd2a52d4a124f01b5ede499ebfa21f49955955`. Sin push ni cambios fuera del alcance.
