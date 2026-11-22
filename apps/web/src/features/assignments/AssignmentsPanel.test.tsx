@@ -57,16 +57,41 @@ describe("AssignmentsPanel", () => {
     }
   });
 
-  it("renders only the published mission content passed to the student view", () => {
+  it("shows the mission action and passes its exact published snapshot to the callback", async () => {
     const studentAssignment = {
       id: "fixture-version", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
       title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
       requiredSkills: [{ id: skill.id, name: skill.name, description: null }], optionalSkills: [], status: "published",
       mentorContextVersion: 3, createdAt: "2026-11-22T00:00:00.000Z",
     } as StudentAssignment;
-    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} />);
+    const onStartProposal = vi.fn();
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />);
     expect(html).toContain("Misiones del aula");
     expect(html).toContain("Habilidades requeridas");
     expect(html).toContain("Observación");
+    expect(html).toContain("Iniciar propuesta");
+
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />));
+      const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Explora tu entorno"]');
+      expect(button).toBeTruthy();
+      await act(async () => button?.click());
+      expect(onStartProposal).toHaveBeenCalledExactlyOnceWith(studentAssignment);
+      expect(onStartProposal.mock.calls[0]?.[0]).toMatchObject({
+        id: "fixture-version",
+        assignmentId: "fixture-assignment",
+        version: 1,
+        requiredSkills: [{ id: "fixture-skill", name: "Observación", description: null }],
+        optionalSkills: [],
+        mentorContextVersion: 3,
+      });
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
   });
 });
