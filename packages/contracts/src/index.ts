@@ -335,6 +335,44 @@ export const SkillCreateRequestSchema = z.object({ name: classroomText(100), des
 export const SkillUpdateRequestSchema = SkillCreateRequestSchema.partial().strict().refine((input) => Object.keys(input).length > 0, "Indica al menos un campo para actualizar.");
 export const ClassroomSkillsResponseSchema = z.array(SkillCatalogEntrySchema.extend({ enabled: z.boolean() })).max(500);
 export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifier, skillId: identifier, enabled: z.boolean(), updatedAt: z.iso.datetime() }).strict();
+// F18.B missions: draft edits are mutable; each published version is an immutable snapshot.
+export const AssignmentStatusSchema = z.enum(["draft", "published", "archived"]);
+export const AssignmentSkillSnapshotSchema = z.object({ id: identifier, name: classroomText(100), description: z.string().trim().max(1000).nullable() }).strict();
+const AssignmentDraftFieldsSchema = z.object({
+  title: classroomText(160),
+  instructions: classroomText(5000),
+  objectives: z.array(classroomText(240)).min(1).max(12),
+  requiredSkillIds: z.array(identifier).min(1).max(20),
+  optionalSkillIds: z.array(identifier).max(20),
+}).strict();
+const assignmentSkillListsAreDisjoint = (value: { requiredSkillIds: string[]; optionalSkillIds: string[] }) => new Set([...value.requiredSkillIds, ...value.optionalSkillIds]).size === value.requiredSkillIds.length + value.optionalSkillIds.length;
+export const AssignmentDraftSchema = AssignmentDraftFieldsSchema.refine(assignmentSkillListsAreDisjoint, {
+  message: "Una habilidad no puede ser obligatoria y optativa a la vez.",
+});
+const AssignmentVersionFieldsSchema = AssignmentDraftFieldsSchema.extend({
+  id: identifier,
+  assignmentId: identifier,
+  version: z.number().int().positive(),
+  status: z.literal("published"),
+  requiredSkills: z.array(AssignmentSkillSnapshotSchema).min(1).max(20),
+  optionalSkills: z.array(AssignmentSkillSnapshotSchema).max(20),
+  mentorContextVersion: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+}).omit({ requiredSkillIds: true, optionalSkillIds: true }).strict();
+export const AssignmentVersionSchema = AssignmentVersionFieldsSchema;
+export const ClassroomAssignmentSchema = z.object({
+  id: identifier, classroomId: identifier, status: AssignmentStatusSchema,
+  draftVersion: z.number().int().positive(), publishedVersion: z.number().int().positive().nullable(),
+  draft: AssignmentDraftSchema.nullable(), versions: z.array(AssignmentVersionSchema).max(50), updatedAt: z.iso.datetime(),
+}).strict();
+export const ClassroomAssignmentsResponseSchema = z.array(ClassroomAssignmentSchema).max(200);
+export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.omit({ assignmentId: true }).extend({
+  classroomId: identifier, classroomTitle: classroomText(120), subject: classroomText(120),
+}).strict();
+export const StudentAssignmentsResponseSchema = z.array(StudentAssignmentSchema).max(200);
+export const CreateAssignmentRequestSchema = AssignmentDraftSchema;
+export const UpdateAssignmentDraftRequestSchema = AssignmentDraftSchema.extend({ expectedVersion: z.number().int().positive() }).strict();
+export const PublishAssignmentRequestSchema = z.object({ expectedVersion: z.number().int().positive() }).strict();
 export const TechnologyCatalogEntrySchema = z.object({
   id: identifier, slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120), name: classroomText(100), description: z.string().trim().max(1000).nullable(),
 }).strict();
@@ -568,3 +606,7 @@ export type CreateReviewSubmissionRequest = z.infer<typeof CreateReviewSubmissio
 export type MentorSubmissionResponse = z.infer<typeof MentorSubmissionResponseSchema>;
 export type ReviewSubmissionResponse = z.infer<typeof ReviewSubmissionResponseSchema>;
 export type VerifySubmissionResponse = z.infer<typeof VerifySubmissionResponseSchema>;
+export type AssignmentDraft = z.infer<typeof AssignmentDraftSchema>;
+export type AssignmentVersion = z.infer<typeof AssignmentVersionSchema>;
+export type ClassroomAssignment = z.infer<typeof ClassroomAssignmentSchema>;
+export type StudentAssignment = z.infer<typeof StudentAssignmentSchema>;
