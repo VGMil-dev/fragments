@@ -4,6 +4,7 @@
 
 - Base local `origin/main`: `ea2de7067d1710170a89df27b095a79e002fe9a9`.
 - Rama: `codex/f22-admin-teachers` en worktree separado `C:\Users\vgmil\.codex\worktrees\f22-admin-teachers\Fragments`. El worktree F22.4 `fragments-f22-observability` y su rama se conservaron sin cambios.
+- Commit de código y evidencia inicial: `d3d33156b69815e442940e68051b1a74b508d0ca`.
 - API feature-local: repository keyset, cursor/query estrictos, servicio de DTO mínimo y handler con autorización admin y audit callback fail-closed-before-read.
 - UI feature-local: cliente de solo lectura y panel paginado con estados accesibles; no se añadió ruta/navigation compartida.
 - Integración requerida del arquitecto: registrar handler en ruta HTTP; agregar `admin.teachers.list` al allowlist/sink F22.4; conectar panel a route/navigation web. Sin cambios de contratos, schema, migraciones o TASKS.
