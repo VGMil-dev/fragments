@@ -211,4 +211,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - PR #128 integrado normalmente como `1041d1af3f949a13671d761ee96a59c52d2a1d78`; CI final `45074239987` SUCCESS. Revisión independiente del head `7c82e0f` PASS.
 - F14 `v0.5.20` tag object `67483ab021a0b30970ec7ba5a4b1892e0e088a37`, SHA `1041d1af3f949a13671d761ee96a59c52d2a1d78`, run `45074528240` SUCCESS en los tres jobs y aplicación automática confirmada. `/health` ok/DB ready; bundle `/assets/index-DQ4oYmnp.js` confirma versión y SHA.
 - La asociación de misión se validó con APIs fake. El aula QA productiva sigue sin habilidades/misiones; persistencia remota del borrador, flujo completo con datos académicos reales y calidad de evaluación IA continúan NO COMPROBADOS. Sin escrituras productivas.
-- Commit de reconciliación de evidencias F14/F18.B: `303f2c824670d2bc1100f305a08bde4507b5f876`; PR documental y CI pendientes.
+- Commit de reconciliación F14/F18.B: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado mediante PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
