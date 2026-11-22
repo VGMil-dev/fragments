@@ -242,7 +242,7 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Revisión independiente recomendó reemplazar la aserción `expect.any(Number)` de la evaluación Mentor por la versión exacta fijada en el contexto del borrador. Añadí esa comparación en `academic-flow.integration.test.ts`; tras publicar v2, la respuesta de evaluación debe seguir reportando el contexto Mentor v1 asociado al borrador.
 - PostgreSQL 18.6 desechable, enlazado solo a `127.0.0.1:55444`; `current_database()` fue comprobado por el test y se aplicaron las cinco migraciones vigentes en `fragments_test`.
 - Comando `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS; `git diff --check` — PASS. El contenedor temporal se detuvo y eliminó; F23 y UX08 quedaron activos.
-- Commit de test: `b06f5e2`. PR #138 abierto para integración normal; CI pendiente al registrar esta evidencia.
+- Commit de test: `b06f5e2`. CI run `45084702142` SUCCESS; revisión independiente PASS; PR #138 integrado normalmente como `bc6aaf9487b0710a41e101dfd69bcec5b9433eca`.
 - El test usa HTTP local, auth fixture y Mentor fake. No prueba Better Auth real, proveedor IA real, UI de misión activa ni datos de producción.
 
 ## Ego Lite · estado de las aulas sin escritura · 2026-11-22
