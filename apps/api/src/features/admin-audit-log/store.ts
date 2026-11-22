@@ -53,6 +53,12 @@ export function createAdminAuditLog(options: Options) {
       // Return fresh objects so callers cannot mutate the shared feed.
       return entries.slice(0, bounded).map((entry) => ({ ...entry }));
     },
+
+    listExcluding(requestId: string, limit = ADMIN_AUDIT_LOG_MAX_PAGE_SIZE): AdminAuditLogEntry[] {
+      const bounded = Math.max(1, Math.min(ADMIN_AUDIT_LOG_MAX_PAGE_SIZE, Math.trunc(limit) || 1));
+      // Exclude the read's own audit event before applying the page limit.
+      return entries.filter((entry) => entry.requestId !== requestId).slice(0, bounded).map((entry) => ({ ...entry }));
+    },
   };
 }
 

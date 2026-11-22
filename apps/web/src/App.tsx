@@ -23,6 +23,8 @@ import { AdminRequestsScreen } from "./features/admin-requests/AdminRequestsScre
 import { adminRequestsApi } from "./features/admin-requests/admin-requests-api.js";
 import { AdminQueueSummaryScreen } from "./features/admin-queue/AdminQueueSummaryScreen.js";
 import { adminQueueApi } from "./features/admin-queue/admin-queue-api.js";
+import { AdminAuditLogScreen } from "./features/admin-audit-log/AdminAuditLogScreen.js";
+import { adminAuditLogApi } from "./features/admin-audit-log/admin-audit-log-api.js";
 import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
@@ -357,6 +359,7 @@ export function App() {
   if (path === "/admin/diagnostics") return <><div id="route-content" tabIndex={-1}><AdminDiagnosticsScreen api={adminDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/requests") return <><div id="route-content" tabIndex={-1}><AdminRequestsScreen api={adminRequestsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/audit-log") return <><div id="route-content" tabIndex={-1}><AdminAuditLogScreen api={adminAuditLogApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 
   return (
