@@ -183,8 +183,8 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `apps/web/src/features/student/StudentClassroomsScreen.test.tsx`: cubre fallo→éxito de misiones y habilidades, que el recurso hermano se solicite una sola vez y que clicks duplicados simultáneos por recurso no creen requests adicionales. Comprueba los estados alert/status y contenido vacío tras éxito.
 - TDD: las tres pruebas nuevas fallaron antes del cambio porque faltaban botones de reintento; tras el cambio, `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx --maxWorkers=1` — PASS, 6/6.
 - Suite focal web: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15. `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
-- Sin cambios a contratos, API, migraciones, datos productivos ni sesiones. Sin navegador ni release.
-- Commit de implementación: `d72fa6111c9418e18fbea5d7e8923634c421986c`; PR nuevo pendiente.
+- El commit inicial no cambió contratos, API, migraciones, datos productivos ni sesiones; no se realizó navegador ni release en ese momento.
+- Commit de implementación: `d72fa6111c9418e18fbea5d7e8923634c421986c`.
 
 ## Sincronización con main para PR #126 — 2026-11-22
 
@@ -192,4 +192,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - El conflicto de esta evidencia se resolvió conservando el historial completo del snapshot/release F14 v0.5.18 y el apartado de reintentos F18. Se preservaron los demás cambios de documentación/TASKS que llegaron desde main.
 - Commit de merge y resolución: `93a57648f53fb286f5d858eb647b1e2456bbc89f`.
 - Verificación fresca post-merge: suite focal web 15/15; `pnpm --filter @fragments/web typecheck` PASS; `git diff --cached --check` PASS.
-- PR #126 debe apuntar a main sincronizado con `8e72af9133abedecc927cbda3723466398d8913b`; espera push normal y refresh de CI.
+- PR #126 se actualizó con push normal y CI final `45071108105` SUCCESS; merge normal `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+
+## PR #126 y release F14 v0.5.19 — 2026-11-22
+
+- PR #126 implementa en Mis aulas reintento independiente por aula para errores de habilidades y misiones. Código `d72fa6111c9418e18fbea5d7e8923634c421986c`; CI final `45071108105` PASS, suite focal 15/15, typecheck y diff-check PASS. Revisión independiente PASS (head `d4c6c3b`; el commit posterior solo actualizó `TASKS.md`). Main merge `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+- F14 `v0.5.19`, run `45071360770`, aplicada por timer/agente normal. SSH read-only confirma web/API healthy en SHA exacto; `/health` ok/DB ready; bundle público `index-BgnTqOr6.js` confirma versión/SHA y ambos botones retry.
+- El PR no toca contratos, rutas compartidas, API, esquema ni migraciones. No hubo escrituras productivas. En producción no se provocó una falla para ejercitar retry; ese recorrido sigue NO COMPROBADO en navegador. La misión real e historial de contexto tampoco pueden validarse porque el aula QA no tiene misiones/habilidades.

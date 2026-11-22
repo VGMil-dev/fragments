@@ -223,3 +223,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El sondeo normal del agente pull y aplicador terminó success (20:53 y 20:55 UTC). SSH read-only vio web/api healthy en imagen `sha-214fb...`; `/health` público `ok`, DB `ready`; el bundle `/assets/index-QEJ8Q_ES.js` confirma v0.5.18 y los nuevos mensajes de cola/solicitudes.
 - Ego Lite read-only en sesión docente: `/admin/queue` y `/admin/requests` presentan el 403 específico, sin tabla ni filas. No se hizo login admin ni escrituras; sesiones docente/admin permanecen abiertas/restauradas.
 - La afirmación histórica previa de revisión manual en la configuración inicial F14 fue superada por la decisión aprobada y cambio de configuración ya verificados: `Required reviewers` OFF. El entorno y todos los gates técnicos F14 se mantienen; no volver a habilitar revisión humana. Ledger/hash del backup/labels del host, sesión admin, datos/eventos y worker independiente continúan NO COMPROBADOS.
+
+## Release y aplicación v0.5.19 — 2026-11-22
+
+- PR #126 integrado mediante merge normal como `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`; su head final fue `883675206581cfddb9eaf1a1e6ca8946705fc9fd`; CI `45071108105` PASS, revisión independiente PASS. No hubo cambios posteriores al SHA integrado antes de etiquetar.
+- Preflight read-only: `origin/main` coincide con el SHA de la release, la tag remota `v0.5.19` no existía, `fragments-production` conserva el patrón de tag `v*.*.*`, Required reviewers=0 y wait timer=0. Tag anotada objeto `aaed354081758b16ca927004725c38dfaf774b88`, peeled SHA `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+- F14 run `45071360770`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Pasaron base PostgreSQL desechable, backup/restore, suites, typecheck/lint/build, verificación bundle, ARM64 y atestación. Paquete, manifest/attestation y pull queue publicados.
+- El timer normal del agente pull sondeó la cola; el servicio aplicador concluyó `Result=success` y los contenedores cambiaron automáticamente a `sha-af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`, ambos healthy. No se hizo pull, restart ni invocación manual.
+- Público: `/health` devuelve `status=ok`, `database=ready`; home 200, bundle `/assets/index-BgnTqOr6.js` contiene versión y SHA exactos y los textos “Reintentar misiones”/“Reintentar habilidades”. Sin escrituras productivas ni parada de servicios.
+- Environment/gates F14 conservados; no revisión humana. Ledger/hash backup/labels, sesión admin, eventos reales y worker separado continúan NO COMPROBADOS.
