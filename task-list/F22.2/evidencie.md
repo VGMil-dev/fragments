@@ -50,4 +50,12 @@ PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/
 - Web: `pnpm --filter @fragments/web exec vitest run src/App.admin-requests.test.tsx src/features/admin-requests src/features/admin-diagnostics/AdminDiagnosticsScreen.test.tsx --maxWorkers=1` — PASS, 4 archivos / 7 pruebas.
 - `pnpm --filter @fragments/api typecheck` — PASS; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Integración del arquitecto se publicó en PR #99, rama `codex/f22-admin-requests-integration`, head inicial `f73e49b820daf86236c05c728b127f3f3152637c`; CI inicial se disparó. La base de datos real, sesión admin y retención/rotación de stdout siguen NO COMPROBADAS; no hubo producción ni Ego Lite.
-- Revisión independiente detectó que stdout no esperaba el callback de escritura. Se corrigió el writer productivo para resolver solo tras el callback exitoso y rechazar errores asíncronos, manteniendo 503 sin datos cuando la auditoría falla. Regresiones focalizadas repetidas: API 5/5, web 7/7, typechecks API/web y `git diff --check` PASS. El commit de seguimiento se publicará en el mismo PR #99; el CI debe repetirse sobre ese head.
+- Revisión independiente detectó que stdout no esperaba el callback de escritura. Se corrigió en commit `c4ec322a471672b3ab25f5569b200f3ba74e2434`: el writer productivo resuelve tras callback exitoso y rechaza errores asíncronos; el handler falla cerrado con 503 sin datos cuando falla auditoría. API 5/5, web 7/7, typechecks API/web y `git diff --check` PASS. CI del head final `45042506959` SUCCESS; revisión reflexiva independiente PASS estático.
+
+## Release v0.5.12 y límite de QA admin — 2026-11-22
+
+- PR #99 integrado en `main` mediante merge normal `613c02f71129a1f0bb417a5e602ff631fc1de42c`; CI final `45042506959` SUCCESS. Release F14 `v0.5.12`, run `45042723696`: build/verificación, atestación y publicación SUCCESS.
+- Producción pública sirve bundle con `v0.5.12` y SHA exacto; `/health` responde `status=ok`, `database=ready`.
+- GET anónimo de `/api/admin/classroom-requests` respondió `401 AUTH_REQUIRED` y sin `items`; confirma que la API deniega acceso anónimo antes de entregar datos.
+- Sin sesión admin real no se pudo comprobar la UI autenticada, filas persistidas, ni que el evento de auditoría quede retenido/rotado en el host. Estos puntos quedan **NO COMPROBADOS**; los tests usan fakes para roles/Prisma/sink. El shell de página sin sesión no muestra solicitudes, y ACL backend permanece obligatoria.
+- Ledger/backup hash/labels de imágenes host siguen **NO COMPROBADOS** por falta de canal administrativo de solo lectura. No se intentó SSH, no se modificó la producción y no hubo escrituras a matrículas.
