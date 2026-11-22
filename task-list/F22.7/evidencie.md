@@ -30,3 +30,8 @@
 
 - La mejora explica la denegación, pero no concede rol admin ni resuelve la falta de eventos observados.
 - La disponibilidad de una sesión admin autorizada y la emisión de eventos reales siguen sin verificarse en este cambio.
+
+## PR #118 — integración normal
+
+- Revisión independiente: PASS; solo códigos seguros se convierten a mensajes fijos, el retry permanece y ningún detalle backend se muestra.
+- PR #118 merge normal `9da508544ea5f764a87cc60ca38c7689dba1ac14`; `verify` run `45063736494` PASS. F14 de la versión con cambios F18/F22 sigue pendiente.
