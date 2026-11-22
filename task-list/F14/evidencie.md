@@ -162,3 +162,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - PR #23 se integró por merge normal: rama `codex/f14-fix-upload-artifact-pin`, cabeza `fbf96e9a873e568da3022d5e3e75a86203df5524`, check obligatorio `verify` SUCCESS en run `43462324919`; SHA del merge `858e9a7a8401427bf3812c74c106f3e9c3c2c97d`. La regresión, la prueba Turbo de metadata y tests/typecheck/lint/build pasaron en CI.
 - Revalidación posterior al merge: `origin/main` fue `858e9a7a8401427bf3812c74c106f3e9c3c2c97d`, contiene el commit del arreglo, y el workflow presenta `upload-artifact@ea165f8…` para ambos uploads y `download-artifact@d3f86a…` para los downloads. La tag histórica `v0.4.2` conserva el objeto anotado y peeled SHA anteriores. `v0.4.3` no existía al comprobarlo.
 - No se volvió a ejecutar el pipeline fallido: el workflow F14 de `v0.4.2` es inmutable y no debe reutilizarse; tampoco se publicó release ni se hizo despliegue. No se modificó producción, SQLite, Pits, PostgreSQL ni Cloudflare. La candidata `v0.4.3` requiere autorización específica y debe usar el SHA exacto de `main` tras integrar cualquier documentación final.
+
+## Despliegue v0.5.10 — 2026-11-22
+
+- Autorización nocturna F14 consultada en Notion: release anotado y despliegue autónomo por el flujo normal, manteniendo gates técnicos; sin bypass ni cambios a infraestructura.
+- Tag anotada `v0.5.10` → commit `818b9c39acb739d272ae27ce234114b650ab3787` (merge PR #90). Workflow `45033466925`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Release creado con atestación, paquete de imágenes y manifiesto.
+- Environment `fragments-production` verificado de solo lectura: 0 required reviewers, sin wait timer; reglas de ramas intactas.
+- Apply reportado exitoso por agente F14: imágenes API y web fijadas al SHA `818b9c3`, backup previo SHA-256 `4c86afb2c3100166dcc3fb4dd48bc5fefcb098d1269f38fa3ef2e0d5d0c625f4`, healthchecks sanos y `/health` DB ready. No se apagó producción ni se ejecutó despliegue manual.
