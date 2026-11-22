@@ -25,6 +25,7 @@ describe("AdminDiagnosticsScreen", () => {
     expect(view.textContent).toContain("503");
     expect(view.textContent).toContain("00000000-0000-4000-8000-000000000001");
     expect(view.textContent).toContain("El historial solo incluye el proceso actual de la API.");
+    expect(view.querySelector('a[href="/admin/requests"]')?.textContent).toBe("Solicitudes académicas");
     expect(view.querySelector('[role="region"][tabindex="0"]')?.getAttribute("aria-label")).toBe("Solicitudes recientes");
     expect(view.querySelector("time")?.getAttribute("dateTime")).toBe("2026-11-22T12:00:00.000Z");
     expect(view.querySelector("[aria-label='Código HTTP 503']")).not.toBeNull();

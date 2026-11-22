@@ -22,6 +22,8 @@ import { createTechnologyCatalogHttp } from "../features/mentor/technology-catal
 import { createAssignmentHttp } from "../features/assignments/http.js";
 import { createRequestDiagnostics } from "../features/admin-diagnostics/diagnostics.js";
 import { createAdminDiagnosticsHttp } from "../features/admin-diagnostics/http.js";
+import { createAdminClassroomRequestsHttp } from "../features/admin-requests/http.js";
+import { createAdminClassroomRequestsRepository } from "../features/admin-requests/repository.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -40,6 +42,11 @@ export function createHttpHandler(database: PrismaClient, options: {
 } = {}) {
   const requestDiagnostics = createRequestDiagnostics();
   const adminDiagnosticsHandler = createAdminDiagnosticsHttp(requestDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null);
+  const adminClassroomRequests = createAdminClassroomRequestsRepository(database);
+  const adminClassroomRequestsHandler = createAdminClassroomRequestsHttp(adminClassroomRequests, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
+    getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+    write: (event) => { process.stdout.write(`${JSON.stringify(event)}\n`); },
+  });
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
   const technologyCatalogHandler = createTechnologyCatalogHttp(database, options.auth);
@@ -90,6 +97,7 @@ export function createHttpHandler(database: PrismaClient, options: {
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     if (trainerHandler && await trainerHandler(request, response) === "handled") return;
     if (reviewHandler && await reviewHandler(request, response) === "handled") return;
+    if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));

@@ -40,3 +40,13 @@ PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/
 - No se verificó el contenido actual de `fragments_prod` ni `fragments_test`; el comportamiento con filas persistidas depende de integrar la ruta con el Prisma client existente.
 - El DTO omite identidad del estudiante, por lo que esta vista permite inspeccionar estados agregados por aula y fechas, pero no identificar a quién corresponde una solicitud. Cualquier acción para aprobar/rechazar queda fuera de F22.2.
 - PR #98 abierto y publicado por push normal. `task-list/TASKS.md` sigue siendo propiedad del planner y aún no tiene fila F22.2.
+
+## Integración de rutas y auditoría — 2026-11-22
+
+- PR #98 se integró mediante merge normal en `38ed9f3e7fe5637ce09efcb664a1db2e09c0fb65`; CI del head con audit trail `45041327156` SUCCESS. Revisión reflexiva independiente no encontró exposición en DTO ni bypass de auth; recomendó audit trail atribuible y quedó resuelta en el PR.
+- El arquitecto instancia repository/handler en `apps/api/src/http/app.ts`: `adminCheck` autoriza y `userId` obtiene actor de la sesión Better Auth. Se escribe el evento `admin.classroom_requests.read` en stdout estructurado con actor admin, hora UTC y requestId generado por middleware F22.1. No se emite identidad estudiantil y ningún actor se devuelve en el DTO. Si falla actor o sink, el handler devuelve 503 sin filas.
+- `apps/web/src/App.tsx` monta `/admin/requests`; navegación cruzada enlaza Diagnósticos y Solicitudes académicas. Diagnósticos clasifica la nueva ruta en familia `admin.requests` sin conservar query ni IDs.
+- API integrado y clasificador: `pnpm --filter @fragments/api exec vitest run src/http/admin-requests.integration.test.ts src/features/admin-diagnostics/diagnostics.test.ts --maxWorkers=1` — PASS, 2 archivos / 5 pruebas. El test de integración usa DB y roles fake, confirma 401/403, consulta solo con rol admin, request ID/log auditado y respuesta sin actor/estudiante/contexto.
+- Web: `pnpm --filter @fragments/web exec vitest run src/App.admin-requests.test.tsx src/features/admin-requests src/features/admin-diagnostics/AdminDiagnosticsScreen.test.tsx --maxWorkers=1` — PASS, 4 archivos / 7 pruebas.
+- `pnpm --filter @fragments/api typecheck` — PASS; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Integración del arquitecto aún en rama `codex/f22-admin-requests-integration`; falta publicar PR y CI. La base de datos real, sesión admin y retención/rotación de stdout siguen NO COMPROBADAS; no hubo producción ni Ego Lite.

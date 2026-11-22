@@ -19,6 +19,8 @@ import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherWorkspaceShell } from "./features/teacher/TeacherWorkspaceShell";
 import { AdminDiagnosticsScreen } from "./features/admin-diagnostics/AdminDiagnosticsScreen.js";
 import { adminDiagnosticsApi } from "./features/admin-diagnostics/admin-diagnostics-api.js";
+import { AdminRequestsScreen } from "./features/admin-requests/AdminRequestsScreen.js";
+import { adminRequestsApi } from "./features/admin-requests/admin-requests-api.js";
 import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
@@ -351,6 +353,7 @@ export function App() {
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/diagnostics") return <><div id="route-content" tabIndex={-1}><AdminDiagnosticsScreen api={adminDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/requests") return <><div id="route-content" tabIndex={-1}><AdminRequestsScreen api={adminRequestsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 
   return (
