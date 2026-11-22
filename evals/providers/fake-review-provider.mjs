@@ -1,3 +1,5 @@
+// Characterization fixture only: these fixed claims and score are independent
+// of the snapshot and prompt. This provider never validates repository meaning.
 const cases = {
   grounded: {
     criterionId: "correctness",
