@@ -149,3 +149,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Prueba nueva: `ClassroomStudio` renderiza una habilidad fixture archivada, confirma su nombre y nota, y comprueba el enlace contextual. La prueba falló antes del ajuste porque faltaba el enlace.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Commit incremental: `72cd2a52d4a124f01b5ede499ebfa21f49955955`. Sin push ni cambios fuera del alcance.
+
+## PR #116 y post-release Ego Lite v0.5.16 — 2026-11-22
+
+- PR #116 se integró normalmente en `main` como `23528bccfb256dabaa3d6317a36138ad6f0edbd6`; CI `45060350800` SUCCESS. Revisión independiente PASS. El caso adicional de solo habilidades archivadas está cubierto.
+- F14 `v0.5.16`, run `45060644194`, se aplicó según bundle público `/assets/index-B5aKBWSl.js`; footer Ego Lite confirmó `v0.5.16 · 23528bc`, `/health` `database=ready`.
+- Ego Lite docente: el detalle real de Programación Móvil mostró cero habilidades activas y el enlace contextual “Ir al catálogo de habilidades”. La navegación abrió `/teacher/skills` y mostró el formulario; regresé el navegador al mismo detalle. Sin creación/guardado.
+- Ego Lite estudiante: matrícula activa de Programación Móvil visible, sin habilidades autorizadas ni misiones publicadas. Las páginas docente y estudiante quedaron abiertas; no se alteró ninguna sesión o dato.
+- Resultado real limitado: link y navegación docente PASS; inscripción/estados estudiantiles presentes. Crear habilidad, habilitarla, publicar misión, propuesta, Mentor y provider IA permanecen NO COMPROBADOS; no se escribieron datos productivos. Las pruebas existentes son HTTP/UI con fixtures/fake y PostgreSQL disposable.

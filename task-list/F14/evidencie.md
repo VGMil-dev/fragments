@@ -195,3 +195,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45052895014`: `verify-build`, pruebas contra DB disposable, build/metadata, ARM64 y `attest-package` SUCCESS; `publish-approved-release` SUCCESS. Release incluye paquete, manifiesto y attestation.
 - Después del sondeo normal del agente pull, el bundle productivo `/assets/index-C8xxczOG.js` contiene `v0.5.14`, SHA exacto `d40817ad2e62d1d9971fccbef5b878543307f9e9` y `/admin/audit-log`. `GET /health`: `status=ok`, `database=ready`. GET anónimo a `/api/admin/audit-log?limit=1`: `401 Unauthorized`, `Cache-Control: no-store`.
 - Release aplicado verificado por bundle y API pública; no se apagó producción ni se usó despliegue manual. Ledger del host, digest del backup previo, labels Docker, sesión admin y eventos productivos siguen NO COMPROBADOS.
+
+## Release y aplicación v0.5.16 — 2026-11-22
+
+- PR #115 (F22.6) y PR #116 (F18.B) se integraron por merge normal; `main` quedó en `23528bccfb256dabaa3d6317a36138ad6f0edbd6`. CI #45060021130 y #45060350800 SUCCESS; revisiones independientes PASS.
+- Preflight de solo lectura: `fragments-production` conservó la política de rama; la API devolvió solo `branch_policy` (sin reviewers ni wait timer). Los gates técnicos y el agente pull no se modificaron. La tag local/remota `v0.5.16` es anotada; objeto `2472d624fcb7a77d1866aa183753d927390921ba`, peeled commit exactamente `23528bccfb256dabaa3d6317a36138ad6f0edbd6`.
+- F14 run `45060644194`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Validó tag/SHA/main, PostgreSQL disposable, backup/restore, release-agent, pruebas/typecheck/lint/build, imágenes ARM64, atestación Sigstore y publicación normal de paquete/manifiesto.
+- Tras el sondeo del agente pull, el bundle público cambió a `/assets/index-B5aKBWSl.js`, con versión `v0.5.16` y commit corto `23528bc`; incluye `/admin/teachers`, filtro de eventos y enlace de aula a habilidades. `/health` respondió `status=ok`, `database=ready`. GET anónimo `/api/admin/teachers?limit=1` → 401 sin datos.
+- Ego Lite existente: docente abrió el catálogo desde el aula y volvió; estudiante conservó matrícula activa sin habilidades/misiones. Páginas permanecieron abiertas y no se guardaron recursos. No hubo deploy manual, SSH, reinicio ni cambios de infraestructura.
+- Ledger/backup hash/labels del host, sesión admin real, cuentas y eventos del feed siguen NO COMPROBADOS. El flujo real de misión/Mentor/provider tampoco se valida con el aula actual sin habilidades/misiones.
