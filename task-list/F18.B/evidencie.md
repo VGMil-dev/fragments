@@ -3,7 +3,8 @@
 ## Regresión de continuidad misión → Mentor — 2026-11-22
 
 - Se añadió `apps/api/src/features/assignments/academic-flow.integration.test.ts`: PostgreSQL fixture con IDs UUID, preflight obligatorio `current_database() = fragments_test` y cleanup limitado a sus propios registros.
-- El recorrido comprueba publicar misión v1 con habilidad requerida, visibilidad a matrícula activa, crear/recuperar propuesta ligada al ID inmutable de v1, publicar v2 con habilidad optativa y conservar snapshot/contexto de v1 para evaluación Mentor etiquetada `fake/local-heuristic-v1`.
+- El recorrido de repositorio comprueba publicar misión v1 con habilidad requerida, visibilidad a matrícula activa, crear/recuperar propuesta ligada al ID inmutable de v1, publicar v2 con habilidades requerida y optativa, y conservar snapshot/contexto de v1 para evaluación Mentor a nivel servicio etiquetada `fake/local-heuristic-v1`. No simula ni declara comprobadas las autorizaciones de endpoints HTTP.
+- Revisión reflexiva detectó y corrigió que v2 debía conservar al menos una habilidad requerida; la fixture ahora prueba categorías requeridas/optativas distintas. La URL debe apuntar a localhost y a `fragments_test` antes de conectar; `current_database()` se valida antes de escrituras. La limpieza queda protegida con `finally`.
 - Verificación local: `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 1 prueba omitida porque `DATABASE_URL` no está configurada. No se abrió conexión; integración PostgreSQL queda **NO COMPROBADA localmente**, pendiente de CI efímero.
 - Verificación local: `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
 - No se modificaron contratos, migraciones, rutas, configuración de proveedores, datos productivos ni sesiones de navegador. La fake no valida calidad de IA real ni sustituye el recorrido Ego Lite.
