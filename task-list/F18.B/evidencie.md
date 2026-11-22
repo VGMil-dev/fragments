@@ -166,7 +166,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Commits de implementación y evidencia: `6b92166929c027a00d88821bf84ee81fa21dd030`, `6de99611ef6d68aa82ce5b20f4122b7525f0483e`, `f524ba669332ec1c188a01461931963aee2f6cfb`.
 - No cambia contratos, rutas compartidas, API, schema, migraciones ni datos. QA visual y verificación productiva del historial siguen NO COMPROBADOS; sesiones Ego Lite docente y estudiante quedan abiertas.
 
+## Snapshot de misión y release v0.5.18 — 2026-11-22
+
+- PR #119 merge `45d80c8b122da53039c2ef891ce03cf30e4b1759`, CI `45064333176` PASS: UI docente expone historial cerrado de snapshots publicados; prueba UI 4/4, typecheck/diff-check PASS y revisión independiente PASS. Solo lectura, sin edición.
+- F14 `v0.5.18` run `45068388150` SUCCESS y aplicación automática verificada en SHA `214fb1344816172ecc52c99de5e7351508d77324`; health DB ready. No hubo cambio de F18 en esa release.
+- No hay misiones ni habilidades activas en el aula de QA productiva. El historial con datos, publicar misión, iniciar propuesta y completar el contexto de Mentor siguen NO COMPROBADOS. No se escribieron datos productivos; páginas/sesiones Ego Lite permanecen abiertas.
+
 ## PR #119 — integración normal
 
 - PR #119 se integró normalmente en `main` como `45d80c8b122da53039c2ef891ce03cf30e4b1759`; CI `45064333176` SUCCESS.
-- El historial docente queda integrado en main. F14 v0.5.17 y el reflejo visual del historial en producción están pendientes; no se modificaron recursos académicos.
+- El historial docente queda integrado en main. Al momento de integrar PR #119, F14 v0.5.17 y el reflejo productivo estaban pendientes. F14 v0.5.18 fue aplicada posteriormente; la inspección visual del historial con una misión real sigue NO COMPROBADA. No se modificaron recursos académicos.
