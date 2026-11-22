@@ -70,6 +70,7 @@ describe("AdminRequestsScreen", () => {
     expect(view.textContent).not.toContain("private");
     await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")?.click());
     expect(view.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar las solicitudes académicas");
+    expect(view.textContent).not.toContain("private http detail");
     await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")?.click());
 
     expect(filter.value).toBe("pending");

@@ -63,6 +63,7 @@ describe("AdminQueueSummaryScreen", () => {
     expect(view.textContent).not.toContain("private");
     await act(async () => view.querySelector<HTMLButtonElement>("button")?.click());
     expect(view.querySelector('[role="alert"]')?.textContent).toContain("No se pudo cargar el estado de la cola");
+    expect(view.textContent).not.toContain("private http detail");
     await act(async () => view.querySelector<HTMLButtonElement>("button")?.click());
     expect(read).toHaveBeenCalledTimes(4);
     expect(view.textContent).toContain("Pendientes");
