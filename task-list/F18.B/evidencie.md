@@ -202,9 +202,9 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 
 ## Continuidad UI — asociación segura de misión en Mentor — 2026-11-22
 
-- La prueba de composición `apps/web/src/App.student-flow.test.tsx` reproduce la transición desde Mis aulas: iniciar desde misión v1, comprobar contexto F11 snapshot v7 y guardar con el `assignmentVersionId` exacto; luego volver al catálogo, abrir Mentor desde la navegación y comprobar contexto general v2 sin el ID anterior.
-- La prueba detectó que el estado seleccionado sobrevivía al cambio de ruta. `apps/web/src/App.tsx` ahora limpia la misión al volver y al abrir Mentor desde ambos accesos de navegación.
-- Verificación fresca: `pnpm exec vitest run src/App.student-flow.test.tsx` PASS 1/1; `pnpm --filter @fragments/web test` PASS 181/181; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
+- La prueba de composición `apps/web/src/App.student-flow.test.tsx` inicia desde misión v1, comprueba contexto F11 snapshot v7 y guarda con el `assignmentVersionId` exacto. También recorre Mis entregas → Abrir Mentor y Review → Volver a Mentor y comprueba contexto general v2, sin asociar los borradores nuevos al ID de misión anterior.
+- Se encontró y corrigió estado stale en la navegación, en “Abrir Mentor” desde Mis entregas y en el retorno desde Review. `App.tsx` conserva el snapshot solo en la transición explícita iniciada desde la misión.
+- Verificación fresca tras ampliar rutas: `pnpm exec vitest run src/App.student-flow.test.tsx` PASS 1/1; `pnpm --filter @fragments/web test` PASS 181/181; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
 - Los APIs se simulan en esta prueba. No se comprobó persistencia remota ni producción; la integración real HTTP/PostgreSQL y Mentor fake previa sigue en sus evidencias anteriores. Sin cambio de contratos, rutas de servidor, esquema, migraciones o datos.
-- Commit de implementación, prueba y actualización inicial de TASKS: `41a32456c65f56267f903285ec67c15cc8c52f7`.
-- Pendiente: PR, revisión independiente, integración CI, release F14 y comprobación productiva read-only.
+- Commit inicial de implementación/prueba/docs: `41a32456c65f56267f903285ec67c15cc8c52f7`; follow-up por revisión independiente: pendiente.
+- PR #128 abierto; CI `45073564838` pasó en el head inicial, pero debe repetirse para el head que cubre las rutas adicionales. Revisión independiente inicial detectó Mis entregas/Review y motivó este follow-up; revisión del head corregido, release F14 y comprobación productiva read-only pendientes.

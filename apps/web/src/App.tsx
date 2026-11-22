@@ -260,7 +260,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           {submissions.status === "empty" ? <p>Aún no tienes entregas generadas. Las propuestas guardadas están en Mis proyectos; una evaluación formativa no es una aprobación docente.</p> : null}
           {submissions.status === "success" ? <><ul className="student-submission-list">{submissions.data.map((item) => <li key={item.id}><span><strong>{item.label}</strong><small>{item.kind === "mentor" ? "Entrega Mentor" : "Entrega Review"} · {new Date(item.createdAt).toLocaleDateString("es-CO")}</small></span><span>{item.score}/100</span><small>Resultado disponible · no es aprobación docente</small><button type="button" onClick={() => void downloadSubmission(item.id, item.kind)}>Descargar PDF</button></li>)}</ul><p>Las propuestas guardadas están en Mis proyectos. Una evaluación formativa no es una aprobación docente.</p></> : null}
           {submissionDownloadError ? <p role="alert">{submissionDownloadError}</p> : null}
-          <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Abrir Mentor</button></main> : null}
+          <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Abrir Mentor</button></main> : null}
         {path === "/student/gallery" ? (
           <GalleryScreen
             state={gallery}
@@ -322,7 +322,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
-            onBack={() => navigate("/student/mentor")}
+            onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
         {path === "/student/trainer" ? <TrainerScreen api={trainerApi} /> : null}

@@ -7,7 +7,7 @@ import type { StudentAssignment } from "@fragments/contracts";
 const mocks = vi.hoisted(() => {
   const studentApi = {
     getMe: vi.fn(), getMyClassrooms: vi.fn(), getMyClassroomRequests: vi.fn(),
-    getMyClassroomSkills: vi.fn(), getMentorContext: vi.fn(), getMyProposals: vi.fn(), getGallery: vi.fn(),
+    getMyClassroomSkills: vi.fn(), getMentorContext: vi.fn(), getMyProposals: vi.fn(), getMySubmissions: vi.fn(), getGallery: vi.fn(),
     saveProposalDraft: vi.fn(),
   };
   return { studentApi, assignmentsApi: { listStudent: vi.fn() } };
@@ -26,6 +26,9 @@ vi.mock("./features/mentor", () => ({
       <button type="button" onClick={onBack}>Volver al catálogo</button>
     </section>
   ),
+}));
+vi.mock("./features/review", () => ({
+  ReviewScreen: ({ onBack }: { onBack: () => void }) => <button type="button" onClick={onBack}>Volver desde Review</button>,
 }));
 
 import { App } from "./App";
@@ -51,6 +54,7 @@ beforeEach(() => {
   mocks.studentApi.getMyClassroomRequests.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [] });
+  mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getGallery.mockResolvedValue({ ok: true, data: { items: [], nextOffset: null } });
   mocks.studentApi.getMentorContext.mockResolvedValue({ ok: true, data: { version: 2 } });
   mocks.studentApi.saveProposalDraft.mockResolvedValue({ ok: true, data: { id: "proposal-1", version: 1, proposal: { title: "Borrador de misión" } } });
@@ -85,13 +89,26 @@ describe("student mission to Mentor flow", () => {
       proposal: { title: "Borrador de misión" }, assignmentVersionId: mission.id,
     });
 
-    const back = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Volver al catálogo");
-    await act(async () => back?.click());
-    const mentorLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent === "Mentor");
-    await act(async () => mentorLink?.click());
+    const submissionsLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent?.includes("Mis entregas"));
+    await act(async () => submissionsLink?.click());
+    const openMentor = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir Mentor");
+    await act(async () => openMentor?.click());
     expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("2");
     const saveAgain = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Guardar borrador");
     await act(async () => saveAgain?.click());
+    expect(mocks.studentApi.saveProposalDraft).toHaveBeenLastCalledWith({ proposal: { title: "Borrador de misión" } });
+
+    const classroomsLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent?.includes("Mis aulas"));
+    await act(async () => classroomsLink?.click());
+    const startAgain = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Aplicación móvil"]');
+    await act(async () => startAgain?.click());
+    const reviewLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent === "Review");
+    await act(async () => reviewLink?.click());
+    const reviewBack = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Volver desde Review");
+    await act(async () => reviewBack?.click());
+    expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("2");
+    const saveFromReview = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Guardar borrador");
+    await act(async () => saveFromReview?.click());
     expect(mocks.studentApi.saveProposalDraft).toHaveBeenLastCalledWith({ proposal: { title: "Borrador de misión" } });
   });
 });
