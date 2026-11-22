@@ -204,3 +204,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Tras el sondeo del agente pull, el bundle público cambió a `/assets/index-B5aKBWSl.js`, con versión `v0.5.16` y commit corto `23528bc`; incluye `/admin/teachers`, filtro de eventos y enlace de aula a habilidades. `/health` respondió `status=ok`, `database=ready`. GET anónimo `/api/admin/teachers?limit=1` → 401 sin datos.
 - Ego Lite existente: docente abrió el catálogo desde el aula y volvió; estudiante conservó matrícula activa sin habilidades/misiones. Páginas permanecieron abiertas y no se guardaron recursos. No hubo deploy manual, SSH, reinicio ni cambios de infraestructura.
 - Ledger/backup hash/labels del host, sesión admin real, cuentas y eventos del feed siguen NO COMPROBADOS. El flujo real de misión/Mentor/provider tampoco se valida con el aula actual sin habilidades/misiones.
+
+## Release y aplicación v0.5.17 — 2026-11-22
+
+- PR #119 y PR #120 se integraron normalmente; PR #121 consolidó evidencia y checklist. Main final: `bb6e70532e26ac71aaf31543b20413040d7bc581`.
+- Preflight de solo lectura: `fragments-production` mantuvo su regla de rama, con `reviewers=null`; tag remota v0.5.17 inexistente antes de publicar. Se creó tag anotada `v0.5.17`, objeto `640c285a82214da5e4694da478fbc4a4e29c2b16`, peeled SHA exactamente `bb6e70532e26ac71aaf31543b20413040d7bc581`; push normal.
+- F14 run `45065509688`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; validación de tag/SHA/main, PostgreSQL disposable, backup/restore, pruebas/typecheck/lint/build, imágenes ARM64, atestación y publicación del paquete/manifest.
+- El sondeo normal `fragments-release-poll.timer` ejecutó success a las 20:26:40 UTC y activó el aplicador. `fragments-release-apply.service` terminó `Result=success` a las 20:28:45 UTC. Sin invocación manual ni reinicio de servicio por el coordinador.
+- SSH read-only confirmó `fragments-web-1` y `fragments-api-1` en imagen `sha-bb6e705...`, ambos healthy. GET público `/health` → `ok`, database `ready`; bundle `/assets/index-BkvVCLOV.js` confirma `v0.5.17`, historial de misiones y mensajes 401/403 de feed, diagnósticos y cuentas docentes.
+- Ego Lite docente en las tres vistas admin muestra denegación 403 segura, sin filas ni detalle backend; no se intentó acceso admin. El aula sigue sin misiones, por lo que historial visual y flujo misión→Mentor quedan NO COMPROBADOS. Cero eventos admin allowlisted en la ventana de 20m observada; sesión admin, eventos reales, ledger/hash backup/labels y liveness de worker separado siguen NO COMPROBADOS.
+- Required reviewers continúa desactivado; entorno y gates F14 preservados. No se escribieron datos académicos ni se apagó producción.
