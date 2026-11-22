@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AdminDiagnosticsApi, AdminRequestDiagnostic, DiagnosticRouteFamily } from "./admin-diagnostics-api.js";
+import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-diagnostics.css";
 
 type ScreenState = { status: "loading" } | { status: "ready"; events: AdminRequestDiagnostic[] } | { status: "error" };
@@ -23,6 +24,7 @@ export function AdminDiagnosticsScreen({ api }: { api: AdminDiagnosticsApi }) {
       <p className="admin-diagnostics__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-diagnostics-title">Diagnóstico de solicitudes</h1>
       <p>Eventos recientes de la API. No incluyen contenido de solicitudes ni datos de cuenta.</p>
+      <AdminConsoleNavigation current="diagnostics" />
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={state.status === "loading"} aria-label={state.status === "error" ? "Reintentar diagnósticos" : "Actualizar diagnósticos"}>
         {state.status === "loading" ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}
       </button>
@@ -54,6 +56,7 @@ function routeFamilyLabel(value: DiagnosticRouteFamily): string {
     trainer: "Trainer",
     inspector: "Inspector",
     "admin.diagnostics": "Diagnóstico admin",
+    "admin.requests": "Solicitudes admin",
     other: "Otra ruta",
   };
   return labels[value];

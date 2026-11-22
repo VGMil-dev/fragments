@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AdminEnrollmentRequest, AdminRequestsApi, EnrollmentStatus } from "./admin-requests-api.js";
+import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-requests.css";
 
 const pageSize = 20;
@@ -29,6 +30,7 @@ export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
       <p className="admin-requests__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-requests-title">Solicitudes académicas</h1>
       <p>Consulta matrículas y solicitudes de ingreso registradas. Esta vista no permite aprobar ni modificar estados.</p>
+      <AdminConsoleNavigation current="requests" />
     </header>
     <section className="admin-requests__controls" aria-label="Filtros y actualización">
       <label htmlFor="admin-request-status">Estado</label>
