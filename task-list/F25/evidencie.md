@@ -108,3 +108,4 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - No se leyó contenido de filas, no hubo escrituras ni llamadas externas/proveedor. No se inspeccionaron secretos. Este conteo no es una comprobación de producción ni añade outputs Review completos al corpus.
 - Sigue `BLOCKED` la calibración A/B/C: los outputs históricos completos y el presupuesto/modelo efectivos siguen sin estar disponibles mediante evidencia autorizada; calidad semántica real **NO COMPROBADA** y llamadas pagadas bloqueadas.
 - Fuente de la observación: resumen agregado entregado por el coordinador en la continuación F25; no se recibió el SQL literal ni un log exportado de la sesión. No atribuir a esta nota comandos que no fueron compartidos.
+- Commit local de esta nota: `cdce261` (`docs(F25): registra inventario QA limitado`). Queda local en `codex/f25-offline-response-validator`, rama atrasada respecto a main; no se publicó.
