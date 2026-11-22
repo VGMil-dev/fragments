@@ -214,3 +214,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - SSH read-only confirmó `fragments-web-1` y `fragments-api-1` en imagen `sha-bb6e705...`, ambos healthy. GET público `/health` → `ok`, database `ready`; bundle `/assets/index-BkvVCLOV.js` confirma `v0.5.17`, historial de misiones y mensajes 401/403 de feed, diagnósticos y cuentas docentes.
 - Ego Lite docente en las tres vistas admin muestra denegación 403 segura, sin filas ni detalle backend; no se intentó acceso admin. El aula sigue sin misiones, por lo que historial visual y flujo misión→Mentor quedan NO COMPROBADOS. Cero eventos admin allowlisted en la ventana de 20m observada; sesión admin, eventos reales, ledger/hash backup/labels y liveness de worker separado siguen NO COMPROBADOS.
 - Required reviewers continúa desactivado; entorno y gates F14 preservados. No se escribieron datos académicos ni se apagó producción.
+
+## Release y aplicación v0.5.18 — 2026-11-22
+
+- PR #123 (F22.9) y PR #124 (evidencia) integrados normalmente; main exacto `214fb1344816172ecc52c99de5e7351508d77324`. CI de código `45067784339` y CI de evidencia `45068097463` SUCCESS.
+- Preflight de solo lectura: `fragments-production` conserva branch policy, `reviewers=null`; tag v0.5.18 ausente antes de publicación. Tag anotada objeto `d3fc6f31442ec897ed4c5faaa117373ccebccf79`, peeled SHA exacto `214fb1344816172ecc52c99de5e7351508d77324`.
+- Run F14 `45068388150`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; paquete, manifiesto y attestation publicados. No hubo aprobación humana adicional.
+- El sondeo normal del agente pull y aplicador terminó success (20:53 y 20:55 UTC). SSH read-only vio web/api healthy en imagen `sha-214fb...`; `/health` público `ok`, DB `ready`; el bundle `/assets/index-QEJ8Q_ES.js` confirma v0.5.18 y los nuevos mensajes de cola/solicitudes.
+- Ego Lite read-only en sesión docente: `/admin/queue` y `/admin/requests` presentan el 403 específico, sin tabla ni filas. No se hizo login admin ni escrituras; sesiones docente/admin permanecen abiertas/restauradas.
+- La afirmación histórica previa de revisión manual en la configuración inicial F14 fue superada por la decisión aprobada y cambio de configuración ya verificados: `Required reviewers` OFF. El entorno y todos los gates técnicos F14 se mantienen; no volver a habilitar revisión humana. Ledger/hash del backup/labels del host, sesión admin, datos/eventos y worker independiente continúan NO COMPROBADOS.
