@@ -46,4 +46,5 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 
 - GIVEN un aula sin habilidades disponibles, WHEN el docente ve el estado vacío de “Habilidades disponibles”, THEN conserva el aviso “Crea habilidades en el catálogo para habilitarlas aquí.” y dispone de un enlace visible a `/teacher/skills`.
 - WHEN activa el enlace con ratón o teclado, THEN usa la navegación existente hacia el catálogo; no se cambia ninguna API ni contrato.
-- El enlace solo aparece en el estado sin habilidades; con habilidades listadas no se agrega esta acción contextual.
+- El enlace aparece cuando no hay habilidades activas, tanto si la lista está vacía como si todas sus entradas están archivadas; si hay una activa, se omite.
+- GIVEN el aula conserva únicamente habilidades archivadas, WHEN el docente revisa disponibilidad, THEN conserva sus nombres y la nota de referencias archivadas, y también dispone del enlace al catálogo.

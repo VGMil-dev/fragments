@@ -142,3 +142,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Se leyó `vercel-react-best-practices`; se aplicó enlace semántico accesible y la navegación existente. Sin navegador ni producción, acorde al alcance indicado.
 - Sin cambios a contratos, rutas compartidas/App.tsx, schema, migraciones, APIs, servicios o datos reales.
 - Commit de implementación: `a69f563c93833358f6688b0b1bc45f73b0438e41`. Sin push ni despliegue.
+
+## Continuidad — catálogo con habilidades archivadas — 2026-11-22
+
+- Cuando no hay habilidades activas, el enlace aparece tanto si el aula está vacía como si conserva solo habilidades archivadas. Las filas archivadas y su mensaje de referencias conservadas permanecen visibles.
+- Prueba nueva: `ClassroomStudio` renderiza una habilidad fixture archivada, confirma su nombre y nota, y comprueba el enlace contextual. La prueba falló antes del ajuste porque faltaba el enlace.
+- Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Commit incremental pendiente de registrarse; no hubo push ni cambios fuera del alcance.

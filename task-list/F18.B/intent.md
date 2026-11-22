@@ -47,7 +47,7 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 
 ## Incremento F18.B — acceso al catálogo desde el aula docente
 
-- Problema: si el aula no tiene habilidades disponibles, el detalle explica que deben crearse en el catálogo pero no ofrece una acción junto al bloqueo.
+- Problema: si el aula no tiene habilidades disponibles (ninguna asociada o todas archivadas), el detalle explica que deben crearse en el catálogo pero no ofrece una acción junto al bloqueo.
 - Objetivo: añadir un enlace contextual accesible a `/teacher/skills` junto al estado vacío, conservando el mensaje existente.
 - No objetivos: cambiar contratos, rutas compartidas, datos, catálogo ni el flujo de habilitación.
 - Owner de tarea: PLANNER. Implementación acotada al detalle de `ClassroomStudio` y su prueba UI.

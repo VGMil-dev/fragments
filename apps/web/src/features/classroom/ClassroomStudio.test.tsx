@@ -147,4 +147,28 @@ describe("ClassroomStudio", () => {
     await act(async () => catalogLink?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })));
     expect(navigate).toHaveBeenCalledWith("/teacher/skills");
   });
+
+  it("keeps archived classroom skills visible and links to the catalog when all are archived", async () => {
+    const classroom = {
+      id: "fixture-classroom-archived-skills", title: "Aula de prueba", subject: "Programación", groupLabel: "G1",
+      period: null, context: null, status: "active" as const,
+      createdAt: "2026-11-20T00:00:00.000Z", updatedAt: "2026-11-20T00:00:00.000Z",
+    };
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [classroom], nextOffset: null } });
+    classroomApi.get.mockResolvedValue({ ok: true, data: classroom });
+    classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [{ id: "fixture-skill-archived", name: "Habilidad archivada", description: null, archived: true, enabled: false }] });
+    classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    assignmentsApi.listTeacher.mockResolvedValue({ ok: true, data: [] });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path={`/teacher/classrooms/${classroom.id}`} navigate={vi.fn()} />));
+
+    const availability = container.querySelector(".cs-availability")!;
+    expect(availability.textContent).toContain("Habilidad archivada");
+    expect(availability.textContent).toContain("Archivada; se conservan sus referencias.");
+    expect(availability.querySelector('a[href="/teacher/skills"]')?.textContent).toContain("Ir al catálogo de habilidades");
+  });
 });
