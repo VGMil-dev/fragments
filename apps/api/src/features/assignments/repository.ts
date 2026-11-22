@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { ClassroomAssignmentSchema, MentorPublishedConfigSchema, StudentAssignmentSchema } from "@fragments/contracts";
+import { ClassroomAssignmentSchema, MentorEvaluationContextSchema, StudentAssignmentSchema } from "@fragments/contracts";
 import { buildAssignmentMentorConfig } from "./mentor-context.js";
 
 type Draft = { title: string; instructions: string; objectives: string[]; requiredSkillIds: string[]; optionalSkillIds: string[] };
@@ -77,7 +77,7 @@ export function createAssignmentRepository(database: PrismaClient) {
         const version = row.versions.find((entry) => entry.version === row.publishedVersion); if (!version) continue;
         const control = await database.mentorControlVersion.findUnique({ where: { version: version.mentorContextVersion } });
         if (!control) continue;
-        const context = MentorPublishedConfigSchema.parse({ version: control.version, publishedAt: control.publishedAt.toISOString(), config: {
+        const context = MentorEvaluationContextSchema.parse({ version: control.version, publishedAt: control.publishedAt.toISOString(), config: {
           ...buildAssignmentMentorConfig(control.configJson, version.snapshotJson, enrollment.classroom.subject),
         } });
         output.push(StudentAssignmentSchema.parse({ ...version.snapshotJson as object, id: version.id, assignmentId: row.id, version: version.version,

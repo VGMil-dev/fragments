@@ -29,3 +29,7 @@ Review/Inspector, entregas oficiales, nota/F26, fechas, archivos adjuntos, co-do
 ## Criterio de cierre
 
 Contrato, pruebas unitarias/integración con fakes, typecheck/lint/build, aislamiento docente/estudiante, recorrido Ego Lite de perfiles disponibles y evidencia actualizada. Distinguir bloqueos de sesión o recursos de QA; no declarar despliegue ni recorrido productivo sin evidencia real.
+
+## Corrección derivada de QA v0.5.10
+
+El contexto de Mentor debe conservar el snapshot académico completo de la versión publicada: objetivos, habilidades obligatorias y optativas, además de todos los requisitos de F11. Ningún criterio puede truncarse silenciosamente. La configuración editable F11 conserva su límite original; el límite ampliado se aplica únicamente al contexto efectivo de evaluación.
