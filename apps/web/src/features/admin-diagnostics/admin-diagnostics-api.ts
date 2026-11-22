@@ -1,5 +1,5 @@
 export const diagnosticMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD", "OTHER"] as const;
-export const diagnosticRouteFamilies = ["health", "auth", "classrooms", "assignments", "mentor", "review", "trainer", "inspector", "admin.diagnostics", "admin.requests", "other"] as const;
+export const diagnosticRouteFamilies = ["health", "auth", "classrooms", "assignments", "mentor", "review", "trainer", "inspector", "admin.diagnostics", "admin.requests", "admin.queue", "other"] as const;
 export type DiagnosticMethod = (typeof diagnosticMethods)[number];
 export type DiagnosticRouteFamily = (typeof diagnosticRouteFamilies)[number];
 export type AdminRequestDiagnostic = {

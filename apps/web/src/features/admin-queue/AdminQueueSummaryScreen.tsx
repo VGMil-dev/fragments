@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AdminQueueApi, AdminQueueSummary } from "./admin-queue-api.js";
+import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-queue.css";
 
 type State = { status: "loading" } | { status: "ready"; summary: AdminQueueSummary } | { status: "error" };
@@ -30,6 +31,7 @@ export function AdminQueueSummaryScreen({ api }: { api: AdminQueueApi }) {
       <p className="admin-queue__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-queue-title">Estado de la cola</h1>
       <p>Conteos agregados de trabajos y leases. No se muestran trabajos individuales ni datos de su contenido; estos conteos no confirman por sí solos que el worker esté disponible.</p>
+      <AdminConsoleNavigation current="queue" />
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={state.status === "loading"}>
         {state.status === "loading" ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}
       </button>
