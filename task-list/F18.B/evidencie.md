@@ -18,6 +18,7 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 ## Verificación local fresca
 
 - CI anterior del PR #90, run `45030155130`, falló en `packages/contracts/src/index.test.ts:94`: el fixture StudentAssignment omitía el nuevo campo requerido `mentorContext`. Se corrigió el fixture con contexto versionado representativo; `pnpm --filter @fragments/contracts test` — PASS (29/29), `pnpm --filter @fragments/contracts typecheck` — PASS y `git diff --check` — PASS. El nuevo CI queda pendiente tras publicar este commit.
+- Después de integrar F25 PR #92 en `main` (`74c413c`), la rama F18.B se sincronizó con `origin/main` mediante merge normal. En el árbol sincronizado: contratos 29/29, contratos/API/web typecheck y `git diff --check` — PASS. CI del head sincronizado pendiente de publicarse/terminar. Revisión estática independiente PASS en ownership, matrícula y binding de contexto; PostgreSQL runtime continúa NO COMPROBADO.
 - `pnpm --filter @fragments/contracts build` — PASS (`tsc -p tsconfig.json`).
 - `pnpm --filter @fragments/api exec prisma validate` — PASS (`The schema at prisma\\schema.prisma is valid`).
 - `pnpm --filter @fragments/api exec prisma generate` — PASS (Prisma Client 7.10.1 generado).
