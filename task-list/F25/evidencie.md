@@ -34,4 +34,5 @@ El resultado solo prueba repetibilidad/estructura del proveedor fake y la presen
 ## Cierre Git
 
 - Commit de implementación y documentación: `ee51314b780c64cb4695f27318ad588220f9dad9` (`docs(F25): documenta baseline offline de Review`).
+- Commit de consolidación de evidencia: `5d9ce133bcbc74c3133469ab7ee8f7f9ee9566aa` (`docs(F25): registra cierre local del baseline`).
 - Rama local: `codex/f25-offline-calibration`; árbol limpio tras el commit.
