@@ -317,7 +317,7 @@ model Classroom {
   teacherId         String                       @map("teacher_id")
   title             String
   subject           String
-  groupLabel        String                       @map("group_label")
+  groupLabel        String?                      @map("group_label")
   identityKey       String                       @map("identity_key")
   period            String?
   context           String?

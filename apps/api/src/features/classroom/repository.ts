@@ -1,12 +1,12 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import {
-  ClassroomSchema, ClassroomSummarySchema, ClassEnrollmentSchema, ClassJoinCodeSchema,
+  ClassroomSchema, ClassroomSummarySchema, ClassEnrollmentSchema, ClassJoinCodeSchema, TeacherDashboardSummarySchema,
   ClassroomSkillsResponseSchema, SkillCatalogEntrySchema,
 } from "@fragments/contracts";
 
-type ClassroomInput = { title: string; subject: string; groupLabel: string; period?: string | null | undefined; context?: string | null | undefined };
-type ClassroomUpdateInput = { title?: string | undefined; subject?: string | undefined; groupLabel?: string | undefined; period?: string | null | undefined; context?: string | null | undefined; status?: "active" | "archived" | undefined };
+type ClassroomInput = { title: string; subject: string; groupLabel?: string | null | undefined; period?: string | null | undefined; context?: string | null | undefined };
+type ClassroomUpdateInput = { title?: string | undefined; subject?: string | undefined; groupLabel?: string | null | undefined; period?: string | null | undefined; context?: string | null | undefined; status?: "active" | "archived" | undefined };
 type EnrollmentDto = { id: string; status: "pending" | "active" | "rejected" | "removed"; source: "join_code" | "teacher_assignment"; requestedAt: string; decidedAt: string | null };
 type EnrollmentStatus = EnrollmentDto["status"];
 type EnrollmentSource = EnrollmentDto["source"];
@@ -15,9 +15,13 @@ type DirectEnrollmentResult = { kind: "ok"; enrollment: EnrollmentDto } | { kind
 type Db = PrismaClient | Prisma.TransactionClient;
 
 function normalizedName(value: string): string { return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("es"); }
-function classroomIdentity(input: ClassroomInput) { return JSON.stringify([input.subject, input.groupLabel, input.period ?? ""].map(normalizedName)); }
+function classroomIdentity(input: Pick<ClassroomInput, "subject" | "period">) { return JSON.stringify([input.subject, input.period ?? ""].map(normalizedName)); }
+function hasLegacyGroupIdentity(identityKey: string): boolean {
+  try { const value: unknown = JSON.parse(identityKey); return Array.isArray(value) && value.length === 3; }
+  catch { return false; }
+}
 function hashCode(code: string): string { return createHash("sha256").update(code).digest("hex"); }
-function toClassroom(row: { id: string; title: string; subject: string; groupLabel: string; period: string | null; context: string | null; status: string; createdAt: Date; updatedAt: Date }) {
+function toClassroom(row: { id: string; title: string; subject: string; groupLabel: string | null; period: string | null; context: string | null; status: string; createdAt: Date; updatedAt: Date }) {
   return ClassroomSchema.parse({ id: row.id, title: row.title, subject: row.subject, groupLabel: row.groupLabel, period: row.period,
     context: row.context, status: row.status, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
 }
@@ -55,9 +59,22 @@ export function createClassroomRepository(database: PrismaClient, clock: () => D
     async createClassroom(teacherId: string, input: ClassroomInput) {
       const timestamp = now();
       const row = await database.classroom.create({ data: { id: randomUUID(), teacherId, title: input.title, subject: input.subject,
-        groupLabel: input.groupLabel, identityKey: classroomIdentity(input), period: input.period ?? null, context: input.context ?? null,
+        // New classrooms represent a theme, not a school section. Legacy request fields are accepted but ignored.
+        groupLabel: null, identityKey: classroomIdentity(input), period: input.period ?? null, context: input.context ?? null,
         status: "active", createdAt: timestamp, updatedAt: timestamp } });
       return toClassroom(row);
+    },
+    async getDashboardSummary(teacherId: string) {
+      const [totalClassrooms, pendingJoinRequests, rows] = await Promise.all([
+        database.classroom.count({ where: { teacherId } }),
+        database.classEnrollment.count({ where: { status: "pending", source: "join_code", classroom: { teacherId, status: "active" } } }),
+        database.classroom.findMany({ where: { teacherId }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take: 4 }),
+      ]);
+      return TeacherDashboardSummarySchema.parse({
+        totalClassrooms,
+        pendingJoinRequests,
+        classrooms: rows.map(toClassroomSummary),
+      });
     },
     async listClassrooms(teacherId: string, offset: number, limit: number) {
       const rows = await database.classroom.findMany({ where: { teacherId }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take: limit + 1, skip: offset });
@@ -70,12 +87,15 @@ export function createClassroomRepository(database: PrismaClient, clock: () => D
     async updateClassroom(teacherId: string, classroomId: string, input: ClassroomUpdateInput) {
       const row = await ownedClassroom(teacherId, classroomId);
       if (!row) return null;
-      const next = { title: input.title ?? row.title, subject: input.subject ?? row.subject, groupLabel: input.groupLabel ?? row.groupLabel,
+      const next = { title: input.title ?? row.title, subject: input.subject ?? row.subject, groupLabel: input.groupLabel === undefined ? row.groupLabel : input.groupLabel,
         period: input.period === undefined ? row.period : input.period, context: input.context === undefined ? row.context : input.context,
         status: input.status ?? row.status };
+      const nextIdentityKey = hasLegacyGroupIdentity(row.identityKey)
+        ? input.groupLabel === null ? classroomIdentity(next) : row.identityKey
+        : classroomIdentity(next);
       const timestamp = now();
       await database.$transaction(async (tx) => {
-        await tx.classroom.update({ where: { id: classroomId }, data: { ...next, identityKey: classroomIdentity(next), updatedAt: timestamp } });
+        await tx.classroom.update({ where: { id: classroomId }, data: { ...next, identityKey: nextIdentityKey, updatedAt: timestamp } });
         if (row.status === "active" && next.status === "archived") {
           await tx.classJoinCode.updateMany({ where: { classroomId, revokedAt: null }, data: { revokedAt: timestamp, revokedBy: teacherId } });
         }

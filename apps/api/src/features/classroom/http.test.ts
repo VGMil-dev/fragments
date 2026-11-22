@@ -53,8 +53,8 @@ async function request(base: string, path: string, user: string, role: "teacher"
   return { status: response.status, body: await response.json() as { ok: boolean; data?: any; error?: { code: string } } };
 }
 
-async function createClassroom(base: string, user = fixtureTeacherA, title = "Grupo A") {
-  return request(base, "/api/teacher/classrooms", user, "teacher", "POST", { title, subject: "Programación", groupLabel: title });
+async function createClassroom(base: string, user = fixtureTeacherA, title = "Grupo A", subject = "Programación") {
+  return request(base, "/api/teacher/classrooms", user, "teacher", "POST", { title, subject, groupLabel: title });
 }
 
 afterEach(async () => {
@@ -83,13 +83,75 @@ describePostgres("Classroom Studio HTTP — PostgreSQL integration", () => {
     const created = await createClassroom(base);
     expect(created.status).toBe(201);
     const id = created.body.data!.id as string;
+    expect(created.body.data).toMatchObject({ groupLabel: null });
     expect((await createClassroom(base)).body.error!.code).toBe("CLASSROOM_EXISTS");
-    expect((await createClassroom(base, fixtureTeacherA, "Grupo B")).status).toBe(201);
+    expect((await createClassroom(base, fixtureTeacherA, "Grupo B")).body.error!.code).toBe("CLASSROOM_EXISTS");
+    expect((await createClassroom(base, fixtureTeacherA, "Desarrollo web", "Desarrollo web")).status).toBe(201);
     const forged = await request(base, "/api/teacher/classrooms", fixtureTeacherA, "teacher", "POST", { title: "Forgery", subject: "X", groupLabel: "X", teacherId: fixtureTeacherB });
     expect(forged.status).toBe(400);
     expect((await request(base, "/api/teacher/classrooms", fixtureTeacherB, "teacher")).body.data.items).toHaveLength(0);
     expect((await request(base, `/api/teacher/classrooms/${id}`, fixtureTeacherB, "teacher")).status).toBe(404);
     expect((await request(base, `/api/teacher/classrooms/${id}`, fixtureTeacherB, "teacher", "PATCH", { title: "Robo" })).status).toBe(404);
+  });
+
+  it("returns only the authenticated teacher's classroom count and pending join requests", async () => {
+    const { base, prisma } = await start();
+    const ownActive = await createClassroom(base, fixtureTeacherA, "Aula móvil", "Programación móvil");
+    const ownArchived = await createClassroom(base, fixtureTeacherA, "Aula histórica", "Diseño web");
+    const foreign = await createClassroom(base, fixtureTeacherB, "Aula ajena", "Proyectos de software");
+    const ownActiveId = ownActive.body.data!.id as string;
+    const ownArchivedId = ownArchived.body.data!.id as string;
+    const foreignId = foreign.body.data!.id as string;
+    const archivedCode = await request(base, `/api/teacher/classrooms/${ownArchivedId}/join-code`, fixtureTeacherA, "teacher", "POST", {});
+    const archivedRequest = await request(base, "/api/classroom-join-requests", fixtureStudentB, "student", "POST", { code: archivedCode.body.data!.code });
+    expect(archivedRequest.body.data!.status).toBe("pending");
+    await request(base, `/api/teacher/classrooms/${ownArchivedId}`, fixtureTeacherA, "teacher", "PATCH", { status: "archived" });
+
+    const ownCode = await request(base, `/api/teacher/classrooms/${ownActiveId}/join-code`, fixtureTeacherA, "teacher", "POST", {});
+    const foreignCode = await request(base, `/api/teacher/classrooms/${foreignId}/join-code`, fixtureTeacherB, "teacher", "POST", {});
+    await request(base, "/api/classroom-join-requests", fixtureStudentA, "student", "POST", { code: ownCode.body.data!.code });
+    await request(base, "/api/classroom-join-requests", fixtureStudentB, "student", "POST", { code: foreignCode.body.data!.code });
+    await prisma.classEnrollment.create({ data: {
+      id: `fixture-assignment-pending-${namespace}`, classroomId: ownActiveId, studentId: fixtureStudentB,
+      status: "pending", source: "teacher_assignment", requestedAt: new Date(),
+    } });
+
+    const anonymous = await fetch(`${base}/api/teacher/dashboard/summary`);
+    expect(anonymous.status).toBe(401);
+    expect((await request(base, "/api/teacher/dashboard/summary", fixtureStudentA, "student")).status).toBe(403);
+
+    const own = await request(base, "/api/teacher/dashboard/summary", fixtureTeacherA, "teacher");
+    expect(own.status).toBe(200);
+    expect(own.body.data).toMatchObject({ totalClassrooms: 2, pendingJoinRequests: 1 });
+    expect(own.body.data!.classrooms.map((classroom: { id: string }) => classroom.id).sort()).toEqual([ownActiveId, ownArchivedId].sort());
+
+    const other = await request(base, "/api/teacher/dashboard/summary", fixtureTeacherB, "teacher");
+    expect(other.body.data).toMatchObject({ totalClassrooms: 1, pendingJoinRequests: 1 });
+    expect(other.body.data!.classrooms.map((classroom: { id: string }) => classroom.id)).toEqual([foreignId]);
+  });
+
+  it("preserves historical parallel identity keys and does not merge them into a new thematic classroom", async () => {
+    const { base, prisma } = await start();
+    const timestamp = new Date();
+    const legacyId = `fixture-legacy-classroom-${namespace}`;
+    const legacyKey = JSON.stringify(["programación móvil", "3.º bgu e2", ""]);
+    await prisma.classroom.create({ data: {
+      id: legacyId, teacherId: fixtureTeacherA, title: "Programación móvil · grupo previo", subject: "Programación móvil",
+      groupLabel: "3.º BGU E2", identityKey: legacyKey, period: null, context: null, status: "archived",
+      createdAt: timestamp, updatedAt: timestamp,
+    } });
+    const thematic = await createClassroom(base, fixtureTeacherA, "Programación móvil", "Programación móvil");
+    expect(thematic.status).toBe(201);
+
+    const renamed = await request(base, `/api/teacher/classrooms/${legacyId}`, fixtureTeacherA, "teacher", "PATCH", { title: "Aula histórica conservada" });
+    expect(renamed.status).toBe(200);
+    expect((await prisma.classroom.findUniqueOrThrow({ where: { id: legacyId } })).identityKey).toBe(legacyKey);
+
+    const collision = await request(base, `/api/teacher/classrooms/${legacyId}`, fixtureTeacherA, "teacher", "PATCH", { groupLabel: null });
+    expect(collision.status).toBe(409);
+    expect(await prisma.classroom.findUniqueOrThrow({ where: { id: legacyId } })).toMatchObject({ groupLabel: "3.º BGU E2", identityKey: legacyKey });
+    const summary = await request(base, "/api/teacher/dashboard/summary", fixtureTeacherA, "teacher");
+    expect(summary.body.data).toMatchObject({ totalClassrooms: 2 });
   });
 
   it("keeps code enrollment pending until its owner approves and scopes student reads to the caller", async () => {

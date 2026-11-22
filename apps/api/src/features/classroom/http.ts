@@ -5,7 +5,7 @@ import {
   ClassroomSchema, ClassroomUpdateRequestSchema, ClassEnrollmentSchema, ClassEnrollmentsResponseSchema, ClassroomJoinCodeRevocationSchema,
   ClassJoinCodeSchema, ClassroomSkillsResponseSchema, DirectEnrollmentRequestSchema, JoinClassroomRequestSchema,
   SkillCatalogResponseSchema, SkillCreateRequestSchema, SkillUpdateRequestSchema, StudentClassroomRequestsSchema,
-  StudentClassroomsSchema, ClassroomSkillAvailabilitySchema,
+  StudentClassroomsSchema, ClassroomSkillAvailabilitySchema, TeacherDashboardSummarySchema,
 } from "@fragments/contracts";
 import { z } from "zod";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
@@ -20,6 +20,13 @@ export function createClassroomHttp(database: PrismaClient, auth?: FragmentsAuth
   return async function handleClassroomHttp(request: IncomingMessage, response: ServerResponse): Promise<HandlerResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     const { pathname } = url;
+    if (pathname === "/api/teacher/dashboard/summary" && request.method === "GET") {
+      const teacherId = await requireTeacher(request, response, auth);
+      if (!teacherId) return "handled";
+      const classrooms = getRepository();
+      sendJson(response, 200, { ok: true, data: TeacherDashboardSummarySchema.parse(await classrooms.getDashboardSummary(teacherId)) });
+      return "handled";
+    }
     if (pathname.startsWith("/api/teacher/classrooms") || pathname.startsWith("/api/teacher/skills")) {
       const teacherId = await requireTeacher(request, response, auth);
       if (!teacherId) return "handled";
@@ -35,7 +42,7 @@ export function createClassroomHttp(database: PrismaClient, auth?: FragmentsAuth
         const input = ClassroomCreateRequestSchema.safeParse(raw);
         if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los datos del aula."); return "handled"; }
         try { sendJson(response, 201, { ok: true, data: ClassroomSchema.parse(await classrooms.createClassroom(teacherId, input.data)) }); }
-        catch (error) { sendDatabaseError(response, error, "CLASSROOM_EXISTS", "Ya existe un aula con la misma asignatura, grupo y período."); }
+        catch (error) { sendDatabaseError(response, error, "CLASSROOM_EXISTS", "Ya existe un aula compartida para esa temática y período."); }
         return "handled";
       }
 
@@ -54,7 +61,7 @@ export function createClassroomHttp(database: PrismaClient, auth?: FragmentsAuth
           const result = await classrooms.updateClassroom(teacherId, classroomId, input.data);
           if (!result) sendError(response, 404, "NOT_FOUND", "No se encontró el aula.");
           else sendJson(response, 200, { ok: true, data: ClassroomSchema.parse(result) });
-        } catch (error) { sendDatabaseError(response, error, "CLASSROOM_EXISTS", "Ya existe un aula con la misma asignatura, grupo y período."); }
+        } catch (error) { sendDatabaseError(response, error, "CLASSROOM_EXISTS", "Ya existe un aula compartida para esa temática y período."); }
         return "handled";
       }
 
@@ -221,6 +228,7 @@ async function readJson(request: IncomingMessage, response: ServerResponse): Pro
 function sendJson(response: ServerResponse, status: number, body: unknown): void { response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }); response.end(JSON.stringify(body)); }
 function sendError(response: ServerResponse, status: number, code: string, message: string): void { response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }); response.end(JSON.stringify(errorSchema.parse({ ok: false, error: { code, message } }))); }
 function sendDatabaseError(response: ServerResponse, error: unknown, conflictCode: string, conflictMessage: string): void {
-  if (error instanceof Error && (error.message.includes("UNIQUE constraint failed") || error.message.includes("Unique constraint failed"))) sendError(response, 409, conflictCode, conflictMessage);
+  const prismaCode = error && typeof error === "object" && "code" in error ? error.code : null;
+  if (prismaCode === "P2002" || (error instanceof Error && (error.message.includes("UNIQUE constraint failed") || error.message.includes("Unique constraint failed")))) sendError(response, 409, conflictCode, conflictMessage);
   else sendError(response, 500, "PERSISTENCE_ERROR", "No se pudo guardar el cambio. Inténtalo de nuevo.");
 }
