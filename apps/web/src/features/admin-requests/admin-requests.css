@@ -1,0 +1,19 @@
+.admin-requests { width: min(100% - 2rem, 76rem); margin: clamp(1.25rem, 4vw, 3rem) auto; color: var(--f16-text-primary); }
+.admin-requests__header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--f16-border); }
+.admin-requests__eyebrow { color: var(--f16-lime); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+.admin-requests h1 { margin: .35rem 0 .65rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.04em; }
+.admin-requests__header > p:not(.admin-requests__eyebrow) { max-width: 65ch; color: var(--f16-text-secondary); line-height: 1.55; }
+.admin-requests__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; margin-bottom: 1rem; }
+.admin-requests label { font-weight: 700; }
+.admin-requests select, .admin-requests button { min-height: 44px; padding: .6rem .85rem; border: 1px solid var(--f16-border); border-radius: .65rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; }
+.admin-requests button { font-weight: 700; cursor: pointer; }
+.admin-requests button:focus-visible, .admin-requests select:focus-visible, .admin-requests__table-wrap:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-requests button:disabled { cursor: not-allowed; opacity: .65; }
+.admin-requests__table-wrap { overflow-x: auto; border: 1px solid var(--f16-border); border-radius: .85rem; background: var(--f16-surface); }
+.admin-requests table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.admin-requests caption { padding: .9rem; color: var(--f16-text-secondary); text-align: left; }
+.admin-requests th, .admin-requests td { padding: .75rem; border-top: 1px solid var(--f16-border); text-align: left; white-space: nowrap; }
+.admin-requests th { color: var(--f16-text-secondary); font-size: .78rem; }
+.admin-requests__pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .85rem; color: var(--f16-text-secondary); }
+.admin-requests__pagination > div { display: flex; gap: .5rem; }
+@media (max-width: 600px) { .admin-requests { width: min(100% - 1rem, 76rem); } }
