@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createServer } from "node:http";
 import { openDatabase } from "../../db/open.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createAssignmentRepository } from "./repository.js";
 import { createPrismaMentorRepository } from "../mentor/prisma-repository.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../mentor/local-fakes.js";
 import { createMentorService } from "../mentor/service.js";
+import type { FragmentsAuthService } from "../../auth/better-auth.js";
+import { createHttpHandler } from "../../http/app.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para probar el recorrido académico PostgreSQL.");
@@ -64,6 +67,92 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     } finally {
       await database.$disconnect();
       database = undefined;
+    }
+  });
+
+  it("runs authenticated mission, student draft, and Mentor evaluation through HTTP with the pinned version", async () => {
+    const db = database!;
+    const localEvaluator = createLocalMentorEvaluator();
+    let evaluatedConfig: unknown;
+    const mentor = createMentorService({
+      evaluator: { async evaluate(input) { evaluatedConfig = input.config; return localEvaluator.evaluate(input); } },
+      pdf: createMinimalPdfRenderer(),
+    });
+    const auth = {
+      async userId(request: { headers: Record<string, string | undefined> }) {
+        const id = request.headers["x-fixture-user"];
+        return id && request.headers["x-fixture-role"] === "teacher" ? id : null;
+      },
+      async teacherId(request: { headers: Record<string, string | undefined> }) {
+        const id = request.headers["x-fixture-user"];
+        return id && request.headers["x-fixture-role"] === "teacher" ? id : null;
+      },
+      async student(request: { headers: Record<string, string | undefined> }) {
+        const id = request.headers["x-fixture-user"];
+        if (!id || request.headers["x-fixture-role"] !== "student") return null;
+        return { id, githubAccountId: `fixture-github-${id}`, githubLogin: id, avatarUrl: null, registeredAt: new Date().toISOString() };
+      },
+      githubOAuthConfigured: true,
+    } as unknown as FragmentsAuthService;
+    const server = createServer(createHttpHandler(db, { auth, mentor }));
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected local HTTP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const request = async (path: string, role: "teacher" | "student" | "anonymous", method = "GET", body?: unknown, user = role === "teacher" ? teacherId : studentId) => {
+      const response = await fetch(`${base}${path}`, { method, headers: { ...(role === "anonymous" ? {} : { "x-fixture-user": user, "x-fixture-role": role }), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+      return { status: response.status, body: await response.json() as { data?: any; error?: { code: string } } };
+    };
+    try {
+      const basePath = `/api/teacher/classrooms/${classroomId}/assignments`;
+      expect((await request(basePath, "anonymous", "POST", {})).status).toBe(401);
+      expect((await request(basePath, "teacher", "GET", undefined, "fixture-other-teacher")).status).toBe(404);
+      const created = await request(basePath, "teacher", "POST", {
+        title: "Misión HTTP v1", instructions: "Construye una navegación clara.", objectives: ["Conectar dos vistas"],
+        requiredSkillIds: [skillId], optionalSkillIds: [],
+      });
+      expect(created.status).toBe(201);
+      const published = await request(`${basePath}/${created.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 1 });
+      expect(published.status).toBe(200);
+      const version = published.body.data!.versions.find((item: { version: number }) => item.version === 1);
+      expect(version).toMatchObject({ assignmentId: created.body.data!.id, status: "published", requiredSkills: [{ id: skillId, name: "Navegación" }] });
+
+      const noEnrollment = await request(`/api/me/classrooms/${classroomId}/assignments`, "student", "GET", undefined, "fixture-student-without-enrollment");
+      expect(noEnrollment.status).toBe(404);
+      const visible = await request(`/api/me/classrooms/${classroomId}/assignments`, "student");
+      expect(visible.status).toBe(200);
+      expect(visible.body.data).toMatchObject([{ assignmentId: created.body.data!.id, id: version.id, title: "Misión HTTP v1" }]);
+
+      const proposal = {
+        title: "Propuesta desde la misión", problem: "El equipo necesita navegar entre pantallas.",
+        solution: "Una barra conecta las pantallas.", description: "Implementar una navegación móvil sencilla.",
+        purpose: "Aplicar navegación en un proyecto real.", goals: ["Conectar dos pantallas"], skills: [],
+        mentorSkills: { classroomId, selectedSkillIds: [] }, scope: "Dos pantallas conectadas.", constraints: [],
+      };
+      const deniedDraft = await request("/api/me/proposals/drafts", "student", "POST", { proposal, assignmentVersionId: version.id }, "fixture-student-without-enrollment");
+      expect(deniedDraft).toMatchObject({ status: 404, body: { error: { code: "ASSIGNMENT_UNAVAILABLE" } } });
+      const createdDraft = await request("/api/me/proposals/drafts", "student", "POST", { proposal, assignmentVersionId: version.id });
+      expect(createdDraft.status).toBe(201);
+      expect(createdDraft.body.data).toMatchObject({ assignmentVersionId: version.id, assignmentContext: { assignmentVersionId: version.id, mentorContext: { config: { theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) } } } });
+
+      const edit = await request(`${basePath}/${created.body.data!.id}/draft`, "teacher", "PATCH", {
+        title: "Misión HTTP v2", instructions: "Conecta vistas y conserva el estado.", objectives: ["Conectar vistas", "Conservar el estado"],
+        requiredSkillIds: [skillId], optionalSkillIds: [optionalSkillId], expectedVersion: 2,
+      });
+      expect(edit.status).toBe(200);
+      expect((await request(`${basePath}/${created.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 3 })).status).toBe(200);
+      const owned = await request("/api/me/proposals", "student");
+      expect(owned.status).toBe(200);
+      expect(owned.body.data).toMatchObject([{ id: createdDraft.body.data!.id, assignmentVersionId: version.id, assignmentContext: { mentorContext: { config: { theme: "Misión HTTP v1" } } } }]);
+
+      const evaluation = await request(`/api/proposals/${createdDraft.body.data!.id}/review`, "student", "POST");
+      expect(evaluation.status).toBe(200);
+      expect(evaluatedConfig).toMatchObject({ theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
+      expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
+      expect(evaluation.body.data).toMatchObject({ mentorContextVersion: expect.any(Number), proposalId: createdDraft.body.data!.id });
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
 

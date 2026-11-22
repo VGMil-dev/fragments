@@ -85,3 +85,15 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - El editor/creación/publicación de misión queda **NO COMPROBADO**: el CTA estaba deshabilitado porque el aula no tenía habilidad activa. No se habilitó una habilidad ni se escribió en el aula productiva. El recorrido misión→propuesta→evaluación Mentor, incluida persistencia PostgreSQL real de ese flujo, también permanece **NO COMPROBADO**.
 - Endpoint público `/health` reportó `status=ok`, `database=ready`; el bundle público contiene versión `v0.5.11` y SHA `a3c189f041694ccf898f208de41a51c36ad41a04`.
 - Ledger del host, SHA del backup previo y labels de imagen en Docker quedan **NO COMPROBADOS**: la sesión no dispone de una fuente administrativa autorizada de solo lectura para esos datos. No se intentó SSH ni se alteró producción.
+
+## Seguimiento HTTP autenticado misión→propuesta→Mentor — 2026-11-22
+
+- Referencias auditadas: `origin/main` en `b9eabda7d60360e437285a7907af0dce4b883a65` (PR #101) y página Notion F18 actualizada el 2026-11-22. Notion confirma que PR #101 cubre repositorio/servicio con provider fake y CI `45045147138` PASS, pero no cubre endpoints HTTP; el trayecto productivo continúa NO COMPROBADO porque no hay misión publicada/skill QA activa.
+- Se añadió en `apps/api/src/features/assignments/academic-flow.integration.test.ts` una prueba HTTP PostgreSQL con identidades `fixture-*` y `fake/local-heuristic-v1`: docente autentica, crea/publica misión; estudiante sin matrícula recibe 404; estudiante matriculado lee la misión y crea borrador ligado al `assignmentVersionId`; docente publica v2; el borrador conserva contexto v1 y Mentor evalúa por HTTP usando contexto v1. La prueba conserva el preflight local que exige URL `localhost` y `current_database() = fragments_test`.
+- `pnpm --filter @fragments/api exec prisma generate` — PASS, cliente 7.10.1 generado desde el schema; no establece conexión.
+- `pnpm --filter @fragments/contracts build` — PASS.
+- `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts` — 1 archivo y 2 tests omitidos tras generar el cliente porque `DATABASE_URL` no está configurada en el proceso. No se realizó conexión ni migración.
+- `pnpm --filter @fragments/api exec vitest run src/features/assignments/http.test.ts src/features/assignments/mentor-context.test.ts src/features/mentor/service.test.ts` — PASS, 3 archivos / 13 tests.
+- `pnpm --filter @fragments/api typecheck` y `git diff --check` — PASS.
+- Bloqueo concreto: el proceso no dispone de `DATABASE_URL`; por lo tanto no se puede confirmar `fragments_test`, ejecutar la integración HTTP contra PostgreSQL ni completar preflight/migración local. Ningún endpoint ni base de producción fue contactado; no se usaron sesiones Ego Lite.
+- Commit del seguimiento HTTP: `f9b2c4456badb7c08770013e52e0ab57c55d792b` (`test(f18b): cover authenticated mentor HTTP mission flow`).
