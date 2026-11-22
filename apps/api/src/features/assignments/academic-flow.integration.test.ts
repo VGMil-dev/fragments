@@ -134,6 +134,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       const createdDraft = await request("/api/me/proposals/drafts", "student", "POST", { proposal, assignmentVersionId: version.id });
       expect(createdDraft.status).toBe(201);
       expect(createdDraft.body.data).toMatchObject({ assignmentVersionId: version.id, assignmentContext: { assignmentVersionId: version.id, mentorContext: { config: { theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) } } } });
+      const pinnedContextVersion = createdDraft.body.data!.assignmentContext.mentorContext.version;
 
       const edit = await request(`${basePath}/${created.body.data!.id}/draft`, "teacher", "PATCH", {
         title: "Misión HTTP v2", instructions: "Conecta vistas y conserva el estado.", objectives: ["Conectar vistas", "Conservar el estado"],
@@ -149,7 +150,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(evaluation.status).toBe(200);
       expect(evaluatedConfig).toMatchObject({ theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
       expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
-      expect(evaluation.body.data).toMatchObject({ mentorContextVersion: expect.any(Number), proposalId: createdDraft.body.data!.id });
+      expect(evaluation.body.data).toMatchObject({ mentorContextVersion: pinnedContextVersion, proposalId: createdDraft.body.data!.id });
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
