@@ -33,3 +33,9 @@ Contrato, pruebas unitarias/integración con fakes, typecheck/lint/build, aislam
 ## Corrección derivada de QA v0.5.10
 
 El contexto de Mentor debe conservar el snapshot académico completo de la versión publicada: objetivos, habilidades obligatorias y optativas, además de todos los requisitos de F11. Ningún criterio puede truncarse silenciosamente. La configuración editable F11 conserva su límite original; el límite ampliado se aplica únicamente al contexto efectivo de evaluación.
+
+## Incremento de continuidad — recorrido misión → Mentor
+
+- Añadir una regresión PostgreSQL aislada que publique una misión v1, inicie y recupere una propuesta ligada a esa versión, publique v2 y compruebe que el borrador/evaluación fake conserva la misión y contexto originales.
+- Ejecutar únicamente contra `fragments_test` con preflight de `current_database()`; fixtures con UUID, limpieza acotada y proveedor local fake.
+- Mantener la calidad real de IA y el recorrido productivo como NO COMPROBADOS.
