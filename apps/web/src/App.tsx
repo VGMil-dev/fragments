@@ -217,14 +217,14 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           </div>
           <div className="student-nav__tools" aria-label="Herramientas">
             <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}><Image size={19} aria-hidden="true" /><span>Galería</span></a>
-            <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/mentor"); }}><Sparkles size={19} aria-hidden="true" /><span>Mentor</span></a>
+            <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); setSelectedAssignment(undefined); navigate("/student/mentor"); }}><Sparkles size={19} aria-hidden="true" /><span>Mentor</span></a>
             <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}><Code2 size={19} aria-hidden="true" /><span>Review</span></a>
             <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}><Dumbbell size={19} aria-hidden="true" /><span>Trainer</span></a>
           </div>
           <details className={`student-workspace__more${["/student/projects", "/student/gallery", "/student/mentor", "/student/review", "/student/trainer"].includes(path) ? " student-workspace__more--active" : ""}`}><summary><MoreHorizontal size={19} aria-hidden="true" /><span>Más</span></summary><div>
               <a href="/student/projects" aria-current={path === "/student/projects" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/projects"); }}>Mis proyectos</a>
               <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/gallery"); }}>Galería</a>
-              <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/mentor"); }}>Mentor</a>
+              <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Mentor</a>
               <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/review"); }}>Review</a>
               <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/trainer"); }}>Trainer</a>
           </div></details>
@@ -260,7 +260,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           {submissions.status === "empty" ? <p>Aún no tienes entregas generadas. Las propuestas guardadas están en Mis proyectos; una evaluación formativa no es una aprobación docente.</p> : null}
           {submissions.status === "success" ? <><ul className="student-submission-list">{submissions.data.map((item) => <li key={item.id}><span><strong>{item.label}</strong><small>{item.kind === "mentor" ? "Entrega Mentor" : "Entrega Review"} · {new Date(item.createdAt).toLocaleDateString("es-CO")}</small></span><span>{item.score}/100</span><small>Resultado disponible · no es aprobación docente</small><button type="button" onClick={() => void downloadSubmission(item.id, item.kind)}>Descargar PDF</button></li>)}</ul><p>Las propuestas guardadas están en Mis proyectos. Una evaluación formativa no es una aprobación docente.</p></> : null}
           {submissionDownloadError ? <p role="alert">{submissionDownloadError}</p> : null}
-          <button className="button button--primary" type="button" onClick={() => navigate("/student/mentor")}>Abrir Mentor</button></main> : null}
+          <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Abrir Mentor</button></main> : null}
         {path === "/student/gallery" ? (
           <GalleryScreen
             state={gallery}
@@ -311,7 +311,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               onGenerateSubmission={(request) => studentApi.createMentorSubmission(request)}
               onReadme={(submissionId) => studentApi.downloadMentorReadme(submissionId)}
               onPdf={(submissionId) => studentApi.downloadMentorPdf(submissionId)}
-              onBack={() => navigate("/student/gallery")}
+              onBack={() => { setSelectedAssignment(undefined); navigate("/student/gallery"); }}
             />
           </>
         ) : null}
@@ -322,7 +322,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
-            onBack={() => navigate("/student/mentor")}
+            onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
         {path === "/student/trainer" ? <TrainerScreen api={trainerApi} /> : null}
