@@ -41,3 +41,10 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Al abrirlo, muestra el tema, la consigna contextual, el nivel esperado, los requisitos conservados y el número de versión `mentorContext.version` de esa misión.
 - La UI no presenta pesos ni criterios de rúbrica en este incremento. El CTA sigue pasando el snapshot completo de la misma `StudentAssignment`; no se reconstruye contexto desde el borrador F11 actual.
 - Verificación conductual: renderizar una misión con fixture de contexto, comprobar etiqueta de versión y valores fijados, abrir/cerrar el disclosure y confirmar que no se presenta contenido de criterios/pesos.
+
+## Incremento F18.B — acceso al catálogo desde el aula docente
+
+- GIVEN un aula sin habilidades disponibles, WHEN el docente ve el estado vacío de “Habilidades disponibles”, THEN conserva el aviso “Crea habilidades en el catálogo para habilitarlas aquí.” y dispone de un enlace visible a `/teacher/skills`.
+- WHEN activa el enlace con ratón o teclado, THEN usa la navegación existente hacia el catálogo; no se cambia ninguna API ni contrato.
+- El enlace aparece cuando no hay habilidades activas, tanto si la lista está vacía como si todas sus entradas están archivadas; si hay una activa, se omite.
+- GIVEN el aula conserva únicamente habilidades archivadas, WHEN el docente revisa disponibilidad, THEN conserva sus nombres y la nota de referencias archivadas, y también dispone del enlace al catálogo.
