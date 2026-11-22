@@ -1,5 +1,15 @@
 # Evidencia F18.B
 
+## Regresión de continuidad misión → Mentor — 2026-11-22
+
+- Se añadió `apps/api/src/features/assignments/academic-flow.integration.test.ts`: PostgreSQL fixture con IDs UUID, preflight obligatorio `current_database() = fragments_test` y cleanup limitado a sus propios registros.
+- El recorrido de repositorio comprueba publicar misión v1 con habilidad requerida, visibilidad a matrícula activa, crear/recuperar propuesta ligada al ID inmutable de v1, publicar v2 con habilidades requerida y optativa, y conservar snapshot/contexto de v1 para evaluación Mentor a nivel servicio etiquetada `fake/local-heuristic-v1`. No simula ni declara comprobadas las autorizaciones de endpoints HTTP.
+- Revisión reflexiva detectó y corrigió que v2 debía conservar al menos una habilidad requerida; la fixture ahora prueba categorías requeridas/optativas distintas. La URL debe apuntar a localhost y a `fragments_test` antes de conectar; `current_database()` se valida antes de escrituras. La limpieza queda protegida con `finally`.
+- Verificación local: `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 1 prueba omitida porque `DATABASE_URL` no está configurada. No se abrió conexión; integración PostgreSQL queda **NO COMPROBADA localmente**, pendiente de CI efímero.
+- Verificación local: `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
+- Commits con slice, corrección de fixture y evidencia: `2bdcb5268ad8532c43077f63c1503bdd2277d1ac`, `26e323342df4490b4158a45000b8ba2f5257b6f5`, `d53e48ebb8f6967ee6c31c8f6999c50625672c3b`. CI PR #101 run `45045147138` SUCCESS (tests, typecheck, lint y build con PostgreSQL efímero); revisión independiente final pendiente.
+- No se modificaron contratos, migraciones, rutas, configuración de proveedores, datos productivos ni sesiones de navegador. La fake no valida calidad de IA real ni sustituye el recorrido Ego Lite.
+
 ## Estado
 
 Implementación local parcial, sin migrar bases de datos. El CRUD docente, publicación versionada y lectura estudiantil están implementados; una misión inicia un borrador con su ID de versión inmutable. La API fija esa relación en `Proposal`, verifica matrícula activa y evalúa usando el snapshot y contexto/rúbrica F11 exactos versionados. Mis aulas ofrece el CTA y entrega el contexto de la misión.
