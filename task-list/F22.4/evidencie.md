@@ -4,6 +4,7 @@
 
 - Rama: `codex/f22-audit-log-feed`, basada en el `origin/main` actualizado que contiene PR #104 merge `3911d401`.
 - Commit de implementación: `7dcf49ffff51a2ed6a1606ecc6feed63d6b2b2e2`.
+- PR #105 abierto contra `main`, head `61f37ddb9cdb8dc56e4632f816dfe32c6107f0bb`; CI/revisión/merge todavía pendientes.
 - Store: `apps/api/src/features/admin-audit-log/store.ts`.
 - Solo acepta los dos tipos reales emitidos hoy por F22.2/F22.3. Emite el evento completo estructurado al writer inyectado; después retiene una proyección acotada que omite el actor ID. Falla cerrado si la escritura al sink falla.
 - El buffer es efímero, máximo 100 registros. No se implementó una ruta/UI compartida; el arquitecto integrará el sink de `apps/api/src/http/app.ts` y la ruta de lectura autenticada/auditada, sin incluir su propio evento en la respuesta.
