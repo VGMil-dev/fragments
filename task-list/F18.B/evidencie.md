@@ -236,3 +236,17 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS. Recorrió HTTP: acceso anónimo y docente ajeno denegados, misión v1 publicada, estudiante sin matrícula denegado, matrícula activa y misión visible, draft ligado a `assignmentVersionId`, publicación docente v2 y recuperación/evaluación Mentor fake con snapshot/contexto v1 preservados.
 - La prueba usa auth fixture y `fake/local-heuristic-v1`; confirma integración de rutas/repositorios/PostgreSQL, no Better Auth ni proveedor IA reales. El contenedor temporal se detuvo y eliminó sin volumen persistente.
 - **NO COMPROBADO:** UI con misión activa en Ego Lite, persistencia en producción, Better Auth real y calidad de puntuación IA real. La vista Ego Lite sigue mostrando un aula sin misiones, por lo que el label visual permanece NO COMPROBADO.
+
+## Aserción exacta de versión de contexto en evaluación HTTP · 2026-11-22
+
+- Revisión independiente recomendó reemplazar la aserción `expect.any(Number)` de la evaluación Mentor por la versión exacta fijada en el contexto del borrador. Añadí esa comparación en `academic-flow.integration.test.ts`; tras publicar v2, la respuesta de evaluación debe seguir reportando el contexto Mentor v1 asociado al borrador.
+- PostgreSQL 18.6 desechable, enlazado solo a `127.0.0.1:55444`; `current_database()` fue comprobado por el test y se aplicaron las cinco migraciones vigentes en `fragments_test`.
+- Comando `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS; `git diff --check` — PASS. El contenedor temporal se detuvo y eliminó; F23 y UX08 quedaron activos.
+- Commit de test: `b06f5e2`. PR #138 abierto para integración normal; CI pendiente al registrar esta evidencia.
+- El test usa HTTP local, auth fixture y Mentor fake. No prueba Better Auth real, proveedor IA real, UI de misión activa ni datos de producción.
+
+## Ego Lite · estado de las aulas sin escritura · 2026-11-22
+
+- Se conservaron abiertas las sesiones y pestañas Estudiante (TaskSpace 46) y Fragments-Docente (TaskSpace 44). Los dashboards y accesos a aulas cargaron sin errores de acceso.
+- Estudiante: Programación Móvil · 2026–2027 muestra matrícula activa y no tiene misiones publicadas. Docente: el dashboard y detalle del aula cargan; se ven las secciones Habilidades y Misiones; “Crear misión” está deshabilitado porque no hay habilidades activas. No se guardaron cambios.
+- El label de versión con una tarjeta real y el recorrido misión→propuesta→Mentor siguen NO COMPROBADOS porque no existe misión publicada. La pestaña original del estudiante que dejó de responder se conservó; la lectura se completó en una pestaña nueva del mismo TaskSpace.
