@@ -73,6 +73,11 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Habilidades requeridas");
     expect(html).toContain("Observación");
     expect(html).toContain("Iniciar propuesta");
+    expect(html).toContain("Contexto para tu propuesta · versión 3");
+    expect(html).toContain("Bachillerato");
+    expect(html).toContain("Explora tu entorno");
+    expect(html).toContain("Registrar hallazgos");
+    expect(html).not.toContain("Cita observaciones verificables.");
 
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement("div");
@@ -80,6 +85,11 @@ describe("AssignmentsPanel", () => {
     const root = createRoot(container);
     try {
       await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />));
+      const context = container.querySelector<HTMLDetailsElement>(".student-assignments__context");
+      const contextSummary = context?.querySelector("summary");
+      expect(context?.open).toBe(false);
+      await act(async () => contextSummary?.click());
+      expect(context?.open).toBe(true);
       const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Explora tu entorno"]');
       expect(button).toBeTruthy();
       await act(async () => button?.click());

@@ -27,4 +27,7 @@
 .assignments-panel__list p, .student-assignments article > p:not(.assignments-panel__eyebrow) { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__empty, .assignments-panel__message { padding: .9rem 1rem; border-left: 3px solid var(--f16-info, #8ab4ff); background: var(--f16-surface, #121c32); }
 .student-assignments h4 { margin-bottom: .2rem; }
+.student-assignments__context { margin: 1rem 0; padding: .8rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-control, .55rem); background: var(--f16-night, #0b1220); }
+.student-assignments__context summary { color: var(--f16-info, #8ab4ff); font-weight: 700; cursor: pointer; }
+.student-assignments__context > div { padding-top: .5rem; }
 @media (max-width: 640px) { .assignments-panel__heading, .assignments-panel__list article { align-items: stretch; flex-direction: column; } .assignments-panel__actions { flex-wrap: wrap; } .assignments-panel__skill { align-items: start; flex-wrap: wrap; } }

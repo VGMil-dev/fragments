@@ -187,3 +187,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Producción verificada desde público: `/health` → `status=ok`, `database=ready`; página 200 y bundle `/assets/index-C1smlPXh.js` contiene `v0.5.12` y SHA `613c02f71129a1f0bb417a5e602ff631fc1de42c`.
 - GET anónimo a `/api/admin/classroom-requests` → `401 AUTH_REQUIRED`, sin campo `items`. No se usó una sesión docente/estudiante ni se escribieron matrículas.
 - **NO COMPROBADO:** ledger del host, digest del backup previo, labels Docker, sesión admin real y audit event observado en stdout productivo. Health y bundle confirman disponibilidad/version, pero no sustituyen esos checks. No se intentó SSH ni se modificó infraestructura.
+
+## Release y aplicación v0.5.14 — 2026-11-22
+
+- PR #108 se integró normalmente como `d40817ad2e62d1d9971fccbef5b878543307f9e9`, CI `45052607454` SUCCESS. La tag anotada `v0.5.14` apunta al SHA exacto de `origin/main`.
+- Environment `fragments-production`: cero revisores, sin wait timer; consultado solo lectura. No se cambió el environment ni gates técnicos.
+- F14 run `45052895014`: `verify-build`, pruebas contra DB disposable, build/metadata, ARM64 y `attest-package` SUCCESS; `publish-approved-release` SUCCESS. Release incluye paquete, manifiesto y attestation.
+- Después del sondeo normal del agente pull, el bundle productivo `/assets/index-C8xxczOG.js` contiene `v0.5.14`, SHA exacto `d40817ad2e62d1d9971fccbef5b878543307f9e9` y `/admin/audit-log`. `GET /health`: `status=ok`, `database=ready`. GET anónimo a `/api/admin/audit-log?limit=1`: `401 Unauthorized`, `Cache-Control: no-store`.
+- Release aplicado verificado por bundle y API pública; no se apagó producción ni se usó despliegue manual. Ledger del host, digest del backup previo, labels Docker, sesión admin y eventos productivos siguen NO COMPROBADOS.

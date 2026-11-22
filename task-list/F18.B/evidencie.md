@@ -97,3 +97,38 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api typecheck` y `git diff --check` — PASS.
 - Bloqueo concreto: el proceso no dispone de `DATABASE_URL`; por lo tanto no se puede confirmar `fragments_test`, ejecutar la integración HTTP contra PostgreSQL ni completar preflight/migración local. Ningún endpoint ni base de producción fue contactado; no se usaron sesiones Ego Lite.
 - Commit del seguimiento HTTP: `f9b2c4456badb7c08770013e52e0ab57c55d792b` (`test(f18b): cover authenticated mentor HTTP mission flow`).
+
+## Incremento UI estudiantil — contexto académico de misión — 2026-11-22
+
+- En `apps/web/src/features/assignments/AssignmentsPanel.tsx`, cada misión estudiante incluye un disclosure nativo, cerrado inicialmente, con tema, consigna contextual, nivel esperado y requisitos del snapshot Mentor F11 ligado a esa versión. El CTA conserva el `StudentAssignment` exacto; no se exponen criterios/pesos ni se cambia la rúbrica.
+- TDD verificó contenido, versión, apertura con teclado/nativo y omisión de criterios privados. Verificación del PR: `pnpm --filter @fragments/web test` — 154/154 PASS; typecheck y `git diff --check` PASS. QA visual Ego Lite sigue NO COMPROBADO.
+- PR #106 integrado normalmente en `main` como `7d4802c73bff58e8a58920b3f8213ac35e0e8490`; head `eb1ba79c74dbaea66500dad3ec927fc92a18b0ec`, CI `45050161446` SUCCESS, revisión independiente PASS.
+- No se tocaron contratos, API, esquema/migraciones, producción ni recursos de aula. No se usaron sesiones Ego Lite durante el PR.
+
+## Integración y observación productiva read-only — 2026-11-22
+## Integración y observación productiva read-only — 2026-11-22
+
+- PR #104 integrado normalmente en `main` como `3911d401326027898991cde4ad1b8fbd5ed6444a`; CI final `45047900668` PASS y revisión independiente PASS. El CI inicial/post-merge ejecutó schema y suite completa contra PostgreSQL disposable; los dos casos nuevos pasaron allí. Localmente se omitieron al no haber `DATABASE_URL`.
+- En la prueba HTTP, auth fixture confirma anónimo 401, otro docente 404 y alumno sin matrícula 404. Con matrícula activa crea y recupera borrador ligado a misión v1; publicar v2 no cambia el snapshot que Mentor fake recibe. Esto no prueba Better Auth real ni provider IA real.
+- Ego Lite read-only en producción v0.5.13: aula `Programación Móvil`, período `2026 - 2027`, contexto acordado y matrícula activa; no hay habilidades habilitadas ni misiones publicadas. La UI bloquea crear una misión hasta activar una habilidad. El portal estudiantil refleja matrícula activa, sin skills ni misiones. No se cambió ni guardó ningún recurso y ambas páginas quedaron abiertas.
+- Pendiente para recorrido visual/UI funcional con datos QA: habilidad y misión sintéticas en `fragments_test`, cuando exista un acceso permitido. Flujo de evaluación en producción, Better Auth real y puntuación IA continúan **NO COMPROBADOS**.
+
+## Release v0.5.14 — UI de contexto académico — 2026-11-22
+
+- El release F14 `v0.5.14`, run `45052895014`, está aplicado: bundle `/assets/index-C8xxczOG.js` confirma SHA `d40817ad2e62d1d9971fccbef5b878543307f9e9` e incluye el código de PR #106 (merge `7d4802c`, CI `45050161446` PASS, revisión independiente PASS).
+- Las sesiones Ego Lite docente y estudiante permanecieron abiertas. No se navegó ni se modificó ningún recurso durante el release.
+- Estado funcional conocido sin cambios: el aula productiva no tiene habilidades habilitadas ni misiones publicadas; por ello el recorrido misión→propuesta→Mentor no se puede validar con esos datos. Better Auth real, evaluación/provider IA y flujo completo quedan NO COMPROBADOS. Se requiere QA sintética permitida en `fragments_test`.
+
+## Spot check independiente Ego Lite v0.5.14 — 2026-11-22
+
+- El revisor independiente observó las sesiones existentes de estudiante y docente, ambas devueltas abiertas; versión `v0.5.14`, commit `d40817a`. No cerró pestañas ni cambió o guardó recursos.
+- Estudiante: matrícula activa en `Programación Móvil`, ninguna habilidad autorizada y ninguna misión publicada; la vista indica “Tu docente aún no ha publicado misiones en esta aula.”
+- Docente: ninguna habilidad habilitada, sin misiones y CTA “Crear misión” deshabilitado. Esto coincide con la restricción de requisito previo de habilidad.
+- El disclosure de contexto académico de una misión queda NO COMPROBADO porque exigiría habilitar una habilidad o publicar recursos en producción. No se tomó captura: la vista mostraba datos personales. QA de datos sintéticos en `fragments_test`, Better Auth real y evaluación IA real siguen pendientes.
+
+## Recorrido F18.B en PostgreSQL disposable — 2026-11-22
+
+- Se creó un contenedor PostgreSQL temporal local, ligado solo a `127.0.0.1`, sin volumen persistente; se confirmó que existe únicamente `fragments_test` y se aplicaron ahí las cinco migraciones vigentes. La integración vuelve a verificar la base y URL local antes de crear fixtures.
+- `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS. Ejercita HTTP con auth fixture, misión v1, rechazo anónimo/ajeno/sin matrícula, matrícula activa, borrador vinculado a snapshot, publicación v2 y Mentor fake conservando contexto de v1.
+- `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — 3/3 PASS. Comprueba disclosure cerrado/abrible, contexto/versión, exclusión de criterios/pesos y entrega del snapshot exacto.
+- La base temporal fue detenida y eliminada; no se modificó el test DB compartido, producción ni sesiones Ego Lite. Esto no verifica Better Auth ni IA reales. El disclosure en sesión productiva no puede comprobarse mientras no haya una misión habilitada; no se escribieron recursos productivos.

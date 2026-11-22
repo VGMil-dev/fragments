@@ -58,6 +58,7 @@ function routeFamilyLabel(value: DiagnosticRouteFamily): string {
     "admin.diagnostics": "Diagnóstico admin",
     "admin.requests": "Solicitudes admin",
     "admin.queue": "Cola admin",
+    "admin.audit_log": "Registro admin",
     other: "Otra ruta",
   };
   return labels[value];

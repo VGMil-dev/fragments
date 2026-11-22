@@ -101,6 +101,12 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Límite: estas pruebas verifican integridad estructural/citas y provenance declarada; no verifican veracidad de contenido, correspondencia real de citas con snapshots, score, ni validez educativa. Calidad semántica real continúa **NO COMPROBADA**. Sigue faltando el export QA autorizado descrito en el preflight (outputs completos enlazados a SHA y resumen vigente de modelo/proveedor/presupuesto).
 - Commit local: `5233a5e` (`test(F25): valida outputs Review offline`). Rama `codex/f25-offline-response-validator` basada en `origin/main` `3911d401326027898991cde4ad1b8fbd5ed6444a`.
 
+## Integración PR #107 — 2026-11-22
+
+- PR #107 se sincronizó normalmente con main, pasó CI `45051154100` SUCCESS y se fusionó mediante merge normal como `a18c55fb54e7aa2657a455953d384ee6397996ab`.
+- La revisión independiente fue PASS para la lógica y pruebas del validador. La autenticidad de provider/model ID no queda probada: el auditor declara `providerProvenance: NOT_AUTHENTICATED` y bloquea `fake:` conocido.
+- La integración no cambia el estado semántico: A/B/C siguen `BLOCKED` por outputs completos faltantes; score y calidad real Mentor/Review quedan **NO COMPROBADOS**. No hubo llamadas pagadas ni cambios en prompts/rúbricas.
+
 ## Inventario agregado de DB QA local · 2026-11-22 (hora de consulta no reportada)
 
 - Según la consulta agregada de solo lectura ejecutada por el coordinador sobre el loopback local `fragments-ux08-test-db`, `current_database()` fue `fragments_test`. Esa instancia no contiene `fragments_prod`; este resultado se limita a esa DB local QA y no determina el estado de ninguna base de producción.
@@ -108,4 +114,4 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - No se leyó contenido de filas, no hubo escrituras ni llamadas externas/proveedor. No se inspeccionaron secretos. Este conteo no es una comprobación de producción ni añade outputs Review completos al corpus.
 - Sigue `BLOCKED` la calibración A/B/C: los outputs históricos completos y el presupuesto/modelo efectivos siguen sin estar disponibles mediante evidencia autorizada; calidad semántica real **NO COMPROBADA** y llamadas pagadas bloqueadas.
 - Fuente de la observación: resumen agregado entregado por el coordinador en la continuación F25; no se recibió el SQL literal ni un log exportado de la sesión. No atribuir a esta nota comandos que no fueron compartidos.
-- Commit local de esta nota: `cdce261` (`docs(F25): registra inventario QA limitado`). Queda local en `codex/f25-offline-response-validator`, rama atrasada respecto a main; no se publicó.
+- El agente documentó la observación localmente en commits `cdce261` y `f31e16f` de su rama F25; se preservaron sin reescribir su historia al actualizarse con `origin/main`.

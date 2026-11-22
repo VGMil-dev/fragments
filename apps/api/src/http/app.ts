@@ -26,6 +26,8 @@ import { createAdminClassroomRequestsHttp, type AdminClassroomRequestsAuditEvent
 import { createAdminClassroomRequestsRepository } from "../features/admin-requests/repository.js";
 import { createAdminQueueSummaryHttp, type AdminQueueAuditEvent } from "../features/admin-queue/http.js";
 import { createAdminQueueSummaryRepository } from "../features/admin-queue/repository.js";
+import { createAdminAuditLogHttp } from "../features/admin-audit-log/http.js";
+import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/admin-audit-log/store.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -40,6 +42,7 @@ type HttpOptions = {
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
+  adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
 };
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
@@ -48,19 +51,27 @@ function sendError(response: ServerResponse, status: number, code: string, messa
 
 export function createHttpHandler(database: PrismaClient, options: HttpOptions = {}) {
   const requestDiagnostics = createRequestDiagnostics();
+  const adminAuditLog = createAdminAuditLog({ writeLine: options.adminAuditLogWriteLine ?? ((line) => {
+    const event = JSON.parse(line) as AdminAuditSourceEvent;
+    if (event.event === "admin.classroom_requests.read" && options.adminAuditWrite) return options.adminAuditWrite(event as AdminClassroomRequestsAuditEvent);
+    if (event.event === "admin.queue_summary.read" && options.adminQueueAuditWrite) return options.adminQueueAuditWrite(event as AdminQueueAuditEvent);
+    return new Promise<void>((resolve, reject) => {
+      process.stdout.write(`${line}\n`, (error?: Error | null) => error ? reject(error) : resolve());
+    });
+  }) });
   const adminDiagnosticsHandler = createAdminDiagnosticsHttp(requestDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null);
   const adminClassroomRequests = createAdminClassroomRequestsRepository(database);
   const adminClassroomRequestsHandler = createAdminClassroomRequestsHttp(adminClassroomRequests, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
-    write: options.adminAuditWrite ?? ((event) => new Promise<void>((resolve, reject) => {
-      process.stdout.write(`${JSON.stringify(event)}\n`, (error?: Error | null) => error ? reject(error) : resolve());
-    })),
+    write: (event) => adminAuditLog.write(event),
   });
   const adminQueueSummaryHandler = createAdminQueueSummaryHttp(createAdminQueueSummaryRepository(database), async (request) => options.auth ? options.auth.adminCheck(request) : null, {
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
-    write: options.adminQueueAuditWrite ?? ((event) => new Promise<void>((resolve, reject) => {
-      process.stdout.write(`${JSON.stringify(event)}\n`, (error?: Error | null) => error ? reject(error) : resolve());
-    })),
+    write: (event) => adminAuditLog.write(event),
+  });
+  const adminAuditLogHandler = createAdminAuditLogHttp(adminAuditLog, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
+    getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+    write: (event) => adminAuditLog.write(event),
   });
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
@@ -114,6 +125,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminQueueSummaryHandler(request, response) === "handled") return;
+    if (await adminAuditLogHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));

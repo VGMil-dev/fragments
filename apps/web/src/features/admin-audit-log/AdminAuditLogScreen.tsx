@@ -1,0 +1,57 @@
+import { useEffect, useState } from "react";
+import type { AdminAuditEvent, AdminAuditLogApi } from "./admin-audit-log-api.js";
+import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
+import "./admin-audit-log.css";
+
+type State = { status: "loading" } | { status: "ready"; events: AdminAuditEvent[] } | { status: "error" };
+
+export function AdminAuditLogScreen({ api }: { api: AdminAuditLogApi }) {
+  const [reload, setReload] = useState(0);
+  const [state, setState] = useState<State>({ status: "loading" });
+  useEffect(() => {
+    let active = true;
+    setState({ status: "loading" });
+    void api.read().then((result) => {
+      if (!active) return;
+      setState(result.ok ? { status: "ready", events: result.data.events } : { status: "error" });
+    }).catch(() => { if (active) setState({ status: "error" }); });
+    return () => { active = false; };
+  }, [api, reload]);
+
+  const busy = state.status === "loading";
+  return <main className="admin-audit-log" aria-labelledby="admin-audit-log-title" aria-busy={busy}>
+    <header className="admin-audit-log__header">
+      <p className="admin-audit-log__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
+      <h1 id="admin-audit-log-title">Registro de actividad administrativa</h1>
+      <p>Consultas administrativas recientes con hora y correlación de solicitud. No se muestran identidades ni contenido privado.</p>
+      <AdminConsoleNavigation current="audit-log" />
+      <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
+    </header>
+    <p className="admin-audit-log__retention">La muestra conserva hasta 50 eventos desde el último inicio del API; se pierde al reiniciar el proceso.</p>
+    {busy ? <p role="status" aria-live="polite">Cargando registro de actividad…</p> : null}
+    {state.status === "error" ? <p role="alert">No se pudo cargar el registro de actividad. Verifica el acceso e inténtalo de nuevo.</p> : null}
+    {state.status === "ready" && state.events.length === 0 ? <p role="status">No hay eventos administrativos disponibles.</p> : null}
+    {state.status === "ready" && state.events.length > 0 ? <div className="admin-audit-log__table-wrap" role="region" aria-label="Actividad administrativa reciente" tabIndex={0}>
+      <table>
+        <caption>Eventos redactados · hora UTC · máximo 50</caption>
+        <thead><tr><th scope="col">Fecha y hora (UTC)</th><th scope="col">Evento</th><th scope="col">Actor</th><th scope="col">ID de solicitud</th></tr></thead>
+        <tbody>{state.events.map((event) => <tr key={event.requestId}>
+          <td><time dateTime={event.occurredAt}>{formatUtc(event.occurredAt)}</time></td><td>{eventLabel(event.event)}</td><td>Administración</td><td><code>{event.requestId}</code></td>
+        </tr>)}</tbody>
+      </table>
+    </div> : null}
+  </main>;
+}
+
+function eventLabel(event: AdminAuditEvent["event"]): string {
+  const labels: Record<AdminAuditEvent["event"], string> = {
+    "admin.classroom_requests.read": "Solicitudes académicas consultadas",
+    "admin.queue_summary.read": "Cola de trabajos consultada",
+    "admin.audit_log.read": "Registro de actividad consultado",
+  };
+  return labels[event];
+}
+
+function formatUtc(value: string): string {
+  return new Intl.DateTimeFormat("es", { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }).format(new Date(value));
+}
