@@ -52,3 +52,11 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - No objetivos: cambiar contratos, rutas compartidas, datos, catálogo ni el flujo de habilitación.
 - Owner de tarea: PLANNER. Implementación acotada al detalle de `ClassroomStudio` y su prueba UI.
 - Skill aplicada: `vercel-react-best-practices`; se usa un enlace semántico con navegación existente; se descartan optimizaciones ajenas a este cambio pequeño.
+
+## Incremento F18.B — inspección de snapshots publicados
+
+- Problema: el listado docente expone el número publicado, pero no permite inspeccionar el contenido inmutable, habilidades fijadas y contexto Mentor de cada versión.
+- Objetivo: hacer revisable el historial publicado desde el detalle del aula usando los snapshots que ya entrega la API.
+- No objetivos: editar versiones publicadas, cambiar APIs/contratos, contexto activo, rutas, esquema o migraciones.
+- Owner de tarea: PLANNER. Implementación local a la vista docente de misiones y su prueba UI.
+- Criterio: resumen plegable por misión; al abrir, cada versión publicada muestra texto, objetivos, categorías de habilidades y `mentorContextVersion`.

@@ -149,3 +149,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Prueba nueva: `ClassroomStudio` renderiza una habilidad fixture archivada, confirma su nombre y nota, y comprueba el enlace contextual. La prueba falló antes del ajuste porque faltaba el enlace.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Commit incremental: `72cd2a52d4a124f01b5ede499ebfa21f49955955`. Sin push ni cambios fuera del alcance.
+
+## Incremento UI docente — inspección de snapshots publicados — 2026-11-22
+
+- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade un disclosure “Revisar versiones publicadas” en cada misión con historial. Cada versión muestra su título, consigna, objetivos, habilidades requeridas y optativas snapshot y el número `mentorContextVersion`; el disclosure inicia cerrado y no tiene controles de edición.
+- `apps/web/src/features/assignments/assignments-panel.css` organiza historial y snapshots dentro de la tarjeta de misión respetando el diseño existente.
+- `apps/web/src/features/assignments/AssignmentsPanel.test.tsx` cubre dos snapshots históricos con distintos contextos, habilidades y consigna; la prueba falló primero por ausencia del disclosure y pasó tras el cambio.
+- `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — PASS, 4/4.
+- `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Fuente: `ClassroomAssignment.versions` existente. Sin cambios a contratos, rutas compartidas, schema, migraciones, APIs, datos o `TASKS.md`.
+- Commit de este incremento pendiente de registro; no hay QA visual ni verificación en producción.
