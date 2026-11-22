@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación local parcial, sin migrar bases de datos. El CRUD docente, publicación versionada y lectura estudiantil están implementados en feature; el panel docente está integrado en `ClassroomStudio`. El planner integra el montaje estudiantil y el handler HTTP en el shell general.
+Implementación local parcial, sin migrar bases de datos. El CRUD docente, publicación versionada y lectura estudiantil están implementados en feature; el panel docente está integrado en `ClassroomStudio`, la lectura en Mis aulas y el handler HTTP en el shell general.
 
 ## Cambios implementados
 
@@ -19,7 +19,7 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api exec prisma generate` — PASS (Prisma Client 7.10.1 generado).
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments` — PASS (2 archivos, 5 tests). Cobertura: autenticación docente, habilidades duplicadas, snapshot inmutable v1/v2, `assignmentId` + id de versión, matrícula pendiente, dueño docente ajeno y conflicto de versión obsoleta.
 - `pnpm --filter @fragments/api typecheck` — PASS (`tsc --noEmit -p tsconfig.json`).
-- `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx src/features/assignments/AssignmentsPanel.test.tsx` — PASS (2 archivos, 5 tests).
+- `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx src/features/student/StudentClassroomsScreen.test.tsx` — PASS (3 archivos, 7 tests; incluye el montaje de Mis aulas).
 - `pnpm --filter @fragments/web typecheck` — PASS (`tsc -p tsconfig.json`).
 - `git diff --check` — PASS.
 - Commit del slice: `631cd6550e3569d16aa79ec5f62da369dd960c6e` (`feat(f18b): agregar misiones de aula versionadas`).
@@ -29,5 +29,5 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Preflight seguro: `DATABASE_URL` ausente en el proceso; no se abrió conexión. No se aplicó migración ni se ejecutó persistencia PostgreSQL. La verificación solicitada de `current_database() = fragments_test` queda pendiente; no se contactó `fragments_prod`.
 - No se usó Ego Lite ni se tomaron capturas. Falta QA visual/teclado en viewport disponible.
 - No se ejecutó código de estudiantes, servicios AI, GitHub, Moodle ni destino de despliegue.
-- Planner integró `createAssignmentHttp` en el shell de API y montó `StudentAssignmentsList` en Mis aulas. La prueba cruzada de Mis aulas quedó con una expectativa antigua que excluye texto de misiones; debe ajustarse para validar su estado de carga/vacío.
-- Sin push, PR ni release. El cierre de F18.B sigue parcial hasta que el planner integre rutas/cambios concurrentes, corrija la aserción estudiantil antigua, ejecute preflight sobre `fragments_test` y complete Ego Lite si el viewport está disponible.
+- Commits del slice y su evidencia: `631cd6550e3569d16aa79ec5f62da369dd960c6e` y `b6eeac14daedc9ac996020504d92db882bedaf1a`.
+- Sin push, PR ni release. El cierre de F18.B sigue parcial hasta ejecutar preflight sobre `fragments_test` y completar Ego Lite si el viewport está disponible.
