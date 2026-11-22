@@ -29,4 +29,11 @@
 
 - PR #123 se integró normalmente en main como `8d984817e7e7fa3224a118ff081da89e329abc2b`; CI `45067784339` SUCCESS.
 - Revisión independiente PASS del mensaje 401/403, redacción OTHER, retry, filtro y paginación. Las aserciones agregadas en `064ee4f` verifican que los errores OTHER no exhiban `private http detail`.
-- F14 v0.5.18 queda pendiente. Sesión admin y lecturas/eventos productivos siguen NO COMPROBADOS; sin cambios de permisos ni escrituras.
+- En el momento de abrir PR #123, F14 v0.5.18 estaba pendiente. Su aplicación posterior se verificó el 2026-11-22; véase el cierre de verificación abajo. Sesión admin y lecturas/eventos productivos siguen NO COMPROBADOS; sin cambios de permisos ni escrituras.
+
+## F14 v0.5.18 y Ego Lite — cierre de verificación
+
+- PR #123 merge `8d984817e7e7fa3224a118ff081da89e329abc2b`, CI `45067784339` PASS; PR #124 merge `214fb1344816172ecc52c99de5e7351508d77324`, CI `45068097463` PASS.
+- F14 tag anotada `v0.5.18` sobre SHA exacto `214fb1344816172ecc52c99de5e7351508d77324`, run `45068388150` SUCCESS. Aplicador normal success; web/API healthy en SHA exacto; `/health` ok y database ready; bundle público confirma versión.
+- Ego Lite read-only: en `/admin/queue` y `/admin/requests` la cuenta docente recibe el mensaje fijo de falta de permisos (403), sin tabla ni filas. No hubo login admin ni escrituras; pestañas docente y admin se dejaron abiertas/restauradas.
+- La prueba manual 401 con sesión sin autenticar y acceso admin autenticado siguen NO COMPROBADOS. Eventos, solicitudes reales y worker separado también NO COMPROBADOS. Sin cambios de roles ni API.
