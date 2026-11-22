@@ -11,13 +11,14 @@
 ## Verificación local
 
 - TDD rojo: prueba focal antes de implementación — 2 pruebas nuevas fallaron por ausencia del control de filtro (2 existentes pasaron).
-- TDD verde: `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — PASS, 4/4.
-- `pnpm --filter @fragments/web typecheck` — PASS.
-- `git diff --check` — PASS.
+- TDD verde, repetido después del commit de implementación: `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — PASS, 4/4 (22 nov 2026, 14:15:40 local).
+- `pnpm --filter @fragments/web typecheck`, repetido después del commit de implementación — PASS (22 nov 2026, 14:15:40 local).
+- `git diff --check` — PASS antes y después del commit de implementación; final sobre evidencia y árbol se repite antes del commit documental.
 
 ## Commit
 
-- Pendiente de commit; registrar hash y repetir verificación tras crear el commit.
+- Commit de implementación: `ebf0c113e4358bc55ee80bd14678bb700e30d9c8` (`feat(admin-audit-log): filtra eventos del feed`).
+- Esta evidencia se incluye en un commit documental posterior al commit de implementación; historia sin reescrituras.
 
 ## Limitaciones
 
