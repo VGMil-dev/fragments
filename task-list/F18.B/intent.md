@@ -39,3 +39,8 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Añadir una regresión PostgreSQL aislada que publique una misión v1, inicie y recupere una propuesta ligada a esa versión, publique v2 y compruebe que el borrador/evaluación fake conserva la misión y contexto originales.
 - Ejecutar únicamente contra `fragments_test` con preflight de `current_database()`; fixtures con UUID, limpieza acotada y proveedor local fake.
 - Mantener la calidad real de IA y el recorrido productivo como NO COMPROBADOS.
+
+## Incremento de continuidad — contexto académico en Mis aulas
+
+- Antes de iniciar propuesta, el estudiante puede abrir un panel plegable que explica el tema, la consigna, el nivel esperado y los requisitos del contexto Mentor fijado en la versión publicada de la misión.
+- La interfaz identifica la versión del contexto para que el alumno sepa qué snapshot acompaña a su misión. No modifica ni expone pesos/rúbrica, y conserva el CTA existente para iniciar propuesta con el mismo objeto de versión.
