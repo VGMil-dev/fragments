@@ -60,6 +60,11 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - GIVEN falla la carga de habilidades de un aula activa, WHEN el estudiante activa “Reintentar habilidades”, THEN se vuelve a solicitar solo ese catálogo autorizado y desaparece el error tras una respuesta exitosa.
 - Los errores se anuncian con `role="alert"`; cada reintento anuncia `role="status"` mientras carga. Solicitudes simultáneas duplicadas de la misma combinación aula/recurso se coalescen; el recurso independiente puede reintentarse por separado.
 
+## Incremento UI estudiantil — identificar snapshot de misión
+
+- GIVEN una misión publicada en Mis aulas, WHEN el estudiante ve su tarjeta antes de abrir el contexto, THEN ve `Misión publicada vN · Contexto Mentor vM` con los números del mismo `StudentAssignment` que se pasa al CTA de propuesta.
+- La etiqueta está fuera del disclosure de contexto para facilitar distinguir versión de misión y versión Mentor. El CTA conserva el objeto snapshot completo sin reconstruirlo ni mutarlo.
+
 ## Incremento de continuidad — limpiar selección de misión al volver a Mentor
 
 - GIVEN el estudiante inicia una propuesta desde una versión publicada, WHEN guarda el borrador, THEN se envía el `assignmentVersionId` exacto y Mentor recibe el `mentorContext` del snapshot seleccionado.

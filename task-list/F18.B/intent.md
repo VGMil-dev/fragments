@@ -69,6 +69,13 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Owner de tarea: PLANNER. Implementación en `StudentClassroomsScreen` y prueba de componente.
 - Criterio: errores accesibles, carga anunciada durante el reintento y deduplicación mientras el mismo recurso/aula tenga una solicitud pendiente.
 
+## Incremento UI estudiantil — identificar snapshot de misión
+
+- Problema: la tarjeta muestra el contexto Mentor versionado, pero omite la versión publicada de la misión que se enlaza a la propuesta.
+- Objetivo: identificar juntas en la tarjeta la versión de misión y la versión de contexto fijadas al snapshot que recibe el CTA.
+- No objetivos: cambiar creación/edición de propuestas, contratos, rutas, datos, versionado o API.
+- Owner de tarea: PLANNER. Implementación local a `StudentAssignmentsList` y su prueba existente.
+
 ## Incremento de continuidad — limpiar selección de misión al volver a Mentor
 
 - Problema: al volver desde una propuesta iniciada con misión, la selección de la misión podía sobrevivir al cambio de ruta. Abrir Mentor desde la navegación podía asociar por error una propuesta nueva a la versión anterior.
