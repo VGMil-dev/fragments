@@ -178,3 +178,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Verificación pública: `https://fragments.gavanti.org/health` respondió `status=ok`, `database=ready`; bundle servido reporta `v0.5.11` y SHA exacto `a3c189f041694ccf898f208de41a51c36ad41a04`.
 - Alcance de verificación: el agente supervisor no halló canal disponible de solo lectura para consultar ledger del host, hash del backup o labels de imágenes; estos tres datos son **NO COMPROBADOS**. No se usó SSH, no se leyó ninguna llave, no se detuvieron servicios y no se tocó configuración productiva.
 - Política F14 vigente: `Required reviewers` permanece desactivado exclusivamente; el entorno `fragments-production` se conserva y todos los gates técnicos de build, firma/atestación, backup, healthchecks y rollback siguen siendo obligatorios. No introducir aprobación humana en futuras features salvo autorización explícita del propietario.
+
+## Release v0.5.12 — 2026-11-22
+
+- PR #99 integró F22.2 en `main`; merge SHA `613c02f71129a1f0bb417a5e602ff631fc1de42c`. Tag anotada `v0.5.12` apunta al SHA exacto.
+- Antes del tag se comprobó `fragments-production` de solo lectura: cero reviewers requeridos, sin wait timer; reglas de rama/gates no se tocaron.
+- F14 run `45042723696`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Se validó el tag/SHA exactos, pruebas/migración/restore en base efímera, metadata, build ARM64, atestación GitHub/Sigstore y publicación del paquete al flujo aprobado.
+- Producción verificada desde público: `/health` → `status=ok`, `database=ready`; página 200 y bundle `/assets/index-C1smlPXh.js` contiene `v0.5.12` y SHA `613c02f71129a1f0bb417a5e602ff631fc1de42c`.
+- GET anónimo a `/api/admin/classroom-requests` → `401 AUTH_REQUIRED`, sin campo `items`. No se usó una sesión docente/estudiante ni se escribieron matrículas.
+- **NO COMPROBADO:** ledger del host, digest del backup previo, labels Docker, sesión admin real y audit event observado en stdout productivo. Health y bundle confirman disponibilidad/version, pero no sustituyen esos checks. No se intentó SSH ni se modificó infraestructura.
