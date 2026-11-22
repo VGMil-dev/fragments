@@ -17,7 +17,14 @@
 ## Verificación local
 
 - TDD rojo inicial: prueba focal falló porque la pantalla devolvía mensaje genérico ante 401.
-- Verificación verde y commit: pendiente.
+- TDD verde, repetido después del commit: `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — PASS, 5/5 (22 nov 2026, 14:55:02 local).
+- `pnpm --filter @fragments/web typecheck`, repetido después del commit — PASS (22 nov 2026, 14:55:02 local).
+- `git diff --check` — PASS después del commit y al finalizar evidencia.
+
+## Commit
+
+- Implementación: `5376efc1a0f53bbc586dd639c62b8f9c6f8e6545` (`feat(admin-audit-log): distingue acceso denegado`).
+- Hash y verificación se registran en un commit documental posterior; no se reescribe historia.
 
 ## Limitaciones
 
