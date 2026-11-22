@@ -222,3 +222,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Fuente de datos: `StudentAssignment` ya contiene ambos números versionados. Sin cambios a contratos, API, rutas, esquema/migraciones, datos productivos o sesiones. No se usó navegador ni se hizo release.
 - Commit de implementación: `c8e222b2d65e77497566e76afa551e51ae3e3c6a`.
 - PR #133 abierto contra `main` (`codex/f18b-student-mission-version`), head de código `e1caa2545d495860faa9d4526fcd7edbcd6cba34`; CI `verify` run `45081014837` SUCCESS. La actualización documental del PR queda en un commit separado, sin cambios de código.
+
+## Aplicación F18.B v0.5.23 y comprobación Ego Lite · 2026-11-22
+
+- PR #133 integrada normalmente en `main` como `411747c5ad55e630d2bb572f2ba71d1d96aba97b`; CI `45081295834` SUCCESS y revisión independiente PASS. Tag anotada `v0.5.23` en el SHA exacto; F14 `45081907608` terminó SUCCESS en verify-build, attest-package y publish-approved-release.
+- Aplicación por el mecanismo pull normal: API/web healthy en imagen `sha-411747c5...`; `/health` status ok/database ready. Bundle cache-bypass `/assets/index-NaEOWqTZ.js` contiene v0.5.23, SHA exacto y la etiqueta de versiones.
+- Ego Lite: perfil estudiante y TaskSpace existentes permanecieron abiertos. `/student/classrooms` muestra Programación Móvil sin misiones publicadas y 0 tarjetas. La etiqueta y su posición fuera del disclosure quedan NO COMPROBADAS porque no hubo una tarjeta que observar. No se guardó ni alteró nada.
+- El recorrido misión→propuesta→Mentor sobre recursos reales y calidad IA siguen NO COMPROBADOS; no se crearon habilidades ni misiones productivas.
