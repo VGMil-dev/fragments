@@ -11,7 +11,7 @@ F22.3 todavía necesita integración del arquitecto en `apps/api/src/http/app.ts
 - Repository feature-local con seis `job.count` sobre la tabla existente: pending, leases vigentes, leases vencidos/sin fecha, failed, done y otros estados.
 - Un único `sampledAt` UTC determina la clasificación del lease; no se leen filas/IDs/payload/worker IDs/errors.
 - Handler `GET /api/admin/queue/summary`, autorización `isAdmin` inyectada, 401/403 sin consultar datos.
-- Auditoría inyectada obligatoria de la lectura autorizada: `{requestId,event,occurredAt,adminActorId}`. Reusa request ID server-side `x-request-id` con UUID server-side fallback. El actor no se devuelve en respuesta; actor/sink no disponible produce 503 sin resumen.
+- Auditoría inyectada obligatoria del intento de lectura autorizado, escrita antes de `store.read()`: `{requestId,event,occurredAt,adminActorId}`. Reusa request ID server-side `x-request-id` con UUID server-side fallback. El actor no se devuelve en respuesta; actor/sink no disponible produce 503 sin consultar store ni resumir datos. Si la lectura falla después, el evento registra el intento autorizado.
 - UI administra solo lectura, presenta seis conteos y muestreo UTC, con carga/error/reintento manual y nota visible de que conteos de cola no demuestran liveness del worker.
 - Sin rutas compartidas, cambios de auth, contratos, migraciones, writes, acciones operativas o cambios de infraestructura.
 
@@ -28,6 +28,10 @@ F22.3 todavía necesita integración del arquitecto en `apps/api/src/http/app.ts
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web typecheck` — PASS.
 - `git diff --check` — PASS (`GIT_DIFF_CHECK_PASS` en el staged diff).
+
+## Revisión de orden de auditoría
+
+El requisito F22 de registrar cada operación privilegiada implica registrar el intento antes de consultar datos; un registro posterior deja una ventana de acceso si el sink falla. Commit correctivo `c203cf2`. Se obtiene primero el actor y se escribe el evento; solo después se accede al store. La regresión valida la secuencia `actor → audit.write → store.read`; si falla el sink, comprueba que `store.read()` no se invoca y que no se devuelve el resumen. El callback también se ejecuta si la lectura posterior falla, dejando constancia del intento autorizado.
 
 ## Límites
 
