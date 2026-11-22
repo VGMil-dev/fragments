@@ -31,5 +31,13 @@
 - `apps/web/src/features/admin-audit-log/` añade cliente con esquema/allowlist estricta y pantalla `/admin/audit-log`: fecha UTC, evento, actor genérico y UUID de correlación; estados de carga, error recuperable, vacío y refresh manual. La UI explica el límite de retención en memoria y no muestra identidad de actor ni payload.
 - Revisión independiente detectó la pérdida de una fila con `limit=1` porque el evento propio ocupaba el primer lugar. Se añadió `listExcluding(requestId,limit)`, que filtra antes de paginar; integración actual usa `limit=1` y confirma que vuelve el evento previo. Revisión independiente de la corrección PASS.
 - Verificación completa fresca tras el fix: `pnpm exec turbo run test typecheck lint build --force` — 11/11 tareas PASS; API 125 passed/68 skipped (tests DB omitidos por no haber `DATABASE_URL`); web 160/160; contracts 29/29; typechecks, lint y builds PASS. Prueba focal store+HTTP 10/10; `git diff --check` PASS.
-- Pruebas usan auth fixture y sink fake; no se accedió a producción, host, stdout real, datos de usuarios ni secretos. F14 sigue pendiente; el feed productivo aún NO está desplegado.
-- Commit arquitectónico: `83a13823f9f59a316581e27aeb10bac1f08a45db` (`feat(f22): integra feed de auditoria admin`). PR #108 abierto contra `main`; CI `45052376136` SUCCESS. Merge y despliegue F14 pendientes.
+- Pruebas usan auth fixture y sink fake; no se accedió a host, stdout real, datos de usuarios ni secretos.
+- Commit arquitectónico `83a13823f9f59a316581e27aeb10bac1f08a45db`; merge normal PR #108 `d40817ad2e62d1d9971fccbef5b878543307f9e9`, CI final `45052607454` SUCCESS. F14 `v0.5.14` y su resultado productivo final se documentan abajo.
+
+## Aplicación productiva F14 · 2026-11-22
+
+- Workflow F14 `45052895014` SUCCESS en sus tres jobs; la release anotada `v0.5.14` apunta al merge #108 exacto. `fragments-production` se conservó con Required reviewers desactivado y gates técnicos intactos.
+- Bundle `/assets/index-C8xxczOG.js` confirma `v0.5.14`, SHA exacto `d40817ad2e62d1d9971fccbef5b878543307f9e9` y el segmento de UI `/admin/audit-log`.
+- `/health` reporta `status=ok`, `database=ready`; GET anónimo a `/api/admin/audit-log?limit=1` retorna 401 y `Cache-Control: no-store`.
+- NO COMPROBADOS: vista con sesión admin, eventos reales, retención/rotación de stdout en host, historial antes del proceso. El buffer es volátil y retiene hasta 100 eventos; no hay datos históricos.
+- Sigue F22 en validación hasta comprobar con canal autorizado de solo lectura la sesión admin, eventos reales y retención. Ninguna escritura productiva fue realizada.
