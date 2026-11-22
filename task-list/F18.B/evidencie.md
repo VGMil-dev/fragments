@@ -118,3 +118,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - El release F14 `v0.5.14`, run `45052895014`, está aplicado: bundle `/assets/index-C8xxczOG.js` confirma SHA `d40817ad2e62d1d9971fccbef5b878543307f9e9` e incluye el código de PR #106 (merge `7d4802c`, CI `45050161446` PASS, revisión independiente PASS).
 - Las sesiones Ego Lite docente y estudiante permanecieron abiertas. No se navegó ni se modificó ningún recurso durante el release.
 - Estado funcional conocido sin cambios: el aula productiva no tiene habilidades habilitadas ni misiones publicadas; por ello el recorrido misión→propuesta→Mentor no se puede validar con esos datos. Better Auth real, evaluación/provider IA y flujo completo quedan NO COMPROBADOS. Se requiere QA sintética permitida en `fragments_test`.
+
+## Spot check independiente Ego Lite v0.5.14 — 2026-11-22
+
+- El revisor independiente observó las sesiones existentes de estudiante y docente, ambas devueltas abiertas; versión `v0.5.14`, commit `d40817a`. No cerró pestañas ni cambió o guardó recursos.
+- Estudiante: matrícula activa en `Programación Móvil`, ninguna habilidad autorizada y ninguna misión publicada; la vista indica “Tu docente aún no ha publicado misiones en esta aula.”
+- Docente: ninguna habilidad habilitada, sin misiones y CTA “Crear misión” deshabilitado. Esto coincide con la restricción de requisito previo de habilidad.
+- El disclosure de contexto académico de una misión queda NO COMPROBADO porque exigiría habilitar una habilidad o publicar recursos en producción. No se tomó captura: la vista mostraba datos personales. QA de datos sintéticos en `fragments_test`, Better Auth real y evaluación IA real siguen pendientes.
