@@ -5,8 +5,8 @@ import { auditSemanticCorpus } from "./audit-semantic-corpus.mjs";
 
 const fixturePath = new URL("../fixtures/fragments-test-commits.json", import.meta.url);
 const sha256Pattern = /^[a-f\d]{64}$/i;
-const syntheticModelPattern = /^(?:fake|fixture|mock|test)(?::|[-_])/i;
-const syntheticProviderPattern = /^(?:fake|fixture|mock|test)(?::|[-_])/i;
+const syntheticModelPattern = /^(?:fake|fixture|mock|test)(?:$|[:_-])/i;
+const syntheticProviderPattern = /^(?:fake|fixture|mock|test)(?:$|[:_-])/i;
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -120,9 +120,13 @@ export function comparePersistedReview({ caseReference, reviewOutput, manifest, 
     && record.inputDigest === analysis.inputDigest)) {
     blockers.push("input_digest_mismatch");
   }
-  if (!authorizedExportIds.includes(manifest?.exportId)) {
+  const exportAllowlisted = authorizedExportIds.includes(manifest?.exportId);
+  const manifestRecordMatches = exportAllowlisted
+    ? Boolean(findManifestRecord({ caseReference, reviewOutput, manifest }))
+    : false;
+  if (!exportAllowlisted) {
     blockers.push("untrusted_export");
-  } else if (!findManifestRecord({ caseReference, reviewOutput, manifest })) {
+  } else if (!manifestRecordMatches) {
     blockers.push("manifest_record_mismatch");
   }
   if (analysis && typeof analysis.modelId === "string" && syntheticModelPattern.test(analysis.modelId)
@@ -139,7 +143,11 @@ export function comparePersistedReview({ caseReference, reviewOutput, manifest, 
       classification: null,
       qualityComparison: "NOT_PERFORMED",
       scoreComputed: false,
-      providerProvenance: "NOT_ACCEPTED",
+      providerProvenance: "NOT_CRYPTOGRAPHICALLY_AUTHENTICATED",
+      exportIntegrity: manifestRecordMatches ? "OUTPUT_DIGEST_AND_RECORD_MATCHED" : "NOT_MATCHED_OR_UNAVAILABLE",
+      exportAuthorization: exportAllowlisted
+        ? "EXTERNAL_ALLOWLIST_DECLARATION_MATCHED"
+        : "NOT_ALLOWLISTED",
       citationValidation: audit.cases[0].citationValidation,
     };
   }
@@ -150,7 +158,9 @@ export function comparePersistedReview({ caseReference, reviewOutput, manifest, 
     classification: classifyReferenceBehaviors({ caseReference, reviewOutput, coverage }),
     qualityComparison: "NOT_PERFORMED",
     scoreComputed: false,
-    providerProvenance: "MANIFEST_MATCHED_AUTHENTICATION_EXTERNAL",
+    providerProvenance: "NOT_CRYPTOGRAPHICALLY_AUTHENTICATED",
+    exportIntegrity: "OUTPUT_DIGEST_AND_RECORD_MATCHED",
+    exportAuthorization: "EXTERNAL_ALLOWLIST_DECLARATION_MATCHED",
     citationValidation: "SHAPE_ONLY",
   };
 }

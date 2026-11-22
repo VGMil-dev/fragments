@@ -116,6 +116,7 @@ test("no clasifica omisiones si la cobertura completa no está declarada", () =>
 
 test("la comparación persistida bloquea outputs fake aunque SHA y manifest declarado coincidan", () => {
   const reviewOutput = makeFakeOutput({ findings: [fakeFinding("required_validation")] });
+  reviewOutput.provenance.source = "operator-authorized-qa-export";
   const inputDigest = reviewOutput.analysis.inputDigest;
   const manifest = {
     source: "operator-authorized-qa-export",
@@ -142,6 +143,9 @@ test("la comparación persistida bloquea outputs fake aunque SHA y manifest decl
   assert.equal(result.status, "BLOCKED");
   assert.ok(result.blockers.includes("synthetic_model"));
   assert.equal(result.classification, null);
+  assert.equal(result.providerProvenance, "NOT_CRYPTOGRAPHICALLY_AUTHENTICATED");
+  assert.equal(result.exportIntegrity, "OUTPUT_DIGEST_AND_RECORD_MATCHED");
+  assert.equal(result.exportAuthorization, "EXTERNAL_ALLOWLIST_DECLARATION_MATCHED");
 });
 
 test("la provenance etiquetada fake bloquea la comparación aunque el modelId parezca productivo", () => {
@@ -188,6 +192,69 @@ test("bloquea export IDs que no están en la allowlist autorizada", () => {
   assert.equal(result.status, "BLOCKED");
   assert.ok(result.blockers.includes("untrusted_export"));
   assert.equal(result.classification, null);
+});
+
+test("bloquea IDs sintéticos exactos fake, fixture, mock y test como modelId", () => {
+  for (const modelId of ["fake", "fixture", "mock", "test"]) {
+    const reviewOutput = makeFakeOutput({ findings: [fakeFinding("required_validation")] });
+    reviewOutput.analysis.modelId = modelId;
+    reviewOutput.provenance.modelId = modelId;
+    const manifest = {
+      source: "operator-authorized-qa-export",
+      exportId: "bare-model-id-test",
+      records: [{
+        label: "C",
+        recordId: "bare-model-id-test-record",
+        commitSha: caseC.commitSha,
+        inputDigest: reviewOutput.analysis.inputDigest,
+        provider: "provider-x",
+        modelId,
+        reviewOutputDigest: digestReviewOutput(reviewOutput),
+      }],
+    };
+
+    const result = comparePersistedReview({
+      caseReference: caseC,
+      reviewOutput,
+      manifest,
+      authorizedExportIds: ["bare-model-id-test"],
+    });
+    assert.equal(result.status, "BLOCKED", `${modelId} must be rejected`);
+    assert.ok(result.blockers.includes("synthetic_model"), `${modelId} must be identified as synthetic`);
+    assert.equal(result.classification, null);
+  }
+});
+
+test("bloquea providers sintéticos exactos fake, fixture, mock y test", () => {
+  for (const provider of ["fake", "fixture", "mock", "test"]) {
+    const reviewOutput = makeFakeOutput({ findings: [fakeFinding("required_validation")] });
+    reviewOutput.analysis.modelId = "provider-x/model-y";
+    reviewOutput.provenance.modelId = "provider-x/model-y";
+    reviewOutput.provenance.provider = provider;
+    const manifest = {
+      source: "operator-authorized-qa-export",
+      exportId: "bare-provider-test",
+      records: [{
+        label: "C",
+        recordId: "bare-provider-test-record",
+        commitSha: caseC.commitSha,
+        inputDigest: reviewOutput.analysis.inputDigest,
+        provider,
+        modelId: "provider-x/model-y",
+        reviewOutputDigest: digestReviewOutput(reviewOutput),
+      }],
+    };
+
+    const result = comparePersistedReview({
+      caseReference: caseC,
+      reviewOutput,
+      manifest,
+      authorizedExportIds: ["bare-provider-test"],
+    });
+    assert.equal(result.status, "BLOCKED", `${provider} must be rejected`);
+    assert.ok(result.blockers.includes("synthetic_provider"), `${provider} must be identified as synthetic`);
+    assert.equal(result.classification, null);
+  }
 });
 
 test("la comparación persistida exige coincidencia exacta de commit e input digest", () => {
