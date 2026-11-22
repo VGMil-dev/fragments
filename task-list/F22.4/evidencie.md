@@ -4,7 +4,7 @@
 
 - Rama: `codex/f22-audit-log-feed`, basada en el `origin/main` actualizado que contiene PR #104 merge `3911d401`.
 - Commits de implementación: `7dcf49ffff51a2ed6a1606ecc6feed63d6b2b2e2`, `4eff4a1aa9973828f59232815c09ae772f759948`.
-- PR #105 abierto contra `main`; CI `45049905376` SUCCESS en el head anterior `945052eefe5d9f5e12248bfac8d419bd96475bc8`; nuevo head con el evento `admin.audit_log.read` pendiente de CI y revisión independiente.
+- PR #105 abierto contra `main`; head `43196c4dd76e566cdb22e0c49e54d5449a1e070b`; CI `45050355414` SUCCESS. Revisión independiente y merge pendientes.
 - Store: `apps/api/src/features/admin-audit-log/store.ts`.
 - Solo acepta `admin.classroom_requests.read`, `admin.queue_summary.read` y `admin.audit_log.read` (la ruta futura del feed). Emite el evento completo estructurado al writer inyectado; después retiene una proyección acotada que omite el actor ID. Falla cerrado si la escritura al sink falla.
 - El buffer es efímero, máximo 100 registros. No se implementó una ruta/UI compartida; el arquitecto integrará el sink de `apps/api/src/http/app.ts` y la ruta de lectura autenticada/auditada, sin incluir su propio evento en la respuesta.
