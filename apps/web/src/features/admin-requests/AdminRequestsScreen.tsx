@@ -4,7 +4,12 @@ import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.
 import "./admin-requests.css";
 
 const pageSize = 20;
-type State = { status: "loading" } | { status: "ready"; items: AdminEnrollmentRequest[]; total: number } | { status: "error" };
+type State = { status: "loading" } | { status: "ready"; items: AdminEnrollmentRequest[]; total: number } | { status: "error"; reason: "AUTH_REQUIRED" | "FORBIDDEN" | "OTHER" };
+
+function errorReason(code: string): Extract<State, { status: "error" }>['reason'] {
+  if (code === "AUTH_REQUIRED" || code === "FORBIDDEN") return code;
+  return "OTHER";
+}
 
 export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
   const [filter, setFilter] = useState<EnrollmentStatus | null>(null);
@@ -17,8 +22,8 @@ export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
     setState({ status: "loading" });
     void api.list({ limit: pageSize, offset, status: filter }).then((result) => {
       if (!active) return;
-      setState(result.ok ? { status: "ready", items: result.data.items, total: result.data.total } : { status: "error" });
-    }).catch(() => { if (active) setState({ status: "error" }); });
+      setState(result.ok ? { status: "ready", items: result.data.items, total: result.data.total } : { status: "error", reason: errorReason(result.error.code) });
+    }).catch(() => { if (active) setState({ status: "error", reason: "OTHER" }); });
     return () => { active = false; };
   }, [api, filter, offset, reload]);
 
@@ -40,7 +45,7 @@ export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{state.status === "error" ? "Reintentar" : busy ? "Actualizando…" : "Actualizar"}</button>
     </section>
     {state.status === "loading" ? <p role="status" aria-live="polite">Cargando solicitudes académicas…</p> : null}
-    {state.status === "error" ? <p role="alert">No pudimos cargar las solicitudes académicas. Verifica el acceso e inténtalo de nuevo.</p> : null}
+    {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" && state.items.length === 0 ? <p role="status">No hay registros para este estado.</p> : null}
     {state.status === "ready" && state.items.length > 0 ? <>
       <div className="admin-requests__table-wrap" role="region" aria-label="Matrículas y solicitudes" tabIndex={0}>
@@ -59,6 +64,12 @@ export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
       </nav>
     </> : null}
   </main>;
+}
+
+function errorMessage(reason: Extract<State, { status: "error" }>['reason']): string {
+  if (reason === "AUTH_REQUIRED") return "Inicia sesión con una cuenta administradora para consultar las solicitudes académicas.";
+  if (reason === "FORBIDDEN") return "Esta cuenta no tiene permisos de administración para consultar las solicitudes académicas. Solicita acceso admin o usa una cuenta administradora.";
+  return "No pudimos cargar las solicitudes académicas. Verifica el acceso e inténtalo de nuevo.";
 }
 
 function statusLabel(status: EnrollmentStatus): string {

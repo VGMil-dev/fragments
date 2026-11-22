@@ -3,7 +3,7 @@ import type { AdminQueueApi, AdminQueueSummary } from "./admin-queue-api.js";
 import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-queue.css";
 
-type State = { status: "loading" } | { status: "ready"; summary: AdminQueueSummary } | { status: "error" };
+type State = { status: "loading" } | { status: "ready"; summary: AdminQueueSummary } | { status: "error"; reason: "AUTH_REQUIRED" | "FORBIDDEN" | "OTHER" };
 const rows = [
   ["pending", "Pendientes", "Esperan a que el worker tome el trabajo."],
   ["leased", "En proceso", "Tienen un lease vigente."],
@@ -13,6 +13,11 @@ const rows = [
   ["other", "Otros estados", "No coinciden con los estados conocidos."],
 ] as const;
 
+function errorReason(code: string): Extract<State, { status: "error" }>['reason'] {
+  if (code === "AUTH_REQUIRED" || code === "FORBIDDEN") return code;
+  return "OTHER";
+}
+
 export function AdminQueueSummaryScreen({ api }: { api: AdminQueueApi }) {
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<State>({ status: "loading" });
@@ -21,8 +26,8 @@ export function AdminQueueSummaryScreen({ api }: { api: AdminQueueApi }) {
     setState({ status: "loading" });
     void api.read().then((result) => {
       if (!active) return;
-      setState(result.ok ? { status: "ready", summary: result.data } : { status: "error" });
-    }).catch(() => { if (active) setState({ status: "error" }); });
+      setState(result.ok ? { status: "ready", summary: result.data } : { status: "error", reason: errorReason(result.error.code) });
+    }).catch(() => { if (active) setState({ status: "error", reason: "OTHER" }); });
     return () => { active = false; };
   }, [api, reload]);
 
@@ -37,7 +42,7 @@ export function AdminQueueSummaryScreen({ api }: { api: AdminQueueApi }) {
       </button>
     </header>
     {state.status === "loading" ? <p role="status" aria-live="polite">Cargando estado de la cola…</p> : null}
-    {state.status === "error" ? <p role="alert">No se pudo cargar el estado de la cola. Verifica el acceso e inténtalo de nuevo.</p> : null}
+    {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" ? <>
       <p className="admin-queue__sampled"><time dateTime={state.summary.sampledAt}>Muestreo UTC: {formatUtc(state.summary.sampledAt)}</time></p>
       <dl className="admin-queue__counts">
@@ -47,6 +52,12 @@ export function AdminQueueSummaryScreen({ api }: { api: AdminQueueApi }) {
       </dl>
     </> : null}
   </main>;
+}
+
+function errorMessage(reason: Extract<State, { status: "error" }>['reason']): string {
+  if (reason === "AUTH_REQUIRED") return "Inicia sesión con una cuenta administradora para consultar el estado de la cola.";
+  if (reason === "FORBIDDEN") return "Esta cuenta no tiene permisos de administración para consultar el estado de la cola. Solicita acceso admin o usa una cuenta administradora.";
+  return "No se pudo cargar el estado de la cola. Verifica el acceso e inténtalo de nuevo.";
 }
 
 function formatUtc(value: string): string {
