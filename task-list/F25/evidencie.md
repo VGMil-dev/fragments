@@ -64,6 +64,12 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Comando ejecutado: `node --test evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **5 tests, 5 pass, 0 fail**. `node evals/scripts/audit-semantic-corpus.mjs` produjo el bloqueo explícito descrito arriba; `git diff --check` terminó con exit 0.
 - Conclusión técnica: no hay un par caso→respuesta Review completa persistido en el repo con el cual estimar calidad semántica. La comparación real queda **BLOQUEADA** hasta que existan salidas completas archivadas offline asociadas a A/B/C; no se ejecutaron modelos, proveedores ni código de esos repositorios.
 
+## Resultado integrado — 2026-11-22
+
+- PR #92 mergeado normalmente a `main`, SHA `74c413ccbbbb3a720065501d088025390e64d5aa`; CI `45030089149` SUCCESS.
+- Verificación offline: 5/5 tests PASS. No se ejecutaron proveedores IA ni código de repositorios estudiantiles; no hubo coste externo.
+- El corpus A/B/C sigue BLOCKED: faltan respuestas completas persistidas de Review, `rubricVersion`, `score`, `findings`, `modelId` e `inputDigest`. Modelo/proveedor y presupuesto productivo quedan NO COMPROBADOS; calidad semántica real Mentor/Review **NO COMPROBADA**.
+
 ## Cierre Git
 
 - Commit de auditoría del corpus semántico offline: `fd3ee9515b4541a38bc5088eac642bf9efb2c645` (`test(F25): audita corpus offline semantico`).

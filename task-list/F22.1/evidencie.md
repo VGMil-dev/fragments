@@ -31,3 +31,10 @@ Módulo e integración implementados en `codex/f22-readonly-diagnostics`; prueba
 - Ego Lite intentó abrir `http://127.0.0.1:5173/admin/diagnostics` y `http://127.0.0.1:4173/admin/diagnostics`; ambas conexiones fueron rechazadas. No había preview accesible. Sin despliegue/servicios nuevos, la validación visual, navegación y sesión autenticada real de administrador quedan NO COMPROBADAS.
 - No hay persistencia tras reiniciar API; stdout y buffer en memoria son los límites deliberados de esta fase.
 - No se accedió a `fragments_test`, `fragments_prod`, VPS, proveedores IA o despliegue. La UI usa la sesión same-origin de Better Auth y el server impone rol; la comprobación real de acceso sigue pendiente.
+
+## Resultado final — PR #93 integrado y smoke de producción — 2026-11-22
+
+- PR #93 mergeado normalmente a `main` en `b7ffa4cfb18eb99481386ff936f9e3d288a781e8`; CI `45031681060` SUCCESS. API focalizada 7/7, web 4/4 y typechecks API/web PASS en el head integrado.
+- Los eventos observados incluyen método, familia de ruta permitida, status, duración y request ID; se retienen en buffer de memoria de 100 y stdout. No hay persistencia tras reiniciar API.
+- Tras `v0.5.10`, `/admin/diagnostics` cargó con el perfil docente, pero el GET protegido devolvió 403 y aviso de acceso denegado. Esto verifica el rechazo del rol docente, no el acceso admin. UI y sesión admin real quedan NO COMPROBADAS.
+- La mención previa de preview local inaccesible queda superada para la ruta productiva observada. No se cerraron sesiones docente/estudiante ni se alteró producción.

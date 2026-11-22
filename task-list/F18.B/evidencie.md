@@ -47,3 +47,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Los cambios F25 mergeados recientemente en `origin/main` (`c25f97a`) todavía no se han integrado en esta rama local.
 - La migración no se aplicó: `DATABASE_URL` ausente. La persistencia de FK, autorización de asociación, digest/cache y consulta de la rúbrica exacta en PostgreSQL son NO COMPROBADAS hasta CI con DB efímera y preflight `current_database() = fragments_test`.
 - No hubo QA Ego Lite ni sesiones docente/estudiante. No se contactó producción, proveedores IA, VPS, GitHub API, Moodle o despliegue.
+
+## Resultado integrado y release v0.5.10 — 2026-11-22
+
+- PR #90 mergeado normalmente a `main`, SHA `818b9c39acb739d272ae27ce234114b650ab3787`; CI `45032665876` SUCCESS. En el checkout: API 100 PASS/66 omitidas por falta de `DATABASE_URL`; web 145/145; contracts 29/29; typechecks y Prisma validate PASS. CI verificó la persistencia PostgreSQL; la consulta local de producción no se realizó.
+- Se publicó la tag anotada `v0.5.10` apuntando al commit exacto `818b9c39acb739d272ae27ce234114b650ab3787`. Workflow F14 `45033466925`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; release publicado con bundles y manifiesto.
+- El environment `fragments-production` se consultó de solo lectura: `reviewers_count=0`, `wait_timer=null`; reglas de ramas y gates técnicos preservados. No se editaron settings ni se saltó ningún gate.
+- Apply reportado exitoso por agente F14: API/web en SHA `818b9c3`, backup íntegro SHA-256 `4c86afb2c3100166dcc3fb4dd48bc5fefcb098d1269f38fa3ef2e0d5d0c625f4`, contenedores saludables y `/health` con DB `ready`.
+- Smoke Ego Lite read-only: docente autenticado abrió dashboard y aula (API 200). No había misiones publicadas; el trayecto misión→propuesta→Mentor queda NO COMPROBADO y no se crearon datos productivos. La vista admin de diagnósticos devolvió 403 al perfil docente; acceso con identidad admin queda NO COMPROBADO. Sesiones docente y estudiante se conservaron.
