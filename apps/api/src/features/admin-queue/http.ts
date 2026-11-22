@@ -23,9 +23,6 @@ export function createAdminQueueSummaryHttp(store: AdminQueueSummaryStore, isAdm
     catch { send(response, 503, { ok: false, error: { code: "AUTH_UNAVAILABLE", message: "No se pudieron validar los permisos." } }); return "handled"; }
     if (allowed === null) { send(response, 401, { ok: false, error: { code: "AUTH_REQUIRED", message: "Inicia sesión para continuar." } }); return "handled"; }
     if (!allowed) { send(response, 403, { ok: false, error: { code: "FORBIDDEN", message: "No tienes permiso para consultar el estado de la cola." } }); return "handled"; }
-    let summary: AdminQueueSummary;
-    try { summary = await store.read(); }
-    catch { send(response, 503, { ok: false, error: { code: "QUEUE_UNAVAILABLE", message: "No se pudo consultar el estado de la cola." } }); return "handled"; }
     let adminActorId: string | null;
     try { adminActorId = await audit.getActorId(request); }
     catch { adminActorId = null; }
@@ -37,6 +34,9 @@ export function createAdminQueueSummaryHttp(store: AdminQueueSummaryStore, isAdm
     const requestId = typeof serverRequestId === "string" && serverRequestId.length > 0 ? serverRequestId : newId();
     try { await audit.write({ requestId, event: "admin.queue_summary.read", occurredAt: now().toISOString(), adminActorId }); }
     catch { send(response, 503, { ok: false, error: { code: "AUDIT_UNAVAILABLE", message: "No se pudo registrar la consulta administrativa." } }); return "handled"; }
+    let summary: AdminQueueSummary;
+    try { summary = await store.read(); }
+    catch { send(response, 503, { ok: false, error: { code: "QUEUE_UNAVAILABLE", message: "No se pudo consultar el estado de la cola." } }); return "handled"; }
     send(response, 200, { ok: true, data: summary });
     return "handled";
   };
