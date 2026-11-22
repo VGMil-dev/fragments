@@ -232,3 +232,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El timer normal del agente pull sondeó la cola; el servicio aplicador concluyó `Result=success` y los contenedores cambiaron automáticamente a `sha-af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`, ambos healthy. No se hizo pull, restart ni invocación manual.
 - Público: `/health` devuelve `status=ok`, `database=ready`; home 200, bundle `/assets/index-BgnTqOr6.js` contiene versión y SHA exactos y los textos “Reintentar misiones”/“Reintentar habilidades”. Sin escrituras productivas ni parada de servicios.
 - Environment/gates F14 conservados; no revisión humana. Ledger/hash backup/labels, sesión admin, eventos reales y worker separado continúan NO COMPROBADOS.
+
+## Release y aplicación v0.5.20 — 2026-11-22
+
+- PR #128 se integró normalmente como merge de `main` `1041d1af3f949a13671d761ee96a59c52d2a1d78`; CI final `45074239987` SUCCESS. Tag anotada `v0.5.20` objeto `67483ab021a0b30970ec7ba5a4b1892e0e088a37`, apunta al SHA exacto de `main`.
+- F14 run `45074528240`: `verify-build`, pruebas/build de la fuente etiquetada, PostgreSQL disposable y restore, build ARM64, `attest-package`/Sigstore y `publish-approved-release` SUCCESS.
+- Aplicación automática verificada desde el sitio público: `/health` status `ok`, database `ready`; `/assets/index-DQ4oYmnp.js` contiene versión `v0.5.20` y el SHA exacto. No se realizó deploy manual, SSH, reinicio ni cambio de infraestructura.
+- `Required reviewers` sigue OFF según decisión F14; no se alteró configuración del entorno. Ledger/archivo y hash de backup/labels del host NO COMPROBADOS.
+- Commit de reconciliación de evidencias: `303f2c824670d2bc1100f305a08bde4507b5f876`; PR documental y CI pendientes.
