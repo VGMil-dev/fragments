@@ -5,9 +5,16 @@
 - Revisión del handler ya integrado encontró que `store.list()` ocurría antes de resolver el actor y escribir `admin.classroom_requests.read`, aunque después fallara cerrada la respuesta. Ahora la auditoría del intento autorizado ocurre antes de consultar la base; si actor o sink fallan, el store no se invoca. Si la lectura falla, el intento ya quedó auditado.
 - Regresiones añadidas comprueban orden `audit → read`, que un sink fallido no consulta el store y que los errores de lectura quedan precedidos por auditoría.
 - Verificación local fresca: `pnpm --filter @fragments/api exec vitest run src/features/admin-requests/http.test.ts --maxWorkers=1` — PASS, 4/4; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
-- Sin producción, bases reales, sesiones ni cambios de permisos. Falta CI del PR de integración arquitectónica y el resto de F22.2 (sesión admin/retención stdout) sigue NO COMPROBADO.
+- En la verificación inicial no se tocó producción, bases ni permisos. La sesión admin/retención stdout continúan NO COMPROBADAS tras el release, como se registra abajo.
 
-La corrección está en la rama arquitectónica `codex/f22-queue-integration`, commit `6257fdb`: `apps/api/src/features/admin-requests/http.ts` resuelve actor y confirma `audit.write` antes de `store.list`. Tests API 4/4 y typecheck PASS. PR #103 contiene el cambio; CI final y despliegue F14 se registrarán tras su cierre. No afirmar que ya está en producción.
+La corrección local en commit `6257fdb` resuelve actor y confirma `audit.write` antes de `store.list`. Fue integrada mediante PR #103 y desplegada en v0.5.13; resultados y límites actuales se detallan más abajo.
+
+## Resultado PR #103 y v0.5.13 — 2026-11-22
+
+- PR #103 integró la corrección en `main` (`dd0222f92b1b6ebb836e66fcf30bf90c7786eb25`), CI `45047282256` PASS, revisión independiente PASS.
+- F14 publicó y aplicó `v0.5.13` (run `45047598074` SUCCESS); Ego Lite muestra la versión y SHA exactos; `/health` `database=ready`.
+- El endpoint de solicitudes sigue respondiendo `401 AUTH_REQUIRED` en una petición anónima, sin `items`. La sesión admin real y la retención/rotación del audit event en stdout del host siguen **NO COMPROBADAS**.
+- El hotfix audita actor antes de `store.list`; tests de handler 4/4, test integrado con la ruta de cola en CI también pasa. No se consultaron solicitudes productivas ni se mutaron matrículas.
 
 ## Estado
 

@@ -100,3 +100,9 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - `git diff --check` — exit 0. No hubo llamadas a Gateway/proveedores, lectura de secretos ni ejecución de repositorios estudiantiles.
 - Límite: estas pruebas verifican integridad estructural/citas y provenance declarada; no verifican veracidad de contenido, correspondencia real de citas con snapshots, score, ni validez educativa. Calidad semántica real continúa **NO COMPROBADA**. Sigue faltando el export QA autorizado descrito en el preflight (outputs completos enlazados a SHA y resumen vigente de modelo/proveedor/presupuesto).
 - Commit local: `5233a5e` (`test(F25): valida outputs Review offline`). Rama `codex/f25-offline-response-validator` basada en `origin/main` `3911d401326027898991cde4ad1b8fbd5ed6444a`.
+
+## Integración PR #107 — 2026-11-22
+
+- PR #107 se sincronizó normalmente con main, pasó CI `45051154100` SUCCESS y se fusionó mediante merge normal como `a18c55fb54e7aa2657a455953d384ee6397996ab`.
+- La revisión independiente fue PASS para la lógica y pruebas del validador. La autenticidad de provider/model ID no queda probada: el auditor declara `providerProvenance: NOT_AUTHENTICATED` y bloquea `fake:` conocido.
+- La integración no cambia el estado semántico: A/B/C siguen `BLOCKED` por outputs completos faltantes; score y calidad real Mentor/Review quedan **NO COMPROBADOS**. No hubo llamadas pagadas ni cambios en prompts/rúbricas.

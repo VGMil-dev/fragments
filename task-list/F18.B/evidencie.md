@@ -100,9 +100,15 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 
 ## Incremento UI estudiantil — contexto académico de misión — 2026-11-22
 
-- Se sincronizó la rama del PR mediante fast-forward con su update de GitHub y luego con `origin/main` actualizado a `3911d401326027898991cde4ad1b8fbd5ed6444a`; sin rebase ni force. El worktree estaba limpio antes del cambio de feature.
-- En `apps/web/src/features/assignments/AssignmentsPanel.tsx`, cada misión estudiante ahora tiene un disclosure accesible, cerrado inicialmente, «Contexto para tu propuesta · versión N». Al abrirlo muestra tema, consigna contextual, nivel esperado y requisitos del snapshot Mentor F11 ligado a esa versión. El CTA de propuesta conserva el objeto `StudentAssignment` exacto. No se exponen criterios/pesos ni se modifica la rúbrica.
-- TDD: la prueba se añadió primero y falló por ausencia del panel/versión; tras la implementación pasó y verifica contenido del snapshot, disclosure cerrado/abierto y que no presenta el texto de criterios.
-- Verificación fresca: `pnpm --filter @fragments/web test` — 36 archivos / 154 pruebas PASS; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
-- No se tocaron contratos, esquema/migraciones, routing compartido, API ni infraestructura. No se ejecutó Ego Lite ni se hicieron escrituras/consultas productivas; QA visual queda NO COMPROBADO.
-- Commit del slice UI: `9ea9125` (`feat(f18b): mostrar contexto académico de misión`); commit de evidencia: `6d9a1b9`. PR #104 se cerró y mergeó en el head anterior `3fef959`; el slice quedó en PR #106 (`https://github.com/VGMil-dev/fragments/pull/106`), abierto y no mergeado. CI del head `6d9a1b95d91f6f2a5d7e7613e2730a3df80bf059`: run `45049914126` SUCCESS; job `verify` SUCCESS.
+- En `apps/web/src/features/assignments/AssignmentsPanel.tsx`, cada misión estudiante incluye un disclosure nativo, cerrado inicialmente, con tema, consigna contextual, nivel esperado y requisitos del snapshot Mentor F11 ligado a esa versión. El CTA conserva el `StudentAssignment` exacto; no se exponen criterios/pesos ni se cambia la rúbrica.
+- TDD verificó contenido, versión, apertura con teclado/nativo y omisión de criterios privados. Verificación del PR: `pnpm --filter @fragments/web test` — 154/154 PASS; typecheck y `git diff --check` PASS. QA visual Ego Lite sigue NO COMPROBADO.
+- PR #106 integrado normalmente en `main` como `7d4802c73bff58e8a58920b3f8213ac35e0e8490`; head `eb1ba79c74dbaea66500dad3ec927fc92a18b0ec`, CI `45050161446` SUCCESS, revisión independiente PASS.
+- No se tocaron contratos, API, esquema/migraciones, producción ni recursos de aula. No se usaron sesiones Ego Lite durante el PR.
+
+## Integración y observación productiva read-only — 2026-11-22
+## Integración y observación productiva read-only — 2026-11-22
+
+- PR #104 integrado normalmente en `main` como `3911d401326027898991cde4ad1b8fbd5ed6444a`; CI final `45047900668` PASS y revisión independiente PASS. El CI inicial/post-merge ejecutó schema y suite completa contra PostgreSQL disposable; los dos casos nuevos pasaron allí. Localmente se omitieron al no haber `DATABASE_URL`.
+- En la prueba HTTP, auth fixture confirma anónimo 401, otro docente 404 y alumno sin matrícula 404. Con matrícula activa crea y recupera borrador ligado a misión v1; publicar v2 no cambia el snapshot que Mentor fake recibe. Esto no prueba Better Auth real ni provider IA real.
+- Ego Lite read-only en producción v0.5.13: aula `Programación Móvil`, período `2026 - 2027`, contexto acordado y matrícula activa; no hay habilidades habilitadas ni misiones publicadas. La UI bloquea crear una misión hasta activar una habilidad. El portal estudiantil refleja matrícula activa, sin skills ni misiones. No se cambió ni guardó ningún recurso y ambas páginas quedaron abiertas.
+- Pendiente para recorrido visual/UI funcional con datos QA: habilidad y misión sintéticas en `fragments_test`, cuando exista un acceso permitido. Flujo de evaluación en producción, Better Auth real y puntuación IA continúan **NO COMPROBADOS**.
