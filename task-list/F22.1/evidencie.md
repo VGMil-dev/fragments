@@ -2,7 +2,7 @@
 
 ## Estado
 
-Módulo implementado y probado localmente; pendiente de integración por el arquitecto, PR, CI y QA visual/Ego Lite. Rama `codex/f22-readonly-diagnostics`, basada en `origin/main` commit `c25f97a60934b294fa30b3b4d3fcccea4f51007e`.
+Módulo e integración principal implementados en `codex/f22-readonly-diagnostics`; pruebas focalizadas y typechecks pasan. Pendientes PR/CI y QA visual Ego Lite con rol admin disponible.
 
 ## Cambios y commit
 
@@ -11,22 +11,21 @@ Módulo implementado y probado localmente; pendiente de integración por el arqu
 - Handler aislado: `GET /api/admin/diagnostics/requests?limit=` requiere callback admin inyectado; anónimo 401 y teacher/otro rol 403, sin eventos en la respuesta denegada; máximo 50 resultados.
 - Web: API cliente valida campos permitidos y presenta fecha UTC, método, familia, status, duración y request ID; estados carga/vacío/error y botón Actualizar.
 - Sólo se modificaron `apps/api/src/features/admin-diagnostics/*` y `apps/web/src/features/admin-diagnostics/*` en el commit funcional.
+- El integrador añadió `adminCheck` en Better Auth que acepta exclusivamente `role=admin` (no `isTeacher`), `observe()` al inicio de cada petición, handler en `createHttpHandler` y ruta web `/admin/diagnostics`. Se probó integrada con auth/DB fake etiquetados; no es una verificación de sesión real.
+- Commit UX/a11y `10032a8`: retención en memoria explícita, nombres de área en español, `<time>`, región enfocada/desplazable, columna HTTP, anuncio de carga y reintento.
 
 ## Verificación local fresca
 
-- `pnpm --filter @fragments/api exec vitest run src/features/admin-diagnostics --maxWorkers=1` — PASS; 2 archivos, 6 pruebas.
+- `pnpm --filter @fragments/api exec vitest run src/http/admin-diagnostics.test.ts src/features/admin-diagnostics --maxWorkers=1` — PASS; 3 archivos, 7 pruebas, incluyendo integración de ruta, captura del status real, request ID, saneamiento y rechazo de profesor/anónimo.
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-diagnostics --maxWorkers=1` — PASS; 2 archivos, 4 pruebas.
 - `pnpm --filter @fragments/contracts build` — PASS; necesario para preparar workspace local.
 - `pnpm --filter @fragments/api exec prisma generate` — PASS; solo genera cliente local, sin abrir conexión a base.
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web typecheck` — PASS.
-- `git diff --cached --check` — PASS antes del commit.
+- `git diff --check` — PASS.
 
 ## Integración y límites pendientes
 
-- El handler aún no está registrado en `apps/api/src/http/app.ts`; el integrador central debe crear el almacén en memoria y llamar `observe(request, response)` al inicio de cada solicitud para capturar requestId/status reales.
-- Better Auth aún no expone una comprobación estricta de rol `admin`; el integrador debe agregar `adminId` separado de `teacherId` y conectarlo a `isAdmin`.
-- `AdminDiagnosticsScreen` aún no está montada en una ruta de la app; el root integrator añadirá `/admin/diagnostics` y su acceso.
+- No se hizo QA visual Ego Lite ni prueba autenticada con una sesión real de administrador; esas validaciones quedan NO COMPROBADAS.
 - No hay persistencia tras reiniciar API; stdout y buffer en memoria son los límites deliberados de esta fase.
-- No se accedió a `fragments_test`, `fragments_prod`, VPS, proveedores AI ni GitHub remoto desde la feature. No se desplegó.
-- Aún sin Ego Lite ni verificación con sesiones docente/admin/estudiante; no declarar el recorrido funcional integrado hasta completar ese QA.
+- No se accedió a `fragments_test`, `fragments_prod`, VPS, proveedores IA o despliegue. La UI usa la sesión same-origin de Better Auth y el server impone rol; la comprobación real de acceso sigue pendiente.
