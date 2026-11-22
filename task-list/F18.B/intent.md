@@ -44,3 +44,11 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 
 - Antes de iniciar propuesta, el estudiante puede abrir un panel plegable que explica el tema, la consigna, el nivel esperado y los requisitos del contexto Mentor fijado en la versión publicada de la misión.
 - La interfaz identifica la versión del contexto para que el alumno sepa qué snapshot acompaña a su misión. No modifica ni expone pesos/rúbrica, y conserva el CTA existente para iniciar propuesta con el mismo objeto de versión.
+
+## Incremento F18.B — acceso al catálogo desde el aula docente
+
+- Problema: si el aula no tiene habilidades disponibles, el detalle explica que deben crearse en el catálogo pero no ofrece una acción junto al bloqueo.
+- Objetivo: añadir un enlace contextual accesible a `/teacher/skills` junto al estado vacío, conservando el mensaje existente.
+- No objetivos: cambiar contratos, rutas compartidas, datos, catálogo ni el flujo de habilitación.
+- Owner de tarea: PLANNER. Implementación acotada al detalle de `ClassroomStudio` y su prueba UI.
+- Skill aplicada: `vercel-react-best-practices`; se usa un enlace semántico con navegación existente; se descartan optimizaciones ajenas a este cambio pequeño.
