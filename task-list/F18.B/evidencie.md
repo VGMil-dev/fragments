@@ -7,7 +7,7 @@
 - Revisión reflexiva detectó y corrigió que v2 debía conservar al menos una habilidad requerida; la fixture ahora prueba categorías requeridas/optativas distintas. La URL debe apuntar a localhost y a `fragments_test` antes de conectar; `current_database()` se valida antes de escrituras. La limpieza queda protegida con `finally`.
 - Verificación local: `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 1 prueba omitida porque `DATABASE_URL` no está configurada. No se abrió conexión; integración PostgreSQL queda **NO COMPROBADA localmente**, pendiente de CI efímero.
 - Verificación local: `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
-- Commit con el slice y evidencia: `2bdcb5268ad8532c43077f63c1503bdd2277d1ac`; corrección de fixture/preflight/cleanup: `26e323342df4490b4158a45000b8ba2f5257b6f5`. PR #101 CI run `45045059730` in progress al 2026-11-22; la prueba PostgreSQL sigue pendiente de resultado.
+- Commits con slice, corrección de fixture y evidencia: `2bdcb5268ad8532c43077f63c1503bdd2277d1ac`, `26e323342df4490b4158a45000b8ba2f5257b6f5`, `d53e48ebb8f6967ee6c31c8f6999c50625672c3b`. CI PR #101 run `45045147138` SUCCESS (tests, typecheck, lint y build con PostgreSQL efímero); revisión independiente final pendiente.
 - No se modificaron contratos, migraciones, rutas, configuración de proveedores, datos productivos ni sesiones de navegador. La fake no valida calidad de IA real ni sustituye el recorrido Ego Lite.
 
 ## Estado
