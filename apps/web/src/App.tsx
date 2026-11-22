@@ -9,25 +9,20 @@ import { GalleryScreen } from "./features/gallery";
 import { MentorScreen } from "./features/mentor";
 import { ReviewScreen } from "./features/review";
 import { TrainerScreen } from "./features/trainer";
-import { TeacherGate } from "./features/inspector";
-import { createInspectorApi } from "./lib/api/inspector-api";
 import { createTrainerApi } from "./lib/api/trainer-api";
-import { MentorControlWorkspace } from "./features/mentor-control/MentorControlWorkspace";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { StudentDashboard } from "./features/student/StudentDashboard";
 import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
 import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
-import { TeacherStudentsWorkspace } from "./features/teacher/TeacherStudentsWorkspace";
-import { ClassroomStudio } from "./features/classroom/ClassroomStudio";
+import { TeacherWorkspaceShell } from "./features/teacher/TeacherWorkspaceShell";
 import "./features/landing/public-landing-f162.css";
 import type { AsyncState } from "./hooks/async-state";
 import "./styles/student-workspace.css";
 import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
-const inspectorApi = createInspectorApi(createApiClient());
 const trainerApi = createTrainerApi();
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
@@ -328,7 +323,7 @@ export function App() {
     document.documentElement.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
     document.documentElement.style.scrollBehavior = "";
-    if (path.startsWith("/student/") || path === "/teacher/inspector" || path === "/teacher/mentor-control" || path === "/teacher/reset-password") {
+    if (path.startsWith("/student/") || path.startsWith("/teacher/")) {
       requestAnimationFrame(() => document.getElementById("route-content")?.focus({ preventScroll: true }));
     }
   }, [path]);
@@ -340,14 +335,9 @@ export function App() {
 
   if (path === "/student/login") return <><StudentLoginScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/auth/complete") return <><OAuthCompletionScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
-  if (path === "/teacher/students") return <><TeacherStudentsWorkspace navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
-  if (path === "/teacher/classrooms" || path.startsWith("/teacher/classrooms/") || path === "/teacher/skills") return <><ClassroomStudio path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
-  if (path === "/teacher/inspector") {
-    return <><div id="route-content" tabIndex={-1}><TeacherGate inspectorApi={inspectorApi} navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
-  }
-  if (path === "/teacher/mentor-control") return <><div id="route-content" tabIndex={-1}><MentorControlWorkspace navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 
   return (
     <>
@@ -424,7 +414,7 @@ export function App() {
       <footer className="site-footer">
         <a className="brand brand--footer" href="#inicio" aria-label="Fragments, volver al inicio"><BrandMark className="brand__icon" /><span className="brand__name">fragments<span className="brand__period">.</span></span></a>
         <p>Imagina. Construye. Demuestra.</p>
-        <a href="/teacher/inspector" onClick={(event) => { event.preventDefault(); navigate("/teacher/inspector"); }}>Área docente</a>
+        <a href="/teacher/dashboard" onClick={(event) => { event.preventDefault(); navigate("/teacher/dashboard"); }}>Área docente</a>
         <a href="/teacher/mentor-control" onClick={(event) => { event.preventDefault(); navigate("/teacher/mentor-control"); }}>Control de Mentor</a>
         <a href="/teacher/students" onClick={(event) => { event.preventDefault(); navigate("/teacher/students"); }}>Estudiantes y proyectos</a>
         <a href="/teacher/classrooms" onClick={(event) => { event.preventDefault(); navigate("/teacher/classrooms"); }}>Classroom Studio</a>

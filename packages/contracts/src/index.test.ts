@@ -38,6 +38,9 @@ import {
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
   ClassJoinCodeSchema,
+  ClassroomSchema,
+  ClassroomSummarySchema,
+  TeacherDashboardSummarySchema,
   ClassroomJoinCodeRevocationSchema,
   ClassEnrollmentTransitionSchema,
   ClassroomCreateRequestSchema,
@@ -79,8 +82,33 @@ describe("shared API contracts", () => {
   it("validates classroom input without accepting client-supplied ownership", () => {
     const valid = { title: "Grupo A", subject: "Programación", groupLabel: "10A" };
     expect(ClassroomCreateRequestSchema.safeParse(valid).success).toBe(true);
+    expect(ClassroomCreateRequestSchema.safeParse({ title: "Programación móvil", subject: "Programación móvil" }).success).toBe(true);
+    expect(ClassroomCreateRequestSchema.safeParse({ title: "Programación móvil", subject: "Programación móvil", groupLabel: null }).success).toBe(true);
+    expect(ClassroomCreateRequestSchema.safeParse({ ...valid, groupLabel: null }).success).toBe(true);
     expect(ClassroomCreateRequestSchema.safeParse({ ...valid, teacherId: "teacher-1" }).success).toBe(false);
     expect(ClassroomUpdateRequestSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("keeps historical classroom labels and represents thematic classrooms without a school group", () => {
+    const base = {
+      id: "classroom-1", title: "Programación móvil", subject: "Programación móvil", period: null,
+      status: "active", createdAt: now, updatedAt: now,
+    };
+    expect(ClassroomSchema.safeParse({ ...base, context: null, groupLabel: null }).success).toBe(true);
+    expect(ClassroomSummarySchema.safeParse({ ...base, groupLabel: null }).success).toBe(true);
+    expect(ClassroomSummarySchema.safeParse({ ...base, groupLabel: "10A" }).success).toBe(true);
+    expect(ClassroomSchema.safeParse({ ...base, context: null, groupLabel: "10A" }).success).toBe(true);
+  });
+
+  it("validates the minimal teacher dashboard summary", () => {
+    const classroom = {
+      id: "classroom-1", title: "Programación móvil", subject: "Programación móvil", groupLabel: null,
+      period: null, status: "archived", createdAt: now, updatedAt: now,
+    };
+    const tooManyClassrooms = Array.from({ length: 5 }, (_, index) => ({ ...classroom, id: `classroom-${index}` }));
+    expect(TeacherDashboardSummarySchema.safeParse({ totalClassrooms: 3, pendingJoinRequests: 0, classrooms: [classroom] }).success).toBe(true);
+    expect(TeacherDashboardSummarySchema.safeParse({ totalClassrooms: -1, pendingJoinRequests: 0, classrooms: [] }).success).toBe(false);
+    expect(TeacherDashboardSummarySchema.safeParse({ totalClassrooms: 0, pendingJoinRequests: 0, classrooms: tooManyClassrooms }).success).toBe(false);
   });
 
   it("exposes only the join code and safe expiry metadata", () => {

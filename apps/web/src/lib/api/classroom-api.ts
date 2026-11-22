@@ -10,6 +10,7 @@ import {
   ClassroomSkillsResponseSchema,
   ClassroomSkillAvailabilitySchema,
   ClassroomJoinCodeRevocationSchema,
+  TeacherDashboardSummarySchema,
   SkillCatalogResponseSchema,
   SkillCatalogEntrySchema,
   StudentClassroomRequestsSchema,
@@ -22,6 +23,7 @@ const api = createApiClient();
 
 export const classroomApi = {
   list(offset = 0) { return api.request(`/api/teacher/classrooms?offset=${offset}&limit=50`, ClassroomPageSchema); },
+  dashboardSummary() { return api.request("/api/teacher/dashboard/summary", TeacherDashboardSummarySchema); },
   get(id: string) { return api.request(`/api/teacher/classrooms/${id}`, ClassroomSchema); },
   create(input: unknown) { const parsed = ClassroomCreateRequestSchema.safeParse(input); return parsed.success ? api.request("/api/teacher/classrooms", ClassroomSchema, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) }) : Promise.resolve({ ok: false as const, error: { code: "INVALID_INPUT", message: "Revisa los datos del aula." } }); },
   update(id: string, input: unknown) { const parsed = ClassroomUpdateRequestSchema.safeParse(input); return parsed.success ? api.request(`/api/teacher/classrooms/${id}`, ClassroomSchema, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) }) : Promise.resolve({ ok: false as const, error: { code: "INVALID_INPUT", message: "Revisa los datos del aula." } }); },

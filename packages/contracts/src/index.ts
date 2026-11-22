@@ -293,14 +293,19 @@ export const TeacherStudentsPageSchema = z.object({
 const classroomText = (max: number) => z.string().trim().min(1).max(max);
 export const ClassroomStatusSchema = z.enum(["active", "archived"]);
 export const ClassroomSchema = z.object({
-  id: identifier, title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80),
+  id: identifier, title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80).nullable(),
   period: z.string().trim().max(80).nullable(), context: z.string().trim().max(2000).nullable(),
   status: ClassroomStatusSchema, createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
 }).strict();
 export const ClassroomSummarySchema = ClassroomSchema.omit({ context: true });
 export const ClassroomPageSchema = z.object({ items: z.array(ClassroomSummarySchema).max(50), nextOffset: z.number().int().min(0).nullable() }).strict();
+export const TeacherDashboardSummarySchema = z.object({
+  totalClassrooms: z.number().int().min(0),
+  pendingJoinRequests: z.number().int().min(0),
+  classrooms: z.array(ClassroomSummarySchema).max(4),
+}).strict();
 export const ClassroomCreateRequestSchema = z.object({
-  title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80),
+  title: classroomText(120), subject: classroomText(120), groupLabel: classroomText(80).nullable().optional(),
   period: z.string().trim().max(80).nullable().optional(), context: z.string().trim().max(2000).nullable().optional(),
 }).strict();
 export const ClassroomUpdateRequestSchema = ClassroomCreateRequestSchema.partial().extend({ status: ClassroomStatusSchema.optional() }).strict()
@@ -526,6 +531,7 @@ export type TeacherStudentsPage = z.infer<typeof TeacherStudentsPageSchema>;
 export type Classroom = z.infer<typeof ClassroomSchema>;
 export type ClassroomSummary = z.infer<typeof ClassroomSummarySchema>;
 export type ClassroomPage = z.infer<typeof ClassroomPageSchema>;
+export type TeacherDashboardSummary = z.infer<typeof TeacherDashboardSummarySchema>;
 export type ClassroomCreateRequest = z.infer<typeof ClassroomCreateRequestSchema>;
 export type ClassroomUpdateRequest = z.infer<typeof ClassroomUpdateRequestSchema>;
 export type ClassJoinCode = z.infer<typeof ClassJoinCodeSchema>;

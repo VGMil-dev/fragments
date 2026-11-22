@@ -8,7 +8,7 @@ import "./classroom-studio.css";
 type Access = "checking" | "signed-out" | "forbidden" | "ready" | "error";
 type JoinCode = { code: string; expiresAt: string | null; createdAt: string };
 
-export function ClassroomStudio({ path, navigate }: { path: string; navigate: (path: string) => void }) {
+export function ClassroomStudio({ path, navigate, embedded = false }: { path: string; navigate: (path: string) => void; embedded?: boolean }) {
   const [access, setAccess] = useState<Access>("checking");
   const [classrooms, setClassrooms] = useState<Array<Omit<Classroom, "context">>>([]);
   const [classroom, setClassroom] = useState<Classroom | null>(null);
@@ -68,7 +68,7 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
   async function createClassroom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage("");
     const data = new FormData(event.currentTarget);
-    const result = await classroomApi.create({ title: data.get("title"), subject: data.get("subject"), groupLabel: data.get("groupLabel"), period: data.get("period") || null, context: data.get("context") || null });
+    const result = await classroomApi.create({ title: data.get("title"), subject: data.get("subject"), period: data.get("period") || null, context: data.get("context") || null });
     setBusy(false);
     if (!result.ok) { setMessage(result.error.message); return; }
     navigate(`/teacher/classrooms/${result.data.id}`);
@@ -77,7 +77,7 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
   async function saveClassroom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!classroom) return; setBusy(true); setMessage("");
     const data = new FormData(event.currentTarget);
-    const result = await classroomApi.update(classroom.id, { title: data.get("title"), subject: data.get("subject"), groupLabel: data.get("groupLabel"), period: data.get("period") || null, context: data.get("context") || null });
+    const result = await classroomApi.update(classroom.id, { title: data.get("title"), subject: data.get("subject"), period: data.get("period") || null, context: data.get("context") || null });
     setBusy(false);
     if (!result.ok) setMessage(result.error.message); else { setClassroom(result.data); await load(); setMessage("Cambios guardados."); }
   }
@@ -123,24 +123,24 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
   if (access === "forbidden") return <main className="classroom-studio classroom-studio--gate"><h1>Acceso docente requerido</h1><p>Esta cuenta no puede administrar aulas ni habilidades.</p><button className="cs-button" type="button" onClick={() => void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).then(() => setAccess("signed-out"))}>Cerrar sesión</button></main>;
   if (access === "error") return <main className="classroom-studio classroom-studio--gate"><h1>No se pudo abrir Classroom Studio</h1><p role="alert">{message || "Inténtalo de nuevo."}</p><button className="cs-button cs-button--primary" type="button" onClick={() => void load()}>Reintentar</button></main>;
 
-  return <main className="classroom-studio" aria-labelledby="cs-title">
-    <a className="cs-skip" href="#cs-content">Saltar al contenido</a>
-    <header className="cs-header">
+  return <main className={`classroom-studio${embedded ? " classroom-studio--embedded" : ""}`} aria-labelledby="cs-title">
+    {!embedded ? <a className="cs-skip" href="#cs-content">Saltar al contenido</a> : null}
+    {!embedded ? <header className="cs-header">
       <a className="cs-brand" href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>FRAGMENTS<span>.</span></a>
       <nav aria-label="Espacio docente">
         <a aria-current={path.startsWith("/teacher/classrooms") ? "page" : undefined} href="/teacher/classrooms" onClick={(event) => { event.preventDefault(); navigate("/teacher/classrooms"); }}>Aulas</a>
         <a aria-current={isSkills ? "page" : undefined} href="/teacher/skills" onClick={(event) => { event.preventDefault(); navigate("/teacher/skills"); }}>Habilidades</a>
         <a href="/teacher/students" onClick={(event) => { event.preventDefault(); navigate("/teacher/students"); }}>Estudiantes</a>
       </nav>
-    </header>
+    </header> : null}
     <div className="cs-page" id="cs-content">
       <p className="cs-eyebrow">ESPACIO DOCENTE · F18.A</p>
-      <div className="cs-title-row"><div><h1 id="cs-title">{isSkills ? "Catálogo de habilidades" : isNew ? "Nueva aula" : classroom?.title ?? "Classroom Studio"}</h1><p>{isSkills ? "Crea y reutiliza habilidades en tus aulas." : isNew ? "Organiza una asignatura y su grupo." : classroom ? `${classroom.subject} · ${classroom.groupLabel}` : "Gestiona tus aulas y grupos."}</p></div>
+      <div className="cs-title-row"><div><h1 id="cs-title">{isSkills ? "Catálogo de habilidades" : isNew ? "Nueva aula" : classroom?.title ?? "Classroom Studio"}</h1><p>{isSkills ? "Crea y reutiliza habilidades en tus aulas." : isNew ? "Organiza un espacio compartido por temática." : classroom ? classroom.subject : "Gestiona tus aulas compartidas."}</p></div>
         {!detailId && !isNew && !isSkills ? <button className="cs-button cs-button--primary" type="button" onClick={() => navigate("/teacher/classrooms/new")}><Plus size={18} aria-hidden="true" />Nueva aula</button> : null}
       </div>
       {message ? <p className="cs-notice" role="status">{message}</p> : null}
       {isNew ? <form className="cs-panel cs-form" onSubmit={(event) => void createClassroom(event)}>
-        <label>Nombre del aula<input name="title" required maxLength={120} /></label><div className="cs-form-grid"><label>Asignatura<input name="subject" required maxLength={120} /></label><label>Grupo o sección<input name="groupLabel" required maxLength={80} /></label></div>
+        <label>Nombre del aula o temática<input name="title" required maxLength={120} /></label><label>Asignatura o área<input name="subject" required maxLength={120} /></label>
         <label>Período <span>(opcional)</span><input name="period" maxLength={80} /></label><label>Contexto para el grupo <span>(opcional)</span><textarea name="context" rows={4} maxLength={2000} /></label>
         <div className="cs-actions"><button className="cs-button" type="button" onClick={() => navigate("/teacher/classrooms")}>Cancelar</button><button className="cs-button cs-button--primary" disabled={busy}>Crear aula</button></div>
       </form> : null}
@@ -152,7 +152,7 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
       {detailId && classroom ? <>
         <a className="cs-back" href="/teacher/classrooms" onClick={(event) => { event.preventDefault(); navigate("/teacher/classrooms"); }}><ArrowLeft size={16} aria-hidden="true" />Todas las aulas</a>
         <div className="cs-detail-grid">
-          <form className="cs-panel cs-form" onSubmit={(event) => void saveClassroom(event)}><div className="cs-panel-heading"><h2>Datos del aula</h2><span className={`cs-status cs-status--${classroom.status}`}>{classroom.status === "active" ? "Activa" : "Archivada"}</span></div><label>Nombre<input name="title" defaultValue={classroom.title} required maxLength={120} /></label><div className="cs-form-grid"><label>Asignatura<input name="subject" defaultValue={classroom.subject} required maxLength={120} /></label><label>Grupo o sección<input name="groupLabel" defaultValue={classroom.groupLabel} required maxLength={80} /></label></div><label>Período<input name="period" defaultValue={classroom.period ?? ""} maxLength={80} /></label><label>Contexto<textarea name="context" defaultValue={classroom.context ?? ""} rows={4} maxLength={2000} /></label><div className="cs-actions"><button className="cs-button cs-button--primary" disabled={busy}>Guardar cambios</button><button className="cs-button cs-button--quiet" type="button" disabled={busy} onClick={() => void classroomApi.update(classroom.id, { status: classroom.status === "active" ? "archived" : "active" }).then((result) => { if (result.ok) { setClassroom(result.data); setMessage("Estado del aula actualizado."); } else setMessage(result.error.message); })}>{classroom.status === "active" ? "Archivar aula" : "Reactivar aula"}</button></div></form>
+          <form className="cs-panel cs-form" onSubmit={(event) => void saveClassroom(event)}><div className="cs-panel-heading"><h2>Datos del aula</h2><span className={`cs-status cs-status--${classroom.status}`}>{classroom.status === "active" ? "En curso" : "Histórica"}</span></div><label>Nombre del aula o temática<input name="title" defaultValue={classroom.title} required maxLength={120} /></label><label>Asignatura o área<input name="subject" defaultValue={classroom.subject} required maxLength={120} /></label><label>Período<input name="period" defaultValue={classroom.period ?? ""} maxLength={80} /></label><label>Contexto<textarea name="context" defaultValue={classroom.context ?? ""} rows={4} maxLength={2000} /></label><div className="cs-actions"><button className="cs-button cs-button--primary" disabled={busy}>Guardar cambios</button><button className="cs-button cs-button--quiet" type="button" disabled={busy} onClick={() => void classroomApi.update(classroom.id, { status: classroom.status === "active" ? "archived" : "active" }).then((result) => { if (result.ok) { setClassroom(result.data); setMessage("Estado del aula actualizado."); } else setMessage(result.error.message); })}>{classroom.status === "active" ? "Archivar aula" : "Reactivar aula"}</button></div></form>
           <section className="cs-panel cs-members"><div className="cs-panel-heading"><h2><Users size={19} aria-hidden="true" />Miembros y solicitudes</h2><button className="cs-button cs-button--quiet" type="button" disabled={busy} onClick={() => void classroomApi.createCode(classroom.id).then((result) => { if (result.ok) { setJoinCode(result.data); setMessage("Código generado. Cópialo y compártelo con el grupo."); } else setMessage(result.error.message); })}>Generar código</button></div>
             {joinCode ? <div className="cs-code"><p>Código de ingreso</p><code>{joinCode.code}</code><button className="cs-button cs-button--quiet" type="button" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(joinCode.code).then(() => setMessage("Código copiado.")); else setMessage("Copia el código mostrado para compartirlo."); }}>Copiar código</button><button className="cs-text-button" type="button" onClick={() => void classroomApi.revokeCode(classroom.id).then((result) => { if (result.ok) { setJoinCode(null); setMessage("Código revocado."); } else setMessage(result.error.message); })}>Revocar</button></div> : null}
             <form className="cs-direct" onSubmit={(event) => void directAssign(event)}><label>Asignar estudiante existente<select value={studentId} required onChange={(event) => setStudentId(event.target.value)}><option value="">Selecciona una identidad GitHub verificada</option>{students.map((student) => <option key={student.id} value={student.id}>@{student.githubLogin}</option>)}</select></label><button className="cs-button" disabled={busy || !studentId}>Asignar</button></form>
@@ -161,7 +161,7 @@ export function ClassroomStudio({ path, navigate }: { path: string; navigate: (p
           <section className="cs-panel cs-availability"><h2>Habilidades disponibles</h2><p>Solo el alumnado con matrícula activa ve estas habilidades.</p>{skills.length ? skills.map((skill) => <label className={`cs-check ${skill.archived ? "is-archived" : ""}`} key={skill.id}><input type="checkbox" checked={skill.enabled ?? false} disabled={busy || skill.archived} onChange={(event) => void toggleSkill(skill.id, event.target.checked)} /><span><strong>{skill.name}</strong>{skill.description ? <small>{skill.description}</small> : null}{skill.archived ? <small>Archivada; se conservan sus referencias.</small> : null}</span></label>) : <p className="cs-empty-inline">Crea habilidades en el catálogo para habilitarlas aquí.</p>}</section>
         </div>
       </> : null}
-      {!isNew && !isSkills && !detailId ? <section className="cs-list" aria-label="Mis aulas">{contentLoading ? <p role="status">Cargando tus aulas…</p> : classrooms.length ? classrooms.map((item) => <a className="cs-panel cs-classroom-card" key={item.id} href={`/teacher/classrooms/${item.id}`} onClick={(event) => { event.preventDefault(); navigate(`/teacher/classrooms/${item.id}`); }}><span className="cs-card-mark" aria-hidden="true"><BookOpen /></span><span><small>{item.subject} · {item.groupLabel}</small><strong>{item.title}</strong><span>{item.period ?? "Sin período indicado"}</span></span><span className={`cs-status cs-status--${item.status}`}>{item.status === "active" ? "Activa" : "Archivada"}</span></a>) : <div className="cs-empty"><BookOpen aria-hidden="true" /><h2>Empieza con un aula</h2><p>Crea un aula para organizar grupos, gestionar solicitudes y habilitar habilidades.</p><button className="cs-button cs-button--primary" type="button" onClick={() => navigate("/teacher/classrooms/new")}><Plus size={18} aria-hidden="true" />Crear primera aula</button></div>}</section> : null}
+      {!isNew && !isSkills && !detailId ? <section className="cs-list" aria-label="Mis aulas">{contentLoading ? <p role="status">Cargando tus aulas…</p> : classrooms.length ? classrooms.map((item) => <a className="cs-panel cs-classroom-card" key={item.id} href={`/teacher/classrooms/${item.id}`} onClick={(event) => { event.preventDefault(); navigate(`/teacher/classrooms/${item.id}`); }}><span className="cs-card-mark" aria-hidden="true"><BookOpen /></span><span><small>{item.subject}{item.period ? ` · ${item.period}` : " · Aula compartida"}</small><strong>{item.title}</strong></span><span className="cs-status">Ver aula</span></a>) : <div className="cs-empty"><BookOpen aria-hidden="true" /><h2>Empieza con un aula</h2><p>Crea un espacio temático que puedan compartir estudiantes autorizados de distintos paralelos.</p><button className="cs-button cs-button--primary" type="button" onClick={() => navigate("/teacher/classrooms/new")}><Plus size={18} aria-hidden="true" />Crear primera aula</button></div>}</section> : null}
     </div>
   </main>;
 }

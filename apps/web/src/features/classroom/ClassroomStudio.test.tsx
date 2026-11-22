@@ -10,6 +10,7 @@ const { classroomApi } = vi.hoisted(() => ({
     enrollments: vi.fn(),
     classroomSkills: vi.fn(),
     students: vi.fn(),
+    create: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -34,6 +35,7 @@ afterEach(() => {
   classroomApi.classroomSkills.mockReset();
   classroomApi.students.mockReset();
   classroomApi.update.mockReset();
+  classroomApi.create.mockReset();
 });
 
 describe("ClassroomStudio", () => {
@@ -52,6 +54,33 @@ describe("ClassroomStudio", () => {
     expect(container.querySelector('input[name="title"]')).not.toBeNull();
     expect(container.textContent).not.toContain("No se encontró el aula.");
     expect(classroomApi.get).not.toHaveBeenCalled();
+    expect(container.querySelector('input[name="groupLabel"]')).toBeNull();
+    expect(container.textContent).toContain("espacio compartido por temática");
+  });
+
+  it("creates a thematic classroom without a school parallel label", async () => {
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [] } });
+    classroomApi.get.mockResolvedValue({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró el aula." } });
+    classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    classroomApi.create.mockResolvedValue({ ok: true, data: { id: "fixture-classroom" } });
+    const navigate = vi.fn();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path="/teacher/classrooms/new" navigate={navigate} />));
+    const title = container.querySelector<HTMLInputElement>('input[name="title"]')!;
+    const subject = container.querySelector<HTMLInputElement>('input[name="subject"]')!;
+    const form = container.querySelector<HTMLFormElement>("form.cs-form")!;
+    title.value = "Programación móvil";
+    subject.value = "Desarrollo de software";
+
+    await act(async () => { form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+
+    expect(classroomApi.create).toHaveBeenCalledWith({ title: "Programación móvil", subject: "Desarrollo de software", period: null, context: null });
+    expect(navigate).toHaveBeenCalledWith("/teacher/classrooms/fixture-classroom");
   });
 
   it("keeps the save confirmation visible after refreshing persisted classroom data", async () => {

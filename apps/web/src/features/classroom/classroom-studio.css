@@ -4,6 +4,7 @@
   color: var(--f16-text-primary);
   font: 400 var(--f16-type-body)/1.5 var(--font-body);
 }
+.classroom-studio--embedded { min-height: 0; }
 .classroom-studio * { box-sizing: border-box; }
 .classroom-studio a { color: inherit; }
 .cs-skip { position: absolute; left: 1rem; top: -5rem; z-index: 5; padding: .65rem 1rem; background: var(--f16-lime); color: var(--f16-night) !important; border-radius: var(--f16-radius-control); }
