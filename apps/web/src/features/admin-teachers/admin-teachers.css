@@ -1,0 +1,16 @@
+.admin-teachers { width: min(100% - 2rem, 76rem); margin: clamp(1.25rem, 4vw, 3rem) auto; color: var(--f16-text-primary); }
+.admin-teachers__header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--f16-border); }
+.admin-teachers__eyebrow { color: var(--f16-lime); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+.admin-teachers h1 { margin: .35rem 0 .65rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.04em; }
+.admin-teachers__header > p:not(.admin-teachers__eyebrow) { max-width: 65ch; color: var(--f16-text-secondary); line-height: 1.55; }
+.admin-teachers button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--f16-border); border-radius: .7rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; font-weight: 700; cursor: pointer; }
+.admin-teachers button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-teachers button:disabled { cursor: not-allowed; opacity: .6; }
+.admin-teachers__table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--f16-border); border-radius: .85rem; }
+.admin-teachers table { width: 100%; border-collapse: collapse; text-align: left; }
+.admin-teachers caption { padding: .85rem 1rem; color: var(--f16-text-secondary); text-align: left; }
+.admin-teachers th, .admin-teachers td { padding: .8rem 1rem; border-top: 1px solid var(--f16-border); vertical-align: top; }
+.admin-teachers th { color: var(--f16-text-secondary); font-size: .82rem; }
+.admin-teachers td code { overflow-wrap: anywhere; font-size: .82rem; }
+.admin-teachers__pagination { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; margin-top: 1rem; }
+.admin-teachers__pagination span { color: var(--f16-text-secondary); font-variant-numeric: tabular-nums; }

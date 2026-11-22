@@ -48,6 +48,7 @@ function eventLabel(event: AdminAuditEvent["event"]): string {
     "admin.classroom_requests.read": "Solicitudes académicas consultadas",
     "admin.queue_summary.read": "Cola de trabajos consultada",
     "admin.audit_log.read": "Registro de actividad consultado",
+    "admin.teachers.list": "Cuentas docentes consultadas",
   };
   return labels[event];
 }

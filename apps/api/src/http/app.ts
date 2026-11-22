@@ -28,6 +28,9 @@ import { createAdminQueueSummaryHttp, type AdminQueueAuditEvent } from "../featu
 import { createAdminQueueSummaryRepository } from "../features/admin-queue/repository.js";
 import { createAdminAuditLogHttp } from "../features/admin-audit-log/http.js";
 import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/admin-audit-log/store.js";
+import { createAdminTeachersHttp } from "../features/admin-teachers/http.js";
+import { createAdminTeachersRepository } from "../features/admin-teachers/repository.js";
+import { createAdminTeachersService } from "../features/admin-teachers/service.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -73,6 +76,14 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
     write: (event) => adminAuditLog.write(event),
   });
+  const adminTeachersHandler = createAdminTeachersHttp(
+    createAdminTeachersService(createAdminTeachersRepository(database)),
+    async (request) => options.auth ? options.auth.adminCheck(request) : null,
+    {
+      getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+      write: (event) => adminAuditLog.write(event),
+    },
+  );
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
   const technologyCatalogHandler = createTechnologyCatalogHttp(database, options.auth);
@@ -126,6 +137,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminQueueSummaryHandler(request, response) === "handled") return;
     if (await adminAuditLogHandler(request, response) === "handled") return;
+    if (await adminTeachersHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
