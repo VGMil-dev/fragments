@@ -66,6 +66,7 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 
 ## Cierre Git
 
+- Commit de auditoría del corpus semántico offline: `fd3ee9515b4541a38bc5088eac642bf9efb2c645` (`test(F25): audita corpus offline semantico`).
 - Commit del harness offline y su evidencia: `5c5efa5cfc6aec87cc4045256f9160a86ab8313e` (`test(F25): etiqueta alcance de fixtures offline`).
 - Commit de implementación y documentación: `ee51314b780c64cb4695f27318ad588220f9dad9` (`docs(F25): documenta baseline offline de Review`).
 - Commit de consolidación de evidencia: `5d9ce133bcbc74c3133469ab7ee8f7f9ee9566aa` (`docs(F25): registra cierre local del baseline`).
