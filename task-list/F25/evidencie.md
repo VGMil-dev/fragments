@@ -99,4 +99,4 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Auditor ejecutado: `node evals/scripts/audit-semantic-corpus.mjs` — exit 0, `status: BLOCKED`, `blockedLabels: [A, B, C]`, `qualityComparison: NOT_PERFORMED`, `scoreComputed: false`. Los casos siguen sin `reviewOutput`; faltan respuestas históricas completas para los SHA A/B/C.
 - `git diff --check` — exit 0. No hubo llamadas a Gateway/proveedores, lectura de secretos ni ejecución de repositorios estudiantiles.
 - Límite: estas pruebas verifican integridad estructural/citas y provenance declarada; no verifican veracidad de contenido, correspondencia real de citas con snapshots, score, ni validez educativa. Calidad semántica real continúa **NO COMPROBADA**. Sigue faltando el export QA autorizado descrito en el preflight (outputs completos enlazados a SHA y resumen vigente de modelo/proveedor/presupuesto).
-- Commit local de código/evidencia pendiente de registrar tras el cierre Git de esta iteración.
+- Commit local: `5233a5e` (`test(F25): valida outputs Review offline`). Rama `codex/f25-offline-response-validator` basada en `origin/main` `3911d401326027898991cde4ad1b8fbd5ed6444a`.
