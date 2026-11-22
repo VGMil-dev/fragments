@@ -22,30 +22,35 @@ import { createTechnologyCatalogHttp } from "../features/mentor/technology-catal
 import { createAssignmentHttp } from "../features/assignments/http.js";
 import { createRequestDiagnostics } from "../features/admin-diagnostics/diagnostics.js";
 import { createAdminDiagnosticsHttp } from "../features/admin-diagnostics/http.js";
-import { createAdminClassroomRequestsHttp } from "../features/admin-requests/http.js";
+import { createAdminClassroomRequestsHttp, type AdminClassroomRequestsAuditEvent } from "../features/admin-requests/http.js";
 import { createAdminClassroomRequestsRepository } from "../features/admin-requests/repository.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
-
-function sendError(response: ServerResponse, status: number, code: string, message: string): void {
-  response.writeHead(status).end(JSON.stringify(errorSchema.parse({ ok: false, error: { code, message } })));
-}
-
-export function createHttpHandler(database: PrismaClient, options: {
+type AdminAuditWrite = (event: AdminClassroomRequestsAuditEvent) => void | Promise<void>;
+type HttpOptions = {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
-} = {}) {
+  adminAuditWrite?: AdminAuditWrite;
+};
+
+function sendError(response: ServerResponse, status: number, code: string, message: string): void {
+  response.writeHead(status).end(JSON.stringify(errorSchema.parse({ ok: false, error: { code, message } })));
+}
+
+export function createHttpHandler(database: PrismaClient, options: HttpOptions = {}) {
   const requestDiagnostics = createRequestDiagnostics();
   const adminDiagnosticsHandler = createAdminDiagnosticsHttp(requestDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null);
   const adminClassroomRequests = createAdminClassroomRequestsRepository(database);
   const adminClassroomRequestsHandler = createAdminClassroomRequestsHttp(adminClassroomRequests, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
-    write: (event) => { process.stdout.write(`${JSON.stringify(event)}\n`); },
+    write: options.adminAuditWrite ?? ((event) => new Promise<void>((resolve, reject) => {
+      process.stdout.write(`${JSON.stringify(event)}\n`, (error?: Error | null) => error ? reject(error) : resolve());
+    })),
   });
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
@@ -104,11 +109,4 @@ export function createHttpHandler(database: PrismaClient, options: {
   };
 }
 
-export function createApiServer(database: PrismaClient, options: {
-  auth?: FragmentsAuthService;
-  mentor?: ReturnType<typeof createMentorService>;
-  logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
-  inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver };
-  trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
-} = {}) { return createServer(createHttpHandler(database, options)); }
+export function createApiServer(database: PrismaClient, options: Omit<HttpOptions, "review"> & { review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver } } = {}) { return createServer(createHttpHandler(database, options)); }

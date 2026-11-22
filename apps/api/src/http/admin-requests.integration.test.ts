@@ -26,40 +26,35 @@ describe("integrated admin classroom requests", () => {
       adminCheck: vi.fn(async (request: { headers: Record<string, unknown> }) => request.headers["x-fixture-role"] === "admin" ? true : request.headers["x-fixture-role"] === "teacher" ? false : null),
       userId: vi.fn(async (request: { headers: Record<string, unknown> }) => request.headers["x-fixture-role"] === "admin" ? "fixture-admin-id" : null),
     } as unknown as FragmentsAuthService;
-    const logs: string[] = [];
-    const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => { logs.push(String(chunk)); return true; });
-    const server = createServer(createHttpHandler(database, { auth }));
+    const auditEvents: unknown[] = [];
+    const auditWrite = vi.fn(async (event: unknown) => { auditEvents.push(event); });
+    const server = createServer(createHttpHandler(database, { auth, adminAuditWrite: auditWrite }));
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
     const url = `http://127.0.0.1:${address.port}/api/admin/classroom-requests?status=pending&limit=20`;
 
-    try {
-      const admin = await fetch(url, { headers: { "x-fixture-role": "admin" } });
-      expect(admin.status).toBe(200);
-      const requestId = admin.headers.get("x-request-id");
-      expect(requestId).toMatch(/^[0-9a-f-]{36}$/i);
-      const body = await admin.json();
-      expect(body).toMatchObject({ ok: true, data: { total: 1, status: "pending", items: [{ classroomTitle: "Aula de integración", requestId: "fixture-enrollment-id" }] } });
-      expect(JSON.stringify(body)).not.toMatch(/fixture-student-id|fixture-admin-id|Contexto privado|decidedBy/i);
-      expect(auth.adminCheck).toHaveBeenCalledOnce();
-      expect(auth.userId).toHaveBeenCalledOnce();
-      expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
-      expect(logs.join("")).toContain(`"requestId":"${requestId}"`);
-      expect(logs.join("")).toContain('"event":"admin.classroom_requests.read"');
-      expect(logs.join("")).toContain('"adminActorId":"fixture-admin-id"');
+    const admin = await fetch(url, { headers: { "x-fixture-role": "admin" } });
+    expect(admin.status).toBe(200);
+    const requestId = admin.headers.get("x-request-id");
+    expect(requestId).toMatch(/^[0-9a-f-]{36}$/i);
+    const body = await admin.json();
+    expect(body).toMatchObject({ ok: true, data: { total: 1, status: "pending", items: [{ classroomTitle: "Aula de integración", requestId: "fixture-enrollment-id" }] } });
+    expect(JSON.stringify(body)).not.toMatch(/fixture-student-id|fixture-admin-id|Contexto privado|decidedBy/i);
+    expect(auth.adminCheck).toHaveBeenCalledOnce();
+    expect(auth.userId).toHaveBeenCalledOnce();
+    expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
+    expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId, event: "admin.classroom_requests.read", occurredAt: expect.any(String), adminActorId: "fixture-admin-id" });
+    expect(JSON.stringify(auditEvents)).not.toMatch(/fixture-student-id|Contexto privado/i);
 
-      const denied = await fetch(url, { headers: { "x-fixture-role": "teacher" } });
-      expect(denied.status).toBe(403);
-      expect(auth.userId).toHaveBeenCalledOnce();
-      expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
-      const anonymous = await fetch(url);
-      expect(anonymous.status).toBe(401);
-      expect(auth.userId).toHaveBeenCalledOnce();
-      expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
-    } finally {
-      stdout.mockRestore();
-    }
+    const denied = await fetch(url, { headers: { "x-fixture-role": "teacher" } });
+    expect(denied.status).toBe(403);
+    expect(auth.userId).toHaveBeenCalledOnce();
+    expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
+    const anonymous = await fetch(url);
+    expect(anonymous.status).toBe(401);
+    expect(auth.userId).toHaveBeenCalledOnce();
+    expect(database.classEnrollment.findMany).toHaveBeenCalledOnce();
   });
 });
