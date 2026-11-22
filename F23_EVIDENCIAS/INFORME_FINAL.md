@@ -1,6 +1,6 @@
 # F23 — Informe de evidencia
 
-Estado de esta revisión: **validación local PASS; integración y producción pendientes**. Commit de implementación en `codex/f23-teacher-dashboard`: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`.
+Estado de esta revisión: **implementación, integración y QA local PASS; release F14 en espera de aprobación manual; despliegue y cuenta docente productiva pendientes**. Commit de implementación `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 integrada con merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` pasó.
 
 ## Referencia visual
 
@@ -39,6 +39,10 @@ La página docente mostró los valores sintéticos reales de `fragments_test`. E
 
 ## Límites y siguientes pasos autorizados
 
-Esta evidencia no acredita merge, tag ni despliegue. Faltan PR y CI, integración normal, release protegida por F14, chequeo y provisionamiento idempotente de la única identidad docente autorizada en `fragments_prod`, verificación de configuración/aceptación de Resend y solicitud segura de reset para que el propietario defina su contraseña. Un HTTP exitoso por sí solo no acredita recepción del correo. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
+La release anotada `v0.5.9` apunta al merge `d0b9334463baf56f1644f305164cb87cf8599393`. En F14 run `44973255280`, `verify-build` y `attest-package` terminaron `success`; `publish-approved-release` permanece `waiting` por revisión manual del entorno protegido `fragments-production`. Por ello, no se acredita todavía publicación ni despliegue. El control Required reviewers quedó habilitado y admin bypass deshabilitado antes de crear el tag.
+
+No se consultó ni modificó `fragments_prod`: el acceso SSH preparado según `docs/SSH_WORKSTATIONS.md` fue bloqueado por la política del comando antes de resolver el host; no se intentó una ruta alternativa. Sigue pendiente comprobar/provisionar idempotentemente solo `vgmiltonisaac@gmail.com`, validar configuración y aceptación de Resend, solicitar el reset y comprobar el enlace sin afirmar recepción. Un HTTP exitoso no acredita entrega. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
+
+La ficha F23 en Notion se actualizó el 2026-11-22 a `En validación`, enlazando PR, CI y release, y dejando deployment y cuenta pendientes.
 
 No hay todavía vínculo verificable de proyectos/Review con aula en el panel y la actividad no tiene una consulta docente autorizada. No se presenta progreso ficticio.

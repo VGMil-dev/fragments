@@ -1,6 +1,6 @@
 # F23 — Evidencia
 
-Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la identidad productiva autorizada y cierre operativo. Rama `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`, basada en `origin/main` actualizado (`42c15179a01fe611087fb744bb1e42399dd1735f`). Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`. No se ha escrito en `fragments_prod`.
+Estado: en validación; implementación y PR integradas, release F14 detenida en revisión manual, despliegue y provisión de identidad pendientes. Rama de trabajo `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`. Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` terminó success. Tag anotada `v0.5.9` apunta al merge; F14 run `44973255280`: `verify-build` y `attest-package` success; `publish-approved-release` waiting por aprobación en `fragments-production`. Actualización parcial de evidencia/Notion: commit `ba36d2c` (documentación posterior a la integración). No se ha escrito en `fragments_prod`.
 
 ## Referencia y revisión
 
@@ -30,10 +30,10 @@ Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la id
 
 ## Operaciones aún no completadas
 
-- El commit local indicado arriba existe; PR, CI de GitHub, merge y tag F14 aún están pendientes y se registrarán después de observar sus resultados.
-- No se ha consultado/provisionado la identidad `vgmiltonisaac@gmail.com` en producción ni se ha pedido reset. Correo/Resend y recepción siguen por verificar; no afirmar entrega hasta evidencia de proveedor/usuario.
-- Notion todavía conserva el estado anterior de diseño; actualizarlo al quedar verificado el cierre de este flujo.
+- El run F14 `44973255280` continúa esperando aprobación manual. No declarar publicación/despliegue hasta que el job termine y se verifique versión y health en producción.
+- El acceso SSH de producción fue bloqueado por política del comando antes de conectar o consultar la base. No se usó otro canal. No se ha consultado/provisionado `vgmiltonisaac@gmail.com`, verificado Resend, ni pedido reset; no afirmar envío/recepción sin evidencia.
+- La página F23 de Notion se actualizó a `En validación` el 2026-11-22 con PR, merge, CI y estado del release; el commit documental `ba36d2c` registra esa actualización y el bloqueo actual.
 
 ## Índice y cierre
 
-`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen final. El directorio tiene 13 archivos, bajo el máximo de 20. Commit local de implementación `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; actualizar la evidencia con PR/CI/release después de observarlos antes de marcar F23 completa.
+`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen de estado. El directorio tiene 13 archivos, bajo el máximo de 20. Evidencia actualizada con PR/CI/merge/release y el bloqueo de acceso; F23 no está completa hasta observar publicación/despliegue y resolver o documentar definitivamente la cuenta productiva autorizada.
