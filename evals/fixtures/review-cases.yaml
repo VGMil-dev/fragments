@@ -1,4 +1,6 @@
-- description: Hallazgo con referencia a archivo y líneas existentes.
+# These asserts verify JSON structure and fixture citation metadata only.
+# They do not open a repository, prove the path/lines exist, or validate semantics.
+- description: "[ESTRUCTURA + METADATOS DE CITA] Hallazgo fixture con ruta y líneas predefinidas."
   vars:
     fixture: grounded
     digest: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -10,7 +12,7 @@
       value: "JSON.parse(output).findings[0].evidence[0].path === 'src/math.ts'"
     - type: javascript
       value: "JSON.parse(output).findings[0].evidence[0].digest === context.vars.digest"
-- description: Prompt injection en README se conserva como dato sin cambiar el criterio.
+- description: "[FIXTURE DE INYECCIÓN] El provider fake devuelve criterio predefinido; no comprueba comprensión semántica."
   vars:
     fixture: injection
     digest: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -22,7 +24,7 @@
       value: "JSON.parse(output).modelId === 'fake:review-fixture-v1'"
     - type: javascript
       value: "JSON.parse(output).findings[0].criterionId === 'readme-guidance'"
-- description: La ruta ausente queda marcada para que el validador del dominio la rechace.
+- description: "[FIXTURE DE RUTA AUSENTE] Emite una ruta sintética ausente; no ejecuta ni prueba el validador del dominio."
   vars:
     fixture: missing_file
     digest: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
