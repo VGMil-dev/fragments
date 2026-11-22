@@ -30,8 +30,8 @@ Estado: en validación; implementación, PR, release F14 y health/version públi
 
 ## Operaciones aún no completadas
 
-- El aprovisionamiento de `vgmiltonisaac@gmail.com` y su rol/permisos productivos no están verificados. El único script de repositorio `provision:teacher` es de QA local y habilita signup; se descartó para producción. SSH fue bloqueado antes de conexión y no hay otro canal administrativo autorizado disponible en esta sesión.
-- No se consultaron credenciales/configuración Resend ni se solicitó reset; no se envió correo ni se comprobó su aceptación. No se accedió a `/teacher/dashboard` con una sesión docente productiva.
+- SSH `servidor` conectó con host key y autenticación pública verificadas. Lectura de producción confirmó `current_database() = fragments_prod` y una identidad coincidente con `isTeacher=false`, `role=user`, ligada a `credential` y `github`. No se tocó esa identidad ni otras por posible colisión con una cuenta estudiantil. `AUTH_ENABLED=true` y Resend API key/remitente configurados (solo presencia comprobada; valores no leídos ni impresos). No se creó cuenta docente, no se solicitó reset ni hubo correo; aceptación del proveedor, permisos y acceso autenticado siguen pendientes hasta resolver la colisión sin afectar identidad estudiantil.
+- La presencia de configuración Resend se comprobó sin leer sus valores. No se solicitó reset ni se envió correo por la colisión identificada; su aceptación no se comprobó. No se accedió a `/teacher/dashboard` con una sesión docente productiva.
 - Las páginas F14/F23 de Notion registran Required reviewers desactivado, el run F14 exitoso y las comprobaciones públicas; la identidad sigue pendiente.
 
 ## Índice y cierre
