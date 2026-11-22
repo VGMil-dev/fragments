@@ -4,7 +4,7 @@
 
 Implementación feature-local y pruebas completadas en `codex/f22-admin-requests`, creada limpia desde `origin/main` (`a3c189f041694ccf898f208de41a51c36ad41a04`). El PR #93 estaba cerrado/mergeado en `b7ffa4cfb18eb99481386ff936f9e3d288a781e8`; su rama `codex/f22-readonly-diagnostics` se conservó intacta. Commit de implementación: `b4cb44acfa9026d780eebe938eaaf61dfaf327e4`. Después se integraron los dos commits documentales que avanzaron `origin/main`, merge local `15b53e8573819129294c9c45638a3e5c658a4907`.
 
-El módulo aún no está conectado a rutas compartidas ni validado contra una base de datos o sesión admin reales. Requiere integración del arquitecto y posterior smoke de la ruta integrada. No hubo producción, secretos, Ego Lite ni escrituras de base.
+PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/98 (head inicial `0613a6776d720c4d2e781b582eda4d7c2d9d961a`). El módulo aún no está conectado a rutas compartidas ni validado contra una base de datos o sesión admin reales. Requiere integración del arquitecto y posterior smoke de la ruta integrada. No hubo producción, secretos, Ego Lite ni escrituras de base.
 
 ## Implementación
 
@@ -36,4 +36,4 @@ El módulo aún no está conectado a rutas compartidas ni validado contra una ba
 
 - No se verificó el contenido actual de `fragments_prod` ni `fragments_test`; el comportamiento con filas persistidas depende de integrar la ruta con el Prisma client existente.
 - El DTO omite identidad del estudiante, por lo que esta vista permite inspeccionar estados agregados por aula y fechas, pero no identificar a quién corresponde una solicitud. Cualquier acción para aprobar/rechazar queda fuera de F22.2.
-- El módulo aún no tiene PR abierto; falta push normal de la rama y crear PR hacia `main`. `task-list/TASKS.md` sigue siendo propiedad del planner y aún no tiene fila F22.2.
+- PR #98 abierto y publicado por push normal. `task-list/TASKS.md` sigue siendo propiedad del planner y aún no tiene fila F22.2.
