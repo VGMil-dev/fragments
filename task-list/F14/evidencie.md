@@ -239,3 +239,4 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45074528240`: `verify-build`, pruebas/build de la fuente etiquetada, PostgreSQL disposable y restore, build ARM64, `attest-package`/Sigstore y `publish-approved-release` SUCCESS.
 - Aplicación automática verificada desde el sitio público: `/health` status `ok`, database `ready`; `/assets/index-DQ4oYmnp.js` contiene versión `v0.5.20` y el SHA exacto. No se realizó deploy manual, SSH, reinicio ni cambio de infraestructura.
 - `Required reviewers` sigue OFF según decisión F14; no se alteró configuración del entorno. Ledger/archivo y hash de backup/labels del host NO COMPROBADOS.
+- Commit de reconciliación de evidencias: `303f2c824670d2bc1100f305a08bde4507b5f876`; PR documental y CI pendientes.
