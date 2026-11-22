@@ -178,4 +178,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - TDD: las tres pruebas nuevas fallaron antes del cambio porque faltaban botones de reintento; tras el cambio, `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx --maxWorkers=1` — PASS, 6/6.
 - Suite focal web: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15. `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Sin cambios a contratos, API, migraciones, datos productivos ni sesiones. Sin navegador ni release.
-- Commit de este incremento pendiente de registrarse; PR nuevo pendiente.
+- Commit de implementación: `d72fa6111c9418e18fbea5d7e8923634c421986c`; PR nuevo pendiente.
