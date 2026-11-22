@@ -1,6 +1,6 @@
 # F23 — Evidencia
 
-Estado: en validación; implementación, PR, release F14 y health/version públicas están verificadas; la cuenta docente productiva sigue pendiente. Rama de trabajo `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`. Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` terminó success. Tag anotada `v0.5.9` apunta al merge; F14 run `44973255280`: `verify-build`, `attest-package` y `publish-approved-release` success. Required reviewers está desactivado; Wait timer y admin bypass también; se conserva el entorno y tag rule `v*.*.*`. GET `/` y `/health` 200; `database=ready`; bundle público confirma `v0.5.9` y `d0b9334`. PRs documentales #82 y #83 integradas por merge `6bc7ca7` y `a4822bf`; CI `44974016480` y `44974308892` success. No se ha escrito en `fragments_prod`.
+Estado: en validación; implementación, PR, release F14 y health/version públicas están verificadas; la cuenta docente productiva sigue pendiente. Actualización de colisión productiva: commit `d91be42`. Rama de trabajo `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`. Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` terminó success. Tag anotada `v0.5.9` apunta al merge; F14 run `44973255280`: `verify-build`, `attest-package` y `publish-approved-release` success. Required reviewers está desactivado; Wait timer y admin bypass también; se conserva el entorno y tag rule `v*.*.*`. GET `/` y `/health` 200; `database=ready`; bundle público confirma `v0.5.9` y `d0b9334`. PRs documentales #82 y #83 integradas por merge `6bc7ca7` y `a4822bf`; CI `44974016480` y `44974308892` success. No se ha escrito en `fragments_prod`.
 
 ## Referencia y revisión
 
@@ -30,8 +30,8 @@ Estado: en validación; implementación, PR, release F14 y health/version públi
 
 ## Operaciones aún no completadas
 
-- El aprovisionamiento de `vgmiltonisaac@gmail.com` y su rol/permisos productivos no están verificados. El único script de repositorio `provision:teacher` es de QA local y habilita signup; se descartó para producción. SSH fue bloqueado antes de conexión y no hay otro canal administrativo autorizado disponible en esta sesión.
-- No se consultaron credenciales/configuración Resend ni se solicitó reset; no se envió correo ni se comprobó su aceptación. No se accedió a `/teacher/dashboard` con una sesión docente productiva.
+- SSH `servidor` conectó con host key y autenticación pública verificadas. Lectura de producción confirmó `current_database() = fragments_prod` y una identidad coincidente con `isTeacher=false`, `role=user`, ligada a `credential` y `github`. No se tocó esa identidad ni otras por posible colisión con una cuenta estudiantil. `AUTH_ENABLED=true` y Resend API key/remitente configurados (solo presencia comprobada; valores no leídos ni impresos). No se creó cuenta docente, no se solicitó reset ni hubo correo; aceptación del proveedor, permisos y acceso autenticado siguen pendientes hasta resolver la colisión sin afectar identidad estudiantil.
+- La presencia de configuración Resend se comprobó sin leer sus valores. No se solicitó reset ni se envió correo por la colisión identificada; su aceptación no se comprobó. No se accedió a `/teacher/dashboard` con una sesión docente productiva.
 - Las páginas F14/F23 de Notion registran Required reviewers desactivado, el run F14 exitoso y las comprobaciones públicas; la identidad sigue pendiente.
 
 ## Índice y cierre
