@@ -2,7 +2,7 @@
 
 ## Estado
 
-Módulo e integración principal implementados en `codex/f22-readonly-diagnostics`; pruebas focalizadas y typechecks pasan. Pendientes PR/CI y QA visual Ego Lite con rol admin disponible.
+Módulo e integración implementados en `codex/f22-readonly-diagnostics`; pruebas focalizadas y typechecks pasan. PR #93 abierto. El primer intento de fusión fue rechazado por la protección de `main` porque, tras integrar F25, faltaba `verify` para la nueva base. La rama se sincronizó mediante merge normal con `origin/main`; CI nuevo pendiente. QA visual autenticado Ego Lite queda NO COMPROBADO: no existe preview accesible y las direcciones locales 127.0.0.1:5173 y :4173 rechazaron la conexión. No se abrió producción ni se cerraron sesiones docente/estudiante.
 
 ## Cambios y commit
 
@@ -24,9 +24,10 @@ Módulo e integración principal implementados en `codex/f22-readonly-diagnostic
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web typecheck` — PASS.
 - `git diff --check` — PASS.
+- Verificación repetida después de sincronizar `origin/main` (incluye F25 #92): API focalizada 7/7 PASS; web focalizada 4/4 PASS; API y web typecheck PASS. El check CI del head actualizado queda pendiente después del push.
 
 ## Integración y límites pendientes
 
-- No se hizo QA visual Ego Lite ni prueba autenticada con una sesión real de administrador; esas validaciones quedan NO COMPROBADAS.
+- Ego Lite intentó abrir `http://127.0.0.1:5173/admin/diagnostics` y `http://127.0.0.1:4173/admin/diagnostics`; ambas conexiones fueron rechazadas. No había preview accesible. Sin despliegue/servicios nuevos, la validación visual, navegación y sesión autenticada real de administrador quedan NO COMPROBADAS.
 - No hay persistencia tras reiniciar API; stdout y buffer en memoria son los límites deliberados de esta fase.
 - No se accedió a `fragments_test`, `fragments_prod`, VPS, proveedores IA o despliegue. La UI usa la sesión same-origin de Better Auth y el server impone rol; la comprobación real de acceso sigue pendiente.
