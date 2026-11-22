@@ -46,12 +46,6 @@ export function createAdminClassroomRequestsHttp(store: AdminClassroomRequestsSt
       return "handled";
     }
     const status = rawStatus as AdminEnrollmentStatus | null;
-    let result: AdminEnrollmentRequestPage;
-    try { result = await store.list({ limit, offset, ...(status ? { status } : {}) }); }
-    catch {
-      send(response, 500, { ok: false, error: { code: "READ_FAILED", message: "No se pudieron cargar las solicitudes académicas." } });
-      return "handled";
-    }
     let adminActorId: string | null;
     try { adminActorId = await audit.getActorId(request); }
     catch { adminActorId = null; }
@@ -65,6 +59,12 @@ export function createAdminClassroomRequestsHttp(store: AdminClassroomRequestsSt
       await audit.write({ requestId, event: "admin.classroom_requests.read", occurredAt: now().toISOString(), adminActorId });
     } catch {
       send(response, 503, { ok: false, error: { code: "AUDIT_UNAVAILABLE", message: "No se pudo registrar la consulta administrativa." } });
+      return "handled";
+    }
+    let result: AdminEnrollmentRequestPage;
+    try { result = await store.list({ limit, offset, ...(status ? { status } : {}) }); }
+    catch {
+      send(response, 500, { ok: false, error: { code: "READ_FAILED", message: "No se pudieron cargar las solicitudes académicas." } });
       return "handled";
     }
     send(response, 200, { ok: true, data: { ...result, limit, offset, status } });
