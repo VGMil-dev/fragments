@@ -10,7 +10,14 @@
 ## Verificación
 
 - TDD rojo: pruebas nuevas fallaron en ambas pantallas porque se mostraba el error genérico para 401.
-- Verde, typecheck, commit y CI: pendiente.
+- TDD verde, repetido después del commit de implementación: `pnpm --filter @fragments/web exec vitest run src/features/admin-teachers/AdminTeachersPanel.test.tsx src/features/admin-diagnostics/AdminDiagnosticsScreen.test.tsx --maxWorkers=1` — PASS, 8/8 (22 nov 2026, 15:06:11 local).
+- `pnpm --filter @fragments/web typecheck`, repetido después del commit de implementación — PASS (22 nov 2026, 15:06:11 local).
+- `git diff --check` — PASS después del commit de implementación y al cerrar evidencia.
+
+## Commit
+
+- Implementación: `a069102daf4b23c75730c3944226a08d46a3daf5` (`feat(admin-console): distingue estados de acceso`).
+- Evidencia actualizada en commit documental posterior; no se reescribe historia.
 
 ## Limitaciones
 
