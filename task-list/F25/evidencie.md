@@ -30,3 +30,8 @@ offline-provider assertions: 5 passed; calls: 0 external
 ## Límites
 
 El resultado solo prueba repetibilidad/estructura del proveedor fake y la presencia de limitaciones explícitas. No prueba la calidad, calibración ni validez educativa de modelos reales ni del proveedor productivo. No se ejecutó el script `evals/scripts/audit-public-fixtures.mts`: crea un lector GitHub REST y requeriría llamadas de red.
+
+## Cierre Git
+
+- Commit de implementación y documentación: `ee51314b780c64cb4695f27318ad588220f9dad9` (`docs(F25): documenta baseline offline de Review`).
+- Rama local: `codex/f25-offline-calibration`; árbol limpio tras el commit.
