@@ -150,14 +150,18 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Commit incremental: `72cd2a52d4a124f01b5ede499ebfa21f49955955`. Sin push ni cambios fuera del alcance.
 
+## PR #116 y post-release Ego Lite v0.5.16 — 2026-11-22
+
+- PR #116 se integró normalmente en `main` como `23528bccfb256dabaa3d6317a36138ad6f0edbd6`; CI `45060350800` SUCCESS. Revisión independiente PASS. El caso adicional de solo habilidades archivadas está cubierto.
+- F14 `v0.5.16`, run `45060644194`, se aplicó según bundle público `/assets/index-B5aKBWSl.js`; footer Ego Lite confirmó `v0.5.16 · 23528bc`, `/health` `database=ready`.
+- Ego Lite docente: el detalle real de Programación Móvil mostró cero habilidades activas y el enlace contextual “Ir al catálogo de habilidades”. La navegación abrió `/teacher/skills` y mostró el formulario; regresé el navegador al mismo detalle. Sin creación/guardado.
+- Ego Lite estudiante: matrícula activa de Programación Móvil visible, sin habilidades autorizadas ni misiones publicadas. Las páginas docente y estudiante quedaron abiertas; no se alteró ninguna sesión o dato.
+- Resultado real limitado: link y navegación docente PASS; inscripción/estados estudiantiles presentes. Crear habilidad, habilitarla, publicar misión, propuesta, Mentor y provider IA permanecen NO COMPROBADOS; no se escribieron datos productivos. Las pruebas existentes son HTTP/UI con fixtures/fake y PostgreSQL disposable.
+
 ## Incremento UI docente — inspección de snapshots publicados — 2026-11-22
 
-- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade un disclosure “Revisar versiones publicadas” en cada misión con historial. Cada versión muestra su título, consigna, objetivos, habilidades requeridas y optativas snapshot y el número `mentorContextVersion`; el disclosure inicia cerrado y no tiene controles de edición.
-- `apps/web/src/features/assignments/assignments-panel.css` organiza historial y snapshots dentro de la tarjeta de misión respetando el diseño existente.
-- `apps/web/src/features/assignments/AssignmentsPanel.test.tsx` cubre dos snapshots históricos con distintos contextos, habilidades y consigna; la prueba falló primero por ausencia del disclosure y pasó tras el cambio.
-- `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — PASS, 4/4.
-- `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
-- Fuente: `ClassroomAssignment.versions` existente. Sin cambios a contratos, rutas compartidas, schema, migraciones, APIs, datos o `TASKS.md`.
-- Commit de este incremento: `6b92166929c027a00d88821bf84ee81fa21dd030`; no hay QA visual ni verificación en producción.
-
-- Revisión independiente de 6b92166/6de9961: PASS, sin defectos accionables. Confirmó origen ClassroomAssignment.versions, snapshots publicados en orden ascendente, disclosure nativo cerrado y sin edición. Límite: el revisor no repitió tests/typecheck ni Ego Lite; la prueba verifica contenido y cerrado inicial, no apertura/teclado.
+- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade un disclosure “Revisar versiones publicadas” en cada misión con historial. Cada versión muestra título, consigna, objetivos, habilidades obligatorias y optativas snapshot y `mentorContextVersion`; inicia cerrado y no ofrece controles de edición.
+- La prueba `AssignmentsPanel.test.tsx` cubre dos snapshots con distinto contexto y habilidades; TDD falló antes por ausencia del disclosure y pasó tras el cambio. Verificación: prueba focal 4/4 PASS, `pnpm --filter @fragments/web typecheck` PASS y `git diff --check` PASS.
+- Revisión independiente PASS: confirmó fuente `ClassroomAssignment.versions`, solo snapshots publicados en orden ascendente y disclosure sin edición. No repitió pruebas ni typecheck; interacción/teclado no se ejercitaron y se apoyan en el elemento nativo `<details>`.
+- Commits de implementación y evidencia: `6b92166929c027a00d88821bf84ee81fa21dd030`, `6de99611ef6d68aa82ce5b20f4122b7525f0483e`, `f524ba669332ec1c188a01461931963aee2f6cfb`.
+- No cambia contratos, rutas compartidas, API, schema, migraciones ni datos. QA visual y verificación productiva del historial siguen NO COMPROBADOS; sesiones Ego Lite docente y estudiante quedan abiertas.

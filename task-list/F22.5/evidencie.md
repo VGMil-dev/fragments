@@ -36,3 +36,9 @@
 
 - Better Auth real, PostgreSQL real, existencia/conteo de cuentas docentes, sesión admin y lectura productiva del directorio/logs: **NO COMPROBADOS**. CI/local usa fixtures/fakes; la ruta integrada aún requiere PR/CI/release.
 - No hay cursor de página anterior en el API; la UI conserva cursores vistos en memoria y solicita la página anterior de nuevo.
+
+## Integración y release v0.5.15 — 2026-11-22
+
+- PR #113 integrado normalmente como `daff05564e71d3b2a022a4d9f0b5dae63d79967d`; CI `45057596835` SUCCESS y revisión independiente PASS. Tag `v0.5.15`, F14 run `45058073432` SUCCESS en tres jobs.
+- Publicación aplicada: bundle pasó a `assets/index-yqmDb2F4.js` con `v0.5.15` y ruta de directorio docente. `/health` mostró `database=ready`; GET anónimo `/api/admin/teachers?limit=1` devolvió 401 sin datos.
+- El paso verificado confirma que la ruta está desplegada y protegida ante anónimo, no que una sesión admin pueda leer el directorio. Better Auth admin real, PostgreSQL/cuentas docentes y salida de lista continúan NO COMPROBADOS. No hubo escrituras ni migraciones.

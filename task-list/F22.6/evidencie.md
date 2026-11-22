@@ -24,3 +24,9 @@
 
 - El filtro solo permite explorar los eventos devueltos por la consulta existente (máximo actual 50); no amplía la muestra ni altera su retención efímera.
 - No se ejecutó suite completa ni revisión visual de navegador; el alcance pidió pruebas UI focales, typecheck y diff check, y excluyó navegador.
+
+## PR #115 y aplicación v0.5.16 — 2026-11-22
+
+- PR #115 se integró normalmente como `08cfe01e6c7a03fab8cc15009ecc59e86e6118ce`; CI `45060021130` SUCCESS y revisión independiente PASS.
+- La prueba UI focal pasó 4/4 y fue repetida por el revisor. Filtro por tipo sobre la muestra local devuelta (máximo 50), con etiqueta nativa, estado vacío, actualización y filtro conservado; API/retención intactas.
+- Incluida en F14 `v0.5.16` (run `45060644194` SUCCESS), aplicada según bundle público `assets/index-B5aKBWSl.js`; `/health` DB ready. La sesión admin/feed real y retención host siguen NO COMPROBADOS.
