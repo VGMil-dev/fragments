@@ -7,7 +7,7 @@
 - Verificación local fresca: `pnpm --filter @fragments/api exec vitest run src/features/admin-requests/http.test.ts --maxWorkers=1` — PASS, 4/4; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
 - Sin producción, bases reales, sesiones ni cambios de permisos. Falta CI del PR de integración arquitectónica y el resto de F22.2 (sesión admin/retención stdout) sigue NO COMPROBADO.
 
-La corrección está integrada localmente en la rama arquitectónica `codex/f22-queue-integration`, commit `6257fdb`: `apps/api/src/features/admin-requests/http.ts` resuelve actor y confirma `audit.write` antes de `store.list`. Tests API 4/4 y typecheck PASS; se incluirá en el PR de integración F22.3. Pendientes PR/CI y despliegue F14; no afirmar que ya está en producción.
+La corrección está en la rama arquitectónica `codex/f22-queue-integration`, commit `6257fdb`: `apps/api/src/features/admin-requests/http.ts` resuelve actor y confirma `audit.write` antes de `store.list`. Tests API 4/4 y typecheck PASS. PR #103 contiene el cambio; CI final y despliegue F14 se registrarán tras su cierre. No afirmar que ya está en producción.
 
 ## Estado
 
