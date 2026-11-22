@@ -4,6 +4,7 @@ import {
   TeacherStudentsPageSchema,
 } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
+import { loadProposalAssignmentContext } from "../assignments/proposal-context.js";
 
 const studentWhere = { isTeacher: false, OR: [{ role: null }, { role: { not: { contains: "admin" } } }], accounts: { some: { providerId: "github" } } };
 function avatar(value: string | null): string | null {
@@ -63,7 +64,8 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
     },
     async listOwnedProposals(ownerUserId: string) {
       const rows = await database.proposal.findMany({ where: { ownerUserId }, orderBy: { updatedAt: "desc" }, take: 200 });
-      return rows.map(row => ({ id: row.id, version: row.version, proposal: row.proposalJson, updatedAt: row.updatedAt.toISOString() }));
+      return Promise.all(rows.map(async row => ({ id: row.id, version: row.version, proposal: row.proposalJson, assignmentVersionId: row.assignmentVersionId,
+        assignmentContext: await loadProposalAssignmentContext(database, row.assignmentVersionId), updatedAt: row.updatedAt.toISOString() })));
     },
     async listStudents(offset = 0, limit = 20) {
       const safeOffset = Math.max(0, Math.trunc(offset)), safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));

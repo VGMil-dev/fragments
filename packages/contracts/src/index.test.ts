@@ -46,6 +46,9 @@ import {
   ClassroomCreateRequestSchema,
   ClassroomUpdateRequestSchema,
   SkillCreateRequestSchema,
+  AssignmentDraftSchema,
+  AssignmentVersionSchema,
+  StudentAssignmentSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
@@ -79,6 +82,20 @@ const analysis = {
 };
 
 describe("shared API contracts", () => {
+  it("keeps mission required and optional skills disjoint and snapshots published versions", () => {
+    const draft = { title: "Lista de tareas", instructions: "Construye una lista con Expo.", objectives: ["Agregar y completar una tarea"], requiredSkillIds: ["skill-a"], optionalSkillIds: ["skill-b"] };
+    expect(AssignmentDraftSchema.safeParse(draft).success).toBe(true);
+    expect(AssignmentDraftSchema.safeParse({ ...draft, optionalSkillIds: ["skill-a"] }).success).toBe(false);
+    expect(AssignmentDraftSchema.safeParse({ ...draft, teacherId: "teacher-1" }).success).toBe(false);
+    const version = { id: "version-1", assignmentId: "assignment-1", version: 1, status: "published", title: draft.title, instructions: draft.instructions, objectives: draft.objectives,
+      requiredSkills: [{ id: "skill-a", name: "React Native", description: null }], optionalSkills: [{ id: "skill-b", name: "Expo", description: "Herramientas de Expo." }], mentorContextVersion: 1, createdAt: now };
+    expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
+    expect(AssignmentVersionSchema.safeParse({ ...version, version: 0 }).success).toBe(false);
+    expect(StudentAssignmentSchema.safeParse({ ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
+      mentorContext: { version: 1, publishedAt: now, config: { subject: "Programación", theme: "Lista de tareas", assignment: "Construye una lista con Expo.", requirements: ["Agregar y completar una tarea"],
+        expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] } } }).success).toBe(true);
+  });
+
   it("validates classroom input without accepting client-supplied ownership", () => {
     const valid = { title: "Grupo A", subject: "Programación", groupLabel: "10A" };
     expect(ClassroomCreateRequestSchema.safeParse(valid).success).toBe(true);

@@ -133,6 +133,7 @@
 .student-classrooms__status { display: inline-flex; padding: .25rem .55rem; border-radius: 999px; background: color-mix(in srgb, var(--f16-lime) 18%, var(--f16-surface)); font-size: .84rem; }
 .student-classrooms__skills { padding-left: 1rem; border-left: 1px solid var(--f16-border); }
 .student-classrooms__skills h4 { margin: 0 0 .4rem; }
+.student-classrooms__missions { grid-column: 1 / -1; min-width: 0; }
 .student-classrooms__skills ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
 .student-classrooms__skills li { padding: .3rem .55rem; border: 1px solid var(--f16-border); border-radius: 999px; }
 .student-classrooms__requests li { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem; border-bottom: 1px solid var(--f16-border); }
