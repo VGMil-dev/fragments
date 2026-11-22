@@ -199,3 +199,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - PR #126 implementa en Mis aulas reintento independiente por aula para errores de habilidades y misiones. Código `d72fa6111c9418e18fbea5d7e8923634c421986c`; CI final `45071108105` PASS, suite focal 15/15, typecheck y diff-check PASS. Revisión independiente PASS (head `d4c6c3b`; el commit posterior solo actualizó `TASKS.md`). Main merge `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
 - F14 `v0.5.19`, run `45071360770`, aplicada por timer/agente normal. SSH read-only confirma web/API healthy en SHA exacto; `/health` ok/DB ready; bundle público `index-BgnTqOr6.js` confirma versión/SHA y ambos botones retry.
 - El PR no toca contratos, rutas compartidas, API, esquema ni migraciones. No hubo escrituras productivas. En producción no se provocó una falla para ejercitar retry; ese recorrido sigue NO COMPROBADO en navegador. La misión real e historial de contexto tampoco pueden validarse porque el aula QA no tiene misiones/habilidades.
+
+## Continuidad UI — asociación segura de misión en Mentor — 2026-11-22
+
+- La prueba de composición `apps/web/src/App.student-flow.test.tsx` reproduce la transición desde Mis aulas: iniciar desde misión v1, comprobar contexto F11 snapshot v7 y guardar con el `assignmentVersionId` exacto; luego volver al catálogo, abrir Mentor desde la navegación y comprobar contexto general v2 sin el ID anterior.
+- La prueba detectó que el estado seleccionado sobrevivía al cambio de ruta. `apps/web/src/App.tsx` ahora limpia la misión al volver y al abrir Mentor desde ambos accesos de navegación.
+- Verificación fresca: `pnpm exec vitest run src/App.student-flow.test.tsx` PASS 1/1; `pnpm --filter @fragments/web test` PASS 181/181; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
+- Los APIs se simulan en esta prueba. No se comprobó persistencia remota ni producción; la integración real HTTP/PostgreSQL y Mentor fake previa sigue en sus evidencias anteriores. Sin cambio de contratos, rutas de servidor, esquema, migraciones o datos.
+- Commit de implementación/evidencia y PR aún pendientes.

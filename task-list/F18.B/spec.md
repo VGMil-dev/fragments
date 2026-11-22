@@ -59,3 +59,10 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - GIVEN falla la carga de misiones de un aula activa, WHEN el estudiante activa “Reintentar misiones”, THEN se vuelve a solicitar solo esa lista y desaparece el error tras una respuesta exitosa.
 - GIVEN falla la carga de habilidades de un aula activa, WHEN el estudiante activa “Reintentar habilidades”, THEN se vuelve a solicitar solo ese catálogo autorizado y desaparece el error tras una respuesta exitosa.
 - Los errores se anuncian con `role="alert"`; cada reintento anuncia `role="status"` mientras carga. Solicitudes simultáneas duplicadas de la misma combinación aula/recurso se coalescen; el recurso independiente puede reintentarse por separado.
+
+## Incremento de continuidad — limpiar selección de misión al volver a Mentor
+
+- GIVEN el estudiante inicia una propuesta desde una versión publicada, WHEN guarda el borrador, THEN se envía el `assignmentVersionId` exacto y Mentor recibe el `mentorContext` del snapshot seleccionado.
+- GIVEN el estudiante vuelve al catálogo desde Mentor y luego abre Mentor desde la navegación, WHEN crea y guarda una propuesta nueva, THEN no se adjunta el `assignmentVersionId` anterior y se consulta el contexto Mentor general.
+- Ambos accesos de navegación a Mentor limpian la misión seleccionada; el botón de volver desde Mentor también limpia esa selección.
+- Verificación mediante prueba de composición UI con APIs y proveedor controlados por fakes. No demuestra guardado remoto, datos de producción ni calidad del proveedor IA.

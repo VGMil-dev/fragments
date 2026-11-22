@@ -68,3 +68,10 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - No objetivos: cambiar contratos/APIs, la lista principal de aulas, autenticación, datos o sesiones reales.
 - Owner de tarea: PLANNER. Implementación en `StudentClassroomsScreen` y prueba de componente.
 - Criterio: errores accesibles, carga anunciada durante el reintento y deduplicación mientras el mismo recurso/aula tenga una solicitud pendiente.
+
+## Incremento de continuidad — limpiar selección de misión al volver a Mentor
+
+- Problema: al volver desde una propuesta iniciada con misión, la selección de la misión podía sobrevivir al cambio de ruta. Abrir Mentor desde la navegación podía asociar por error una propuesta nueva a la versión anterior.
+- Objetivo: al abandonar la propuesta hacia el catálogo o abrir Mentor desde la navegación, limpiar el snapshot de misión seleccionado. Iniciar una propuesta desde una misión debe seguir conservando exactamente ese snapshot y su `assignmentVersionId`.
+- Alcance: navegación y estado en `apps/web/src/App.tsx`, con regresión de composición en `apps/web/src/App.student-flow.test.tsx`; sin contratos, endpoints, persistencia o producción.
+- Criterio: una prueba de ruta real de componentes confirma que el borrador iniciado desde la misión lleva su versión publicada, y que después de volver y abrir Mentor por navegación el borrador nuevo no lleva esa asociación y usa el contexto general vigente.
