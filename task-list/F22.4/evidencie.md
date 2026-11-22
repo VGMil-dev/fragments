@@ -3,17 +3,18 @@
 ## Implementación feature-local
 
 - Rama: `codex/f22-audit-log-feed`, basada en el `origin/main` actualizado que contiene PR #104 merge `3911d401`.
-- Commit de implementación: `7dcf49ffff51a2ed6a1606ecc6feed63d6b2b2e2`.
-- PR #105 abierto contra `main`, head `61f37ddb9cdb8dc56e4632f816dfe32c6107f0bb`; CI/revisión/merge todavía pendientes.
+- Commits de implementación: `7dcf49ffff51a2ed6a1606ecc6feed63d6b2b2e2`, `4eff4a1aa9973828f59232815c09ae772f759948`.
+- PR #105 abierto contra `main`; CI `45049905376` SUCCESS en el head anterior `945052eefe5d9f5e12248bfac8d419bd96475bc8`; nuevo head con el evento `admin.audit_log.read` pendiente de CI y revisión independiente.
 - Store: `apps/api/src/features/admin-audit-log/store.ts`.
-- Solo acepta los dos tipos reales emitidos hoy por F22.2/F22.3. Emite el evento completo estructurado al writer inyectado; después retiene una proyección acotada que omite el actor ID. Falla cerrado si la escritura al sink falla.
+- Solo acepta `admin.classroom_requests.read`, `admin.queue_summary.read` y `admin.audit_log.read` (la ruta futura del feed). Emite el evento completo estructurado al writer inyectado; después retiene una proyección acotada que omite el actor ID. Falla cerrado si la escritura al sink falla.
 - El buffer es efímero, máximo 100 registros. No se implementó una ruta/UI compartida; el arquitecto integrará el sink de `apps/api/src/http/app.ts` y la ruta de lectura autenticada/auditada, sin incluir su propio evento en la respuesta.
 - No se contactaron producción, proveedores, bases de datos, hosting ni secretos. Las pruebas usan fake stdout y eventos sintéticos etiquetados `fake`.
 
 ## Verificación local
 
-- `pnpm --filter @fragments/api exec vitest run src/features/admin-audit-log/store.test.ts --maxWorkers=1` — PASS, 5/5.
+- `pnpm --filter @fragments/api exec vitest run src/features/admin-audit-log/store.test.ts --maxWorkers=1` — PASS, 6/6.
 - `pnpm --filter @fragments/api typecheck` — PASS.
+- `pnpm --filter @fragments/api test` — PASS, 121 passed, 68 skipped (17 files skipped; no database-backed tests were claimed as local verification).
 - `git diff --check` — PASS.
 
 ## Limitaciones
