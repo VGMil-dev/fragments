@@ -13,6 +13,7 @@ Módulo e integración principal implementados en `codex/f22-readonly-diagnostic
 - Sólo se modificaron `apps/api/src/features/admin-diagnostics/*` y `apps/web/src/features/admin-diagnostics/*` en el commit funcional.
 - El integrador añadió `adminCheck` en Better Auth que acepta exclusivamente `role=admin` (no `isTeacher`), `observe()` al inicio de cada petición, handler en `createHttpHandler` y ruta web `/admin/diagnostics`. Se probó integrada con auth/DB fake etiquetados; no es una verificación de sesión real.
 - Commit UX/a11y `10032a8`: retención en memoria explícita, nombres de área en español, `<time>`, región enfocada/desplazable, columna HTTP, anuncio de carga y reintento.
+- Commit de integración `7e58cdc07c598da85a32c7d48956515bc2742203` (`feat(f22.1): integra diagnosticos admin`).
 
 ## Verificación local fresca
 
