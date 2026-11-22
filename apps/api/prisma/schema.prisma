@@ -132,13 +132,16 @@ model Proposal {
   updatedAt    DateTime                         @map("updated_at") @db.Timestamptz(3)
   ownerHash    String?                          @map("owner_hash")
   ownerUserId  String?                          @map("owner_user_id")
+  assignmentVersionId String?                   @map("assignment_version_id")
   owner        User?                            @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  assignmentVersion ClassroomAssignmentVersion? @relation(fields: [assignmentVersionId], references: [id], onDelete: Restrict)
   revisions    ProposalRevision[]
   evaluations  MentorEvaluation[]
   galleryOptIn MentorGalleryOptIn?
   moderation   MentorAcademicProjectModeration?
 
   @@index([ownerUserId, updatedAt(sort: Desc)], map: "proposals_owner_user")
+  @@index([assignmentVersionId], map: "proposals_assignment_version")
   @@map("proposals")
 }
 
@@ -477,6 +480,7 @@ model ClassroomAssignmentVersion {
   mentorContextVersion Int                @map("mentor_context_version")
   createdAt            DateTime           @map("created_at") @db.Timestamptz(3)
   assignment           ClassroomAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  proposals            Proposal[]
 
   @@unique([assignmentId, version])
   @@index([assignmentId, version(sort: Desc)], map: "classroom_assignment_versions_latest")

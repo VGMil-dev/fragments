@@ -62,7 +62,10 @@ describe("AssignmentsPanel", () => {
       id: "fixture-version", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
       title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
       requiredSkills: [{ id: skill.id, name: skill.name, description: null }], optionalSkills: [], status: "published",
-      mentorContextVersion: 3, createdAt: "2026-11-22T00:00:00.000Z",
+      mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: {
+        subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
+        rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
+      } }, createdAt: "2026-11-22T00:00:00.000Z",
     } as StudentAssignment;
     const onStartProposal = vi.fn();
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />);

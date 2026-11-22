@@ -22,7 +22,13 @@ function memoryDb() {
       create: vi.fn(async ({ data }: any) => { state.versions.push(data); return data; }),
     },
     classroomSkillAvailability: { findMany: vi.fn(async ({ where }: any) => where.skillId.in.includes("fixture-skill") ? [{ skillId: "fixture-skill", skill: { id: "fixture-skill", name: "Observación", description: null } }] : []) },
-    mentorControlVersion: { findFirst: vi.fn(async () => ({ version: 3 })) },
+    mentorControlVersion: {
+      findFirst: vi.fn(async () => ({ version: 3 })),
+      findUnique: vi.fn(async () => ({ version: 3, publishedAt: new Date("2026-11-22T00:00:00.000Z"), configJson: {
+        subject: "Otra materia", theme: "Tema", assignment: "Consigna", requirements: [], expectedLevel: "Bachillerato",
+        rubricTitle: "Rúbrica", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Evidencia verificable", weight: 100 }],
+      } })),
+    },
     classEnrollment: { findFirst: vi.fn(async ({ where }: any) => state.enrollment?.status === where.status ? state.enrollment : null) },
   };
   return { state, database: { ...tx, $transaction: async (fn: (client: any) => unknown) => fn(tx) } as any };

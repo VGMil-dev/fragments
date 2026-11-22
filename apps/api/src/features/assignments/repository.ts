@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { ClassroomAssignmentSchema, StudentAssignmentSchema } from "@fragments/contracts";
+import { ClassroomAssignmentSchema, MentorPublishedConfigSchema, StudentAssignmentSchema } from "@fragments/contracts";
+import { buildAssignmentMentorConfig } from "./mentor-context.js";
 
 type Draft = { title: string; instructions: string; objectives: string[]; requiredSkillIds: string[]; optionalSkillIds: string[] };
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -71,8 +72,19 @@ export function createAssignmentRepository(database: PrismaClient) {
       const enrollment = await database.classEnrollment.findFirst({ where: { studentId, classroomId, status: "active", classroom: { status: "active" } }, select: { classroom: { select: { id: true, title: true, subject: true } } } });
       if (!enrollment) return null;
       const rows = await database.classroomAssignment.findMany({ where: { classroomId, status: "published", publishedVersion: { not: null } }, include: { versions: true } });
-      return rows.flatMap((row) => { const version = row.versions.find((entry) => entry.version === row.publishedVersion); if (!version) return [];
-        return [StudentAssignmentSchema.parse({ ...version.snapshotJson as object, id: version.id, assignmentId: row.id, version: version.version, classroomId, classroomTitle: enrollment.classroom.title, subject: enrollment.classroom.subject, status: "published", mentorContextVersion: version.mentorContextVersion, createdAt: version.createdAt.toISOString() })]; });
+      const output = [];
+      for (const row of rows) {
+        const version = row.versions.find((entry) => entry.version === row.publishedVersion); if (!version) continue;
+        const control = await database.mentorControlVersion.findUnique({ where: { version: version.mentorContextVersion } });
+        if (!control) continue;
+        const context = MentorPublishedConfigSchema.parse({ version: control.version, publishedAt: control.publishedAt.toISOString(), config: {
+          ...buildAssignmentMentorConfig(control.configJson, version.snapshotJson, enrollment.classroom.subject),
+        } });
+        output.push(StudentAssignmentSchema.parse({ ...version.snapshotJson as object, id: version.id, assignmentId: row.id, version: version.version,
+          classroomId, classroomTitle: enrollment.classroom.title, subject: enrollment.classroom.subject, status: "published",
+          mentorContextVersion: version.mentorContextVersion, mentorContext: context, createdAt: version.createdAt.toISOString() }));
+      }
+      return output;
     },
   };
 }

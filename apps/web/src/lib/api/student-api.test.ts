@@ -39,10 +39,11 @@ describe("createStudentApi", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: updated }), { status: 200 }));
     const api = createStudentApi(createApiClient({ fetcher }));
 
-    await expect(api.saveProposalDraft({ proposal: { title: "Huerto" } })).resolves.toEqual({ ok: true, data: saved });
+    await expect(api.saveProposalDraft({ proposal: { title: "Huerto" }, assignmentVersionId: "assignment-version-1" })).resolves.toEqual({ ok: true, data: saved });
     await expect(api.updateProposalDraft("proposal-1", { expectedVersion: 1, proposal: { problem: "Registrar riegos" } })).resolves.toEqual({ ok: true, data: updated });
     expect(fetcher.mock.calls[0]?.[0]).toBe("/api/me/proposals/drafts");
     expect(fetcher.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toEqual({ proposal: { title: "Huerto" }, assignmentVersionId: "assignment-version-1" });
     expect(fetcher.mock.calls[1]?.[0]).toBe("/api/me/proposals/proposal-1/draft");
     expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toMatchObject({ expectedVersion: 1 });
   });

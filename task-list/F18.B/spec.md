@@ -26,6 +26,8 @@ Una asignación pertenece a un aula transversal y tiene borrador versionado. Pub
 6. GIVEN matrícula pending/rejected/removed, aula archived, o ID de aula manipulado, WHEN consulta, THEN no recibe contenido de esa aula.
 7. GIVEN cliente envía `teacherId`, `studentId`, versiones publicadas editables o IDs de habilidad no habilitadas, WHEN guarda/publica, THEN se rechaza sin persistencia parcial.
 8. Las pruebas de integración confirman la base efectiva `fragments_test`; ninguna prueba F18.B conecta a `fragments_prod`.
+9. Al iniciar propuesta desde una misión, el backend fija la `assignmentVersionId` publicada e inmutable; editar la propuesta no puede cambiarla.
+10. Mentor evalúa con el snapshot de la misión y la versión F11 (`mentorContextVersion`) referenciados, nunca con la versión activa más reciente si la misión está vinculada.
 
 ## UX
 

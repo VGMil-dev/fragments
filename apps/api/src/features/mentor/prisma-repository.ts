@@ -6,12 +6,10 @@ import {
   type GalleryEntry, type ProposalDraftFields, type ProposalDraftResponse, type UpdateProposalRequest, type ProposalResponse, type SubmissionSnapshot,
 } from "@fragments/contracts";
 import type { MentorEvaluation } from "./service.js";
+import { loadProposalAssignmentContext } from "../assignments/proposal-context.js";
 
-function response(row: { id: string; version: number; proposalJson: unknown; updatedAt: Date }): ProposalResponse {
-  return ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: row.proposalJson, updatedAt: row.updatedAt.toISOString() });
-}
-function draftResponse(row: { id: string; version: number; proposalJson: unknown; updatedAt: Date }): ProposalDraftResponse {
-  return ProposalDraftResponseSchema.parse({ id: row.id, version: row.version, proposal: row.proposalJson, updatedAt: row.updatedAt.toISOString() });
+function response(row: { id: string; version: number; proposalJson: unknown; assignmentVersionId?: string | null; updatedAt: Date }): ProposalResponse {
+  return ProposalResponseSchema.parse({ id: row.id, version: row.version, proposal: row.proposalJson, assignmentVersionId: row.assignmentVersionId ?? null, updatedAt: row.updatedAt.toISOString() });
 }
 function withoutExpectedVersion(value: UpdateProposalRequest): ProposalResponse["proposal"] {
   const { expectedVersion: _expectedVersion, ...proposal } = value;
@@ -26,13 +24,17 @@ function proposalObject(value: unknown): Record<string, unknown> { return value 
 export function createPrismaMentorRepository(database: PrismaClient) {
   async function ownedByHash(id: string, ownerHash: string) { return database.proposal.findFirst({ where: { id, ownerHash } }); }
   async function ownedByUser(id: string, ownerUserId: string) { return database.proposal.findFirst({ where: { id, ownerUserId } }); }
+  async function draftResponse(row: { id: string; version: number; proposalJson: unknown; assignmentVersionId?: string | null; updatedAt: Date }): Promise<ProposalDraftResponse> {
+    return ProposalDraftResponseSchema.parse({ id: row.id, version: row.version, proposal: row.proposalJson, assignmentVersionId: row.assignmentVersionId ?? null,
+      assignmentContext: await loadProposalAssignmentContext(database, row.assignmentVersionId), updatedAt: row.updatedAt.toISOString() });
+  }
   async function addRevision(tx: Prisma.TransactionClient, id: string, version: number, proposal: unknown, updatedAt: Date) {
     await tx.proposalRevision.create({ data: { proposalId: id, version, proposalJson: proposal as Prisma.InputJsonValue, updatedAt } });
   }
 
   return {
     async createProposal(proposal: ProposalResponse["proposal"], ownerHash: string | null, ownerUserId?: string, now = new Date()): Promise<ProposalResponse> {
-      const parsed = ProposalResponseSchema.parse({ id: randomUUID(), version: 1, proposal, updatedAt: now.toISOString() });
+      const parsed = ProposalResponseSchema.parse({ id: randomUUID(), version: 1, proposal, assignmentVersionId: null, updatedAt: now.toISOString() });
       await database.$transaction(async (tx) => {
         await tx.proposal.create({ data: { id: parsed.id, version: 1, proposalJson: parsed.proposal as Prisma.InputJsonValue,
           updatedAt: now, ownerHash, ownerUserId: ownerUserId ?? null } });
@@ -43,13 +45,13 @@ export function createPrismaMentorRepository(database: PrismaClient) {
     async getProposal(id: string): Promise<ProposalResponse | null> { const row = await database.proposal.findUnique({ where: { id } }); return row ? response(row) : null; },
     async getOwnedProposal(id: string, ownerHash: string): Promise<ProposalResponse | null> { const row = await ownedByHash(id, ownerHash); return row ? response(row) : null; },
     async getOwnedProposalByUser(id: string, ownerUserId: string): Promise<ProposalResponse | null> { const row = await ownedByUser(id, ownerUserId); return row ? response(row) : null; },
-    async createProposalDraftByUser(proposal: ProposalDraftFields, ownerUserId: string, now = new Date()): Promise<ProposalDraftResponse> {
-      const parsed = ProposalDraftResponseSchema.parse({ id: randomUUID(), version: 1, proposal, updatedAt: now.toISOString() });
+    async createProposalDraftByUser(proposal: ProposalDraftFields, ownerUserId: string, assignmentVersionId: string | null = null, now = new Date()): Promise<ProposalDraftResponse> {
+      const parsed = ProposalDraftResponseSchema.parse({ id: randomUUID(), version: 1, proposal, assignmentVersionId, updatedAt: now.toISOString() });
       await database.$transaction(async (tx) => {
-        await tx.proposal.create({ data: { id: parsed.id, version: 1, proposalJson: parsed.proposal as Prisma.InputJsonValue, updatedAt: now, ownerUserId } });
+        await tx.proposal.create({ data: { id: parsed.id, version: 1, proposalJson: parsed.proposal as Prisma.InputJsonValue, updatedAt: now, ownerUserId, assignmentVersionId } });
         await addRevision(tx, parsed.id, 1, parsed.proposal, now);
       });
-      return parsed;
+      return draftResponse({ id: parsed.id, version: 1, proposalJson: parsed.proposal, assignmentVersionId, updatedAt: now });
     },
     async getOwnedProposalDraftByUser(id: string, ownerUserId: string): Promise<ProposalDraftResponse | null> { const row = await ownedByUser(id, ownerUserId); return row ? draftResponse(row) : null; },
     async listStudentSubmissions(ownerUserId: string) {
@@ -74,16 +76,17 @@ export function createPrismaMentorRepository(database: PrismaClient) {
       return StudentSubmissionsResponseSchema.parse(rows);
     },
     async updateProposalDraftByUser(id: string, ownerUserId: string, expectedVersion: number, proposal: ProposalDraftFields, now = new Date()) {
-      return database.$transaction(async (tx) => {
+      const result = await database.$transaction(async (tx) => {
         const current = await tx.proposal.findFirst({ where: { id, ownerUserId } });
         if (!current) return { status: "not_found" } as const;
         if (current.version !== expectedVersion) return { status: "conflict" } as const;
-        const next = ProposalDraftResponseSchema.parse({ id, version: expectedVersion + 1, proposal: { ...proposalObject(current.proposalJson), ...proposal }, updatedAt: now.toISOString() });
+        const next = ProposalDraftResponseSchema.parse({ id, version: expectedVersion + 1, proposal: { ...proposalObject(current.proposalJson), ...proposal }, assignmentVersionId: current.assignmentVersionId, updatedAt: now.toISOString() });
         const changed = await tx.proposal.updateMany({ where: { id, ownerUserId, version: expectedVersion }, data: { version: next.version, proposalJson: next.proposal as Prisma.InputJsonValue, updatedAt: now } });
         if (!changed.count) return { status: "conflict" } as const;
         await addRevision(tx, id, next.version, next.proposal, now);
         return { status: "updated", proposal: next } as const;
       });
+      return result.status === "updated" ? { ...result, proposal: await draftResponse({ id, version: result.proposal.version, proposalJson: result.proposal.proposal, assignmentVersionId: result.proposal.assignmentVersionId ?? null, updatedAt: new Date(result.proposal.updatedAt) }) } : result;
     },
     async updateProposal(id: string, ownerHash: string, expectedVersion: number, proposal: UpdateProposalRequest, now = new Date()) {
       return database.$transaction(async (tx) => {
@@ -109,9 +112,11 @@ export function createPrismaMentorRepository(database: PrismaClient) {
       return rows.map((row) => ProposalResponseSchema.parse({ id: row.proposalId, version: row.version, proposal: row.proposalJson, updatedAt: row.updatedAt.toISOString() }));
     },
     async getProposalHistoryByUser(id: string, ownerUserId: string): Promise<ProposalDraftResponse[] | null> {
-      if (!await ownedByUser(id, ownerUserId)) return null;
+      const owned = await ownedByUser(id, ownerUserId); if (!owned) return null;
+      const assignmentContext = await loadProposalAssignmentContext(database, owned.assignmentVersionId);
       const rows = await database.proposalRevision.findMany({ where: { proposalId: id }, orderBy: { version: "asc" } });
-      return rows.map((row) => ProposalDraftResponseSchema.parse({ id: row.proposalId, version: row.version, proposal: row.proposalJson, updatedAt: row.updatedAt.toISOString() }));
+      return rows.map((row) => ProposalDraftResponseSchema.parse({ id: row.proposalId, version: row.version, proposal: row.proposalJson, assignmentVersionId: owned.assignmentVersionId,
+        ...(assignmentContext ? { assignmentContext } : {}), updatedAt: row.updatedAt.toISOString() }));
     },
     async setGalleryOptIn(id: string, ownerHash: string, optedIn: boolean, now = new Date()): Promise<{ status: "updated" | "not_found" }> {
       const proposal = await ownedByHash(id, ownerHash); if (!proposal) return { status: "not_found" };

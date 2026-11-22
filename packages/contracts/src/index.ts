@@ -368,6 +368,7 @@ export const ClassroomAssignmentSchema = z.object({
 export const ClassroomAssignmentsResponseSchema = z.array(ClassroomAssignmentSchema).max(200);
 export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.extend({
   classroomId: identifier, classroomTitle: classroomText(120), subject: classroomText(120),
+  mentorContext: MentorPublishedConfigSchema,
 }).strict();
 export const StudentAssignmentsResponseSchema = z.array(StudentAssignmentSchema).max(200);
 export const CreateAssignmentRequestSchema = AssignmentDraftSchema;
@@ -428,7 +429,7 @@ export const ProposalEvaluationInputSchema = ProposalDraftSchema.extend({
   description: nonEmptyText.max(3000),
   purpose: nonEmptyText.max(1000),
 }).strict();
-export const CreateProposalDraftRequestSchema = z.object({ proposal: ProposalDraftFieldsSchema }).strict();
+export const CreateProposalDraftRequestSchema = z.object({ proposal: ProposalDraftFieldsSchema, assignmentVersionId: identifier.optional() }).strict();
 export const UpdateProposalDraftRequestSchema = z.object({
   expectedVersion: z.number().int().min(1),
   proposal: ProposalDraftFieldsSchema,
@@ -441,12 +442,15 @@ export const ProposalResponseSchema = z.object({
   id: identifier,
   version: z.number().int().min(1),
   proposal: ProposalDraftSchema,
+  assignmentVersionId: identifier.nullable().optional(),
   updatedAt: z.iso.datetime(),
 }).strict();
 export const ProposalDraftResponseSchema = z.object({
   id: identifier,
   version: z.number().int().min(1),
   proposal: ProposalDraftFieldsSchema,
+  assignmentVersionId: identifier.nullable().optional(),
+  assignmentContext: z.object({ assignmentVersionId: identifier, mentorContext: MentorPublishedConfigSchema }).strict().nullable().optional(),
   updatedAt: z.iso.datetime(),
 }).strict();
 export const OwnedProposalsResponseSchema = z.array(ProposalDraftResponseSchema).max(200);

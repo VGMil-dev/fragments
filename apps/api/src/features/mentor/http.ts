@@ -23,9 +23,11 @@ import { MentorEvaluationFailure, MentorInputError, type createMentorService } f
 import { validateStudentSkillSelection } from "./skills-validation.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createClassroomRepository } from "../classroom/repository.js";
+import { buildAssignmentMentorConfig } from "../assignments/mentor-context.js";
 
 type MentorService = ReturnType<typeof createMentorService>;
 type RouteResult = "handled" | "unhandled";
+
 export type MentorEvaluationDiagnostic = {
   event: "mentor_evaluation_failed";
   stage: string;
@@ -94,11 +96,18 @@ export function createMentorHttp(
       if (raw === undefined) return "handled";
       const input = CreateProposalDraftRequestSchema.safeParse(raw);
       if (!input.success) { sendError(response, 400, "INVALID_INPUT", "Revisa los campos del borrador."); return "handled"; }
+      let assignmentVersionId: string | null = null;
+      if (input.data.assignmentVersionId) {
+        const assignment = await database.classroomAssignmentVersion.findFirst({ where: { id: input.data.assignmentVersionId,
+          assignment: { status: "published", classroom: { status: "active", enrollments: { some: { studentId: student.id, status: "active" } } } } }, select: { id: true } });
+        if (!assignment) { sendError(response, 404, "ASSIGNMENT_UNAVAILABLE", "La misión ya no está disponible en un aula activa."); return "handled"; }
+        assignmentVersionId = assignment.id;
+      }
       const validatedSkills = await validateStudentSkillSelection(classrooms, input.data.proposal, student.id, true);
       if (!validatedSkills.ok) { sendError(response, 400, "INVALID_SKILL_SELECTION", "Revisa las habilidades seleccionadas para tu aula."); return "handled"; }
       const normalized = await normalizeTechnologySelection(database, validatedSkills.proposal, null);
       if (!normalized) { sendError(response, 400, "INVALID_TECHNOLOGY_SELECTION", "Revisa las tecnologías del catálogo y conserva máximo 20 selecciones o etiquetas importadas."); return "handled"; }
-      const saved = await repository.createProposalDraftByUser(normalized, student.id);
+      const saved = await repository.createProposalDraftByUser(normalized, student.id, assignmentVersionId);
       sendJson(response, 201, { ok: true, data: ProposalDraftResponseSchema.parse(saved) });
       return "handled";
     }
@@ -208,8 +217,19 @@ export function createMentorHttp(
       }
       const startedAt = performance.now();
       try {
-        const active = await control.getActive();
-        const inputDigest = service.proposalDigest(proposal.proposal);
+        let active: Awaited<ReturnType<typeof control.getActive>>;
+        let assignmentDigest = "";
+        if (savedDraft?.assignmentVersionId) {
+          const assignment = await database.classroomAssignmentVersion.findFirst({ where: { id: savedDraft.assignmentVersionId,
+            assignment: { classroom: { status: "active", enrollments: { some: { studentId: student.id, status: "active" } } } } },
+            include: { assignment: { include: { classroom: { select: { title: true, subject: true } } } } } });
+          if (!assignment) { sendError(response, 409, "ASSIGNMENT_CONTEXT_UNAVAILABLE", "La misión vinculada no está disponible para esta matrícula."); return "handled"; }
+          const exactContext = await database.mentorControlVersion.findUnique({ where: { version: assignment.mentorContextVersion } });
+          if (!exactContext) { sendError(response, 503, "MENTOR_CONTEXT_UNAVAILABLE", "No se encontró la versión de Mentor fijada por esta misión."); return "handled"; }
+          active = { version: exactContext.version, config: buildAssignmentMentorConfig(exactContext.configJson, assignment.snapshotJson, assignment.assignment.classroom.subject), publishedAt: exactContext.publishedAt.toISOString() };
+          assignmentDigest = `:${assignment.id}`;
+        } else active = await control.getActive();
+        const inputDigest = createHash("sha256").update(`${service.proposalDigest(proposal.proposal)}${assignmentDigest}`).digest("hex");
         const cacheKey = `${proposal.id}:${proposal.version}:${inputDigest}:${active.version}`;
         let stored = await repository.getCachedEvaluation(proposal.id, proposal.version, inputDigest, active.version);
         if (!stored) {
