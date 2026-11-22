@@ -45,6 +45,7 @@ export function AdminAuditLogScreen({ api }: { api: AdminAuditLogApi }) {
         <option value="admin.queue_summary.read">Cola de trabajos consultada</option>
         <option value="admin.audit_log.read">Registro de actividad consultado</option>
         <option value="admin.teachers.list">Cuentas docentes consultadas</option>
+        <option value="admin.review_events.read">Eventos operativos de Review consultados</option>
       </select>
     </div>
     {busy ? <p role="status" aria-live="polite">Cargando registro de actividad…</p> : null}
@@ -75,6 +76,7 @@ function eventLabel(event: AdminAuditEvent["event"]): string {
     "admin.queue_summary.read": "Cola de trabajos consultada",
     "admin.audit_log.read": "Registro de actividad consultado",
     "admin.teachers.list": "Cuentas docentes consultadas",
+    "admin.review_events.read": "Eventos operativos de Review consultados",
   };
   return labels[event];
 }

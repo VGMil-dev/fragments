@@ -25,6 +25,8 @@ import { AdminQueueSummaryScreen } from "./features/admin-queue/AdminQueueSummar
 import { adminQueueApi } from "./features/admin-queue/admin-queue-api.js";
 import { AdminAuditLogScreen } from "./features/admin-audit-log/AdminAuditLogScreen.js";
 import { adminAuditLogApi } from "./features/admin-audit-log/admin-audit-log-api.js";
+import { AdminReviewEventsScreen } from "./features/admin-review-events/AdminReviewEventsScreen.js";
+import { adminReviewEventsApi } from "./features/admin-review-events/admin-review-events-api.js";
 import { AdminTeachersPanel } from "./features/admin-teachers/AdminTeachersPanel.js";
 import { adminTeachersApi } from "./features/admin-teachers/admin-teachers-api.js";
 import "./features/landing/public-landing-f162.css";
@@ -362,6 +364,7 @@ export function App() {
   if (path === "/admin/requests") return <><div id="route-content" tabIndex={-1}><AdminRequestsScreen api={adminRequestsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/audit-log") return <><div id="route-content" tabIndex={-1}><AdminAuditLogScreen api={adminAuditLogApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/review-events") return <><div id="route-content" tabIndex={-1}><AdminReviewEventsScreen api={adminReviewEventsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/teachers") return <><div id="route-content" tabIndex={-1}><AdminTeachersPanel api={adminTeachersApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 

@@ -16,7 +16,8 @@ import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
 import { createPrismaReviewStore } from "./features/review/prisma-store.js";
 import { createReviewWorker } from "./features/review/worker.js";
-import { writeReviewOperationalEvent } from "./features/review/review-errors.js";
+import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
+import { createReviewOperationalLog } from "./features/review/operational-log.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -42,6 +43,13 @@ const mentor = createMentorService({
 });
 
 const reviewStore = createPrismaReviewStore(database);
+const reviewOperationalLog = createReviewOperationalLog();
+function writeReviewEvent(event: Parameters<typeof writeReviewOperationalEvent>[0]) {
+  const safeEvent = projectReviewOperationalEvent(event);
+  if (!safeEvent) return;
+  reviewOperationalLog.record(safeEvent);
+  writeReviewOperationalEvent(safeEvent);
+}
 const reviewService = createReviewService({
   repository: { getCommitSnapshot: (input, options) => github.readCommitSnapshot(input, options) },
   packer: repomix,
@@ -109,19 +117,19 @@ const review = {
   },
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore } });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });
 
-const worker = createReviewWorker({ store: reviewStore, service: reviewService, workerId: `review-${randomUUID()}` });
+const worker = createReviewWorker({ store: reviewStore, service: reviewService, workerId: `review-${randomUUID()}`, logEvent: writeReviewEvent });
 let workerRunning = false;
 async function processReviewQueue() {
   if (workerRunning) return;
   workerRunning = true;
   const startedAt = Date.now();
   try { await worker.runOnce(); } catch {
-    writeReviewOperationalEvent({
+    writeReviewEvent({
       event: "review.queue.poll_failed", reviewId: null, jobId: null, stage: "queue_poll",
       errorCode: "QUEUE_POLL_FAILED", durationMs: Math.max(0, Date.now() - startedAt), attempt: 0, finalStatus: "degraded",
     });
