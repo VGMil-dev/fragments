@@ -43,6 +43,6 @@ La release anotada `v0.5.9` apunta al merge `d0b9334463baf56f1644f305164cb87cf85
 
 No se consultó ni modificó `fragments_prod`: el acceso SSH preparado según `docs/SSH_WORKSTATIONS.md` fue bloqueado por la política del comando antes de resolver el host; no se intentó una ruta alternativa. Sigue pendiente comprobar/provisionar idempotentemente solo `vgmiltonisaac@gmail.com`, validar configuración y aceptación de Resend, solicitar el reset y comprobar el enlace sin afirmar recepción. Un HTTP exitoso no acredita entrega. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
 
-La ficha F23 en Notion se actualizó el 2026-11-22 a `En validación`, enlazando PR, CI y release, y dejando deployment y cuenta pendientes.
+La ficha F23 en Notion se actualizó el 2026-11-22 a `En validación`, enlazando PR, CI y release, y dejando deployment y cuenta pendientes. La actualización documental post-merge pasó CI en PR #82 (`44974016480`) y se integró en `6bc7ca7dc15a56cc40d9adab3febbe0ca8249e5d`.
 
 No hay todavía vínculo verificable de proyectos/Review con aula en el panel y la actividad no tiene una consulta docente autorizada. No se presenta progreso ficticio.
