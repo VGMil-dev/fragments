@@ -4,12 +4,15 @@
 
 Implementación feature-local y pruebas completadas en `codex/f22-admin-requests`, creada limpia desde `origin/main` (`a3c189f041694ccf898f208de41a51c36ad41a04`). El PR #93 estaba cerrado/mergeado en `b7ffa4cfb18eb99481386ff936f9e3d288a781e8`; su rama `codex/f22-readonly-diagnostics` se conservó intacta. Commit de implementación: `b4cb44acfa9026d780eebe938eaaf61dfaf327e4`. Después se integraron los dos commits documentales que avanzaron `origin/main`, merge local `15b53e8573819129294c9c45638a3e5c658a4907`.
 
-PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/98 (head inicial `0613a6776d720c4d2e781b582eda4d7c2d9d961a`). El módulo aún no está conectado a rutas compartidas ni validado contra una base de datos o sesión admin reales. Requiere integración del arquitecto y posterior smoke de la ruta integrada. No hubo producción, secretos, Ego Lite ni escrituras de base.
+PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/98. El módulo aún no está conectado a rutas compartidas ni validado contra una base de datos o sesión admin reales. Requiere integración del arquitecto y posterior smoke de la ruta integrada. No hubo producción, secretos, Ego Lite ni escrituras de base.
 
 ## Implementación
 
 - API feature-local `GET /api/admin/classroom-requests?limit=&offset=&status=`; usa `ClassEnrollment` y campos relacionados existentes, sin migraciones ni writes.
 - Autorización inyectada `isAdmin(request)`: 401 anónimo, 403 rol no admin, sin consulta ni datos en respuestas denegadas.
+- Cada lectura admin exitosa requiere `getActorId` y `write` inyectados. El callback recibe `{requestId,event,occurredAt,adminActorId}`; reusa el `x-request-id` del response si fue generado por middleware servidor, con UUID server-side como fallback. No agrega identidad al DTO/response. Si no hay actor o falla la escritura, responde 503 sin entregar registros.
+- Límite del sink: esta feature solo emite evento al callback; la integración esperada escribe stdout JSON. Retención y rotación dependen del runtime de logs, no se garantizan ni se verificaron. No hay persistencia DB.
+- Respuesta al hallazgo independiente P2: commit de código `c7d0d45`; la auditoría se escribe antes de liberar el resultado y falla cerrada si no hay actor/sink.
 - Paginación acotada a 50, offset máximo 100000, filtro enum cerrado, orden por fecha descendente y desempate por ID.
 - DTO solo incluye ID de matrícula como clave interna, título/área/período de aula, estado, origen y fechas. No selecciona estudiante, correo, contexto privado, autor de decisión ni credenciales.
 - Web feature-local con cliente same-origin que valida estado, filtro, límites y campos permitidos; pantalla accesible con estados de carga/vacío/error, filtro, actualización y paginación. No hay acciones para cambiar matrículas.
@@ -17,7 +20,7 @@ PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/
 
 ## Integración requerida del arquitecto
 
-1. En `apps/api/src/http/app.ts`, crear `createAdminClassroomRequestsRepository(database)` y conectar `createAdminClassroomRequestsHttp(store, isAdmin)` con `options.auth?.adminCheck(request)`, antes del 404 compartido.
+1. En `apps/api/src/http/app.ts`, crear `createAdminClassroomRequestsRepository(database)` y conectar `createAdminClassroomRequestsHttp(store, isAdmin, audit)` con `options.auth?.adminCheck(request)`, `options.auth.userId(request)` para el actor y un writer JSON estructurado stdout, antes del 404 compartido.
 2. En `apps/web/src/App.tsx`, importar `AdminRequestsScreen` y `adminRequestsApi`, y asignar la ruta protegida `/admin/requests` siguiendo el patrón admin existente.
 3. Agregar el enlace de navegación desde el shell/admin correspondiente; confirmar que `adminCheck` permanece exclusivamente basado en rol Better Auth `admin`.
 4. Verificar endpoint y pantalla integrados con fake auth/data en test; solo después solicitar validación visual admin autorizada.
@@ -26,7 +29,7 @@ PR #98 está abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/
 
 - `pnpm --filter @fragments/contracts build` — PASS; prerequisito local.
 - `pnpm --filter @fragments/api exec prisma generate` — PASS; cliente generado localmente desde schema existente, sin conexión a base.
-- `pnpm --filter @fragments/api exec vitest run src/features/admin-requests --maxWorkers=1` — PASS, 2 archivos, 3 pruebas.
+- `pnpm --filter @fragments/api exec vitest run src/features/admin-requests --maxWorkers=1` — PASS, 2 archivos, 4 pruebas; incluye evento atribuible, ausencia de identidad en respuesta y fail-closed si falla sink.
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-requests --maxWorkers=1` — PASS, 2 archivos, 4 pruebas.
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web typecheck` — PASS.
