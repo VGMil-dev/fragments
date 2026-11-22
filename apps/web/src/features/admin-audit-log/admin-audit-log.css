@@ -7,6 +7,10 @@
 .admin-audit-log button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .admin-audit-log button:disabled { cursor: wait; opacity: .65; }
 .admin-audit-log__retention { color: var(--f16-text-secondary); font-size: .9rem; line-height: 1.5; }
+.admin-audit-log__filter { display: grid; gap: .45rem; width: min(100%, 28rem); margin: 1rem 0; }
+.admin-audit-log__filter label { font-weight: 700; }
+.admin-audit-log__filter select { min-height: 44px; padding: .6rem .75rem; border: 1px solid var(--f16-border); border-radius: .7rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; }
+.admin-audit-log__filter select:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .admin-audit-log__table-wrap { overflow-x: auto; border: 1px solid var(--f16-border); border-radius: .85rem; background: var(--f16-surface); }
 .admin-audit-log__table-wrap:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .admin-audit-log table { width: 100%; border-collapse: collapse; font-size: .9rem; }

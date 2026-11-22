@@ -36,6 +36,44 @@ describe("AdminAuditLogScreen", () => {
     expect(view.textContent).toContain("No hay eventos administrativos disponibles");
   });
 
+  it("filters the returned sample by event type and reports an empty filter result", async () => {
+    const read = vi.fn().mockResolvedValue({ ok: true, data: { events } });
+    const view = await render({ read });
+    const filter = view.querySelector<HTMLSelectElement>("#admin-audit-log-event-filter");
+
+    expect(filter).not.toBeNull();
+    expect(view.querySelector('label[for="admin-audit-log-event-filter"]')?.textContent).toContain("tipo de evento");
+    await act(async () => {
+      filter!.value = "admin.teachers.list";
+      filter!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(view.querySelector("tbody")?.textContent).toContain("Cuentas docentes consultadas");
+    expect(view.querySelector("tbody")?.textContent).not.toContain("Cola de trabajos consultada");
+
+    await act(async () => {
+      filter!.value = "admin.classroom_requests.read";
+      filter!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(view.textContent).toContain("No hay eventos para este tipo de evento en la muestra actual.");
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the selected event filter when the sample is updated", async () => {
+    const read = vi.fn().mockResolvedValue({ ok: true, data: { events } });
+    const view = await render({ read });
+    const filter = view.querySelector<HTMLSelectElement>("#admin-audit-log-event-filter")!;
+    await act(async () => {
+      filter.value = "admin.teachers.list";
+      filter.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => view.querySelector("button")?.click());
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(filter.value).toBe("admin.teachers.list");
+    expect(view.querySelector("tbody")?.textContent).toContain("Cuentas docentes consultadas");
+    expect(view.querySelector("tbody")?.textContent).not.toContain("Cola de trabajos consultada");
+  });
+
   it("shows loading and a recoverable error", async () => {
     let resolve!: (value: Awaited<ReturnType<AdminAuditLogApi["read"]>>) => void;
     const pending = new Promise<Awaited<ReturnType<AdminAuditLogApi["read"]>>>((done) => { resolve = done; });
