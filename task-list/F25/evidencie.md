@@ -31,6 +31,23 @@ offline-provider assertions: 5 passed; calls: 0 external
 
 El resultado solo prueba repetibilidad/estructura del proveedor fake y la presencia de limitaciones explícitas. No prueba la calidad, calibración ni validez educativa de modelos reales ni del proveedor productivo. No se ejecutó el script `evals/scripts/audit-public-fixtures.mts`: crea un lector GitHub REST y requeriría llamadas de red.
 
+## Referencia técnica A/B/C — revisión estática pública (2026-11-22)
+
+Los objetos A/B/C y archivos relevantes se leyeron en modo GET mediante el conector oficial GitHub, sin clonar ni ejecutar el repositorio. Se inspeccionó `App.tsx`, `src/domain/lost-items.ts` y `tests/lost-items.test.mjs` en B/C, además de metadata/diffs de los tres commits:
+
+- [Commit A `1104f40`](https://github.com/VGMil-dev/fragments-test-app/commit/1104f4046a8049e7736b14748c9f02d5a9f7a533): base Expo/React Native con formulario y listado; `addItem` agrega el estado en memoria, no valida campos y no hay persistencia observable en la pantalla analizada.
+- [Commit B `a66a8da`](https://github.com/VGMil-dev/fragments-test-app/commit/a66a8da27aec0f2b5a25a3ddd67142688ed8c518): separa `validateLostItem`; rechaza nombre/descripción vacíos o solo espacios; muestra mensajes accesibles y guarda valores con `trim()`. El archivo de pruebas afirma esos tres comportamientos. Basado en código, sin ejecutar tests.
+- [Commit C `e2b54b2`](https://github.com/VGMil-dev/fragments-test-app/commit/e2b54b2a3760b22a509c89a8b1345d0e5f4e1781): conserva validación; `filterLostItems` busca solo en nombre con trim + minúsculas; `markLostItemRecovered` devuelve una lista nueva y cambia solo el id coincidente. Las pruebas B/C cubren espacios y ejemplos positivos; C además cubre búsqueda insensible a mayúsculas, query vacío, recuperación inmutable e id desconocido. Basado en fuente y pruebas, sin ejecutar código.
+
+### Oráculo técnico provisional para Review
+
+- A: señalar falta de validación de entradas vacías y estado solo en memoria; no afirmar que el código se ejecuta, sincroniza o persiste.
+- B: considerar la validación requerida y sanitización por trim demostradas en la implementación, con pruebas fuente asociadas. No elevarlo a persistencia.
+- C: aceptar búsqueda por nombre insensible a mayúsculas/espacios e inmutabilidad del cambio de estado; marcar como omisión cualquier afirmación de búsqueda por descripción, persistencia en backend o navegación, porque no aparecen en la pantalla inspeccionada.
+- La existencia de Expo/React Native como dependencia o mención README no demuestra navegación, APIs nativas ni funcionalidad de backend.
+
+Este oráculo mejora los criterios estáticos contra los commits exactos, pero no observa outputs de Review ni valida puntuación/citas del proveedor productivo. La calidad real Mentor/Review continúa **NO COMPROBADA**; no se ejecutó la aplicación, sus tests ni proveedor IA.
+
 ## Cierre Git
 
 - Commit de implementación y documentación: `ee51314b780c64cb4695f27318ad588220f9dad9` (`docs(F25): documenta baseline offline de Review`).
