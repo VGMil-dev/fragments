@@ -13,11 +13,13 @@
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-requests/AdminRequestsScreen.test.tsx src/features/admin-queue/AdminQueueSummaryScreen.test.tsx --maxWorkers=1` — PASS, 6/6 repetidas después del commit (22 nov 2026, 15:35:38 local).
 - `pnpm --filter @fragments/web typecheck` — PASS repetido después del commit (22 nov 2026, 15:35:38 local).
 - `git diff --check` — PASS después del commit y al cerrar evidencia.
+- Revisión independiente solicitó verificar explícitamente que los errores OTHER no muestran `private http detail`; ambas pruebas lo afirman ahora. Tras ese commit: focal 6/6, typecheck y diff-check PASS (22 nov 2026, 15:39:57 local).
 
 ## Commit
 
 - Commit de implementación: `cce9908e6737cd64fdcf61ee784eea67cd18978b` (`feat(admin-console): aclara acceso a solicitudes y cola`).
-- Hash y evidencia se registran en commit documental posterior, sin reescribir historia.
+- Aserciones OTHER: `064ee4fc2beee839865afb461819d0b1731594ba` (`test(admin-console): asegura redacción de otros errores`).
+- Evidencia actualizada en commit documental posterior; sin reescritura de historia.
 
 ## Limitaciones
 
