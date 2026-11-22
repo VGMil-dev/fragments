@@ -169,3 +169,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Tag anotada `v0.5.10` → commit `818b9c39acb739d272ae27ce234114b650ab3787` (merge PR #90). Workflow `45033466925`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Release creado con atestación, paquete de imágenes y manifiesto.
 - Environment `fragments-production` verificado de solo lectura: 0 required reviewers, sin wait timer; reglas de ramas intactas.
 - Apply reportado exitoso por agente F14: imágenes API y web fijadas al SHA `818b9c3`, backup previo SHA-256 `4c86afb2c3100166dcc3fb4dd48bc5fefcb098d1269f38fa3ef2e0d5d0c625f4`, healthchecks sanos y `/health` DB ready. No se apagó producción ni se ejecutó despliegue manual.
+
+## Despliegue v0.5.11 — 2026-11-22
+
+- PR #95 integró el hotfix F18.B en `main`; SHA `a3c189f041694ccf898f208de41a51c36ad41a04`. CI `45037887441` SUCCESS. Rama de documentación verificada sobre ese SHA.
+- Antes de etiquetar se consultó el environment `fragments-production` en modo solo lectura: `reviewers_count=0`, `wait_timer=null`; políticas de rama preservadas. La tag anotada `v0.5.11` apunta exactamente a `a3c189f041694ccf898f208de41a51c36ad41a04`; publicación normal sin bypass.
+- Workflow F14 `45038131003`: `verify-build`, build ARM64, `attest-package` y `publish-approved-release` SUCCESS. Release publicado con atestación, artefacto de imágenes y manifiesto.
+- Verificación pública: `https://fragments.gavanti.org/health` respondió `status=ok`, `database=ready`; bundle servido reporta `v0.5.11` y SHA exacto `a3c189f041694ccf898f208de41a51c36ad41a04`.
+- Alcance de verificación: el agente supervisor no halló canal disponible de solo lectura para consultar ledger del host, hash del backup o labels de imágenes; estos tres datos son **NO COMPROBADOS**. No se usó SSH, no se leyó ninguna llave, no se detuvieron servicios y no se tocó configuración productiva.
+- Política F14 vigente: `Required reviewers` permanece desactivado exclusivamente; el entorno `fragments-production` se conserva y todos los gates técnicos de build, firma/atestación, backup, healthchecks y rollback siguen siendo obligatorios. No introducir aprobación humana en futuras features salvo autorización explícita del propietario.
