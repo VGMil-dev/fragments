@@ -10,13 +10,14 @@
 ## Verificación
 
 - TDD rojo inicial: las pruebas nuevas fallaron en ambas pantallas porque 401 mostraba el texto genérico.
-- `pnpm --filter @fragments/web exec vitest run src/features/admin-requests/AdminRequestsScreen.test.tsx src/features/admin-queue/AdminQueueSummaryScreen.test.tsx --maxWorkers=1` — PASS, 6/6 (22 nov 2026, 15:35:11 local).
-- `pnpm --filter @fragments/web typecheck` — PASS (22 nov 2026, 15:35:11 local).
-- `git diff --check` — PASS antes de commit.
+- `pnpm --filter @fragments/web exec vitest run src/features/admin-requests/AdminRequestsScreen.test.tsx src/features/admin-queue/AdminQueueSummaryScreen.test.tsx --maxWorkers=1` — PASS, 6/6 repetidas después del commit (22 nov 2026, 15:35:38 local).
+- `pnpm --filter @fragments/web typecheck` — PASS repetido después del commit (22 nov 2026, 15:35:38 local).
+- `git diff --check` — PASS después del commit y al cerrar evidencia.
 
 ## Commit
 
-- Hash de implementación y evidencia: pendiente de commit.
+- Commit de implementación: `cce9908e6737cd64fdcf61ee784eea67cd18978b` (`feat(admin-console): aclara acceso a solicitudes y cola`).
+- Hash y evidencia se registran en commit documental posterior, sin reescribir historia.
 
 ## Limitaciones
 
