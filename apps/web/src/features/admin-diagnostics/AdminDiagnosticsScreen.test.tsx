@@ -21,9 +21,13 @@ describe("AdminDiagnosticsScreen", () => {
   it("shows recent safe request events and reloads on demand", async () => {
     const list = vi.fn().mockResolvedValueOnce({ ok: true, data: { events: rows } }).mockResolvedValueOnce({ ok: true, data: { events: [] } });
     const view = await render({ list });
-    expect(view.textContent).toContain("health");
+    expect(view.textContent).toContain("Salud");
     expect(view.textContent).toContain("503");
     expect(view.textContent).toContain("00000000-0000-4000-8000-000000000001");
+    expect(view.textContent).toContain("El historial solo incluye el proceso actual de la API.");
+    expect(view.querySelector('[role="region"][tabindex="0"]')?.getAttribute("aria-label")).toBe("Solicitudes recientes");
+    expect(view.querySelector("time")?.getAttribute("dateTime")).toBe("2026-11-22T12:00:00.000Z");
+    expect(view.querySelector("[aria-label='Código HTTP 503']")).not.toBeNull();
     const button = view.querySelector("button");
     await act(async () => button?.click());
     expect(list).toHaveBeenCalledTimes(2);
@@ -33,7 +37,7 @@ describe("AdminDiagnosticsScreen", () => {
   it("shows visible loading, empty and recoverable error states", async () => {
     let resolve!: (value: Awaited<ReturnType<AdminDiagnosticsApi["list"]>>) => void;
     const waiting = new Promise<Awaited<ReturnType<AdminDiagnosticsApi["list"]>>>((done) => { resolve = done; });
-    const list = vi.fn().mockReturnValueOnce(waiting).mockRejectedValueOnce(new Error("fake-network-error"));
+    const list = vi.fn().mockReturnValueOnce(waiting).mockRejectedValueOnce(new Error("fake-network-error")).mockResolvedValueOnce({ ok: true, data: { events: rows } });
     container = document.createElement("div"); document.body.append(container); root = createRoot(container);
     await act(async () => { root?.render(<AdminDiagnosticsScreen api={{ list }} />); });
     expect(container.textContent).toContain("Cargando diagnósticos");
@@ -42,5 +46,8 @@ describe("AdminDiagnosticsScreen", () => {
     const button = container.querySelector("button");
     await act(async () => button?.click());
     expect(container.textContent).toContain("No pudimos cargar los diagnósticos");
+    expect(button?.textContent).toBe("Reintentar");
+    await act(async () => button?.click());
+    expect(container.textContent).toContain("Salud");
   });
 });
