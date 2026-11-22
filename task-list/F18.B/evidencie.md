@@ -96,4 +96,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments/http.test.ts src/features/assignments/mentor-context.test.ts src/features/mentor/service.test.ts` — PASS, 3 archivos / 13 tests.
 - `pnpm --filter @fragments/api typecheck` y `git diff --check` — PASS.
 - Bloqueo concreto: el proceso no dispone de `DATABASE_URL`; por lo tanto no se puede confirmar `fragments_test`, ejecutar la integración HTTP contra PostgreSQL ni completar preflight/migración local. Ningún endpoint ni base de producción fue contactado; no se usaron sesiones Ego Lite.
-- Commit del seguimiento HTTP pendiente.
+- Commit del seguimiento HTTP: `f9b2c4456badb7c08770013e52e0ab57c55d792b` (`test(f18b): cover authenticated mentor HTTP mission flow`).
