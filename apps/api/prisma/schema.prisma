@@ -329,6 +329,7 @@ model Classroom {
   enrollments       ClassEnrollment[]
   skillAvailability ClassroomSkillAvailability[]
   technologyAvailability ClassroomTechnologyAvailability[]
+  assignments       ClassroomAssignment[]
 
   @@unique([id, teacherId])
   @@unique([teacherId, identityKey])
@@ -450,4 +451,34 @@ model ClassroomTechnologyAvailability {
   @@id([classroomId, technologyId])
   @@index([technologyId, enabled], map: "classroom_technology_availability_enabled")
   @@map("classroom_technology_availability")
+}
+
+model ClassroomAssignment {
+  id               String                      @id
+  classroomId      String                      @map("classroom_id")
+  status           String                      @default("draft")
+  draftVersion     Int                         @default(1) @map("draft_version")
+  publishedVersion Int?                        @map("published_version")
+  draftJson        Json                        @map("draft_json")
+  createdAt        DateTime                    @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                    @map("updated_at") @db.Timestamptz(3)
+  classroom        Classroom                   @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  versions         ClassroomAssignmentVersion[]
+
+  @@index([classroomId, updatedAt(sort: Desc)], map: "classroom_assignments_classroom")
+  @@map("classroom_assignments")
+}
+
+model ClassroomAssignmentVersion {
+  id                   String             @id
+  assignmentId         String             @map("assignment_id")
+  version              Int
+  snapshotJson         Json               @map("snapshot_json")
+  mentorContextVersion Int                @map("mentor_context_version")
+  createdAt            DateTime           @map("created_at") @db.Timestamptz(3)
+  assignment           ClassroomAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+
+  @@unique([assignmentId, version])
+  @@index([assignmentId, version(sort: Desc)], map: "classroom_assignment_versions_latest")
+  @@map("classroom_assignment_versions")
 }

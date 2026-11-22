@@ -1,0 +1,66 @@
+import { describe, expect, it, vi } from "vitest";
+import { createAssignmentRepository } from "./repository.js";
+
+function memoryDb() {
+  const state: { assignment: any; versions: any[]; draft: any; enrollment: any } = { assignment: null, versions: [], draft: null, enrollment: null };
+  const tx: any = {
+    classroom: { findFirst: vi.fn(async ({ where }: any) => where.teacherId === "fixture-owner" ? null : ({ id: "fixture-class", title: "Ciencias", subject: "Ciencias" })) },
+    classroomAssignment: {
+      findMany: vi.fn(async () => state.assignment ? [{ ...state.assignment, versions: state.versions }] : []),
+      findFirst: vi.fn(async () => state.assignment),
+      create: vi.fn(async ({ data }: any) => (state.assignment = { ...data, publishedVersion: null })),
+      findUniqueOrThrow: vi.fn(async () => state.assignment),
+      update: vi.fn(async ({ data }: any) => (state.assignment = { ...state.assignment, ...data, draftVersion: data.draftVersion?.increment ? state.assignment.draftVersion + data.draftVersion.increment : data.draftVersion ?? state.assignment.draftVersion })),
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        if (!state.assignment || state.assignment.id !== where.id || state.assignment.draftVersion !== where.draftVersion || (where.publishedVersion !== undefined && state.assignment.publishedVersion !== where.publishedVersion)) return { count: 0 };
+        state.assignment = { ...state.assignment, ...data, draftVersion: data.draftVersion?.increment ? state.assignment.draftVersion + data.draftVersion.increment : data.draftVersion ?? state.assignment.draftVersion };
+        return { count: 1 };
+      }),
+    },
+    classroomAssignmentVersion: {
+      findMany: vi.fn(async () => state.versions),
+      create: vi.fn(async ({ data }: any) => { state.versions.push(data); return data; }),
+    },
+    classroomSkillAvailability: { findMany: vi.fn(async () => [{ skill: { id: "fixture-skill", name: "Observación", description: null } }]) },
+    mentorControlVersion: { findFirst: vi.fn(async () => ({ version: 3 })) },
+    classEnrollment: { findFirst: vi.fn(async ({ where }: any) => state.enrollment?.status === where.status ? state.enrollment : null) },
+  };
+  return { state, database: { ...tx, $transaction: async (fn: (client: any) => unknown) => fn(tx) } as any };
+}
+
+const draft = { title: "Misión de observación", instructions: "Registra un fenómeno.", objectives: ["Describir el fenómeno"], requiredSkillIds: ["fixture-skill"], optionalSkillIds: [] };
+
+describe("assignment repository", () => {
+  it("publishes immutable snapshots and publishes later edits as a new version", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const created = await repository.create("fixture-teacher", "fixture-class", draft);
+    expect(created?.draftVersion).toBe(1);
+    const first = await repository.publish("fixture-teacher", "fixture-class", created!.id, 1);
+    expect(first.kind).toBe("ok");
+    state.enrollment = { status: "active", classroom: { id: "fixture-class", title: "Ciencias", subject: "Ciencias" } };
+    const studentRows = await repository.listStudent("fixture-student", "fixture-class");
+    expect(studentRows).toMatchObject([{ id: state.versions[0].id, assignmentId: created!.id, version: 1, requiredSkills: [{ id: "fixture-skill", name: "Observación" }] }]);
+    expect((await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 1, draft)).kind).toBe("conflict");
+    const edited = { ...draft, title: "Misión revisada" };
+    const update = await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 2, edited);
+    expect(update.kind).toBe("ok");
+    const second = await repository.publish("fixture-teacher", "fixture-class", created!.id, 3);
+    expect(second.kind).toBe("ok");
+    expect(state.versions.map((item) => (item.snapshotJson as { title: string }).title)).toEqual(["Misión de observación", "Misión revisada"]);
+    expect(state.versions.map((item) => item.version)).toEqual([1, 2]);
+  });
+
+  it("returns no student missions without an active enrollment", async () => {
+    const { database, state } = memoryDb();
+    state.enrollment = { status: "pending" };
+    const repository = createAssignmentRepository(database);
+    expect(await repository.listStudent("fixture-student", "fixture-class")).toBeNull();
+  });
+
+  it("does not expose an assignment to another teacher", async () => {
+    const { database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    expect(await repository.list("fixture-owner", "fixture-class")).toBeNull();
+  });
+});

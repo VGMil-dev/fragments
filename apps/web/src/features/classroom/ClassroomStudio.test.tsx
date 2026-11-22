@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { classroomApi } = vi.hoisted(() => ({
+const { classroomApi, assignmentsApi } = vi.hoisted(() => ({
   classroomApi: {
     list: vi.fn(),
     get: vi.fn(),
@@ -13,9 +13,11 @@ const { classroomApi } = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
   },
+  assignmentsApi: { listTeacher: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn() },
 }));
 
 vi.mock("../../lib/api/classroom-api.js", () => ({ classroomApi }));
+vi.mock("../assignments/assignments-api.js", () => ({ assignmentsApi }));
 
 import { ClassroomStudio } from "./ClassroomStudio.js";
 
@@ -36,6 +38,11 @@ afterEach(() => {
   classroomApi.students.mockReset();
   classroomApi.update.mockReset();
   classroomApi.create.mockReset();
+  assignmentsApi.listTeacher.mockReset();
+  assignmentsApi.create.mockReset();
+  assignmentsApi.update.mockReset();
+  assignmentsApi.publish.mockReset();
+  assignmentsApi.listTeacher.mockResolvedValue({ ok: true, data: [] });
 });
 
 describe("ClassroomStudio", () => {
@@ -45,6 +52,7 @@ describe("ClassroomStudio", () => {
     classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
     classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [] });
     classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    assignmentsApi.listTeacher.mockResolvedValue({ ok: true, data: [] });
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
