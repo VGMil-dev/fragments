@@ -48,8 +48,17 @@ Los objetos A/B/C y archivos relevantes se leyeron en modo GET mediante el conec
 
 Este oráculo mejora los criterios estáticos contra los commits exactos, pero no observa outputs de Review ni valida puntuación/citas del proveedor productivo. La calidad real Mentor/Review continúa **NO COMPROBADA**; no se ejecutó la aplicación, sus tests ni proveedor IA.
 
+### Harness offline: alcance de asserts
+
+- Se etiquetaron los casos Promptfoo como estructura/metadatos de cita, fixture de inyección y fixture de ruta ausente. Los comentarios aclaran que las rutas/líneas no se cotejan con un repositorio y los fixtures no prueban comprensión semántica ni validación de dominio.
+- Se agregó `evals/scripts/fake-review-provider.test.mjs`, que caracteriza la salida JSON, correspondencia de metadatos de cita con la fixture, rechazo de fixture/huella inválida y el límite semántico: score `75` y hallazgo idéntico ante cambios contradictorios de prompt/snapshot.
+- Desde la raíz, `node --test evals/scripts/fake-review-provider.test.mjs` terminó con exit 0: **3 tests, 3 pass, 0 fail**; no depende de servicios externos.
+- Desde la raíz, `git diff --check` terminó con exit 0.
+- Desde `evals/`, `pnpm --version` devolvió `11.25.0`. El comando `pnpm exec promptfoo eval --config promptfooconfig.yaml --no-cache --no-progress-bar --no-table` terminó con exit 1: `promptfoo` no encontrado. La ejecución de `pnpm exec` materializó 441 paquetes desde el store local y reportó 0 descargados. No se usó `npx`, proveedor remoto ni red. Promptfoo completo queda **NO COMPROBADO**.
+
 ## Cierre Git
 
+- Commit del harness offline y su evidencia: `5c5efa5cfc6aec87cc4045256f9160a86ab8313e` (`test(F25): etiqueta alcance de fixtures offline`).
 - Commit de implementación y documentación: `ee51314b780c64cb4695f27318ad588220f9dad9` (`docs(F25): documenta baseline offline de Review`).
 - Commit de consolidación de evidencia: `5d9ce133bcbc74c3133469ab7ee8f7f9ee9566aa` (`docs(F25): registra cierre local del baseline`).
 - Rama local: `codex/f25-offline-calibration`; árbol limpio tras el commit.
