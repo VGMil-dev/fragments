@@ -22,6 +22,7 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx src/features/assignments/AssignmentsPanel.test.tsx` — PASS (2 archivos, 5 tests).
 - `pnpm --filter @fragments/web typecheck` — PASS (`tsc -p tsconfig.json`).
 - `git diff --check` — PASS.
+- Commit del slice: `631cd6550e3569d16aa79ec5f62da369dd960c6e` (`feat(f18b): agregar misiones de aula versionadas`).
 
 ## Límites y bloqueos
 
@@ -29,4 +30,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - No se usó Ego Lite ni se tomaron capturas. Falta QA visual/teclado en viewport disponible.
 - No se ejecutó código de estudiantes, servicios AI, GitHub, Moodle ni destino de despliegue.
 - Planner integró `createAssignmentHttp` en el shell de API y montó `StudentAssignmentsList` en Mis aulas. La prueba cruzada de Mis aulas quedó con una expectativa antigua que excluye texto de misiones; debe ajustarse para validar su estado de carga/vacío.
-- Commit de implementación pendiente; registrar su SHA tras crearlo. Sin push, PR ni release.
+- Sin push, PR ni release. El cierre de F18.B sigue parcial hasta que el planner integre rutas/cambios concurrentes, corrija la aserción estudiantil antigua, ejecute preflight sobre `fragments_test` y complete Ego Lite si el viewport está disponible.
