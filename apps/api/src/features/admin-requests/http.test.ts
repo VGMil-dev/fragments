@@ -13,7 +13,9 @@ describe("admin classroom requests HTTP with fake data", () => {
     const store = { list: vi.fn(async () => fakePage) };
     const roles = new Map<string, boolean | null>([["admin", true], ["teacher", false]]);
     const isAdmin = vi.fn(async (request: IncomingMessage) => roles.get(request.headers["x-fake-role"] as string) ?? null);
-    const handler = createAdminClassroomRequestsHttp(store, isAdmin);
+    const auditWrite = vi.fn();
+    const getActorId = vi.fn(async () => "fake-admin-actor-id");
+    const handler = createAdminClassroomRequestsHttp(store, isAdmin, { getActorId, write: auditWrite, id: () => "fake-audit-request-id", now: () => new Date("2026-11-22T13:00:00.000Z") });
     const server = createServer(async (request, response) => {
       if (await handler(request, response) === "unhandled") response.writeHead(404).end();
     });
@@ -26,8 +28,10 @@ describe("admin classroom requests HTTP with fake data", () => {
       expect(admin.status).toBe(200);
       const body = await admin.json();
       expect(body).toMatchObject({ ok: true, data: { items: fakePage.items, total: 1, limit: 1, offset: 0, status: "pending" } });
-      expect(JSON.stringify(body)).not.toMatch(/studentId|githubLogin|email|context|decidedBy/i);
+      expect(JSON.stringify(body)).not.toMatch(/studentId|githubLogin|email|context|decidedBy|fake-admin-actor-id/i);
       expect(store.list).toHaveBeenCalledWith({ limit: 1, offset: 0, status: "pending" });
+      expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId: "fake-audit-request-id", event: "admin.classroom_requests.read", occurredAt: "2026-11-22T13:00:00.000Z", adminActorId: "fake-admin-actor-id" });
+      expect(getActorId).toHaveBeenCalledTimes(1);
 
       const teacher = await fetch(url, { headers: { "x-fake-role": "teacher" } });
       expect(teacher.status).toBe(403);
@@ -36,6 +40,8 @@ describe("admin classroom requests HTTP with fake data", () => {
       expect(anonymous.status).toBe(401);
       expect(await anonymous.json()).toMatchObject({ ok: false, error: { code: "AUTH_REQUIRED" } });
       expect(store.list).toHaveBeenCalledTimes(1);
+      expect(auditWrite).toHaveBeenCalledTimes(1);
+      expect(getActorId).toHaveBeenCalledTimes(1);
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
@@ -43,10 +49,10 @@ describe("admin classroom requests HTTP with fake data", () => {
 
   it("rejects unknown status and clamps pagination without trusting query identity", async () => {
     const store = { list: vi.fn(async () => ({ items: [], total: 0 })) };
-    const handler = createAdminClassroomRequestsHttp(store, async (request) => request.headers["x-fake-role"] === "admin");
+    const handler = createAdminClassroomRequestsHttp(store, async (request) => request.headers["x-fake-role"] === "admin", { getActorId: async () => "fake-admin-id", write: () => undefined, id: () => "fake-audit-id" });
     let statusCode = 0;
     let payload = "";
-    const response = { writeHead(code: number) { statusCode = code; return this; }, end(body?: string) { payload = body ?? ""; } } as unknown as ServerResponse;
+    const response = { getHeader() { return undefined; }, writeHead(code: number) { statusCode = code; return this; }, end(body?: string) { payload = body ?? ""; } } as unknown as ServerResponse;
 
     await handler({ method: "GET", url: "/api/admin/classroom-requests?status=other&role=admin", headers: { "x-fake-role": "admin" } } as unknown as IncomingMessage, response);
     expect(statusCode).toBe(400);
@@ -55,5 +61,23 @@ describe("admin classroom requests HTTP with fake data", () => {
     expect(statusCode).toBe(200);
     expect(store.list).toHaveBeenCalledWith({ limit: 50, offset: 0 });
     expect(JSON.parse(payload).data).toMatchObject({ total: 0, limit: 50, offset: 0, status: null });
+  });
+
+  it("does not return enrollment data when actor identity or audit writing is unavailable", async () => {
+    const store = { list: vi.fn(async () => fakePage) };
+    const auditWrite = vi.fn(async () => { throw new Error("fake-audit-sink-unavailable"); });
+    const handler = createAdminClassroomRequestsHttp(store, async () => true, {
+      getActorId: async () => "fake-admin-actor-id", write: auditWrite, id: () => "fake-audit-id",
+      now: () => new Date("2026-11-22T13:00:00.000Z"),
+    });
+    let statusCode = 0;
+    let payload = "";
+    const response = { getHeader: () => "server-request-id", writeHead(code: number) { statusCode = code; return this; }, end(body?: string) { payload = body ?? ""; } } as unknown as ServerResponse;
+
+    await handler({ method: "GET", url: "/api/admin/classroom-requests", headers: {} } as unknown as IncomingMessage, response);
+    expect(statusCode).toBe(503);
+    expect(payload).not.toContain("Programación Móvil");
+    expect(payload).not.toContain("fake-admin-actor-id");
+    expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId: "server-request-id", event: "admin.classroom_requests.read", occurredAt: "2026-11-22T13:00:00.000Z", adminActorId: "fake-admin-actor-id" });
   });
 });
