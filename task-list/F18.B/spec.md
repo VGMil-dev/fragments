@@ -53,3 +53,9 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 
 - GIVEN una misión docente con versiones publicadas, WHEN el docente expande “Revisar versiones publicadas”, THEN cada versión disponible presenta su consigna y objetivos inmutables, las habilidades snapshot distinguidas como requeridas u optativas y el número de versión Mentor fijado.
 - El historial es un `<details>` accesible cerrado por defecto. La vista solo lee los objetos `versions` ya cargados y no ofrece controles de escritura sobre versiones publicadas.
+
+## Incremento UI estudiantil — reintentar recursos del aula
+
+- GIVEN falla la carga de misiones de un aula activa, WHEN el estudiante activa “Reintentar misiones”, THEN se vuelve a solicitar solo esa lista y desaparece el error tras una respuesta exitosa.
+- GIVEN falla la carga de habilidades de un aula activa, WHEN el estudiante activa “Reintentar habilidades”, THEN se vuelve a solicitar solo ese catálogo autorizado y desaparece el error tras una respuesta exitosa.
+- Los errores se anuncian con `role="alert"`; cada reintento anuncia `role="status"` mientras carga. Solicitudes simultáneas duplicadas de la misma combinación aula/recurso se coalescen; el recurso independiente puede reintentarse por separado.

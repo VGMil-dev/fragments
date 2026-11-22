@@ -170,3 +170,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 
 - PR #119 se integró normalmente en `main` como `45d80c8b122da53039c2ef891ce03cf30e4b1759`; CI `45064333176` SUCCESS.
 - El historial docente queda integrado en main. F14 v0.5.17 y el reflejo visual del historial en producción están pendientes; no se modificaron recursos académicos.
+
+## Incremento UI estudiantil — reintento por aula y recurso — 2026-11-22
+
+- `apps/web/src/features/student/StudentClassroomsScreen.tsx`: separa el estado/carga de habilidades y misiones, ofrece un retry local junto a cada error por aula y anuncia carga durante el reintento. Un `useRef` con clave aula+recurso evita duplicar solicitudes simultáneas; al reintentar no se refresca `onRefresh` ni se vuelve a pedir el recurso hermano.
+- `apps/web/src/features/student/StudentClassroomsScreen.test.tsx`: cubre fallo→éxito de misiones y habilidades, que el recurso hermano se solicite una sola vez y que clicks duplicados simultáneos por recurso no creen requests adicionales. Comprueba los estados alert/status y contenido vacío tras éxito.
+- TDD: las tres pruebas nuevas fallaron antes del cambio porque faltaban botones de reintento; tras el cambio, `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx --maxWorkers=1` — PASS, 6/6.
+- Suite focal web: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15. `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Sin cambios a contratos, API, migraciones, datos productivos ni sesiones. Sin navegador ni release.
+- Commit de este incremento pendiente de registrarse; PR nuevo pendiente.
