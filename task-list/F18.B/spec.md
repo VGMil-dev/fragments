@@ -34,3 +34,10 @@ Una asignación pertenece a un aula transversal y tiene borrador versionado. Pub
 ## UX
 
 Español y tokens F16. Dentro del aula docente: listado, crear/editar, distinguir visualmente “Obligatorias” y “Optativas”, vista previa estudiantil y publicación versionada. En Mis aulas: lista de tareas publicadas por aula, no mezclar aulas. Estados carga/vacío/error, teclado y mobile. Ego Lite es el único navegador permitido.
+
+## Incremento UI estudiantil — contexto académico vinculado
+
+- Cada misión publicada en Mis aulas expone un `<details>` accesible y cerrado por defecto antes del CTA de propuesta.
+- Al abrirlo, muestra el tema, la consigna contextual, el nivel esperado, los requisitos conservados y el número de versión `mentorContext.version` de esa misión.
+- La UI no presenta pesos ni criterios de rúbrica en este incremento. El CTA sigue pasando el snapshot completo de la misma `StudentAssignment`; no se reconstruye contexto desde el borrador F11 actual.
+- Verificación conductual: renderizar una misión con fixture de contexto, comprobar etiqueta de versión y valores fijados, abrir/cerrar el disclosure y confirmar que no se presenta contenido de criterios/pesos.
