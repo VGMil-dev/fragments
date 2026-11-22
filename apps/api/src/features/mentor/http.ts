@@ -208,7 +208,8 @@ export function createMentorHttp(
       const savedDraft = await repository.getOwnedProposalDraftByUser(evaluateMatch[1]!, student.id);
       const parsedProposal = savedDraft ? ProposalEvaluationInputSchema.safeParse(savedDraft.proposal) : null;
       const proposal = savedDraft && parsedProposal?.success
-        ? ProposalResponseSchema.parse({ ...savedDraft, proposal: parsedProposal.data })
+        ? ProposalResponseSchema.parse({ id: savedDraft.id, version: savedDraft.version, proposal: parsedProposal.data,
+          ...(savedDraft.assignmentVersionId ? { assignmentVersionId: savedDraft.assignmentVersionId } : {}), updatedAt: savedDraft.updatedAt })
         : null;
       if (!proposal) {
         if (savedDraft) { sendError(response, 422, "PROPOSAL_INCOMPLETE", "Completa y guarda los campos obligatorios antes de evaluar."); return "handled"; }
