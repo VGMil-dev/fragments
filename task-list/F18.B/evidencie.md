@@ -206,4 +206,5 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - La prueba detectó que el estado seleccionado sobrevivía al cambio de ruta. `apps/web/src/App.tsx` ahora limpia la misión al volver y al abrir Mentor desde ambos accesos de navegación.
 - Verificación fresca: `pnpm exec vitest run src/App.student-flow.test.tsx` PASS 1/1; `pnpm --filter @fragments/web test` PASS 181/181; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
 - Los APIs se simulan en esta prueba. No se comprobó persistencia remota ni producción; la integración real HTTP/PostgreSQL y Mentor fake previa sigue en sus evidencias anteriores. Sin cambio de contratos, rutas de servidor, esquema, migraciones o datos.
-- Commit de implementación/evidencia y PR aún pendientes.
+- Commit de implementación, prueba y actualización inicial de TASKS: `41a32456c65f56267f903285ec67c15cc8c52f7`.
+- Pendiente: PR, revisión independiente, integración CI, release F14 y comprobación productiva read-only.
