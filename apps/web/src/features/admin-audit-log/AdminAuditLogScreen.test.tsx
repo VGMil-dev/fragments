@@ -83,8 +83,22 @@ describe("AdminAuditLogScreen", () => {
     expect(container.textContent).toContain("Cargando registro de actividad");
     await act(async () => resolve({ ok: true, data: { events } }));
     await act(async () => container?.querySelector("button")?.click());
-    expect(container.textContent).toContain("No se pudo cargar el registro de actividad");
+    expect(container.textContent).toContain("Esta cuenta no tiene el rol de administración necesario");
     await act(async () => container?.querySelector("button")?.click());
     expect(container.textContent).toContain("Cola de trabajos consultada");
+  });
+
+  it("explains missing and insufficient admin access without exposing server details", async () => {
+    const unauthenticated = await render({ read: vi.fn().mockResolvedValue({ ok: false, error: { code: "AUTH_REQUIRED", message: "private backend detail" } }) });
+    expect(unauthenticated.querySelector('[role="alert"]')?.textContent).toContain("No hay una sesión válida");
+    expect(unauthenticated.textContent).not.toContain("private backend detail");
+
+    act(() => root?.unmount());
+    root = undefined;
+    unauthenticated.remove();
+    const forbidden = await render({ read: vi.fn().mockResolvedValue({ ok: false, error: { code: "FORBIDDEN", message: "private backend detail" } }) });
+    expect(forbidden.querySelector('[role="alert"]')?.textContent).toContain("no tiene el rol de administración necesario");
+    expect(forbidden.querySelector('[role="alert"]')?.textContent).toContain("Solicita acceso admin");
+    expect(forbidden.textContent).not.toContain("private backend detail");
   });
 });
