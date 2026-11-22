@@ -56,6 +56,14 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Desde la raíz, `git diff --check` terminó con exit 0.
 - Desde `evals/`, `pnpm --version` devolvió `11.25.0`. El comando `pnpm exec promptfoo eval --config promptfooconfig.yaml --no-cache --no-progress-bar --no-table` terminó con exit 1: `promptfoo` no encontrado. La ejecución de `pnpm exec` materializó 441 paquetes desde el store local y reportó 0 descargados. No se usó `npx`, proveedor remoto ni red. Promptfoo completo queda **NO COMPROBADO**.
 
+### Auditoría de disponibilidad para comparación semántica
+
+- Se ejecutó `node evals/scripts/audit-semantic-corpus.mjs`. El reporte devolvió `status: BLOCKED`, `blockedLabels: [A, B, C]`; para cada commit listó solo `label`, `commitSha`, `evidence`, `verified`, `notPresent` en `evals/fixtures/fragments-test-commits.json`. Ningún caso contiene `reviewOutput`; faltan `rubricVersion`, `score`, `findings`, `modelId` e `inputDigest` y, por tanto, evidencia/citas producidas por Review.
+- `evals/fixtures/review-cases.yaml` es la entrada del provider fake. `evals/providers/fake-review-provider.mjs` fija `score: 75`, hallazgos por nombre de fixture e ignora el prompt/snapshot; el test `fake-review-provider.test.mjs` demuestra que respuesta y score se mantienen ante una entrada contradictoria. No es una salida histórica completa ni material válido para puntuar calidad semántica.
+- Búsqueda de contenido en el repositorio con `rg -l -g '!node_modules/**' -g '!.git/**' -g '!dist/**' -g '!coverage/**' '"rubricVersion"|"modelId"|"inputDigest"' .` no localizó artefactos de salida persistida: solo código de persistencia/proveedor (`apps/api/src/features/review/prisma-store.ts`, `apps/api/src/adapters/ai/ai-provider.ts`) y el auditor/test recién añadidos. El inventario excluyó directorios de dependencias/build y no consultó bases ni secretos.
+- Comando ejecutado: `node --test evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **5 tests, 5 pass, 0 fail**. `node evals/scripts/audit-semantic-corpus.mjs` produjo el bloqueo explícito descrito arriba; `git diff --check` terminó con exit 0.
+- Conclusión técnica: no hay un par caso→respuesta Review completa persistido en el repo con el cual estimar calidad semántica. La comparación real queda **BLOQUEADA** hasta que existan salidas completas archivadas offline asociadas a A/B/C; no se ejecutaron modelos, proveedores ni código de esos repositorios.
+
 ## Cierre Git
 
 - Commit del harness offline y su evidencia: `5c5efa5cfc6aec87cc4045256f9160a86ab8313e` (`test(F25): etiqueta alcance de fixtures offline`).
