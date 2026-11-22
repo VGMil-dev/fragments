@@ -174,6 +174,12 @@ export function createFragmentsAuthService(auth: FragmentsAuthInstance, database
       const roles = typeof user.role === "string" ? user.role.split(",") : [];
       return user.isTeacher === true || roles.includes("admin") ? user.id : null;
     },
+    async adminCheck(request: IncomingMessage): Promise<boolean | null> {
+      const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers), query: { disableCookieCache: true } });
+      if (!session?.user) return null;
+      const roles = typeof session.user.role === "string" ? session.user.role.split(",") : [];
+      return roles.includes("admin");
+    },
     async userId(request: IncomingMessage): Promise<string | null> {
       const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers), query: { disableCookieCache: true } });
       const id = (session?.user as { id?: unknown } | undefined)?.id;

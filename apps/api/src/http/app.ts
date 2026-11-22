@@ -20,6 +20,8 @@ import type { createTrainerService } from "../features/trainer/service.js";
 import { createClassroomHttp } from "../features/classroom/http.js";
 import { createTechnologyCatalogHttp } from "../features/mentor/technology-catalog-http.js";
 import { createAssignmentHttp } from "../features/assignments/http.js";
+import { createRequestDiagnostics } from "../features/admin-diagnostics/diagnostics.js";
+import { createAdminDiagnosticsHttp } from "../features/admin-diagnostics/http.js";
 
 const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), database: z.literal("ready") }).strict());
 const errorSchema = ApiResultSchema(z.unknown());
@@ -36,6 +38,8 @@ export function createHttpHandler(database: PrismaClient, options: {
   review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
 } = {}) {
+  const requestDiagnostics = createRequestDiagnostics();
+  const adminDiagnosticsHandler = createAdminDiagnosticsHttp(requestDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null);
   const academicHandler = createAcademicHttp(database, options.auth);
   const classroomHandler = createClassroomHttp(database, options.auth);
   const technologyCatalogHandler = createTechnologyCatalogHttp(database, options.auth);
@@ -50,6 +54,7 @@ export function createHttpHandler(database: PrismaClient, options: {
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
   const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession, async (request) => (await options.auth?.student(request))?.id ?? null) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
+    requestDiagnostics.observe(request, response);
     const pathname = new URL(request.url ?? "/", "http://fragments.local").pathname;
     if (pathname === "/api/auth/link-social" && request.method === "POST") {
       sendError(response, 404, "NOT_FOUND", "No se encontró la ruta.");
@@ -85,6 +90,7 @@ export function createHttpHandler(database: PrismaClient, options: {
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     if (trainerHandler && await trainerHandler(request, response) === "handled") return;
     if (reviewHandler && await reviewHandler(request, response) === "handled") return;
+    if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
   };
