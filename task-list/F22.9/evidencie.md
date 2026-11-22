@@ -24,3 +24,9 @@
 ## Limitaciones
 
 - La UI informa del motivo de denegación; no cambia roles ni concede acceso.
+
+## PR #123 — integración normal
+
+- PR #123 se integró normalmente en main como `8d984817e7e7fa3224a118ff081da89e329abc2b`; CI `45067784339` SUCCESS.
+- Revisión independiente PASS del mensaje 401/403, redacción OTHER, retry, filtro y paginación. Las aserciones agregadas en `064ee4f` verifican que los errores OTHER no exhiban `private http detail`.
+- F14 v0.5.18 queda pendiente. Sesión admin y lecturas/eventos productivos siguen NO COMPROBADOS; sin cambios de permisos ni escrituras.
