@@ -220,4 +220,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - La prueba existente `AssignmentsPanel.test.tsx` comprueba la etiqueta fuera del disclosure cerrado y mantiene la comprobación de que el CTA entrega el objeto completo, con el ID de versión, callback.
 - TDD: la prueba falló antes del cambio porque no aparecía la etiqueta. Suite focal web `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Fuente de datos: `StudentAssignment` ya contiene ambos números versionados. Sin cambios a contratos, API, rutas, esquema/migraciones, datos productivos o sesiones. No se usó navegador ni se hizo release.
-- Commit de implementación/evidencia pendiente de registrarse; PR nuevo pendiente.
+- Commit de implementación: `c8e222b2d65e77497566e76afa551e51ae3e3c6a`; PR nuevo pendiente.
