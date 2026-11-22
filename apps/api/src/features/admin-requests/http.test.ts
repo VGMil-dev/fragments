@@ -10,10 +10,11 @@ const fakePage = {
 
 describe("admin classroom requests HTTP with fake data", () => {
   it("returns only persisted request fields to admins and denies anonymous/teacher requests without data", async () => {
-    const store = { list: vi.fn(async () => fakePage) };
+    const order: string[] = [];
+    const store = { list: vi.fn(async () => { order.push("read"); return fakePage; }) };
     const roles = new Map<string, boolean | null>([["admin", true], ["teacher", false]]);
     const isAdmin = vi.fn(async (request: IncomingMessage) => roles.get(request.headers["x-fake-role"] as string) ?? null);
-    const auditWrite = vi.fn();
+    const auditWrite = vi.fn(() => { order.push("audit"); });
     const getActorId = vi.fn(async () => "fake-admin-actor-id");
     const handler = createAdminClassroomRequestsHttp(store, isAdmin, { getActorId, write: auditWrite, id: () => "fake-audit-request-id", now: () => new Date("2026-11-22T13:00:00.000Z") });
     const server = createServer(async (request, response) => {
@@ -30,6 +31,7 @@ describe("admin classroom requests HTTP with fake data", () => {
       expect(body).toMatchObject({ ok: true, data: { items: fakePage.items, total: 1, limit: 1, offset: 0, status: "pending" } });
       expect(JSON.stringify(body)).not.toMatch(/studentId|githubLogin|email|context|decidedBy|fake-admin-actor-id/i);
       expect(store.list).toHaveBeenCalledWith({ limit: 1, offset: 0, status: "pending" });
+      expect(order).toEqual(["audit", "read"]);
       expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId: "fake-audit-request-id", event: "admin.classroom_requests.read", occurredAt: "2026-11-22T13:00:00.000Z", adminActorId: "fake-admin-actor-id" });
       expect(getActorId).toHaveBeenCalledTimes(1);
 
@@ -78,6 +80,25 @@ describe("admin classroom requests HTTP with fake data", () => {
     expect(statusCode).toBe(503);
     expect(payload).not.toContain("Programación Móvil");
     expect(payload).not.toContain("fake-admin-actor-id");
+      expect(store.list).not.toHaveBeenCalled();
     expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId: "server-request-id", event: "admin.classroom_requests.read", occurredAt: "2026-11-22T13:00:00.000Z", adminActorId: "fake-admin-actor-id" });
+  });
+
+  it("records the authorized attempt before a failing data read", async () => {
+    const order: string[] = [];
+    const store = { list: vi.fn(async () => { order.push("read"); throw new Error("fake-store-unavailable"); }) };
+    const auditWrite = vi.fn(() => { order.push("audit"); });
+    const handler = createAdminClassroomRequestsHttp(store, async () => true, {
+      getActorId: async () => "fake-admin-actor-id", write: auditWrite, id: () => "fake-audit-id",
+      now: () => new Date("2026-11-22T13:00:00.000Z"),
+    });
+    let statusCode = 0;
+    const response = { getHeader: () => undefined, writeHead(code: number) { statusCode = code; return this; }, end() {} } as unknown as ServerResponse;
+
+    await handler({ method: "GET", url: "/api/admin/classroom-requests", headers: {} } as unknown as IncomingMessage, response);
+
+    expect(statusCode).toBe(500);
+    expect(order).toEqual(["audit", "read"]);
+    expect(auditWrite).toHaveBeenCalledExactlyOnceWith({ requestId: "fake-audit-id", event: "admin.classroom_requests.read", occurredAt: "2026-11-22T13:00:00.000Z", adminActorId: "fake-admin-actor-id" });
   });
 });
