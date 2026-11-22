@@ -126,3 +126,9 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Verificación: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **18 tests, 18 pass, 0 fail**; `node evals/scripts/compare-review-behaviors.mjs` — exit 0, **BLOCKED A/B/C**, cada uno por `missing_persisted_output`; `git diff --check` — exit 0.
 - El corpus real disponible sigue sin outputs Review ni manifest: A/B/C permanecen **BLOCKED**. No se ejecutaron proveedores, llamadas externas ni código de estudiantes; no se tocaron prompts/rúbricas.
 - Commits locales: `9d75e4f` (`test(F25): compara hallazgos con referencia A-B-C`) y `69bc4c3` (`fix(F25): endurece provenance de outputs fake`). Rama `codex/f25-offline-response-validator`; cambios aún no publicados.
+
+## Comprobación offline final del corpus A/B/C — 2026-11-22
+
+- Se revisó el árbol versionado de `origin/main` tras integrar PR #114. `evals/fixtures/fragments-test-commits.json` contiene SHA y metadata `verified/notPresent/behaviorReference`, pero no salidas `reviewOutput` completas; no hay manifest/export autorizado del corpus.
+- No existe corpus elegible para ejecutar el comparador sobre resultados Review auténticos. Faltan análisis y citas completos por cada SHA A/B/C, `inputDigest` ligado e identificador de export autorizado. El comparador mecánico/fixtures fake no reemplaza esas evidencias.
+- No se consultaron secretos, DB, servicios ni proveedores; no hubo llamadas IA pagadas. Calidad semántica de puntuaciones Mentor/Review sigue **NO COMPROBADA**.
