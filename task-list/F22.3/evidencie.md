@@ -4,7 +4,7 @@
 
 Slice feature-local implementado en `codex/f22-queue-observability`, rama limpia creada desde `origin/main` en `0c4c5001659e12d18383393cdfa82a8111be6fbe`. F22 vigente en Notion confirma F22.2 desplegada en v0.5.12 y enumera la observabilidad de jobs/colas/worker como alcance F22 pendiente. Commit funcional: `34b946af5e60c2d699f45a5af677a644682c7afa`.
 
-F22.3 todavía necesita integración del arquitecto en `apps/api/src/http/app.ts` y `apps/web/src/App.tsx`/navegación. El PR se abrirá tras push normal de rama. No hubo acceso a producción, secretos, bases reales o sesiones.
+F22.3 todavía necesita integración del arquitecto en `apps/api/src/http/app.ts` y `apps/web/src/App.tsx`/navegación. PR #102 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/102 (head al crear `c4534f30efa3fceb8acc3888a26fd6d846be3ebf`). No hubo acceso a producción, secretos, bases reales o sesiones.
 
 ## Cambios
 
