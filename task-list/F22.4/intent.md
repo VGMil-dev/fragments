@@ -11,7 +11,7 @@ Proveer a la integración arquitectónica un sink de auditoría que conserve un 
 ## Límites
 
 - No persistir en PostgreSQL ni prometer historial previo o después de reiniciar API.
-- Aceptar únicamente eventos existentes `admin.classroom_requests.read` y `admin.queue_summary.read`.
+- Aceptar únicamente eventos existentes `admin.classroom_requests.read`, `admin.queue_summary.read` y `admin.audit_log.read` (emitido por la futura ruta de lectura del feed).
 - El sink operativo de stdout sigue siendo el destino existente y debe confirmar escritura antes de publicar el resumen en memoria.
 - La proyección del feed solo contiene UUID `requestId` generado por middleware, evento, hora UTC y `actorType: admin`; nunca `adminActorId`, datos de estudiantes, ruta, query, cuerpo ni payload.
 - La integración de la ruta/UI protegida, autorización Better Auth y auditoría previa a lectura pertenece al arquitecto.

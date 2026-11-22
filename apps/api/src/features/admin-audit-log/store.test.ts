@@ -69,4 +69,20 @@ describe("admin audit log store with fake stdout", () => {
 
     expect(writeLine).toHaveBeenCalledTimes(1);
   });
+
+  it("accepts an explicitly audited feed read without making list recursive", async () => {
+    const log = createAdminAuditLog({ writeLine: async () => {} });
+    await log.write(fakeAdminAudit);
+    await log.write({
+      requestId: "00000000-0000-4000-8000-000000000099",
+      event: "admin.audit_log.read",
+      occurredAt: "2026-11-22T18:01:00.000Z",
+      adminActorId: "private-fake-admin-user-id",
+    });
+
+    const feed = log.list();
+
+    expect(feed.map((entry) => entry.event)).toEqual(["admin.audit_log.read", "admin.queue_summary.read"]);
+    expect(feed[0]).not.toHaveProperty("adminActorId");
+  });
 });
