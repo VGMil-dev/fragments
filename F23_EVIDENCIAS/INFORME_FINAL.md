@@ -1,6 +1,6 @@
 # F23 — Informe de evidencia
 
-Estado de esta revisión: **validación local PASS; integración y producción pendientes**.
+Estado de esta revisión: **validación local PASS; integración y producción pendientes**. Commit de implementación en `codex/f23-teacher-dashboard`: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`.
 
 ## Referencia visual
 
@@ -39,6 +39,6 @@ La página docente mostró los valores sintéticos reales de `fragments_test`. E
 
 ## Límites y siguientes pasos autorizados
 
-Esta evidencia no acredita merge, tag ni despliegue. Faltan el commit, PR y CI, integración normal, release protegida por F14, chequeo y provisionamiento idempotente de la única identidad docente autorizada en `fragments_prod`, verificación de configuración/aceptación de Resend y solicitud segura de reset para que el propietario defina su contraseña. Un HTTP exitoso por sí solo no acredita recepción del correo. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
+Esta evidencia no acredita merge, tag ni despliegue. Faltan PR y CI, integración normal, release protegida por F14, chequeo y provisionamiento idempotente de la única identidad docente autorizada en `fragments_prod`, verificación de configuración/aceptación de Resend y solicitud segura de reset para que el propietario defina su contraseña. Un HTTP exitoso por sí solo no acredita recepción del correo. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
 
 No hay todavía vínculo verificable de proyectos/Review con aula en el panel y la actividad no tiene una consulta docente autorizada. No se presenta progreso ficticio.

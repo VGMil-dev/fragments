@@ -1,6 +1,6 @@
 # F23 — Evidencia
 
-Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la identidad productiva autorizada y cierre operativo. Rama `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`, basada en `origin/main` actualizado (`42c15179a01fe611087fb744bb1e42399dd1735f`). No se ha escrito en `fragments_prod`.
+Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la identidad productiva autorizada y cierre operativo. Rama `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`, basada en `origin/main` actualizado (`42c15179a01fe611087fb744bb1e42399dd1735f`). Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`. No se ha escrito en `fragments_prod`.
 
 ## Referencia y revisión
 
@@ -19,7 +19,7 @@ Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la id
 - `pnpm --filter @fragments/api test` contra `fragments_test` — 34 archivos / 150 pruebas PASS; coberturas incluyen aislamiento de docente, sesión requerida, estudiante 403, agregados, solicitudes activas/archivadas y preservación de identidades históricas.
 - `pnpm test` — PASS: contracts 28/28, web 137/137, API 84 passed / 66 omitidas por requerir DB. Las 66 fueron cubiertas por la ejecución de API con `fragments_test` indicada arriba.
 - `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check` — PASS. Build Vite observó chunk principal minificado de 538.62 kB y avisos Rolldown sobre directivas `use client` de Lucide.
-- Integración web probó las siguientes rutas/pantallas: entrada única, Classroom Studio, Estudiantes, Control de Mentor, Review (placeholder seguro), Inspector y Configuración. No se cambió el motor de sesión; el test confirma que rutas docentes comparten shell/sesión.
+- Navegación autenticada probó `/teacher/classrooms`, `/teacher/students`, `/teacher/mentor-control`, `/teacher/inspector` y `/teacher/settings`: todas conservan el shell docente y no vuelven al login. `/teacher/review` muestra el placeholder seguro. Las pruebas unitarias cubren además entrada y shell. No se cambió el motor de sesión.
 
 ## Cambios
 
@@ -30,10 +30,10 @@ Estado: en validación; pendiente PR/CI, merge, release F14, provisión de la id
 
 ## Operaciones aún no completadas
 
-- No existe aún commit, PR, CI de GitHub, merge ni tag F14; registrarlos aquí después de observar sus resultados.
+- El commit local indicado arriba existe; PR, CI de GitHub, merge y tag F14 aún están pendientes y se registrarán después de observar sus resultados.
 - No se ha consultado/provisionado la identidad `vgmiltonisaac@gmail.com` en producción ni se ha pedido reset. Correo/Resend y recepción siguen por verificar; no afirmar entrega hasta evidencia de proveedor/usuario.
 - Notion todavía conserva el estado anterior de diseño; actualizarlo al quedar verificado el cierre de este flujo.
 
 ## Índice y cierre
 
-`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen final, límite total del directorio: 20 archivos (actualmente 12, antes del informe). Historial de commits pendiente; registrar SHA del commit de implementación después de crearlo y volver a comprobar tests/evidencia antes de marcar F23 completa.
+`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen final. El directorio tiene 13 archivos, bajo el máximo de 20. Commit local de implementación `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; actualizar la evidencia con PR/CI/release después de observarlos antes de marcar F23 completa.
