@@ -22,6 +22,7 @@ describe("AdminQueueSummaryScreen", () => {
     const read = vi.fn().mockResolvedValueOnce({ ok: true, data: fakeSummary }).mockResolvedValueOnce({ ok: true, data: { ...fakeSummary, counts: { ...fakeSummary.counts, pending: 0 } } });
     const view = await render({ read });
     expect(view.textContent).toContain("Estado de la cola");
+    expect(view.querySelector('a[href="/admin/queue"]')?.getAttribute("aria-current")).toBe("page");
     expect(view.textContent).toContain("Leases vencidos");
     expect(view.textContent).toContain("Muestreo UTC");
     expect(view.querySelector("time")?.getAttribute("dateTime")).toBe(fakeSummary.sampledAt);
