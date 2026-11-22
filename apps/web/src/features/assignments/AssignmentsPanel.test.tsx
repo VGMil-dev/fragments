@@ -106,6 +106,7 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Observación");
     expect(html).toContain("Iniciar propuesta");
     expect(html).toContain("Contexto para tu propuesta · versión 3");
+    expect(html).toContain("Misión publicada v1 · Contexto Mentor v3");
     expect(html).toContain("Bachillerato");
     expect(html).toContain("Explora tu entorno");
     expect(html).toContain("Registrar hallazgos");
@@ -120,6 +121,7 @@ describe("AssignmentsPanel", () => {
       const context = container.querySelector<HTMLDetailsElement>(".student-assignments__context");
       const contextSummary = context?.querySelector("summary");
       expect(context?.open).toBe(false);
+      expect(container.querySelector(".student-assignments__mission-version")?.textContent).toBe("Misión publicada v1 · Contexto Mentor v3");
       await act(async () => contextSummary?.click());
       expect(context?.open).toBe(true);
       const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Explora tu entorno"]');

@@ -213,3 +213,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - La asociación de misión se validó con APIs fake. El aula QA productiva sigue sin habilidades/misiones; persistencia remota del borrador, flujo completo con datos académicos reales y calidad de evaluación IA continúan NO COMPROBADOS. Sin escrituras productivas.
 - Commit de reconciliación F14/F18.B: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado mediante PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
 - Estado de integración registrado en `beedba8acaf86e62ccd9fd2d8c9326dc327544c2`.
+
+## Incremento UI estudiantil — identificación de versión de misión — 2026-11-22
+
+- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade en cada tarjeta estudiantil la etiqueta visible `Misión publicada vN · Contexto Mentor vM`, con `version` y `mentorContextVersion` del mismo `StudentAssignment`, antes del disclosure y el CTA.
+- La prueba existente `AssignmentsPanel.test.tsx` comprueba la etiqueta fuera del disclosure cerrado y mantiene la comprobación de que el CTA entrega el objeto completo, con el ID de versión, callback.
+- TDD: la prueba falló antes del cambio porque no aparecía la etiqueta. Suite focal web `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Fuente de datos: `StudentAssignment` ya contiene ambos números versionados. Sin cambios a contratos, API, rutas, esquema/migraciones, datos productivos o sesiones. No se usó navegador ni se hizo release.
+- Commit de implementación: `c8e222b2d65e77497566e76afa551e51ae3e3c6a`.
+- PR #133 abierto contra `main` (`codex/f18b-student-mission-version`), head de código `e1caa2545d495860faa9d4526fcd7edbcd6cba34`; CI `verify` run `45081014837` SUCCESS. La actualización documental del PR queda en un commit separado, sin cambios de código.

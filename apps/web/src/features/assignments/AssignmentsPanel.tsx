@@ -64,6 +64,7 @@ export function StudentAssignmentsList({ assignments, onStartProposal }: { assig
     {assignments.length ? <ul>{assignments.map((assignment) => <li key={assignment.id}>
       <article>
         <p className="assignments-panel__eyebrow">{assignment.classroomTitle} · {assignment.subject}</p>
+        <p className="student-assignments__mission-version">Misión publicada v{assignment.version} · Contexto Mentor v{assignment.mentorContextVersion}</p>
         <h3>{assignment.title}</h3>
         <p>{assignment.instructions}</p>
         <h4>Objetivos</h4>
