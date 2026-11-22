@@ -3,8 +3,13 @@ import type { AdminTeachersApi, AdminTeacherPage } from "./admin-teachers-api.js
 import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-teachers.css";
 
-type State = { status: "loading" } | { status: "ready"; page: AdminTeacherPage } | { status: "error" };
+type State = { status: "loading" } | { status: "ready"; page: AdminTeacherPage } | { status: "error"; reason: "AUTH_REQUIRED" | "FORBIDDEN" | "OTHER" };
 const pageSize = 20;
+
+function errorReason(code: string): Extract<State, { status: "error" }>['reason'] {
+  if (code === "AUTH_REQUIRED" || code === "FORBIDDEN") return code;
+  return "OTHER";
+}
 
 export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -18,8 +23,8 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
     setState({ status: "loading" });
     void api.list({ limit: pageSize, ...(cursor ? { cursor } : {}) }).then((result) => {
       if (!active) return;
-      setState(result.ok ? { status: "ready", page: result.data } : { status: "error" });
-    }).catch(() => { if (active) setState({ status: "error" }); });
+      setState(result.ok ? { status: "ready", page: result.data } : { status: "error", reason: errorReason(result.error.code) });
+    }).catch(() => { if (active) setState({ status: "error", reason: "OTHER" }); });
     return () => { active = false; };
   }, [api, cursor, reload]);
 
@@ -48,7 +53,7 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
       </button>
     </header>
     {state.status === "loading" ? <p role="status" aria-live="polite">Cargando cuentas docentes…</p> : null}
-    {state.status === "error" ? <p role="alert">No se pudieron cargar las cuentas docentes. Verifica el acceso e inténtalo de nuevo.</p> : null}
+    {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" ? <>
       {state.page.items.length === 0 ? <p role="status">No hay cuentas docentes para mostrar.</p> : <div className="admin-teachers__table-wrap" role="region" aria-label="Directorio de cuentas docentes" tabIndex={0}>
         <table>
@@ -69,6 +74,12 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
       <span>Página {pageIndex + 1}</span>
     </nav> : null}
   </section>;
+}
+
+function errorMessage(reason: Extract<State, { status: "error" }>['reason']): string {
+  if (reason === "AUTH_REQUIRED") return "Inicia sesión con una cuenta administradora para consultar las cuentas docentes.";
+  if (reason === "FORBIDDEN") return "Esta cuenta no tiene permisos de administración para consultar las cuentas docentes. Solicita acceso admin o usa una cuenta administradora.";
+  return "No se pudieron cargar las cuentas docentes. Verifica el acceso e inténtalo de nuevo.";
 }
 
 function formatUtc(value: string): string {

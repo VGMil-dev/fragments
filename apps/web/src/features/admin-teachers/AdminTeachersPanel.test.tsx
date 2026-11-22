@@ -50,6 +50,25 @@ describe("AdminTeachersPanel with fake API", () => {
     expect(container.textContent).toContain("Docente Fake");
   });
 
+  it("distinguishes missing admin session, forbidden role and other errors while preserving retry", async () => {
+    const list = vi.fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: "AUTH_REQUIRED", message: "private 401 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "FORBIDDEN", message: "private 403 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "HTTP_ERROR", message: "private http detail" } });
+    const view = await render({ list });
+
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Inicia sesión con una cuenta administradora");
+    expect(view.textContent).not.toContain("private");
+    expect(view.querySelector<HTMLButtonElement>(".admin-teachers__header button")?.textContent).toBe("Reintentar");
+    await act(async () => view.querySelector<HTMLButtonElement>(".admin-teachers__header button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Esta cuenta no tiene permisos de administración");
+    expect(view.textContent).not.toContain("private");
+    await act(async () => view.querySelector<HTMLButtonElement>(".admin-teachers__header button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("No se pudieron cargar las cuentas docentes");
+    expect(view.textContent).not.toContain("private");
+    expect(list).toHaveBeenCalledTimes(3);
+  });
+
   it("navigates cursor pages without exposing or mutating account data", async () => {
     const nextPage: AdminTeacherPage = { items: [{ accountId: "teacher-fake-2", displayName: "Segunda Docente", email: "second@example.test", createdAt: "2026-11-21T17:00:00.000Z" }], nextCursor: null };
     const list = vi.fn().mockResolvedValueOnce({ ok: true, data: { ...fakeTeacherPage, nextCursor: "next-fake-cursor" } }).mockResolvedValueOnce({ ok: true, data: nextPage }).mockResolvedValueOnce({ ok: true, data: fakeTeacherPage });
