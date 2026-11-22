@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { ClassroomAssignment, SkillCatalogEntry, StudentAssignment } from "@fragments/contracts";
@@ -18,6 +21,40 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Editar borrador");
     expect(html).toContain("Publicar");
     expect(html).toContain("Hay cambios sin publicar");
+  });
+
+  it("lets the teacher preview the student-facing draft", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<AssignmentsPanel assignments={[]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />));
+      const createButton = [...container.querySelectorAll("button")].find((button) => button.textContent === "Crear misión");
+      expect(createButton).toBeTruthy();
+      await act(async () => createButton?.click());
+      const title = container.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+      const instruction = container.querySelector("textarea");
+      expect(title).toBeTruthy();
+      expect(instruction).toBeTruthy();
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Explora el patio");
+        title!.dispatchEvent(new Event("input", { bubbles: true }));
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(instruction, "Registra tres observaciones.");
+        instruction!.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      const previewButton = [...container.querySelectorAll("button")].find((button) => button.textContent === "Vista previa estudiantil");
+      expect(previewButton).toBeTruthy();
+      await act(async () => previewButton?.click());
+      expect(container.textContent).toContain("VISTA DEL ESTUDIANTE");
+      expect(container.textContent).toContain("Explora el patio");
+      expect(container.textContent).toContain("Registra tres observaciones.");
+      expect(container.textContent).toContain("Observación");
+      expect(container.querySelector('[aria-expanded="true"]')).toBeTruthy();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
   });
 
   it("renders only the published mission content passed to the student view", () => {

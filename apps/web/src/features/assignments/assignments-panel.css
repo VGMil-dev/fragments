@@ -17,6 +17,10 @@
 .assignments-panel__skill label { display: inline-flex; align-items: center; gap: .35rem; font-weight: 500; }
 .assignments-panel__remove, .assignments-panel__text-button { border: 0 !important; background: transparent !important; color: var(--f16-info, #8ab4ff) !important; text-decoration: underline; }
 .assignments-panel__form-actions { flex-wrap: wrap; }
+.assignments-panel__preview { margin: 1rem 0; padding: 1rem; border: 1px dashed var(--f16-border-strong, #6682ac); border-radius: var(--f16-radius-card, .8rem); background: var(--f16-surface, #121c32); }
+.assignments-panel__preview article { padding: 1rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-control, .55rem); background: var(--f16-night, #0b1220); }
+.assignments-panel__preview h3, .assignments-panel__preview h4 { margin: .6rem 0 .25rem; }
+.assignments-panel__preview p { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__list article, .student-assignments article { padding: 1rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-card, .8rem); background: var(--f16-surface, #121c32); }
 .assignments-panel__list article { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .assignments-panel__list h3, .student-assignments h3 { margin: 0; }
