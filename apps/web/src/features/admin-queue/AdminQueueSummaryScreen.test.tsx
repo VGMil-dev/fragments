@@ -46,4 +46,25 @@ describe("AdminQueueSummaryScreen", () => {
     await act(async () => container?.querySelector("button")?.click());
     expect(container.textContent).toContain("Completados");
   });
+
+  it("distinguishes missing and insufficient admin access and retries with a generic fallback", async () => {
+    const read = vi.fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: "AUTH_REQUIRED", message: "private 401 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "FORBIDDEN", message: "private 403 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "HTTP_ERROR", message: "private http detail" } })
+      .mockResolvedValueOnce({ ok: true, data: fakeSummary });
+    const view = await render({ read });
+
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Inicia sesión con una cuenta administradora");
+    expect(view.textContent).not.toContain("private");
+    expect(view.querySelector<HTMLButtonElement>("button")?.textContent).toBe("Reintentar");
+    await act(async () => view.querySelector<HTMLButtonElement>("button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Esta cuenta no tiene permisos de administración");
+    expect(view.textContent).not.toContain("private");
+    await act(async () => view.querySelector<HTMLButtonElement>("button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("No se pudo cargar el estado de la cola");
+    await act(async () => view.querySelector<HTMLButtonElement>("button")?.click());
+    expect(read).toHaveBeenCalledTimes(4);
+    expect(view.textContent).toContain("Pendientes");
+  });
 });

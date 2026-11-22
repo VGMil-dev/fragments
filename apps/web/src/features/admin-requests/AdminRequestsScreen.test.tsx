@@ -48,4 +48,33 @@ describe("AdminRequestsScreen", () => {
     await act(async () => next?.click());
     expect(list).toHaveBeenLastCalledWith({ limit: 20, offset: 20, status: null });
   });
+
+  it("distinguishes access failures while retry keeps the active status and page", async () => {
+    const page = (offset: number, status: "pending" | null) => ({ ok: true as const, data: { items: Array.from({ length: 20 }, (_, index) => ({ ...item, requestId: `fake-${offset}-${index}` })), total: 40, limit: 20, offset, status } });
+    const list = vi.fn()
+      .mockResolvedValueOnce(page(0, null))
+      .mockResolvedValueOnce(page(0, "pending"))
+      .mockResolvedValueOnce({ ok: false, error: { code: "AUTH_REQUIRED", message: "private 401 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "FORBIDDEN", message: "private 403 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "HTTP_ERROR", message: "private http detail" } })
+      .mockResolvedValueOnce({ ok: true, data: { items: [], total: 0, limit: 20, offset: 20, status: "pending" } });
+    const view = await render({ list });
+    const filter = view.querySelector<HTMLSelectElement>("#admin-request-status")!;
+    await act(async () => { filter.value = "pending"; filter.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Siguiente")?.click());
+
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Inicia sesión con una cuenta administradora");
+    expect(view.textContent).not.toContain("private");
+    await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Esta cuenta no tiene permisos de administración");
+    expect(view.textContent).not.toContain("private");
+    await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar las solicitudes académicas");
+    await act(async () => [...view.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")?.click());
+
+    expect(filter.value).toBe("pending");
+    expect(list).toHaveBeenLastCalledWith({ limit: 20, offset: 20, status: "pending" });
+    expect(list).toHaveBeenCalledTimes(6);
+    expect(view.textContent).toContain("No hay registros para este estado.");
+  });
 });
