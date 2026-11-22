@@ -28,7 +28,7 @@ describe("safe Review operational events", () => {
 
     expect(write).toHaveBeenCalledOnce();
     const output = JSON.parse(write.mock.calls[0]![0] as string);
-    expect(output).toEqual(validEvent);
+    expect(output).toEqual({ ...validEvent, occurredAt: expect.any(String) });
     expect(JSON.stringify(output)).not.toContain("FAKE_SECRET_PROMPT");
   });
 

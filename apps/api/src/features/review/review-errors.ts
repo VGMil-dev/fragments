@@ -101,7 +101,10 @@ export type ReviewOperationalEvent = {
   attempt: number;
   finalStatus: "completed" | "failed" | "retry_wait" | "lease_lost" | "degraded";
   gatewayFailure?: GatewayFailureSummary;
+  /** Present only after the event crosses the operational logging boundary. */
+  occurredAt?: string;
 };
+export type StoredReviewOperationalEvent = ReviewOperationalEvent & { occurredAt: string };
 
 const reviewStages = new Set<ReviewStage>([
   "repository", "snapshot_validation", "packing", "ai_dispatch", "analysis_validation",
@@ -147,7 +150,7 @@ function writeToStdout(line: string): Promise<void> {
 
 /** Emit a bounded diagnostic projection; never serialize errors or job payloads. */
 export function writeReviewOperationalEvent(event: ReviewOperationalEvent, write: OperationalWriter = writeToStdout): void {
-  const safeEvent = safeOperationalProjection(event);
+  const safeEvent = projectReviewOperationalEvent(event);
   if (!safeEvent) return;
   try {
     const result = write(JSON.stringify(safeEvent));
@@ -157,13 +160,13 @@ export function writeReviewOperationalEvent(event: ReviewOperationalEvent, write
   } catch { /* Operational logging must not change queue work results. */ }
 }
 
-function safeOperationalProjection(input: ReviewOperationalEvent): ReviewOperationalEvent | null {
+export function projectReviewOperationalEvent(input: ReviewOperationalEvent): StoredReviewOperationalEvent | null {
   if (!input || typeof input !== "object" || !reviewEventNames.has(input.event)
     || !reviewStages.has(input.stage) || !reviewStatuses.has(input.finalStatus)
     || (input.errorCode !== null && !reviewErrorCodes.has(input.errorCode))) return null;
 
   const gatewayFailure = safeGatewayFailure(input.gatewayFailure);
-  const event: ReviewOperationalEvent = {
+  const event: StoredReviewOperationalEvent = {
     event: input.event,
     reviewId: safeReviewId(input.reviewId),
     jobId: safeReviewId(input.jobId),
@@ -172,9 +175,16 @@ function safeOperationalProjection(input: ReviewOperationalEvent): ReviewOperati
     durationMs: safeInteger(input.durationMs, 0, 86_400_000),
     attempt: safeInteger(input.attempt, 0, 1000),
     finalStatus: input.finalStatus,
+    occurredAt: isCanonicalUtcTimestamp(input.occurredAt) ? input.occurredAt : new Date().toISOString(),
     ...(gatewayFailure ? { gatewayFailure } : {}),
   };
   return event;
+}
+
+function isCanonicalUtcTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 function safeReviewId(value: unknown): string | null {

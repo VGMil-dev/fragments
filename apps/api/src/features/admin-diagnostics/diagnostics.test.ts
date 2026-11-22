@@ -18,6 +18,7 @@ describe("safe request diagnostics", () => {
     expect(classifyRouteFamily("/api/admin/queue/summary")).toBe("admin.queue");
     expect(classifyRouteFamily("/api/admin/audit-log?limit=50")).toBe("admin.audit_log");
     expect(classifyRouteFamily("/api/admin/teachers?limit=20")).toBe("admin.teachers");
+    expect(classifyRouteFamily("/api/admin/review-events?limit=50")).toBe("admin.review_events");
     const diagnostics = createRequestDiagnostics({ write: () => undefined, id: () => "fake-request-id" });
     expect(diagnostics.record({ method: "TRACE /secret", pathname: "/secret" as never, statusCode: 204, durationMs: -9 })).toMatchObject({ method: "OTHER", routeFamily: "other", durationMs: 0 });
   });
