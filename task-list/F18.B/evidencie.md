@@ -158,4 +158,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — PASS, 4/4.
 - `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
 - Fuente: `ClassroomAssignment.versions` existente. Sin cambios a contratos, rutas compartidas, schema, migraciones, APIs, datos o `TASKS.md`.
-- Commit de este incremento pendiente de registro; no hay QA visual ni verificación en producción.
+- Commit de este incremento: `6b92166929c027a00d88821bf84ee81fa21dd030`; no hay QA visual ni verificación en producción.
