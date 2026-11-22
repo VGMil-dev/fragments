@@ -4,7 +4,7 @@
 
 Slice feature-local implementado en `codex/f22-queue-observability`, rama limpia creada desde `origin/main` en `0c4c5001659e12d18383393cdfa82a8111be6fbe`. F22 vigente en Notion confirma F22.2 desplegada en v0.5.12 y enumera la observabilidad de jobs/colas/worker como alcance F22 pendiente. Commit funcional: `34b946af5e60c2d699f45a5af677a644682c7afa`.
 
-PR #102 se sincronizó con `main`, pasó CI `45046396155`, tuvo revisión independiente PASS y se integró por merge normal como `7ba8a1bd8ef020b59654cedef4f6c213b6a5fcae`. La integración arquitectónica descrita abajo está local en `codex/f22-queue-integration`; aún no tiene PR/CI/F14. No hubo acceso a producción, secretos, bases reales o sesiones.
+PR #102 se sincronizó con `main`, pasó CI `45046396155`, tuvo revisión independiente PASS y se integró por merge normal como `7ba8a1bd8ef020b59654cedef4f6c213b6a5fcae`. PR #103 integró rutas API/UI, revisión, auditoría-before-read y diagnósticos en `dd0222f92b1b6ebb836e66fcf30bf90c7786eb25`; CI `45047282256` PASS y revisión independiente PASS. F14 publicó y aplicó `v0.5.13`, run `45047598074` SUCCESS. Ego Lite confirma versión/SHA en páginas docente/estudiante y `/health` `database=ready`.
 
 ## Cambios
 
@@ -15,7 +15,7 @@ PR #102 se sincronizó con `main`, pasó CI `45046396155`, tuvo revisión indepe
 - UI administra solo lectura, presenta seis conteos y muestreo UTC, con carga/error/reintento manual y nota visible de que conteos de cola no demuestran liveness del worker.
 - El slice original no incluía rutas compartidas, cambios de auth/contratos, migraciones, writes, acciones operativas o cambios de infraestructura.
 
-## Integración arquitectónica local
+## Integración arquitectónica y release
 
 1. Arquitectura conecta `createAdminQueueSummaryRepository(database)` y `createAdminQueueSummaryHttp(store, isAdmin, audit)` en `apps/api/src/http/app.ts`; usa Better Auth `adminCheck`/`userId` y writer JSON estructurado stdout con callback confirmado.
 2. `/admin/queue` monta `AdminQueueSummaryScreen`/`adminQueueApi` y navegación cruzada; diagnósticos clasifica `/api/admin/queue/summary` como `admin.queue`.
@@ -41,4 +41,5 @@ El requisito F22 de registrar cada operación privilegiada implica registrar el 
 - Los conteos reflejan estados de jobs, pero no prueban por sí solos que el worker esté vivo o procesando.
 - La audit callback requiere integración de arquitecto. Si escribe a stdout, su retención/rotación depende del runtime y no está verificada.
 - No se agregan reintentos; la vista es de solo lectura.
-- La API/UI ya tienen rutas compartidas conectadas en la rama arquitectónica, aún no publicadas ni desplegadas. No se validaron sesiones admin, filas reales, persistencia/rotación de stdout ni worker vivo en producción.
+- Las rutas compartidas y UI quedaron integradas y desplegadas en v0.5.13. No se validaron sesiones admin, filas reales, persistencia/rotación de stdout ni worker vivo en producción.
+- Producción: `GET /api/admin/queue/summary` anónimo → `401 AUTH_REQUIRED` y cuerpo sin conteos. No se usó identidad admin; lectura de jobs reales, auditoría del sink en runtime, retención/rotación stdout y liveness worker permanecen **NO COMPROBADOS**. El test integrado con roles/DB/sink fake confirma orden/códigos, no esos datos.

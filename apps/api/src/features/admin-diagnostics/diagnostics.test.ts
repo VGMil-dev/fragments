@@ -16,6 +16,7 @@ describe("safe request diagnostics", () => {
     expect(classifyRouteFamily("/unmapped/person@example.test?secret=1")).toBe("other");
     expect(classifyRouteFamily("/api/admin/classroom-requests?status=pending")).toBe("admin.requests");
     expect(classifyRouteFamily("/api/admin/queue/summary")).toBe("admin.queue");
+    expect(classifyRouteFamily("/api/admin/audit-log?limit=50")).toBe("admin.audit_log");
     const diagnostics = createRequestDiagnostics({ write: () => undefined, id: () => "fake-request-id" });
     expect(diagnostics.record({ method: "TRACE /secret", pathname: "/secret" as never, statusCode: 204, durationMs: -9 })).toMatchObject({ method: "OTHER", routeFamily: "other", durationMs: 0 });
   });

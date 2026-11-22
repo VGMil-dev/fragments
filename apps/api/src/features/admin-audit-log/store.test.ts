@@ -85,4 +85,14 @@ describe("admin audit log store with fake stdout", () => {
     expect(feed.map((entry) => entry.event)).toEqual(["admin.audit_log.read", "admin.queue_summary.read"]);
     expect(feed[0]).not.toHaveProperty("adminActorId");
   });
+
+  it("excludes the current read event before applying the requested page size", async () => {
+    const log = createAdminAuditLog({ writeLine: async () => {} });
+    await log.write(fakeAdminAudit);
+    await log.write({ ...fakeAdminAudit, requestId: "00000000-0000-4000-8000-000000000098", event: "admin.classroom_requests.read" });
+    await log.write({ ...fakeAdminAudit, requestId: "00000000-0000-4000-8000-000000000099", event: "admin.audit_log.read" });
+
+    expect(log.listExcluding("00000000-0000-4000-8000-000000000099", 1).map((entry) => entry.event)).toEqual(["admin.classroom_requests.read"]);
+    expect(log.listExcluding("00000000-0000-4000-8000-000000000099", 2)).toHaveLength(2);
+  });
 });
