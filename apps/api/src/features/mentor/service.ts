@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AiAnalysisSchema, CreateProposalRequestSchema, MentorControlConfigSchema, SubmissionSnapshotSchema, type AiAnalysis, type GalleryEntry, type MentorControlConfig, type MentorCriterionBreakdown, type SubmissionSnapshot } from "@fragments/contracts";
+import { AiAnalysisSchema, CreateProposalRequestSchema, MentorEvaluationConfigSchema, SubmissionSnapshotSchema, type AiAnalysis, type GalleryEntry, type MentorControlConfig, type MentorEvaluationConfig, type MentorCriterionBreakdown, type SubmissionSnapshot } from "@fragments/contracts";
 
 export type Proposal = ReturnType<typeof CreateProposalRequestSchema.parse>;
 
@@ -9,12 +9,12 @@ export type MentorEvaluation = {
   guidance: string[];
   similarities: Similarity[];
   mentorContextVersion?: number;
-  mentorContext?: MentorControlConfig;
+  mentorContext?: MentorEvaluationConfig;
   criterionBreakdown?: MentorCriterionBreakdown[];
 };
 
 export interface MentorEvaluator {
-  evaluate(input: { proposal: Proposal; proposalDigest: string; config: MentorControlConfig; contextVersion: number; operationKey: string }): Promise<{
+  evaluate(input: { proposal: Proposal; proposalDigest: string; config: MentorEvaluationConfig; contextVersion: number; operationKey: string }): Promise<{
     findings: AiAnalysis["findings"];
     limitations: string[];
     modelId: string;
@@ -203,10 +203,10 @@ export function createMentorService(options: Options) {
   return {
     proposalDigest(rawProposal: unknown): string { return digest(proposalWithoutClassroomIds(rawProposal)); },
 
-    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorControlConfig; version: number; operationKey?: string }): Promise<MentorEvaluation> {
+    async evaluate(rawProposal: unknown, galleryEntries: GalleryEntry[] = [], context?: { config: MentorEvaluationConfig; version: number; operationKey?: string }): Promise<MentorEvaluation> {
       const proposal = proposalWithoutClassroomIds(rawProposal);
       const proposalDigest = digest(proposal);
-      const config = MentorControlConfigSchema.parse(context?.config ?? defaultMentorConfig);
+      const config = MentorEvaluationConfigSchema.parse(context?.config ?? defaultMentorConfig);
       const contextVersion = context?.version ?? 1;
       const operationKey = context?.operationKey ?? createHash("sha256").update(canonical({ proposalDigest, config, contextVersion })).digest("hex");
       const result = await options.evaluator.evaluate({ proposal, proposalDigest, config, contextVersion, operationKey });

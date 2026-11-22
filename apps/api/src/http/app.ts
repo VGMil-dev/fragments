@@ -69,8 +69,8 @@ export function createHttpHandler(database: PrismaClient, options: {
       return;
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
-    if (classroomHandler && await classroomHandler(request, response) === "handled") return;
     if (await assignmentHandler(request, response) === "handled") return;
+    if (classroomHandler && await classroomHandler(request, response) === "handled") return;
     if (await technologyCatalogHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
     response.setHeader("x-content-type-options", "nosniff");

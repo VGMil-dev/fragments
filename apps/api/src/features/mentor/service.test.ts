@@ -57,6 +57,26 @@ describe("Mentor service", () => {
     expect(result.guidance).toHaveLength(1);
   });
 
+  it("passes the full effective assignment context to the evaluator", async () => {
+    let receivedRequirements = 0;
+    const evaluator: MentorEvaluator = {
+      async evaluate(input) {
+        receivedRequirements = input.config.requirements.length;
+        return fakeEvaluator.evaluate(input);
+      },
+    };
+    const config = {
+      subject: "Programación móvil", theme: "Misión", assignment: "Desarrolla la tarea.",
+      requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`),
+      expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11",
+      criteria: [{ id: "criterion-a", title: "Evidencia", description: "Señales comprobables", weight: 100 }],
+    };
+
+    await createMentorService({ evaluator, pdf: fakePdf }).evaluate(proposal, [], { config, version: 3 });
+
+    expect(receivedRequirements).toBe(72);
+  });
+
   it("omits internal classroom and skill IDs from evaluator input and delivery snapshots", async () => {
     let evaluatorProposal: unknown;
     const evaluator: MentorEvaluator = {

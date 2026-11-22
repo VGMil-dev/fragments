@@ -95,25 +95,39 @@ export const MentorRubricCriterionSchema = z.object({
   weight: z.number().int().min(1).max(100),
 }).strict();
 
-export const MentorControlConfigSchema = z.object({
+const MentorConfigFieldsSchema = z.object({
   subject: nonEmptyText.max(120),
   theme: nonEmptyText.max(160),
   assignment: nonEmptyText.max(3000),
-  requirements: z.array(nonEmptyText.max(500)).max(20),
   expectedLevel: nonEmptyText.max(240),
   rubricTitle: nonEmptyText.max(120),
   criteria: z.array(MentorRubricCriterionSchema).min(1).max(10),
-}).strict().superRefine((value, context) => {
+}).strict();
+const validateMentorCriteria = (value: z.infer<typeof MentorConfigFieldsSchema>, context: z.RefinementCtx) => {
   const ids = new Set<string>();
   value.criteria.forEach((criterion, index) => {
     if (ids.has(criterion.id)) context.addIssue({ code: "custom", path: ["criteria", index, "id"], message: "Cada criterio necesita un identificador distinto." });
     ids.add(criterion.id);
   });
-});
+};
+
+// F11's editable configuration stays capped at 20 requirements. F18.B adds up to
+// 12 objectives and 20 required + 20 optional skills to that published snapshot.
+export const MentorControlConfigSchema = MentorConfigFieldsSchema.extend({
+  requirements: z.array(nonEmptyText.max(500)).max(20),
+}).strict().superRefine(validateMentorCriteria);
+export const MentorEvaluationConfigSchema = MentorConfigFieldsSchema.extend({
+  requirements: z.array(nonEmptyText.max(500)).max(72),
+}).strict().superRefine(validateMentorCriteria);
 
 export const MentorPublishedConfigSchema = z.object({
   version: z.number().int().positive(),
   config: MentorControlConfigSchema,
+  publishedAt: z.iso.datetime(),
+}).strict();
+export const MentorEvaluationContextSchema = z.object({
+  version: z.number().int().positive(),
+  config: MentorEvaluationConfigSchema,
   publishedAt: z.iso.datetime(),
 }).strict();
 
@@ -368,7 +382,7 @@ export const ClassroomAssignmentSchema = z.object({
 export const ClassroomAssignmentsResponseSchema = z.array(ClassroomAssignmentSchema).max(200);
 export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.extend({
   classroomId: identifier, classroomTitle: classroomText(120), subject: classroomText(120),
-  mentorContext: MentorPublishedConfigSchema,
+  mentorContext: MentorEvaluationContextSchema,
 }).strict();
 export const StudentAssignmentsResponseSchema = z.array(StudentAssignmentSchema).max(200);
 export const CreateAssignmentRequestSchema = AssignmentDraftSchema;
@@ -450,7 +464,7 @@ export const ProposalDraftResponseSchema = z.object({
   version: z.number().int().min(1),
   proposal: ProposalDraftFieldsSchema,
   assignmentVersionId: identifier.nullable().optional(),
-  assignmentContext: z.object({ assignmentVersionId: identifier, mentorContext: MentorPublishedConfigSchema }).strict().nullable().optional(),
+  assignmentContext: z.object({ assignmentVersionId: identifier, mentorContext: MentorEvaluationContextSchema }).strict().nullable().optional(),
   updatedAt: z.iso.datetime(),
 }).strict();
 export const OwnedProposalsResponseSchema = z.array(ProposalDraftResponseSchema).max(200);
@@ -477,7 +491,7 @@ export const ProposalEvaluationResponseSchema = z.object({
     reason: nonEmptyText.max(1000),
   }).strict()).max(20),
   mentorContextVersion: z.number().int().positive().optional(),
-  mentorContext: MentorControlConfigSchema.optional(),
+  mentorContext: MentorEvaluationConfigSchema.optional(),
   criterionBreakdown: z.array(MentorCriterionBreakdownSchema).max(10).optional(),
   evaluatedAt: z.iso.datetime(),
 }).strict();
@@ -553,6 +567,7 @@ export type RepositorySnapshot = z.infer<typeof RepositorySnapshotSchema>;
 export type AiAnalysis = z.infer<typeof AiAnalysisSchema>;
 export type MentorRubricCriterion = z.infer<typeof MentorRubricCriterionSchema>;
 export type MentorControlConfig = z.infer<typeof MentorControlConfigSchema>;
+export type MentorEvaluationConfig = z.infer<typeof MentorEvaluationConfigSchema>;
 export type MentorPublishedConfig = z.infer<typeof MentorPublishedConfigSchema>;
 export type MentorDraftConfig = z.infer<typeof MentorDraftConfigSchema>;
 export type MentorCriterionBreakdown = z.infer<typeof MentorCriterionBreakdownSchema>;

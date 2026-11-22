@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   AiAnalysisSchema,
   MentorControlConfigSchema,
+  MentorEvaluationConfigSchema,
   MentorPublishedConfigSchema,
   MentorCriterionBreakdownSchema,
   ApiResultSchema,
@@ -91,9 +92,13 @@ describe("shared API contracts", () => {
       requiredSkills: [{ id: "skill-a", name: "React Native", description: null }], optionalSkills: [{ id: "skill-b", name: "Expo", description: "Herramientas de Expo." }], mentorContextVersion: 1, createdAt: now };
     expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
     expect(AssignmentVersionSchema.safeParse({ ...version, version: 0 }).success).toBe(false);
+    const effectiveConfig = { subject: "Programación", theme: "Lista de tareas", assignment: "Construye una lista con Expo.",
+      requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`), expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11",
+      criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] };
     expect(StudentAssignmentSchema.safeParse({ ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
-      mentorContext: { version: 1, publishedAt: now, config: { subject: "Programación", theme: "Lista de tareas", assignment: "Construye una lista con Expo.", requirements: ["Agregar y completar una tarea"],
-        expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] } } }).success).toBe(true);
+      mentorContext: { version: 1, publishedAt: now, config: effectiveConfig } }).success).toBe(true);
+    expect(MentorPublishedConfigSchema.safeParse({ version: 1, publishedAt: now,
+      config: { ...effectiveConfig, requirements: Array.from({ length: 21 }, (_, index) => `F11 ${index + 1}`) } }).success).toBe(false);
   });
 
   it("validates classroom input without accepting client-supplied ownership", () => {
@@ -396,6 +401,10 @@ describe("shared API contracts", () => {
     expect(ProposalDraftFieldsSchema.safeParse(partial).success).toBe(true);
     expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial }).success).toBe(true);
     expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now }).success).toBe(true);
+    expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now,
+      assignmentContext: { assignmentVersionId: "assignment-version-1", mentorContext: { version: 1, publishedAt: now,
+        config: { subject: "Programación", theme: "Misión", assignment: "Consigna", requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`),
+          expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] } } } }).success).toBe(true);
     expect(ProposalEvaluationInputSchema.safeParse(proposal).success).toBe(false);
     expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso." }).success).toBe(true);
     expect(ProposalEvaluationInputSchema.safeParse({ ...proposal, description: "Una descripción concreta.", purpose: "Ayudar al curso.", technologies: ["TypeScript"], expectedOutcome: "MVP demostrable" }).success).toBe(true);
@@ -557,6 +566,8 @@ describe("shared API contracts", () => {
       rubricTitle: "Rúbrica inicial", criteria: [{ id: "scope", title: "Alcance", description: "Cabe en el curso.", weight: 100 }],
     };
     expect(MentorControlConfigSchema.safeParse(config).success).toBe(true);
+    expect(MentorControlConfigSchema.safeParse({ ...config, requirements: Array.from({ length: 21 }, (_, index) => `F11 ${index}`) }).success).toBe(false);
+    expect(MentorEvaluationConfigSchema.safeParse({ ...config, requirements: Array.from({ length: 72 }, (_, index) => `Contexto ${index}`) }).success).toBe(true);
     expect(MentorControlConfigSchema.safeParse({ ...config, criteria: [config.criteria[0], config.criteria[0]] }).success).toBe(false);
     expect(MentorControlConfigSchema.safeParse({ ...config, criteria: [{ ...config.criteria[0], weight: 0 }] }).success).toBe(false);
     expect(MentorPublishedConfigSchema.safeParse({ version: 1, config, publishedAt: now }).success).toBe(true);
