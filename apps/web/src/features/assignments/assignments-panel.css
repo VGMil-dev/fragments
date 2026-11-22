@@ -22,7 +22,13 @@
 .assignments-panel__preview h3, .assignments-panel__preview h4 { margin: .6rem 0 .25rem; }
 .assignments-panel__preview p { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__list article, .student-assignments article { padding: 1rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-card, .8rem); background: var(--f16-surface, #121c32); }
-.assignments-panel__list article { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.assignments-panel__list article { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+.assignments-panel__published-versions { flex-basis: 100%; padding-top: .75rem; border-top: 1px solid var(--f16-border, #334565); }
+.assignments-panel__published-versions > summary { color: var(--f16-info, #8ab4ff); font-weight: 700; cursor: pointer; }
+.assignments-panel__published-versions > ul { display: grid; gap: .75rem; margin: .75rem 0 0; padding: 0; list-style: none; }
+.assignments-panel__published-versions > ul > li > section { padding: .85rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-control, .55rem); background: var(--f16-night, #0b1220); }
+.assignments-panel__published-versions h4, .assignments-panel__published-versions h5 { margin: .55rem 0 .25rem; }
+.assignments-panel__published-versions p, .assignments-panel__published-versions li { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__list h3, .student-assignments h3 { margin: 0; }
 .assignments-panel__list p, .student-assignments article > p:not(.assignments-panel__eyebrow) { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__empty, .assignments-panel__message { padding: .9rem 1rem; border-left: 3px solid var(--f16-info, #8ab4ff); background: var(--f16-surface, #121c32); }

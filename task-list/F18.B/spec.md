@@ -48,3 +48,8 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - WHEN activa el enlace con ratón o teclado, THEN usa la navegación existente hacia el catálogo; no se cambia ninguna API ni contrato.
 - El enlace aparece cuando no hay habilidades activas, tanto si la lista está vacía como si todas sus entradas están archivadas; si hay una activa, se omite.
 - GIVEN el aula conserva únicamente habilidades archivadas, WHEN el docente revisa disponibilidad, THEN conserva sus nombres y la nota de referencias archivadas, y también dispone del enlace al catálogo.
+
+## Incremento F18.B — inspección de snapshots publicados
+
+- GIVEN una misión docente con versiones publicadas, WHEN el docente expande “Revisar versiones publicadas”, THEN cada versión disponible presenta su consigna y objetivos inmutables, las habilidades snapshot distinguidas como requeridas u optativas y el número de versión Mentor fijado.
+- El historial es un `<details>` accesible cerrado por defecto. La vista solo lee los objetos `versions` ya cargados y no ofrece controles de escritura sobre versiones publicadas.
