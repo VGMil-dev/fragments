@@ -132,3 +132,93 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS. Ejercita HTTP con auth fixture, misión v1, rechazo anónimo/ajeno/sin matrícula, matrícula activa, borrador vinculado a snapshot, publicación v2 y Mentor fake conservando contexto de v1.
 - `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — 3/3 PASS. Comprueba disclosure cerrado/abrible, contexto/versión, exclusión de criterios/pesos y entrega del snapshot exacto.
 - La base temporal fue detenida y eliminada; no se modificó el test DB compartido, producción ni sesiones Ego Lite. Esto no verifica Better Auth ni IA reales. El disclosure en sesión productiva no puede comprobarse mientras no haya una misión habilitada; no se escribieron recursos productivos.
+
+## Incremento UI docente — acceso al catálogo — 2026-11-22
+
+- `apps/web/src/features/classroom/ClassroomStudio.tsx`: el estado sin habilidades mantiene el aviso existente y suma el enlace visible “Ir al catálogo de habilidades” a `/teacher/skills`, usando el callback de navegación establecido.
+- `apps/web/src/features/classroom/ClassroomStudio.test.tsx`: la regresión renderiza un aula fixture sin habilidades, comprueba aviso y `href`, y activa el enlace para confirmar la navegación.
+- TDD: la prueba nueva falló antes del cambio porque no encontró el enlace; tras implementarlo, `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 4/4.
+- `pnpm --filter @fragments/web typecheck` — PASS.
+- Se leyó `vercel-react-best-practices`; se aplicó enlace semántico accesible y la navegación existente. Sin navegador ni producción, acorde al alcance indicado.
+- Sin cambios a contratos, rutas compartidas/App.tsx, schema, migraciones, APIs, servicios o datos reales.
+- Commit de implementación: `a69f563c93833358f6688b0b1bc45f73b0438e41`. Sin push ni despliegue.
+
+## Continuidad — catálogo con habilidades archivadas — 2026-11-22
+
+- Cuando no hay habilidades activas, el enlace aparece tanto si el aula está vacía como si conserva solo habilidades archivadas. Las filas archivadas y su mensaje de referencias conservadas permanecen visibles.
+- Prueba nueva: `ClassroomStudio` renderiza una habilidad fixture archivada, confirma su nombre y nota, y comprueba el enlace contextual. La prueba falló antes del ajuste porque faltaba el enlace.
+- Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 5/5; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Commit incremental: `72cd2a52d4a124f01b5ede499ebfa21f49955955`. Sin push ni cambios fuera del alcance.
+
+## PR #116 y post-release Ego Lite v0.5.16 — 2026-11-22
+
+- PR #116 se integró normalmente en `main` como `23528bccfb256dabaa3d6317a36138ad6f0edbd6`; CI `45060350800` SUCCESS. Revisión independiente PASS. El caso adicional de solo habilidades archivadas está cubierto.
+- F14 `v0.5.16`, run `45060644194`, se aplicó según bundle público `/assets/index-B5aKBWSl.js`; footer Ego Lite confirmó `v0.5.16 · 23528bc`, `/health` `database=ready`.
+- Ego Lite docente: el detalle real de Programación Móvil mostró cero habilidades activas y el enlace contextual “Ir al catálogo de habilidades”. La navegación abrió `/teacher/skills` y mostró el formulario; regresé el navegador al mismo detalle. Sin creación/guardado.
+- Ego Lite estudiante: matrícula activa de Programación Móvil visible, sin habilidades autorizadas ni misiones publicadas. Las páginas docente y estudiante quedaron abiertas; no se alteró ninguna sesión o dato.
+- Resultado real limitado: link y navegación docente PASS; inscripción/estados estudiantiles presentes. Crear habilidad, habilitarla, publicar misión, propuesta, Mentor y provider IA permanecen NO COMPROBADOS; no se escribieron datos productivos. Las pruebas existentes son HTTP/UI con fixtures/fake y PostgreSQL disposable.
+
+## Incremento UI docente — inspección de snapshots publicados — 2026-11-22
+
+- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade un disclosure “Revisar versiones publicadas” en cada misión con historial. Cada versión muestra título, consigna, objetivos, habilidades obligatorias y optativas snapshot y `mentorContextVersion`; inicia cerrado y no ofrece controles de edición.
+- La prueba `AssignmentsPanel.test.tsx` cubre dos snapshots con distinto contexto y habilidades; TDD falló antes por ausencia del disclosure y pasó tras el cambio. Verificación: prueba focal 4/4 PASS, `pnpm --filter @fragments/web typecheck` PASS y `git diff --check` PASS.
+- Revisión independiente PASS: confirmó fuente `ClassroomAssignment.versions`, solo snapshots publicados en orden ascendente y disclosure sin edición. No repitió pruebas ni typecheck; interacción/teclado no se ejercitaron y se apoyan en el elemento nativo `<details>`.
+- Commits de implementación y evidencia: `6b92166929c027a00d88821bf84ee81fa21dd030`, `6de99611ef6d68aa82ce5b20f4122b7525f0483e`, `f524ba669332ec1c188a01461931963aee2f6cfb`.
+- No cambia contratos, rutas compartidas, API, schema, migraciones ni datos. QA visual y verificación productiva del historial siguen NO COMPROBADOS; sesiones Ego Lite docente y estudiante quedan abiertas.
+
+## Snapshot de misión y release v0.5.18 — 2026-11-22
+
+- PR #119 merge `45d80c8b122da53039c2ef891ce03cf30e4b1759`, CI `45064333176` PASS: UI docente expone historial cerrado de snapshots publicados; prueba UI 4/4, typecheck/diff-check PASS y revisión independiente PASS. Solo lectura, sin edición.
+- F14 `v0.5.18` run `45068388150` SUCCESS y aplicación automática verificada en SHA `214fb1344816172ecc52c99de5e7351508d77324`; health DB ready. No hubo cambio de F18 en esa release.
+- No hay misiones ni habilidades activas en el aula de QA productiva. El historial con datos, publicar misión, iniciar propuesta y completar el contexto de Mentor siguen NO COMPROBADOS. No se escribieron datos productivos; páginas/sesiones Ego Lite permanecen abiertas.
+
+## PR #119 — integración normal
+
+- PR #119 se integró normalmente en `main` como `45d80c8b122da53039c2ef891ce03cf30e4b1759`; CI `45064333176` SUCCESS.
+- El historial docente queda integrado en main. Al momento de integrar PR #119, F14 v0.5.17 y el reflejo productivo estaban pendientes. F14 v0.5.18 fue aplicada posteriormente; la inspección visual del historial con una misión real sigue NO COMPROBADA. No se modificaron recursos académicos.
+
+## Incremento UI estudiantil — reintento por aula y recurso — 2026-11-22
+
+- `apps/web/src/features/student/StudentClassroomsScreen.tsx`: separa el estado/carga de habilidades y misiones, ofrece un retry local junto a cada error por aula y anuncia carga durante el reintento. Un `useRef` con clave aula+recurso evita duplicar solicitudes simultáneas; al reintentar no se refresca `onRefresh` ni se vuelve a pedir el recurso hermano.
+- `apps/web/src/features/student/StudentClassroomsScreen.test.tsx`: cubre fallo→éxito de misiones y habilidades, que el recurso hermano se solicite una sola vez y que clicks duplicados simultáneos por recurso no creen requests adicionales. Comprueba los estados alert/status y contenido vacío tras éxito.
+- TDD: las tres pruebas nuevas fallaron antes del cambio porque faltaban botones de reintento; tras el cambio, `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx --maxWorkers=1` — PASS, 6/6.
+- Suite focal web: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15. `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- El commit inicial no cambió contratos, API, migraciones, datos productivos ni sesiones; no se realizó navegador ni release en ese momento.
+- Commit de implementación: `d72fa6111c9418e18fbea5d7e8923634c421986c`.
+
+## Sincronización con main para PR #126 — 2026-11-22
+
+- Se confirmó worktree limpio en `codex/f18b-classroom-retry`; `HEAD` era ancestro de `origin/main`, por lo que se integró `origin/main` (`8e72af9133abedecc927cbda3723466398d8913b`) con merge normal, sin rebase/reset/force.
+- El conflicto de esta evidencia se resolvió conservando el historial completo del snapshot/release F14 v0.5.18 y el apartado de reintentos F18. Se preservaron los demás cambios de documentación/TASKS que llegaron desde main.
+- Commit de merge y resolución: `93a57648f53fb286f5d858eb647b1e2456bbc89f`.
+- Verificación fresca post-merge: suite focal web 15/15; `pnpm --filter @fragments/web typecheck` PASS; `git diff --cached --check` PASS.
+- PR #126 se actualizó con push normal y CI final `45071108105` SUCCESS; merge normal `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+
+## PR #126 y release F14 v0.5.19 — 2026-11-22
+
+- PR #126 implementa en Mis aulas reintento independiente por aula para errores de habilidades y misiones. Código `d72fa6111c9418e18fbea5d7e8923634c421986c`; CI final `45071108105` PASS, suite focal 15/15, typecheck y diff-check PASS. Revisión independiente PASS (head `d4c6c3b`; el commit posterior solo actualizó `TASKS.md`). Main merge `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+- F14 `v0.5.19`, run `45071360770`, aplicada por timer/agente normal. SSH read-only confirma web/API healthy en SHA exacto; `/health` ok/DB ready; bundle público `index-BgnTqOr6.js` confirma versión/SHA y ambos botones retry.
+- El PR no toca contratos, rutas compartidas, API, esquema ni migraciones. No hubo escrituras productivas. En producción no se provocó una falla para ejercitar retry; ese recorrido sigue NO COMPROBADO en navegador. La misión real e historial de contexto tampoco pueden validarse porque el aula QA no tiene misiones/habilidades.
+
+## Continuidad UI — asociación segura de misión en Mentor — 2026-11-22
+
+- La prueba de composición `apps/web/src/App.student-flow.test.tsx` inicia desde misión v1, comprueba contexto F11 snapshot v7 y guarda con el `assignmentVersionId` exacto. También recorre Mis entregas → Abrir Mentor y Review → Volver a Mentor y comprueba contexto general v2, sin asociar los borradores nuevos al ID de misión anterior.
+- Se encontró y corrigió estado stale en la navegación, en “Abrir Mentor” desde Mis entregas y en el retorno desde Review. `App.tsx` conserva el snapshot solo en la transición explícita iniciada desde la misión.
+- Verificación fresca tras ampliar rutas: `pnpm exec vitest run src/App.student-flow.test.tsx` PASS 1/1; `pnpm --filter @fragments/web test` PASS 181/181; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
+- Los APIs se simulan en esta prueba. No se comprobó persistencia remota ni producción; la integración real HTTP/PostgreSQL y Mentor fake previa sigue en sus evidencias anteriores. Sin cambio de contratos, rutas de servidor, esquema, migraciones o datos.
+- Commits de implementación/prueba: `41a32456c65f56267f903285ec67c15cc8c52f7` y follow-up del hallazgo independiente `3435c8365a7e2f0a0ba4e2cb9d8671cfff05e538`.
+- Revisión independiente del head `7c82e0f` PASS: las rutas Mis entregas→Abrir Mentor y Review→volver prueban contexto general v2 sin `assignmentVersionId` anterior. Señaló que Projects→Continuar mantiene el valor solo en memoria para una propuesta existente; la pantalla usa `onUpdate` y el revisor no encontró asociación stale a borrador nuevo.
+- PR #128 integrado normalmente como `1041d1af3f949a13671d761ee96a59c52d2a1d78`; CI final `45074239987` SUCCESS. Revisión independiente del head `7c82e0f` PASS.
+- F14 `v0.5.20` tag object `67483ab021a0b30970ec7ba5a4b1892e0e088a37`, SHA `1041d1af3f949a13671d761ee96a59c52d2a1d78`, run `45074528240` SUCCESS en los tres jobs y aplicación automática confirmada. `/health` ok/DB ready; bundle `/assets/index-DQ4oYmnp.js` confirma versión y SHA.
+- La asociación de misión se validó con APIs fake. El aula QA productiva sigue sin habilidades/misiones; persistencia remota del borrador, flujo completo con datos académicos reales y calidad de evaluación IA continúan NO COMPROBADOS. Sin escrituras productivas.
+- Commit de reconciliación F14/F18.B: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado mediante PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
+- Estado de integración registrado en `beedba8acaf86e62ccd9fd2d8c9326dc327544c2`.
+
+## Incremento UI estudiantil — identificación de versión de misión — 2026-11-22
+
+- `apps/web/src/features/assignments/AssignmentsPanel.tsx` añade en cada tarjeta estudiantil la etiqueta visible `Misión publicada vN · Contexto Mentor vM`, con `version` y `mentorContextVersion` del mismo `StudentAssignment`, antes del disclosure y el CTA.
+- La prueba existente `AssignmentsPanel.test.tsx` comprueba la etiqueta fuera del disclosure cerrado y mantiene la comprobación de que el CTA entrega el objeto completo, con el ID de versión, callback.
+- TDD: la prueba falló antes del cambio porque no aparecía la etiqueta. Suite focal web `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15; `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Fuente de datos: `StudentAssignment` ya contiene ambos números versionados. Sin cambios a contratos, API, rutas, esquema/migraciones, datos productivos o sesiones. No se usó navegador ni se hizo release.
+- Commit de implementación: `c8e222b2d65e77497566e76afa551e51ae3e3c6a`.
+- PR #133 abierto contra `main` (`codex/f18b-student-mission-version`), head de código `e1caa2545d495860faa9d4526fcd7edbcd6cba34`; CI `verify` run `45081014837` SUCCESS. La actualización documental del PR queda en un commit separado, sin cambios de código.

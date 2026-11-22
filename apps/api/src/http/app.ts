@@ -28,6 +28,8 @@ import { createAdminQueueSummaryHttp, type AdminQueueAuditEvent } from "../featu
 import { createAdminQueueSummaryRepository } from "../features/admin-queue/repository.js";
 import { createAdminAuditLogHttp } from "../features/admin-audit-log/http.js";
 import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/admin-audit-log/store.js";
+import { createAdminReviewEventsHttp } from "../features/admin-review-events/http.js";
+import type { createReviewOperationalLog } from "../features/review/operational-log.js";
 import { createAdminTeachersHttp } from "../features/admin-teachers/http.js";
 import { createAdminTeachersRepository } from "../features/admin-teachers/repository.js";
 import { createAdminTeachersService } from "../features/admin-teachers/service.js";
@@ -46,6 +48,7 @@ type HttpOptions = {
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
   adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
+  reviewOperationalLog?: ReturnType<typeof createReviewOperationalLog>;
 };
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
@@ -76,6 +79,10 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
     write: (event) => adminAuditLog.write(event),
   });
+  const adminReviewEventsHandler = options.reviewOperationalLog ? createAdminReviewEventsHttp(options.reviewOperationalLog, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
+    getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+    write: (event) => adminAuditLog.write(event),
+  }) : undefined;
   const adminTeachersHandler = createAdminTeachersHttp(
     createAdminTeachersService(createAdminTeachersRepository(database)),
     async (request) => options.auth ? options.auth.adminCheck(request) : null,
@@ -137,6 +144,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminQueueSummaryHandler(request, response) === "handled") return;
     if (await adminAuditLogHandler(request, response) === "handled") return;
+    if (adminReviewEventsHandler && await adminReviewEventsHandler(request, response) === "handled") return;
     if (await adminTeachersHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });

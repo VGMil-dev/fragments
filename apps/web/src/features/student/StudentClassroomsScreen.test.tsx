@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StudentAssignment } from "@fragments/contracts";
 
 const { studentApi, assignmentsApi } = vi.hoisted(() => ({ studentApi: { getMyClassroomSkills: vi.fn() }, assignmentsApi: { listStudent: vi.fn() } }));
 vi.mock("../../lib/api/student-api-instance", () => ({ studentApi }));
@@ -12,6 +13,15 @@ import { StudentClassroomsScreen } from "./StudentClassroomsScreen.js";
 
 const room = { id: "fixture-room", title: "Aula de prueba", subject: "Ciencias", groupLabel: "7A", period: null, status: "active" as const, createdAt: "2026-11-19T12:00:00.000Z", updatedAt: "2026-11-19T12:00:00.000Z" };
 const pending = { id: "fixture-request", status: "pending" as const, source: "join_code" as const, requestedAt: "2026-11-19T12:00:00.000Z", decidedAt: null };
+const mission = {
+  id: "fixture-mission-version", assignmentId: "fixture-mission", version: 1, classroomId: room.id, classroomTitle: room.title, subject: room.subject,
+  title: "Misión recuperada", instructions: "Describe una observación.", objectives: ["Registrar evidencia"],
+  requiredSkills: [{ id: "fixture-skill", name: "Observación", description: null }], optionalSkills: [], status: "published",
+  mentorContextVersion: 2, mentorContext: { version: 2, publishedAt: "2026-11-19T12:00:00.000Z", config: {
+    subject: room.subject, theme: "Observar", assignment: "Describe una observación.", expectedLevel: "Bachillerato", rubricTitle: "Rúbrica de prueba",
+    criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }], requirements: ["Registrar evidencia"],
+  } }, createdAt: "2026-11-19T12:00:00.000Z",
+} as StudentAssignment;
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
@@ -66,5 +76,75 @@ describe("StudentClassroomsScreen", () => {
     expect(container.textContent).toContain("No pudimos cargar las misiones de esta aula.");
     expect(container.textContent).toContain("No pudimos cargar las habilidades de esta aula.");
     expect(container.textContent).not.toContain("Cargando misiones");
+  });
+
+  it("retries a failed mission request for only that classroom resource", async () => {
+    studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
+    assignmentsApi.listStudent.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ ok: true, data: [mission] });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} />));
+
+    const retry = container.querySelector<HTMLButtonElement>('button[aria-label="Reintentar misiones de Aula de prueba"]');
+    expect(container.textContent).toContain("No pudimos cargar las misiones de esta aula.");
+    expect(retry).toBeTruthy();
+    await act(async () => retry?.click());
+
+    expect(assignmentsApi.listStudent).toHaveBeenCalledTimes(2);
+    expect(studentApi.getMyClassroomSkills).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Misión recuperada");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("retries a failed skill request for only that classroom resource", async () => {
+    studentApi.getMyClassroomSkills.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ ok: true, data: [{ id: "fixture-skill", name: "Observación", description: null, archived: false, createdAt: "2026-11-19T12:00:00.000Z", updatedAt: "2026-11-19T12:00:00.000Z" }] });
+    assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [] });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} />));
+
+    const retry = container.querySelector<HTMLButtonElement>('button[aria-label="Reintentar habilidades de Aula de prueba"]');
+    expect(container.textContent).toContain("No pudimos cargar las habilidades de esta aula.");
+    expect(retry).toBeTruthy();
+    await act(async () => retry?.click());
+
+    expect(studentApi.getMyClassroomSkills).toHaveBeenCalledTimes(2);
+    expect(assignmentsApi.listStudent).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Observación");
+    expect(container.textContent).not.toContain("No pudimos cargar las habilidades de esta aula.");
+  });
+
+  it("deduplicates simultaneous per-resource retries and announces their loading state", async () => {
+    let resolveSkills!: (value: unknown) => void;
+    let resolveMissions!: (value: unknown) => void;
+    studentApi.getMyClassroomSkills.mockRejectedValueOnce(new Error("network")).mockImplementationOnce(() => new Promise((resolve) => { resolveSkills = resolve; }));
+    assignmentsApi.listStudent.mockRejectedValueOnce(new Error("network")).mockImplementationOnce(() => new Promise((resolve) => { resolveMissions = resolve; }));
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} />));
+    const retrySkills = container.querySelector<HTMLButtonElement>('button[aria-label="Reintentar habilidades de Aula de prueba"]');
+    const retryMissions = container.querySelector<HTMLButtonElement>('button[aria-label="Reintentar misiones de Aula de prueba"]');
+    expect(retrySkills).toBeTruthy();
+    expect(retryMissions).toBeTruthy();
+
+    await act(async () => { retrySkills?.click(); retrySkills?.click(); retryMissions?.click(); retryMissions?.click(); });
+
+    expect(studentApi.getMyClassroomSkills).toHaveBeenCalledTimes(2);
+    expect(assignmentsApi.listStudent).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("Cargando habilidades…");
+    expect([...container.querySelectorAll('[role="status"]')].some((status) => status.textContent?.includes("Cargando misiones…"))).toBe(true);
+
+    await act(async () => {
+      resolveSkills({ ok: true, data: [] });
+      resolveMissions({ ok: true, data: [] });
+    });
+    expect(container.textContent).toContain("Aún no hay habilidades habilitadas.");
+    expect(container.textContent).toContain("Tu docente aún no ha publicado misiones en esta aula.");
   });
 });

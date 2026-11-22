@@ -41,3 +41,33 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Al abrirlo, muestra el tema, la consigna contextual, el nivel esperado, los requisitos conservados y el número de versión `mentorContext.version` de esa misión.
 - La UI no presenta pesos ni criterios de rúbrica en este incremento. El CTA sigue pasando el snapshot completo de la misma `StudentAssignment`; no se reconstruye contexto desde el borrador F11 actual.
 - Verificación conductual: renderizar una misión con fixture de contexto, comprobar etiqueta de versión y valores fijados, abrir/cerrar el disclosure y confirmar que no se presenta contenido de criterios/pesos.
+
+## Incremento F18.B — acceso al catálogo desde el aula docente
+
+- GIVEN un aula sin habilidades disponibles, WHEN el docente ve el estado vacío de “Habilidades disponibles”, THEN conserva el aviso “Crea habilidades en el catálogo para habilitarlas aquí.” y dispone de un enlace visible a `/teacher/skills`.
+- WHEN activa el enlace con ratón o teclado, THEN usa la navegación existente hacia el catálogo; no se cambia ninguna API ni contrato.
+- El enlace aparece cuando no hay habilidades activas, tanto si la lista está vacía como si todas sus entradas están archivadas; si hay una activa, se omite.
+- GIVEN el aula conserva únicamente habilidades archivadas, WHEN el docente revisa disponibilidad, THEN conserva sus nombres y la nota de referencias archivadas, y también dispone del enlace al catálogo.
+
+## Incremento F18.B — inspección de snapshots publicados
+
+- GIVEN una misión docente con versiones publicadas, WHEN el docente expande “Revisar versiones publicadas”, THEN cada versión disponible presenta su consigna y objetivos inmutables, las habilidades snapshot distinguidas como requeridas u optativas y el número de versión Mentor fijado.
+- El historial es un `<details>` accesible cerrado por defecto. La vista solo lee los objetos `versions` ya cargados y no ofrece controles de escritura sobre versiones publicadas.
+
+## Incremento UI estudiantil — reintentar recursos del aula
+
+- GIVEN falla la carga de misiones de un aula activa, WHEN el estudiante activa “Reintentar misiones”, THEN se vuelve a solicitar solo esa lista y desaparece el error tras una respuesta exitosa.
+- GIVEN falla la carga de habilidades de un aula activa, WHEN el estudiante activa “Reintentar habilidades”, THEN se vuelve a solicitar solo ese catálogo autorizado y desaparece el error tras una respuesta exitosa.
+- Los errores se anuncian con `role="alert"`; cada reintento anuncia `role="status"` mientras carga. Solicitudes simultáneas duplicadas de la misma combinación aula/recurso se coalescen; el recurso independiente puede reintentarse por separado.
+
+## Incremento UI estudiantil — identificar snapshot de misión
+
+- GIVEN una misión publicada en Mis aulas, WHEN el estudiante ve su tarjeta antes de abrir el contexto, THEN ve `Misión publicada vN · Contexto Mentor vM` con los números del mismo `StudentAssignment` que se pasa al CTA de propuesta.
+- La etiqueta está fuera del disclosure de contexto para facilitar distinguir versión de misión y versión Mentor. El CTA conserva el objeto snapshot completo sin reconstruirlo ni mutarlo.
+
+## Incremento de continuidad — limpiar selección de misión al volver a Mentor
+
+- GIVEN el estudiante inicia una propuesta desde una versión publicada, WHEN guarda el borrador, THEN se envía el `assignmentVersionId` exacto y Mentor recibe el `mentorContext` del snapshot seleccionado.
+- GIVEN el estudiante vuelve al catálogo desde Mentor y luego abre Mentor desde la navegación, WHEN crea y guarda una propuesta nueva, THEN no se adjunta el `assignmentVersionId` anterior y se consulta el contexto Mentor general.
+- Ambos accesos de navegación a Mentor limpian la misión seleccionada; el botón de volver desde Mentor también limpia esa selección.
+- Verificación mediante prueba de composición UI con APIs y proveedor controlados por fakes. No demuestra guardado remoto, datos de producción ni calidad del proveedor IA.

@@ -44,3 +44,41 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 
 - Antes de iniciar propuesta, el estudiante puede abrir un panel plegable que explica el tema, la consigna, el nivel esperado y los requisitos del contexto Mentor fijado en la versión publicada de la misión.
 - La interfaz identifica la versión del contexto para que el alumno sepa qué snapshot acompaña a su misión. No modifica ni expone pesos/rúbrica, y conserva el CTA existente para iniciar propuesta con el mismo objeto de versión.
+
+## Incremento F18.B — acceso al catálogo desde el aula docente
+
+- Problema: si el aula no tiene habilidades disponibles (ninguna asociada o todas archivadas), el detalle explica que deben crearse en el catálogo pero no ofrece una acción junto al bloqueo.
+- Objetivo: añadir un enlace contextual accesible a `/teacher/skills` junto al estado vacío, conservando el mensaje existente.
+- No objetivos: cambiar contratos, rutas compartidas, datos, catálogo ni el flujo de habilitación.
+- Owner de tarea: PLANNER. Implementación acotada al detalle de `ClassroomStudio` y su prueba UI.
+- Skill aplicada: `vercel-react-best-practices`; se usa un enlace semántico con navegación existente; se descartan optimizaciones ajenas a este cambio pequeño.
+
+## Incremento F18.B — inspección de snapshots publicados
+
+- Problema: el listado docente expone el número publicado, pero no permite inspeccionar el contenido inmutable, habilidades fijadas y contexto Mentor de cada versión.
+- Objetivo: hacer revisable el historial publicado desde el detalle del aula usando los snapshots que ya entrega la API.
+- No objetivos: editar versiones publicadas, cambiar APIs/contratos, contexto activo, rutas, esquema o migraciones.
+- Owner de tarea: PLANNER. Implementación local a la vista docente de misiones y su prueba UI.
+- Criterio: resumen plegable por misión; al abrir, cada versión publicada muestra texto, objetivos, categorías de habilidades y `mentorContextVersion`.
+
+## Incremento UI estudiantil — reintentar recursos del aula
+
+- Problema: si falla la carga de habilidades o misiones de un aula activa, el estudiante ve el error sin poder recuperarlo de forma local.
+- Objetivo: añadir reintentos independientes por aula y recurso, sin refrescar el dashboard ni volver a solicitar el recurso hermano.
+- No objetivos: cambiar contratos/APIs, la lista principal de aulas, autenticación, datos o sesiones reales.
+- Owner de tarea: PLANNER. Implementación en `StudentClassroomsScreen` y prueba de componente.
+- Criterio: errores accesibles, carga anunciada durante el reintento y deduplicación mientras el mismo recurso/aula tenga una solicitud pendiente.
+
+## Incremento UI estudiantil — identificar snapshot de misión
+
+- Problema: la tarjeta muestra el contexto Mentor versionado, pero omite la versión publicada de la misión que se enlaza a la propuesta.
+- Objetivo: identificar juntas en la tarjeta la versión de misión y la versión de contexto fijadas al snapshot que recibe el CTA.
+- No objetivos: cambiar creación/edición de propuestas, contratos, rutas, datos, versionado o API.
+- Owner de tarea: PLANNER. Implementación local a `StudentAssignmentsList` y su prueba existente.
+
+## Incremento de continuidad — limpiar selección de misión al volver a Mentor
+
+- Problema: al volver desde una propuesta iniciada con misión, la selección de la misión podía sobrevivir al cambio de ruta. Abrir Mentor desde la navegación podía asociar por error una propuesta nueva a la versión anterior.
+- Objetivo: al abandonar la propuesta hacia el catálogo o abrir Mentor desde la navegación, limpiar el snapshot de misión seleccionado. Iniciar una propuesta desde una misión debe seguir conservando exactamente ese snapshot y su `assignmentVersionId`.
+- Alcance: navegación y estado en `apps/web/src/App.tsx`, con regresión de composición en `apps/web/src/App.student-flow.test.tsx`; sin contratos, endpoints, persistencia o producción.
+- Criterio: una prueba de ruta real de componentes confirma que el borrador iniciado desde la misión lleva su versión publicada, y que después de volver y abrir Mentor por navegación el borrador nuevo no lleva esa asociación y usa el contexto general vigente.

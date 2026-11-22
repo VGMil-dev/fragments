@@ -126,3 +126,16 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Verificación: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **18 tests, 18 pass, 0 fail**; `node evals/scripts/compare-review-behaviors.mjs` — exit 0, **BLOCKED A/B/C**, cada uno por `missing_persisted_output`; `git diff --check` — exit 0.
 - El corpus real disponible sigue sin outputs Review ni manifest: A/B/C permanecen **BLOCKED**. No se ejecutaron proveedores, llamadas externas ni código de estudiantes; no se tocaron prompts/rúbricas.
 - Commits locales: `9d75e4f` (`test(F25): compara hallazgos con referencia A-B-C`) y `69bc4c3` (`fix(F25): endurece provenance de outputs fake`). Rama `codex/f25-offline-response-validator`; cambios aún no publicados.
+
+## Comprobación offline final del corpus A/B/C — 2026-11-22
+
+- Se revisó el árbol versionado de `origin/main` tras integrar PR #114. `evals/fixtures/fragments-test-commits.json` contiene SHA y metadata `verified/notPresent/behaviorReference`, pero no salidas `reviewOutput` completas; no hay manifest/export autorizado del corpus.
+- No existe corpus elegible para ejecutar el comparador sobre resultados Review auténticos. Faltan análisis y citas completos por cada SHA A/B/C, `inputDigest` ligado e identificador de export autorizado. El comparador mecánico/fixtures fake no reemplaza esas evidencias.
+- No se consultaron secretos, DB, servicios ni proveedores; no hubo llamadas IA pagadas. Calidad semántica de puntuaciones Mentor/Review sigue **NO COMPROBADA**.
+
+## Búsqueda local adicional — 2026-11-22
+
+- Revisión en worktree existente limpio (`codex/f14-v0517-evidence`, HEAD `f38a37542975643e08d4308a107d862dba7d02f0`): búsquedas acotadas por SHA A/B/C y por campos de outputs/exports no hallaron corpus auténtico o manifest autorizado. Solo fixtures/scripts de auditoría y los apuntes existentes; F24_EVIDENCIAS no está en este worktree.
+- `node evals/scripts/compare-review-behaviors.mjs` — exit 0; A/B/C `BLOCKED` por `missing_persisted_output`; `qualityComparison=NOT_PERFORMED`, `scoreComputed=false`, `semanticValidity=NOT_VALIDATED`.
+- No acceso a base, producción o secretos; no llamadas IA, ni modificaciones al modelo, prompts o rúbricas. Calidad semántica Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS.
+- Bloqueo que requiere al propietario: outputs Review íntegros por SHA con hallazgos/citas/inputDigest y un manifest/export QA autorizado. Sin ese corpus no se calcula ni se juzga puntuación.

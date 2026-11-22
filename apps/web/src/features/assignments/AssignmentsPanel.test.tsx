@@ -23,6 +23,38 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Hay cambios sin publicar");
   });
 
+  it("shows the immutable published skill and Mentor context snapshots", () => {
+    const published = {
+      ...assignment,
+      draftVersion: 3,
+      publishedVersion: 1,
+      versions: [{
+        id: "fixture-assignment-version-1", assignmentId: assignment.id, version: 1, status: "published" as const,
+        title: "Misión publicada v1", instructions: "Consigna guardada en v1.", objectives: ["Objetivo fijado"],
+        requiredSkills: [{ id: skill.id, name: "Habilidad requerida v1", description: "Snapshot requerido." }],
+        optionalSkills: [{ id: "fixture-skill-optional", name: "Habilidad optativa v1", description: "Snapshot optativo." }],
+        mentorContextVersion: 4, createdAt: "2026-11-22T00:00:00.000Z",
+      }, {
+        id: "fixture-assignment-version-2", assignmentId: assignment.id, version: 2, status: "published" as const,
+        title: "Misión publicada v2", instructions: "Consigna guardada en v2.", objectives: ["Segundo objetivo"],
+        requiredSkills: [{ id: skill.id, name: "Habilidad requerida v2", description: null }],
+        optionalSkills: [], mentorContextVersion: 5, createdAt: "2026-11-23T00:00:00.000Z",
+      }],
+    } as ClassroomAssignment;
+
+    const html = renderToStaticMarkup(<AssignmentsPanel assignments={[published]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />);
+
+    expect(html).toContain("Revisar versiones publicadas");
+    expect(html).toContain("Versión publicada 1 · Contexto Mentor v4");
+    expect(html).toContain("Misión publicada v1");
+    expect(html).toContain("Consigna guardada en v1.");
+    expect(html).toContain("Habilidad requerida v1");
+    expect(html).toContain("Habilidad optativa v1");
+    expect(html).toContain("Versión publicada 2 · Contexto Mentor v5");
+    expect(html).toContain("Consigna guardada en v2.");
+    expect(html).not.toMatch(/<details[^>]*open/);
+  });
+
   it("lets the teacher preview the student-facing draft", async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement("div");
@@ -74,6 +106,7 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Observación");
     expect(html).toContain("Iniciar propuesta");
     expect(html).toContain("Contexto para tu propuesta · versión 3");
+    expect(html).toContain("Misión publicada v1 · Contexto Mentor v3");
     expect(html).toContain("Bachillerato");
     expect(html).toContain("Explora tu entorno");
     expect(html).toContain("Registrar hallazgos");
@@ -88,6 +121,7 @@ describe("AssignmentsPanel", () => {
       const context = container.querySelector<HTMLDetailsElement>(".student-assignments__context");
       const contextSummary = context?.querySelector("summary");
       expect(context?.open).toBe(false);
+      expect(container.querySelector(".student-assignments__mission-version")?.textContent).toBe("Misión publicada v1 · Contexto Mentor v3");
       await act(async () => contextSummary?.click());
       expect(context?.open).toBe(true);
       const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Explora tu entorno"]');

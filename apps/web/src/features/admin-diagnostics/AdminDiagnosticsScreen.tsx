@@ -3,7 +3,12 @@ import type { AdminDiagnosticsApi, AdminRequestDiagnostic, DiagnosticRouteFamily
 import { AdminConsoleNavigation } from "../admin-console/AdminConsoleNavigation.js";
 import "./admin-diagnostics.css";
 
-type ScreenState = { status: "loading" } | { status: "ready"; events: AdminRequestDiagnostic[] } | { status: "error" };
+type ScreenState = { status: "loading" } | { status: "ready"; events: AdminRequestDiagnostic[] } | { status: "error"; reason: "AUTH_REQUIRED" | "FORBIDDEN" | "OTHER" };
+
+function errorReason(code: string): Extract<ScreenState, { status: "error" }>['reason'] {
+  if (code === "AUTH_REQUIRED" || code === "FORBIDDEN") return code;
+  return "OTHER";
+}
 
 export function AdminDiagnosticsScreen({ api }: { api: AdminDiagnosticsApi }) {
   const [reload, setReload] = useState(0);
@@ -14,8 +19,8 @@ export function AdminDiagnosticsScreen({ api }: { api: AdminDiagnosticsApi }) {
     setState({ status: "loading" });
     void api.list().then((result) => {
       if (!active) return;
-      setState(result.ok ? { status: "ready", events: result.data.events } : { status: "error" });
-    }).catch(() => { if (active) setState({ status: "error" }); });
+      setState(result.ok ? { status: "ready", events: result.data.events } : { status: "error", reason: errorReason(result.error.code) });
+    }).catch(() => { if (active) setState({ status: "error", reason: "OTHER" }); });
     return () => { active = false; };
   }, [api, reload]);
 
@@ -31,7 +36,7 @@ export function AdminDiagnosticsScreen({ api }: { api: AdminDiagnosticsApi }) {
     </header>
     <p className="admin-diagnostics__retention">El historial solo incluye el proceso actual de la API.</p>
     {state.status === "loading" ? <p role="status" aria-live="polite">Cargando diagnósticos…</p> : null}
-    {state.status === "error" ? <p role="alert">No pudimos cargar los diagnósticos. Verifica el acceso e inténtalo de nuevo.</p> : null}
+    {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" && state.events.length === 0 ? <p role="status">No hay solicitudes recientes.</p> : null}
     {state.status === "ready" && state.events.length > 0 ? <div className="admin-diagnostics__table-wrap" role="region" aria-label="Solicitudes recientes" tabIndex={0}>
       <table>
@@ -43,6 +48,12 @@ export function AdminDiagnosticsScreen({ api }: { api: AdminDiagnosticsApi }) {
       </table>
     </div> : null}
   </main>;
+}
+
+function errorMessage(reason: Extract<ScreenState, { status: "error" }>['reason']): string {
+  if (reason === "AUTH_REQUIRED") return "Inicia sesión con una cuenta administradora para consultar los diagnósticos.";
+  if (reason === "FORBIDDEN") return "Esta cuenta no tiene permisos de administración para consultar los diagnósticos. Solicita acceso admin o usa una cuenta administradora.";
+  return "No pudimos cargar los diagnósticos. Verifica el acceso e inténtalo de nuevo.";
 }
 
 function routeFamilyLabel(value: DiagnosticRouteFamily): string {

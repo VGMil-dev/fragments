@@ -51,4 +51,23 @@ describe("AdminDiagnosticsScreen", () => {
     await act(async () => button?.click());
     expect(container.textContent).toContain("Salud");
   });
+
+  it("distinguishes missing admin session, forbidden role and other errors while preserving retry", async () => {
+    const list = vi.fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: "AUTH_REQUIRED", message: "private 401 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "FORBIDDEN", message: "private 403 detail" } })
+      .mockResolvedValueOnce({ ok: false, error: { code: "HTTP_ERROR", message: "private http detail" } });
+    const view = await render({ list });
+
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Inicia sesión con una cuenta administradora");
+    expect(view.textContent).not.toContain("private");
+    expect(view.querySelector("button")?.textContent).toBe("Reintentar");
+    await act(async () => view.querySelector("button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("Esta cuenta no tiene permisos de administración");
+    expect(view.textContent).not.toContain("private");
+    await act(async () => view.querySelector("button")?.click());
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar los diagnósticos");
+    expect(view.textContent).not.toContain("private");
+    expect(list).toHaveBeenCalledTimes(3);
+  });
 });

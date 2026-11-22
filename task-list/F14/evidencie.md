@@ -195,3 +195,49 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45052895014`: `verify-build`, pruebas contra DB disposable, build/metadata, ARM64 y `attest-package` SUCCESS; `publish-approved-release` SUCCESS. Release incluye paquete, manifiesto y attestation.
 - Después del sondeo normal del agente pull, el bundle productivo `/assets/index-C8xxczOG.js` contiene `v0.5.14`, SHA exacto `d40817ad2e62d1d9971fccbef5b878543307f9e9` y `/admin/audit-log`. `GET /health`: `status=ok`, `database=ready`. GET anónimo a `/api/admin/audit-log?limit=1`: `401 Unauthorized`, `Cache-Control: no-store`.
 - Release aplicado verificado por bundle y API pública; no se apagó producción ni se usó despliegue manual. Ledger del host, digest del backup previo, labels Docker, sesión admin y eventos productivos siguen NO COMPROBADOS.
+
+## Release y aplicación v0.5.16 — 2026-11-22
+
+- PR #115 (F22.6) y PR #116 (F18.B) se integraron por merge normal; `main` quedó en `23528bccfb256dabaa3d6317a36138ad6f0edbd6`. CI #45060021130 y #45060350800 SUCCESS; revisiones independientes PASS.
+- Preflight de solo lectura: `fragments-production` conservó la política de rama; la API devolvió solo `branch_policy` (sin reviewers ni wait timer). Los gates técnicos y el agente pull no se modificaron. La tag local/remota `v0.5.16` es anotada; objeto `2472d624fcb7a77d1866aa183753d927390921ba`, peeled commit exactamente `23528bccfb256dabaa3d6317a36138ad6f0edbd6`.
+- F14 run `45060644194`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Validó tag/SHA/main, PostgreSQL disposable, backup/restore, release-agent, pruebas/typecheck/lint/build, imágenes ARM64, atestación Sigstore y publicación normal de paquete/manifiesto.
+- Tras el sondeo del agente pull, el bundle público cambió a `/assets/index-B5aKBWSl.js`, con versión `v0.5.16` y commit corto `23528bc`; incluye `/admin/teachers`, filtro de eventos y enlace de aula a habilidades. `/health` respondió `status=ok`, `database=ready`. GET anónimo `/api/admin/teachers?limit=1` → 401 sin datos.
+- Ego Lite existente: docente abrió el catálogo desde el aula y volvió; estudiante conservó matrícula activa sin habilidades/misiones. Páginas permanecieron abiertas y no se guardaron recursos. No hubo deploy manual, SSH, reinicio ni cambios de infraestructura.
+- Ledger/backup hash/labels del host, sesión admin real, cuentas y eventos del feed siguen NO COMPROBADOS. El flujo real de misión/Mentor/provider tampoco se valida con el aula actual sin habilidades/misiones.
+
+## Release y aplicación v0.5.17 — 2026-11-22
+
+- PR #119 y PR #120 se integraron normalmente; PR #121 consolidó evidencia y checklist. Main final: `bb6e70532e26ac71aaf31543b20413040d7bc581`.
+- Preflight de solo lectura: `fragments-production` mantuvo su regla de rama, con `reviewers=null`; tag remota v0.5.17 inexistente antes de publicar. Se creó tag anotada `v0.5.17`, objeto `640c285a82214da5e4694da478fbc4a4e29c2b16`, peeled SHA exactamente `bb6e70532e26ac71aaf31543b20413040d7bc581`; push normal.
+- F14 run `45065509688`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; validación de tag/SHA/main, PostgreSQL disposable, backup/restore, pruebas/typecheck/lint/build, imágenes ARM64, atestación y publicación del paquete/manifest.
+- El sondeo normal `fragments-release-poll.timer` ejecutó success a las 20:26:40 UTC y activó el aplicador. `fragments-release-apply.service` terminó `Result=success` a las 20:28:45 UTC. Sin invocación manual ni reinicio de servicio por el coordinador.
+- SSH read-only confirmó `fragments-web-1` y `fragments-api-1` en imagen `sha-bb6e705...`, ambos healthy. GET público `/health` → `ok`, database `ready`; bundle `/assets/index-BkvVCLOV.js` confirma `v0.5.17`, historial de misiones y mensajes 401/403 de feed, diagnósticos y cuentas docentes.
+- Ego Lite docente en las tres vistas admin muestra denegación 403 segura, sin filas ni detalle backend; no se intentó acceso admin. El aula sigue sin misiones, por lo que historial visual y flujo misión→Mentor quedan NO COMPROBADOS. Cero eventos admin allowlisted en la ventana de 20m observada; sesión admin, eventos reales, ledger/hash backup/labels y liveness de worker separado siguen NO COMPROBADOS.
+- Required reviewers continúa desactivado; entorno y gates F14 preservados. No se escribieron datos académicos ni se apagó producción.
+
+## Release y aplicación v0.5.18 — 2026-11-22
+
+- PR #123 (F22.9) y PR #124 (evidencia) integrados normalmente; main exacto `214fb1344816172ecc52c99de5e7351508d77324`. CI de código `45067784339` y CI de evidencia `45068097463` SUCCESS.
+- Preflight de solo lectura: `fragments-production` conserva branch policy, `reviewers=null`; tag v0.5.18 ausente antes de publicación. Tag anotada objeto `d3fc6f31442ec897ed4c5faaa117373ccebccf79`, peeled SHA exacto `214fb1344816172ecc52c99de5e7351508d77324`.
+- Run F14 `45068388150`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; paquete, manifiesto y attestation publicados. No hubo aprobación humana adicional.
+- El sondeo normal del agente pull y aplicador terminó success (20:53 y 20:55 UTC). SSH read-only vio web/api healthy en imagen `sha-214fb...`; `/health` público `ok`, DB `ready`; el bundle `/assets/index-QEJ8Q_ES.js` confirma v0.5.18 y los nuevos mensajes de cola/solicitudes.
+- Ego Lite read-only en sesión docente: `/admin/queue` y `/admin/requests` presentan el 403 específico, sin tabla ni filas. No se hizo login admin ni escrituras; sesiones docente/admin permanecen abiertas/restauradas.
+- La afirmación histórica previa de revisión manual en la configuración inicial F14 fue superada por la decisión aprobada y cambio de configuración ya verificados: `Required reviewers` OFF. El entorno y todos los gates técnicos F14 se mantienen; no volver a habilitar revisión humana. Ledger/hash del backup/labels del host, sesión admin, datos/eventos y worker independiente continúan NO COMPROBADOS.
+
+## Release y aplicación v0.5.19 — 2026-11-22
+
+- PR #126 integrado mediante merge normal como `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`; su head final fue `883675206581cfddb9eaf1a1e6ca8946705fc9fd`; CI `45071108105` PASS, revisión independiente PASS. No hubo cambios posteriores al SHA integrado antes de etiquetar.
+- Preflight read-only: `origin/main` coincide con el SHA de la release, la tag remota `v0.5.19` no existía, `fragments-production` conserva el patrón de tag `v*.*.*`, Required reviewers=0 y wait timer=0. Tag anotada objeto `aaed354081758b16ca927004725c38dfaf774b88`, peeled SHA `af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`.
+- F14 run `45071360770`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Pasaron base PostgreSQL desechable, backup/restore, suites, typecheck/lint/build, verificación bundle, ARM64 y atestación. Paquete, manifest/attestation y pull queue publicados.
+- El timer normal del agente pull sondeó la cola; el servicio aplicador concluyó `Result=success` y los contenedores cambiaron automáticamente a `sha-af8e6b4764b58ffa299ef7f1b85dfd674318c6ee`, ambos healthy. No se hizo pull, restart ni invocación manual.
+- Público: `/health` devuelve `status=ok`, `database=ready`; home 200, bundle `/assets/index-BgnTqOr6.js` contiene versión y SHA exactos y los textos “Reintentar misiones”/“Reintentar habilidades”. Sin escrituras productivas ni parada de servicios.
+- Environment/gates F14 conservados; no revisión humana. Ledger/hash backup/labels, sesión admin, eventos reales y worker separado continúan NO COMPROBADOS.
+
+## Release y aplicación v0.5.20 — 2026-11-22
+
+- PR #128 se integró normalmente como merge de `main` `1041d1af3f949a13671d761ee96a59c52d2a1d78`; CI final `45074239987` SUCCESS. Tag anotada `v0.5.20` objeto `67483ab021a0b30970ec7ba5a4b1892e0e088a37`, apunta al SHA exacto de `main`.
+- F14 run `45074528240`: `verify-build`, pruebas/build de la fuente etiquetada, PostgreSQL disposable y restore, build ARM64, `attest-package`/Sigstore y `publish-approved-release` SUCCESS.
+- Aplicación automática verificada desde el sitio público: `/health` status `ok`, database `ready`; `/assets/index-DQ4oYmnp.js` contiene versión `v0.5.20` y el SHA exacto. No se realizó deploy manual, SSH, reinicio ni cambio de infraestructura.
+- `Required reviewers` sigue OFF según decisión F14; no se alteró configuración del entorno. Ledger/archivo y hash de backup/labels del host NO COMPROBADOS.
+- Commit de reconciliación de evidencias: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado en PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
+- Estado de integración registrado en `beedba8acaf86e62ccd9fd2d8c9326dc327544c2`.
