@@ -1,6 +1,6 @@
 # F23 — Evidencia
 
-Estado: en validación; implementación y PR integradas, release F14 detenida en revisión manual, despliegue y provisión de identidad pendientes. Rama de trabajo `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`. Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` terminó success. Tag anotada `v0.5.9` apunta al merge; F14 run `44973255280`: `verify-build` y `attest-package` success; `publish-approved-release` waiting por aprobación en `fragments-production`. Evidencia/Notion se actualizaron por PR #82, CI `44974016480` success, merge `6bc7ca7dc15a56cc40d9adab3febbe0ca8249e5d`. No se ha escrito en `fragments_prod`.
+Estado: en validación; implementación, PR, release F14 y health/version públicas están verificadas; la cuenta docente productiva sigue pendiente. Rama de trabajo `codex/f23-teacher-dashboard`, worktree `C:\Users\vgmil\.codex\worktrees\f23-teacher-dashboard\Fragments`. Commit de implementación: `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` terminó success. Tag anotada `v0.5.9` apunta al merge; F14 run `44973255280`: `verify-build`, `attest-package` y `publish-approved-release` success. Required reviewers está desactivado; Wait timer y admin bypass también; se conserva el entorno y tag rule `v*.*.*`. GET `/` y `/health` 200; `database=ready`; bundle público confirma `v0.5.9` y `d0b9334`. PRs documentales #82 y #83 integradas por merge `6bc7ca7` y `a4822bf`; CI `44974016480` y `44974308892` success. No se ha escrito en `fragments_prod`.
 
 ## Referencia y revisión
 
@@ -30,10 +30,10 @@ Estado: en validación; implementación y PR integradas, release F14 detenida en
 
 ## Operaciones aún no completadas
 
-- El run F14 `44973255280` continúa esperando aprobación manual. No declarar publicación/despliegue hasta que el job termine y se verifique versión y health en producción.
-- El acceso SSH de producción fue bloqueado por política del comando antes de conectar o consultar la base. No se usó otro canal. No se ha consultado/provisionado `vgmiltonisaac@gmail.com`, verificado Resend, ni pedido reset; no afirmar envío/recepción sin evidencia.
-- La página F23 de Notion se actualizó a `En validación` el 2026-11-22 con PR, merge, CI y estado del release. PR #82 integró la actualización documental; CI `44974016480` success y merge `6bc7ca7dc15a56cc40d9adab3febbe0ca8249e5d`.
+- El aprovisionamiento de `vgmiltonisaac@gmail.com` y su rol/permisos productivos no están verificados. El único script de repositorio `provision:teacher` es de QA local y habilita signup; se descartó para producción. SSH fue bloqueado antes de conexión y no hay otro canal administrativo autorizado disponible en esta sesión.
+- No se consultaron credenciales/configuración Resend ni se solicitó reset; no se envió correo ni se comprobó su aceptación. No se accedió a `/teacher/dashboard` con una sesión docente productiva.
+- Las páginas F14/F23 de Notion registran Required reviewers desactivado, el run F14 exitoso y las comprobaciones públicas; la identidad sigue pendiente.
 
 ## Índice y cierre
 
-`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen de estado. El directorio tiene 13 archivos, bajo el máximo de 20. Evidencia actualizada con PR/CI/merge/release y el bloqueo de acceso; F23 no está completa hasta observar publicación/despliegue y resolver o documentar definitivamente la cuenta productiva autorizada.
+`F23_EVIDENCIAS/INFORME_FINAL.md` es el índice de las capturas y el resumen final. El directorio tiene 13 archivos, bajo el máximo de 20. Release, versión pública y health están comprobados. F23 permanece incompleta hasta que exista una vía administrativa autorizada para verificar/provisionar la cuenta docente, enviar reset y validar acceso productivo.

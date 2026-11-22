@@ -1,6 +1,6 @@
 # F23 — Informe de evidencia
 
-Estado de esta revisión: **implementación, integración y QA local PASS; release F14 en espera de aprobación manual; despliegue y cuenta docente productiva pendientes**. Commit de implementación `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 integrada con merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` pasó.
+Estado de esta revisión: **implementación, integración, release F14 y health/version públicas PASS; aprovisionamiento y acceso autenticado docente productivo pendientes**. Commit de implementación `4382f22bd18bb7642d3c54bc00394d9c92d94b84`; PR #81 integrada con merge `d0b9334463baf56f1644f305164cb87cf8599393`. CI del PR run `44972438641` pasó. Actualizaciones documentales integradas: PR #82 merge `6bc7ca7dc15a56cc40d9adab3febbe0ca8249e5d` (CI `44974016480`) y PR #83 merge `a4822bf242fe55939631782b34690cf933fbc9cb` (CI `44974308892`).
 
 ## Referencia visual
 
@@ -39,10 +39,14 @@ La página docente mostró los valores sintéticos reales de `fragments_test`. E
 
 ## Límites y siguientes pasos autorizados
 
-La release anotada `v0.5.9` apunta al merge `d0b9334463baf56f1644f305164cb87cf8599393`. En F14 run `44973255280`, `verify-build` y `attest-package` terminaron `success`; `publish-approved-release` permanece `waiting` por revisión manual del entorno protegido `fragments-production`. Por ello, no se acredita todavía publicación ni despliegue. El control Required reviewers quedó habilitado y admin bypass deshabilitado antes de crear el tag.
+La release anotada `v0.5.9` apunta al merge `d0b9334463baf56f1644f305164cb87cf8599393`. En F14 run `44973255280`, `verify-build`, `attest-package` y `publish-approved-release` terminaron `success`. Se desactivó exclusivamente `Required reviewers`, según la decisión aprobada para despliegue automático; el entorno `fragments-production`, regla `v*.*.*`, controles CI, firmas, backups, healthchecks, rollback, Wait timer apagado y admin bypass apagado se conservaron. El propietario aprobó manualmente esta ejecución mientras el gate aún estaba activo; no se creó otra tag ni se relanzó el workflow. La próxima release legítima debe avanzar automáticamente al superar los gates técnicos.
 
-No se consultó ni modificó `fragments_prod`: el acceso SSH preparado según `docs/SSH_WORKSTATIONS.md` fue bloqueado por la política del comando antes de resolver el host; no se intentó una ruta alternativa. Sigue pendiente comprobar/provisionar idempotentemente solo `vgmiltonisaac@gmail.com`, validar configuración y aceptación de Resend, solicitar el reset y comprobar el enlace sin afirmar recepción. Un HTTP exitoso no acredita entrega. No se cambiarán roles ajenos ni se ejecutarán seeds o migraciones experimentales en producción.
+La verificación pública de producción devolvió GET `/` 200 y GET `/health` 200 con `database=ready`. El bundle público `/assets/index-Dtep3H8e.js` contiene `v0.5.9` y `d0b9334`, confirmando versión y commit desplegados.
 
-La ficha F23 en Notion se actualizó el 2026-11-22 a `En validación`, enlazando PR, CI y release, y dejando deployment y cuenta pendientes. La actualización documental post-merge pasó CI en PR #82 (`44974016480`) y se integró en `6bc7ca7dc15a56cc40d9adab3febbe0ca8249e5d`.
+**Cuenta docente productiva — no creada ni verificada.** El acceso SSH fue bloqueado por la política del comando antes de conectar; no se consultó ni modificó `fragments_prod`. El repositorio contiene `pnpm --filter @fragments/api provision:teacher`, pero es un aprovisionador de fixture local: requiere `TEACHER_TEST_EMAIL`/`TEACHER_TEST_PASSWORD`, habilita `allowSignUp: true` y después asigna `isTeacher`; no es un mecanismo administrativo seguro para producción y no se ejecutó contra `fragments_prod`. No se verificó si el correo ya existe, ni su rol/permisos en producción. Para evitar una posible colisión estudiantil, no se solicitó el reset antes de comprobar la identidad. No se consultaron los valores de configuración de Resend; no se envió correo y su aceptación/entrega no está verificada. No se ejecutaron seeds, migraciones ni cambios a usuarios productivos.
+
+**Acceso docente al sitio:** la versión y salud públicas están verificadas, pero no se inició sesión en el dashboard productivo; la identidad aún no está preparada. Requiere que el propietario habilite un canal administrativo autorizado (o un operador con ese acceso) para comprobar la identidad y completar el aprovisionamiento idempotente, luego solicitar el reset. El enlace de una hora deberá dirigir a `/teacher/reset-password`; el propietario establecerá su contraseña definitiva.
+
+Las fichas F14 y F23 en Notion se actualizaron con la configuración restaurada, run `44973255280`, versión, health y el estado no configurado de la cuenta docente.
 
 No hay todavía vínculo verificable de proyectos/Review con aula en el panel y la actividad no tiene una consulta docente autorizada. No se presenta progreso ficticio.
