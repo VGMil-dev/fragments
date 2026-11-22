@@ -21,7 +21,7 @@ function memoryDb() {
       findMany: vi.fn(async () => state.versions),
       create: vi.fn(async ({ data }: any) => { state.versions.push(data); return data; }),
     },
-    classroomSkillAvailability: { findMany: vi.fn(async () => [{ skill: { id: "fixture-skill", name: "Observación", description: null } }]) },
+    classroomSkillAvailability: { findMany: vi.fn(async ({ where }: any) => where.skillId.in.includes("fixture-skill") ? [{ skillId: "fixture-skill", skill: { id: "fixture-skill", name: "Observación", description: null } }] : []) },
     mentorControlVersion: { findFirst: vi.fn(async () => ({ version: 3 })) },
     classEnrollment: { findFirst: vi.fn(async ({ where }: any) => state.enrollment?.status === where.status ? state.enrollment : null) },
   };
@@ -49,6 +49,23 @@ describe("assignment repository", () => {
     expect(second.kind).toBe("ok");
     expect(state.versions.map((item) => (item.snapshotJson as { title: string }).title)).toEqual(["Misión de observación", "Misión revisada"]);
     expect(state.versions.map((item) => item.version)).toEqual([1, 2]);
+  });
+
+  it("rejects unavailable skills before persisting a draft", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const result = await repository.create("fixture-teacher", "fixture-class", { ...draft, requiredSkillIds: ["not-enabled"] });
+    expect(result).toMatchObject({ kind: "invalid_skills" });
+    expect(state.assignment).toBeNull();
+  });
+
+  it("does not replace an existing draft when its skills are unavailable", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const created = await repository.create("fixture-teacher", "fixture-class", draft);
+    const invalid = { ...draft, requiredSkillIds: ["archived-or-disabled"] };
+    expect(await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 1, invalid)).toMatchObject({ kind: "invalid_skills" });
+    expect(state.assignment.draftJson).toEqual(draft);
   });
 
   it("returns no student missions without an active enrollment", async () => {

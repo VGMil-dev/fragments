@@ -36,6 +36,7 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
       if (!input.success) { send(response, 400, { ok: false, error: { code: "INVALID_INPUT", message: "Revisa el borrador y las habilidades." } }); return "handled"; }
       const result = await repository.create(teacherId, teacherMatch[1]!, input.data);
       if (!result) send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró un aula activa propia." } });
+      else if ("kind" in result) send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
       else send(response, 201, { ok: true, data: result });
       return "handled";
     }
@@ -47,6 +48,7 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
       const result = await repository.updateDraft(teacherId, draftMatch[1]!, draftMatch[2]!, expectedVersion, draft);
       if (result.kind === "not_found") send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró el borrador." } });
       else if (result.kind === "conflict") send(response, 409, { ok: false, error: { code: "VERSION_CONFLICT", message: "El borrador cambió. Actualiza y vuelve a intentar." } });
+      else if (result.kind === "invalid_skills") send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
       else send(response, 200, { ok: true, data: result.assignment });
       return "handled";
     }

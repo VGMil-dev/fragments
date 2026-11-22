@@ -9,6 +9,12 @@ export function createAssignmentRepository(database: PrismaClient) {
   async function ownedActiveClassroom(tx: Db, teacherId: string, classroomId: string) {
     return tx.classroom.findFirst({ where: { id: classroomId, teacherId, status: "active" } });
   }
+  async function hasEnabledSkills(tx: Db, classroomId: string, skillIds: string[]) {
+    const uniqueIds = [...new Set(skillIds)];
+    if (!uniqueIds.length || uniqueIds.length !== skillIds.length) return false;
+    const rows = await tx.classroomSkillAvailability.findMany({ where: { classroomId, enabled: true, skillId: { in: uniqueIds }, skill: { archived: false } }, select: { skillId: true } });
+    return new Set(rows.map((row) => row.skillId)).size === uniqueIds.length;
+  }
   async function dto(tx: Db, row: { id: string; classroomId: string; status: string; draftVersion: number; publishedVersion: number | null; draftJson: Prisma.JsonValue; updatedAt: Date }) {
     const versions = await tx.classroomAssignmentVersion.findMany({ where: { assignmentId: row.id }, orderBy: { version: "asc" } });
     return ClassroomAssignmentSchema.parse({ id: row.id, classroomId: row.classroomId, status: row.status, draftVersion: row.draftVersion,
@@ -23,6 +29,7 @@ export function createAssignmentRepository(database: PrismaClient) {
     },
     async create(teacherId: string, classroomId: string, draft: Draft) {
       if (!await ownedActiveClassroom(database, teacherId, classroomId)) return null;
+      if (!await hasEnabledSkills(database, classroomId, [...draft.requiredSkillIds, ...draft.optionalSkillIds])) return { kind: "invalid_skills" as const };
       const now = new Date();
       const row = await database.classroomAssignment.create({ data: { id: randomUUID(), classroomId, status: "draft", draftVersion: 1, draftJson: draft as Prisma.InputJsonValue, createdAt: now, updatedAt: now } });
       return dto(database, row);
@@ -33,6 +40,7 @@ export function createAssignmentRepository(database: PrismaClient) {
         const row = await tx.classroomAssignment.findFirst({ where: { id: assignmentId, classroomId } });
         if (!row) return { kind: "not_found" as const };
         if (row.draftVersion !== expectedVersion || row.status === "archived") return { kind: "conflict" as const };
+        if (!await hasEnabledSkills(tx, classroomId, [...draft.requiredSkillIds, ...draft.optionalSkillIds])) return { kind: "invalid_skills" as const };
         const changed = await tx.classroomAssignment.updateMany({ where: { id: row.id, classroomId, draftVersion: expectedVersion, status: { not: "archived" } }, data: { draftJson: draft as Prisma.InputJsonValue, draftVersion: { increment: 1 }, updatedAt: new Date() } });
         if (changed.count !== 1) return { kind: "conflict" as const };
         const updated = await tx.classroomAssignment.findUniqueOrThrow({ where: { id: row.id } });

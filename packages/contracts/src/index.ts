@@ -366,7 +366,7 @@ export const ClassroomAssignmentSchema = z.object({
   draft: AssignmentDraftSchema.nullable(), versions: z.array(AssignmentVersionSchema).max(50), updatedAt: z.iso.datetime(),
 }).strict();
 export const ClassroomAssignmentsResponseSchema = z.array(ClassroomAssignmentSchema).max(200);
-export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.omit({ assignmentId: true }).extend({
+export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.extend({
   classroomId: identifier, classroomTitle: classroomText(120), subject: classroomText(120),
 }).strict();
 export const StudentAssignmentsResponseSchema = z.array(StudentAssignmentSchema).max(200);
@@ -610,3 +610,6 @@ export type AssignmentDraft = z.infer<typeof AssignmentDraftSchema>;
 export type AssignmentVersion = z.infer<typeof AssignmentVersionSchema>;
 export type ClassroomAssignment = z.infer<typeof ClassroomAssignmentSchema>;
 export type StudentAssignment = z.infer<typeof StudentAssignmentSchema>;
+export type CreateAssignmentRequest = z.infer<typeof CreateAssignmentRequestSchema>;
+export type UpdateAssignmentDraftRequest = z.infer<typeof UpdateAssignmentDraftRequestSchema>;
+export type PublishAssignmentRequest = z.infer<typeof PublishAssignmentRequestSchema>;

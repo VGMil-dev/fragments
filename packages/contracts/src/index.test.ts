@@ -48,6 +48,7 @@ import {
   SkillCreateRequestSchema,
   AssignmentDraftSchema,
   AssignmentVersionSchema,
+  StudentAssignmentSchema,
 } from "./index.js";
 
 const digest = "a".repeat(64);
@@ -90,6 +91,7 @@ describe("shared API contracts", () => {
       requiredSkills: [{ id: "skill-a", name: "React Native", description: null }], optionalSkills: [{ id: "skill-b", name: "Expo", description: "Herramientas de Expo." }], mentorContextVersion: 1, createdAt: now };
     expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
     expect(AssignmentVersionSchema.safeParse({ ...version, version: 0 }).success).toBe(false);
+    expect(StudentAssignmentSchema.safeParse({ ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación" }).success).toBe(true);
   });
 
   it("validates classroom input without accepting client-supplied ownership", () => {
