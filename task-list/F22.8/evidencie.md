@@ -23,3 +23,9 @@
 ## Limitaciones
 
 - La UI aclara el rechazo; no modifica ni concede permisos.
+
+## PR #120 — integración normal
+
+- Revisión independiente: PASS; 401/403/otros seguros, mensajes fijos, retry conservado y sin filtración del detalle backend.
+- PR #120 merge normal `15b8f987a9c60ee40c37461d3c4d1a7264ca97a1`; `verify` run `45064857683` PASS. F14 de la versión con cambios F18/F22 sigue pendiente.
+- La sesión admin y la lectura de eventos reales siguen NO COMPROBADAS; no se amplió autorización.
