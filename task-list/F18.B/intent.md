@@ -60,3 +60,11 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - No objetivos: editar versiones publicadas, cambiar APIs/contratos, contexto activo, rutas, esquema o migraciones.
 - Owner de tarea: PLANNER. Implementación local a la vista docente de misiones y su prueba UI.
 - Criterio: resumen plegable por misión; al abrir, cada versión publicada muestra texto, objetivos, categorías de habilidades y `mentorContextVersion`.
+
+## Incremento UI estudiantil — reintentar recursos del aula
+
+- Problema: si falla la carga de habilidades o misiones de un aula activa, el estudiante ve el error sin poder recuperarlo de forma local.
+- Objetivo: añadir reintentos independientes por aula y recurso, sin refrescar el dashboard ni volver a solicitar el recurso hermano.
+- No objetivos: cambiar contratos/APIs, la lista principal de aulas, autenticación, datos o sesiones reales.
+- Owner de tarea: PLANNER. Implementación en `StudentClassroomsScreen` y prueba de componente.
+- Criterio: errores accesibles, carga anunciada durante el reintento y deduplicación mientras el mismo recurso/aula tenga una solicitud pendiente.

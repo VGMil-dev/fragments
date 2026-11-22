@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ClassroomSummary, SkillCatalogEntry, StudentAssignment, StudentClassroomRequest } from "@fragments/contracts";
 import { studentApi } from "../../lib/api/student-api-instance";
 import { assignmentsApi } from "../assignments/assignments-api.js";
@@ -14,38 +14,49 @@ export function StudentClassroomsScreen({ classrooms, requests, loading, error, 
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [skills, setSkills] = useState<Record<string, SkillCatalogEntry[]>>({});
-  const [skillsError, setSkillsError] = useState(false);
-  const [assignments, setAssignments] = useState<Record<string, StudentAssignment[] | null>>({});
+  const [skills, setSkills] = useState<Record<string, SkillCatalogEntry[] | null | undefined>>({});
+  const [assignments, setAssignments] = useState<Record<string, StudentAssignment[] | null | undefined>>({});
+  const inFlight = useRef(new Set<string>());
+
+  const loadSkills = useCallback(async (classroomId: string) => {
+    const requestKey = `${classroomId}:skills`;
+    if (inFlight.current.has(requestKey)) return;
+    inFlight.current.add(requestKey);
+    setSkills((current) => ({ ...current, [classroomId]: undefined }));
+    try {
+      const result = await studentApi.getMyClassroomSkills(classroomId);
+      setSkills((current) => ({ ...current, [classroomId]: result.ok ? result.data.filter((skill) => !skill.archived) : null }));
+    } catch {
+      setSkills((current) => ({ ...current, [classroomId]: null }));
+    } finally {
+      inFlight.current.delete(requestKey);
+    }
+  }, []);
+
+  const loadMissions = useCallback(async (classroomId: string) => {
+    const requestKey = `${classroomId}:missions`;
+    if (inFlight.current.has(requestKey)) return;
+    inFlight.current.add(requestKey);
+    setAssignments((current) => ({ ...current, [classroomId]: undefined }));
+    try {
+      const result = await assignmentsApi.listStudent(classroomId);
+      setAssignments((current) => ({ ...current, [classroomId]: result.ok ? result.data : null }));
+    } catch {
+      setAssignments((current) => ({ ...current, [classroomId]: null }));
+    } finally {
+      inFlight.current.delete(requestKey);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
     const activeClassrooms = classrooms.filter((room) => room.status === "active");
-    void Promise.all(activeClassrooms.map(async (room) => {
-      const [skillResult, assignmentResult] = await Promise.all([
-        studentApi.getMyClassroomSkills(room.id).catch(() => null),
-        assignmentsApi.listStudent(room.id).catch(() => null),
-      ]);
-      return { id: room.id, skillResult, assignmentResult };
-    })).then((results) => {
-      if (!active) return;
-      const next: Record<string, SkillCatalogEntry[]> = {};
-      let failed = false;
-      const missionResults: Record<string, StudentAssignment[] | null> = {};
-      for (const { id, skillResult, assignmentResult } of results) {
-        if (skillResult?.ok) next[id] = skillResult.data.filter((skill) => !skill.archived); else failed = true;
-        missionResults[id] = assignmentResult?.ok ? assignmentResult.data : null;
-      }
-      setSkills(next);
-      setSkillsError(failed);
-      setAssignments(missionResults);
-    }).catch(() => {
-      if (!active) return;
-      setSkillsError(true);
-      setAssignments(Object.fromEntries(activeClassrooms.map((room) => [room.id, null])));
-    });
-    return () => { active = false; };
-  }, [classrooms]);
+    setSkills(Object.fromEntries(activeClassrooms.map((room) => [room.id, undefined])));
+    setAssignments(Object.fromEntries(activeClassrooms.map((room) => [room.id, undefined])));
+    for (const room of activeClassrooms) {
+      void loadSkills(room.id);
+      void loadMissions(room.id);
+    }
+  }, [classrooms, loadSkills, loadMissions]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,12 +85,18 @@ export function StudentClassroomsScreen({ classrooms, requests, loading, error, 
     {loading ? <p role="status">Cargando tus aulas y solicitudes…</p> : null}
     {!loading && !error ? <>
       <section aria-labelledby="student-active-classrooms"><h2 id="student-active-classrooms">Aulas activas</h2>
-        {classrooms.filter((room) => room.status === "active").length ? <ul className="student-classrooms__list">{classrooms.filter((room) => room.status === "active").map((room) => <li key={room.id} className="student-classrooms__card"><div><p>{room.subject} · {room.groupLabel}{room.period ? ` · ${room.period}` : ""}</p><h3>{room.title}</h3><span className="student-classrooms__status">Matrícula activa</span></div><div className="student-classrooms__skills"><h4>Habilidades autorizadas</h4>{skillsError && !skills[room.id] ? <p role="alert">No pudimos cargar las habilidades de esta aula.</p> : skills[room.id]?.length ? <ul>{skills[room.id]?.map((skill) => <li key={skill.id}>{skill.name}</li>)}</ul> : <p>{skills[room.id] ? "Aún no hay habilidades habilitadas." : "Cargando habilidades…"}</p>}</div><div className="student-classrooms__missions">{assignments[room.id] === undefined ? <p role="status">Cargando misiones…</p> : assignments[room.id] === null ? <p role="alert">No pudimos cargar las misiones de esta aula.</p> : <StudentAssignmentsList assignments={assignments[room.id] ?? []} {...(onStartProposal ? { onStartProposal } : {})} />}</div></li>)}</ul> : <p>Aún no tienes matrículas activas. Cuando el docente apruebe tu solicitud, el aula aparecerá aquí.</p>}
+        {classrooms.filter((room) => room.status === "active").length ? <ul className="student-classrooms__list">{classrooms.filter((room) => room.status === "active").map((room) => {
+          const roomSkills = skills[room.id];
+          const roomAssignments = assignments[room.id];
+          return <li key={room.id} className="student-classrooms__card"><div><p>{room.subject} · {room.groupLabel}{room.period ? ` · ${room.period}` : ""}</p><h3>{room.title}</h3><span className="student-classrooms__status">Matrícula activa</span></div>
+            <div className="student-classrooms__skills"><h4>Habilidades autorizadas</h4>{roomSkills === null ? <><p role="alert">No pudimos cargar las habilidades de esta aula.</p><button className="student-classrooms__link" type="button" aria-label={`Reintentar habilidades de ${room.title}`} onClick={() => void loadSkills(room.id)}>Reintentar habilidades</button></> : roomSkills === undefined ? <p role="status">Cargando habilidades…</p> : roomSkills.length ? <ul>{roomSkills.map((skill) => <li key={skill.id}>{skill.name}</li>)}</ul> : <p>Aún no hay habilidades habilitadas.</p>}</div>
+            <div className="student-classrooms__missions">{roomAssignments === undefined ? <p role="status">Cargando misiones…</p> : roomAssignments === null ? <><p role="alert">No pudimos cargar las misiones de esta aula.</p><button className="student-classrooms__link" type="button" aria-label={`Reintentar misiones de ${room.title}`} onClick={() => void loadMissions(room.id)}>Reintentar misiones</button></> : <StudentAssignmentsList assignments={roomAssignments} {...(onStartProposal ? { onStartProposal } : {})} />}</div>
+          </li>;
+        })}</ul> : <p>Aún no tienes matrículas activas. Cuando el docente apruebe tu solicitud, el aula aparecerá aquí.</p>}
       </section>
       <section aria-labelledby="student-classroom-requests"><h2 id="student-classroom-requests">Tus solicitudes</h2>
         {requests.filter((request) => request.status !== "active").length ? <ul className="student-classrooms__requests">{requests.filter((request) => request.status !== "active").map((request) => <li key={request.id}><span>{request.source === "join_code" ? "Solicitud por código" : "Asignación del docente"}</span><strong data-status={request.status}>{statusLabel(request.status)}</strong></li>)}</ul> : <p>No tienes solicitudes pendientes ni rechazadas.</p>}
       </section>
-      {skillsError ? <p role="alert">Algunas habilidades autorizadas no pudieron cargarse.</p> : null}
     </> : null}
   </main>;
 }

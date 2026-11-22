@@ -176,3 +176,20 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 
 - PR #119 se integró normalmente en `main` como `45d80c8b122da53039c2ef891ce03cf30e4b1759`; CI `45064333176` SUCCESS.
 - El historial docente queda integrado en main. Al momento de integrar PR #119, F14 v0.5.17 y el reflejo productivo estaban pendientes. F14 v0.5.18 fue aplicada posteriormente; la inspección visual del historial con una misión real sigue NO COMPROBADA. No se modificaron recursos académicos.
+
+## Incremento UI estudiantil — reintento por aula y recurso — 2026-11-22
+
+- `apps/web/src/features/student/StudentClassroomsScreen.tsx`: separa el estado/carga de habilidades y misiones, ofrece un retry local junto a cada error por aula y anuncia carga durante el reintento. Un `useRef` con clave aula+recurso evita duplicar solicitudes simultáneas; al reintentar no se refresca `onRefresh` ni se vuelve a pedir el recurso hermano.
+- `apps/web/src/features/student/StudentClassroomsScreen.test.tsx`: cubre fallo→éxito de misiones y habilidades, que el recurso hermano se solicite una sola vez y que clicks duplicados simultáneos por recurso no creen requests adicionales. Comprueba los estados alert/status y contenido vacío tras éxito.
+- TDD: las tres pruebas nuevas fallaron antes del cambio porque faltaban botones de reintento; tras el cambio, `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx --maxWorkers=1` — PASS, 6/6.
+- Suite focal web: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentClassroomsScreen.test.tsx src/features/assignments/AssignmentsPanel.test.tsx src/features/classroom/ClassroomStudio.test.tsx --maxWorkers=1` — PASS, 15/15. `pnpm --filter @fragments/web typecheck` — PASS; `git diff --check` — PASS.
+- Sin cambios a contratos, API, migraciones, datos productivos ni sesiones. Sin navegador ni release.
+- Commit de implementación: `d72fa6111c9418e18fbea5d7e8923634c421986c`; PR nuevo pendiente.
+
+## Sincronización con main para PR #126 — 2026-11-22
+
+- Se confirmó worktree limpio en `codex/f18b-classroom-retry`; `HEAD` era ancestro de `origin/main`, por lo que se integró `origin/main` (`8e72af9133abedecc927cbda3723466398d8913b`) con merge normal, sin rebase/reset/force.
+- El conflicto de esta evidencia se resolvió conservando el historial completo del snapshot/release F14 v0.5.18 y el apartado de reintentos F18. Se preservaron los demás cambios de documentación/TASKS que llegaron desde main.
+- Commit de merge y resolución: `93a57648f53fb286f5d858eb647b1e2456bbc89f`.
+- Verificación fresca post-merge: suite focal web 15/15; `pnpm --filter @fragments/web typecheck` PASS; `git diff --cached --check` PASS.
+- PR #126 debe apuntar a main sincronizado con `8e72af9133abedecc927cbda3723466398d8913b`; espera push normal y refresh de CI.
