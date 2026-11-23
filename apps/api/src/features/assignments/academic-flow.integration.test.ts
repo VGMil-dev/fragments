@@ -11,8 +11,12 @@ import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createHttpHandler } from "../../http/app.js";
 import { createReviewHttp } from "../review/http.js";
 import { createReviewAcademicLinkResolver } from "../review/academic-link.js";
-import { createReviewService } from "../review/review.service.js";
+import { createReviewService, digestSnapshot, sha256 } from "../review/review.service.js";
 import { createPrismaReviewStore } from "../review/prisma-store.js";
+import { createReviewWorker } from "../review/worker.js";
+import { createTrainerRepository } from "../trainer/repository.js";
+import { createTrainerService } from "../trainer/service.js";
+import { cleanupReviewFixtureRows } from "../../../test-support/fragments-test-database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para probar el recorrido académico PostgreSQL.");
@@ -232,6 +236,144 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
     expect(evaluation.mentorContextVersion).toBe(recovered!.assignmentContext!.mentorContext.version);
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
+  });
+
+  it("carries a published mission through a fake completed Review into the student's Trainer list", async () => {
+    const db = database!;
+    const assignments = createAssignmentRepository(db);
+    const created = await assignments.create(teacherId, classroomId, {
+      title: "Misión integrada", instructions: "Demuestra una navegación verificable.", objectives: ["Conectar dos vistas"],
+      requiredSkillIds: [skillId], optionalSkillIds: [],
+    });
+    if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
+    const published = await assignments.publish(teacherId, classroomId, created.id, 1);
+    if (published.kind !== "ok") throw new Error("No se publicó la misión fixture.");
+    const mission = published.assignment.versions.find((version) => version.version === 1)!;
+
+    const mentorRepository = createPrismaMentorRepository(db);
+    const proposal = await mentorRepository.createProposalDraftByUser({
+      title: "Propuesta integrada", problem: "El grupo necesita navegar entre pantallas.",
+      solution: "Una navegación sencilla conecta dos vistas.", description: "Aplicación móvil de práctica.",
+      purpose: "Demostrar navegación.", goals: ["Conectar dos vistas"], skills: [], scope: "Dos vistas verificables.", constraints: [],
+    }, studentId, mission.id);
+
+    const reviewStore = createPrismaReviewStore(db);
+    const owner = "fixture-student";
+    const repo = `academic-flow-${namespace}`;
+    const commitSha = "f".repeat(40);
+    let reviewJobId: string | undefined;
+    const snapshotBody = { owner, repo, commitSha, files: [{ path: "src/navigation.ts", content: "export const routeCount = 2;\n", sha: "e".repeat(40) }] };
+    const snapshotDigest = await digestSnapshot(snapshotBody);
+    const packedText = `FAKE_PACKED_REPOSITORY ${snapshotDigest}`;
+    const inputDigest = await sha256(packedText);
+    const reviewService = createReviewService({
+      repository: { async getCommitSnapshot() { return { ...snapshotBody, digest: snapshotDigest }; } },
+      packer: { async pack() { return { text: packedText, inputDigest, tokenCount: 8 }; } },
+      ai: { async analyze(input) {
+        return { rubricVersion: input.rubricVersion, score: 80, findings: [{
+          criterionId: "navigation", status: "verified", evidence: [{ source: "repository", path: "src/navigation.ts", lines: [1, 1], digest: input.snapshotDigest }],
+          reason: "La evidencia fixture está vinculada al snapshot.", guidanceLevel: 1,
+        }], limitations: ["Proveedor fake de integración; no representa una evaluación IA real."], modelId: "fake:academic-flow-v1", inputDigest: input.inputDigest };
+      } },
+      evaluations: reviewStore.evaluations,
+      submissions: reviewStore.submissions,
+      pdf: createMinimalPdfRenderer(),
+    });
+
+    const trainerRepository = createTrainerRepository(db);
+    const trainerSessionHashes = new Set<string>();
+    const trainerStore = {
+      ...trainerRepository,
+      async ensureSession(sessionHash: string, now: Date) {
+        trainerSessionHashes.add(sessionHash);
+        return trainerRepository.ensureSession(sessionHash, now);
+      },
+    };
+    const trainerService = createTrainerService({
+      reviews: {
+        listCompleted: async (student) => student === studentId ? reviewStore.listCompletedForStudent(studentId) : [],
+        async getEvidence() { return null; },
+      },
+      provider: { async createChallenge() { throw new Error("La prueba no solicita retos ni ejecuta código de repositorios."); } },
+      store: trainerStore,
+    });
+    const auth = {
+      async userId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-user"] ?? null; },
+      async teacherId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-role"] === "teacher" ? request.headers["x-fixture-user"] ?? null : null; },
+      async student(request: { headers: Record<string, string | undefined> }) {
+        const id = request.headers["x-fixture-user"];
+        if (!id || request.headers["x-fixture-role"] !== "student") return null;
+        return { id, githubAccountId: `fixture-github-${id}`, githubLogin: owner, avatarUrl: null, registeredAt: new Date().toISOString() };
+      },
+      githubOAuthConfigured: true,
+    } as unknown as FragmentsAuthService;
+    const resolveAcademicLink = createReviewAcademicLinkResolver(db);
+    const handler = createHttpHandler(db, {
+      auth,
+      review: {
+        store: reviewStore,
+        service: reviewService,
+        resolveStudentId: async (request) => request.headers["x-fixture-role"] === "student" ? String(request.headers["x-fixture-user"] ?? "") || null : null,
+        resolveAcademicLink,
+        resolveContext: async (_request, input) => ({ projectId: `${input.owner}/${input.repo}`, rubricVersion: "fake-rubric-v1",
+          evaluatorVersion: "fake-offline-v1", studentId, githubLogin: owner }),
+      },
+      trainer: { service: trainerService, store: trainerStore },
+    });
+    const server = createServer(handler);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected local HTTP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const headers = { "x-fixture-user": studentId, "x-fixture-role": "student" };
+    try {
+      const queuedResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ owner, repo, commitSha, linkedProposalId: proposal.id }) });
+      expect(queuedResponse.status).toBe(202);
+      const queued = await queuedResponse.json() as { data: { id: string; status: string } };
+      reviewJobId = queued.data.id;
+      expect(queued.data.status).toBe("queued");
+
+      const scopedReviewStore = {
+        ...reviewStore,
+        async reconcileExpiredLeases() { return []; },
+        async claim(workerId: string, nowMs = Date.now(), leaseDurationMs = 30_000) {
+          const now = new Date(nowMs);
+          const leaseUntil = new Date(nowMs + leaseDurationMs);
+          const claimed = await db.$transaction(async (tx) => {
+            const changed = await tx.job.updateMany({ where: { id: reviewJobId, type: "review", status: "pending" },
+              data: { status: "leased", attempts: { increment: 1 }, leaseOwner: workerId, leaseUntil, heartbeatAt: now, updatedAt: now } });
+            if (changed.count !== 1) return null;
+            const row = await tx.job.findUnique({ where: { id: reviewJobId } });
+            if (!row) return null;
+            await tx.reviewAttempt.create({ data: { jobId: row.id, attempt: row.attempts, startedAt: now, finalStatus: "running" } });
+            return { id: row.id, attempts: row.attempts, payload: row.payloadJson as { request: unknown; context: unknown } };
+          });
+          if (!claimed) return null;
+          const job = await reviewStore.getJob(claimed.id);
+          if (!job) return null;
+          return ({ ...job, status: "running", request: claimed.payload.request, context: claimed.payload.context, attempts: claimed.attempts }) as Awaited<ReturnType<typeof reviewStore.claim>>;
+        },
+      } as typeof reviewStore;
+      const worker = createReviewWorker({ store: scopedReviewStore, service: reviewService, workerId: `academic-flow-${namespace}` });
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(reviewStore.getJob(queued.data.id)).resolves.toMatchObject({ id: queued.data.id, status: "completed" });
+
+      const trainerResponse = await fetch(`${base}/api/trainer/reviews`, { headers });
+      expect(trainerResponse.status).toBe(200);
+      const trainer = await trainerResponse.json() as { data: Array<Record<string, unknown>> };
+      expect(trainer.data).toHaveLength(1);
+      expect(trainer.data[0]).toMatchObject({ id: queued.data.id, owner, repo, commitSha, academicContext: {
+        missionTitle: "Misión integrada", missionVersion: 1, mentorContextVersion: mission.mentorContextVersion,
+        classroomTitle: "Aula fixture", requiredSkills: ["Navegación"],
+      } });
+      expect(JSON.stringify(trainer.data)).not.toMatch(/studentId|proposalId|assignmentVersionId|classroomId|score|findings/);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      if (trainerSessionHashes.size) await db.trainerSession.deleteMany({ where: { sessionHash: { in: [...trainerSessionHashes] } } });
+      if (reviewJobId) await cleanupReviewFixtureRows(db, databaseUrl!, [reviewJobId]);
+    }
   });
 
   it("links Review to a mission proposal only with student consent and shows it to its active classroom teacher", async () => {

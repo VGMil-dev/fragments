@@ -381,9 +381,20 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - PostgreSQL end-to-end del nuevo resumen y QA visual Ego Lite con una Review vinculada: **NO COMPROBADOS**. La integración académica PostgreSQL se omitió por falta de `DATABASE_URL`; no había una Review QA vinculada autorizada para mostrar en la UI. Calidad real Mentor/Review continúa **NO COMPROBADA**.
 - Commit de código: `b7e3a6109726a8a55aa6c036e47a60e9f6db1dfa` (`feat(F18.B): enlaza misión académica con Trainer`), branch `codex/f18-trainer-academic-context`. CI, PR y release F14 están pendientes.
 
-## PR #178 — estado de integración · 2026-11-23
+## PR #178 — estado observado antes del merge · 2026-11-23
 
 - PR #178 abierta contra `main`: https://github.com/VGMil-dev/fragments/pull/178. Run CI `45159579982` sigue `IN_PROGRESS`; no se ha fusionado ni creado tag.
 - La revisión reflexiva independiente recomendó integrar y su único P2 (validar habilidad vacía o >100 caracteres en el cliente) quedó corregido; `trainer-api.test.ts` cubre ambos casos, 2/2 PASS.
 - Run CI `45159579982` falló en integración PostgreSQL: el snapshot incluye `description` en habilidades y el resolver usaba un esquema estricto que la rechazaba, omitiendo la lista. Se cambió a `AssignmentSkillSnapshotSchema` y el test unitario ahora incluye descripciones; verificación focal `pnpm --filter @fragments/api exec vitest run src/features/review/academic-link.test.ts` — 2/2 PASS; `git diff --check` — PASS.
 - El run `45159831451` también falló antes de esta corrección (mismo head funcional); falta publicar esta corrección y obtener CI completo sobre el nuevo head. No fusionar ni crear tag hasta entonces. Si merge y gates pasan, la siguiente release legítima será `v0.5.37` por F14; no existe deploy manual ni salto de gates.
+
+## Reconciliación de PR #178 y continuidad PostgreSQL Review → Trainer · 2026-11-23
+
+- Estado actual verificado después de los registros históricos anteriores: PR #178 se integró normalmente como `ab1a37f8ef69469a4b7b45c8f51c3c751b472c3e`; CI del merge `45160936114` SUCCESS. La tag anotada `v0.5.37` apunta a ese SHA exacto y el workflow `Fragments release` de F14 `45160936114` terminó SUCCESS. Este trabajo no volvió a consultar `/health` ni el bundle público, por lo que no afirma una comprobación de aplicación actual.
+- Añadí `apps/api/src/features/assignments/academic-flow.integration.test.ts`: crea una misión versionada y propuesta fixture, solicita Review por HTTP con vínculo opt-in, procesa un resultado con fake local y lee `/api/trainer/reviews` con la identidad fixture del mismo estudiante.
+- La aserción comprueba título de misión/aula, versión de misión, versión de contexto Mentor y habilidad requerida del snapshot; también verifica que Trainer no devuelva IDs internos, score ni hallazgos.
+- Aislamiento: la reserva del worker está restringida al ID del job fixture dentro de una transacción y no reconcilia leases ajenos. Se limpian solo ese job, sus intentos y la sesión Trainer creada por el test. Los proveedores están rotulados `fake`; no acceden a GitHub ni a IA externa y no ejecutan archivos del repositorio.
+- Base temporal nueva, sin volumen, publicada solo en `127.0.0.1:55447`; seis migraciones aplicadas a `fragments_test`. El test verifica host local y `current_database()` antes de escribir. No se conectó a `fragments_prod` ni se tocaron contenedores preexistentes.
+- Verificación fresca: `pnpm --filter @fragments/api exec prisma generate` PASS; `pnpm --filter @fragments/contracts build` PASS; `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 4/4 PASS; `pnpm --filter @fragments/api test` — 66 archivos, 250/250 PASS; `pnpm --filter @fragments/api typecheck` PASS; `git diff --check` PASS.
+- Revisión reflexiva independiente del test y su aislamiento: PASS, sin hallazgos restantes.
+- Limitaciones conservadas: Better Auth y proveedores reales, evaluación/puntuación semántica IA, Review QA productiva vinculada visible en Ego Lite, ejecución de retos en Trainer y F25 siguen NO COMPROBADOS. No hubo escritura académica productiva ni llamada pagada. El estado real de F18.B permanece abierto hasta completar QA de Reviews vinculadas y calidad IA bajo presupuesto verificado.

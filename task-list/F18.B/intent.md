@@ -14,6 +14,7 @@ Después de crear aulas y habilitar habilidades, falta el núcleo pedagógico qu
 - Listar tareas del docente dueño y tareas publicadas de aulas activas del estudiante autenticado.
 - Integrar UI docente en el detalle del aula y lectura estudiantil en Mis aulas, preservando shells/rutas existentes.
 - Al recuperar una propuesta guardada, indicar su misión publicada/contexto vinculados sin exponer rúbrica ni perder la identidad de la propuesta.
+- Verificar que el vínculo académico versionado sobreviva hasta una Review completada y aparezca en la lista Trainer del mismo estudiante, usando proveedores fake en `fragments_test`.
 
 ## No objetivos
 
