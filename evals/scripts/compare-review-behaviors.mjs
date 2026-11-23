@@ -90,6 +90,58 @@ export function classifyReferenceBehaviors({ caseReference, reviewOutput, covera
   };
 }
 
+/**
+ * Runs the fixture-only diagnostic only after the same case reference has been
+ * checked against local Git source markers. This links two mechanical checks;
+ * it does not establish semantic truth or validate a Review output.
+ */
+export function classifyAgainstVerifiedReference({ caseReference, reviewOutput, coverage, referenceVerification }) {
+  const verificationCase = Array.isArray(referenceVerification?.cases)
+    ? referenceVerification.cases.find((item) => item.label === caseReference?.label)
+    : null;
+  const expected = caseReference?.behaviorReference;
+  const checks = Array.isArray(verificationCase?.checks) ? verificationCase.checks : [];
+  const checkById = new Map(checks.map((item) => [item.behaviorId, item]));
+  const referenceMatches = expected && typeof expected === "object" && !Array.isArray(expected)
+    && Object.keys(expected).length > 0
+    && Object.entries(expected).every(([behaviorId, expectedPresent]) => {
+      const check = checkById.get(behaviorId);
+      return typeof expectedPresent === "boolean"
+        && check?.status === "MATCH"
+        && check.expectedPresent === expectedPresent
+        && check.detectedPresent === expectedPresent;
+    })
+    && checks.length === Object.keys(expected).length
+    && verificationCase?.commitSha === caseReference?.commitSha
+    && verificationCase?.status === "REFERENCE_MARKERS_MATCH"
+    && referenceVerification?.status === "REFERENCE_MARKERS_MATCH"
+    && referenceVerification?.referenceSource === "LOCAL_GIT_COMMIT_OBJECTS"
+    && referenceVerification?.execution === "SOURCE_NOT_EXECUTED";
+
+  if (!referenceMatches) {
+    return {
+      status: "BLOCKED",
+      blockers: ["reference_not_verified_against_local_markers"],
+      classification: null,
+      qualityComparison: "NOT_PERFORMED",
+      scoreComputed: false,
+      semanticValidity: "NOT_VALIDATED",
+    };
+  }
+
+  return {
+    status: "MECHANICAL_REFERENCE_CLASSIFIED",
+    blockers: [],
+    classification: classifyReferenceBehaviors({ caseReference, reviewOutput, coverage }),
+    referenceValidation: "STATIC_SOURCE_MARKERS_MATCHED",
+    qualityComparison: "NOT_PERFORMED",
+    scoreComputed: false,
+    semanticValidity: "NOT_VALIDATED",
+    referenceReportAuthentication: "NOT_AUTHENTICATED",
+    inputProvenance: "CALLER_SUPPLIED_OUTPUT_NOT_AUTHENTICATED",
+  };
+}
+
 function findManifestRecord({ caseReference, reviewOutput, manifest }) {
   if (manifest?.source !== "operator-authorized-qa-export"
     || typeof manifest.exportId !== "string" || !manifest.exportId.trim()
