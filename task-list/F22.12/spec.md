@@ -22,6 +22,7 @@
 
 - Pruebas API/UI con fakes para éxito, fallo, redacción, límites, auditoría antes de lectura, 401/403 y fallo cerrado.
 - Una prueba compuesta con proveedor Mentor fake confirma evaluación HTTP → buffer operativo → GET admin autorizado, auditoría antes de lectura y respuesta redactada.
+- Una integración con Better Auth real y PostgreSQL efímero crea solo un usuario admin sintético; confirma 401 anónimo, 403 con esa cuenta sin rol y 200 con su sesión admin, además del evento sintético y la auditoría.
 - Typecheck, pruebas focales y `git diff --check`; CI requerido en PR.
 - Pruebas usan únicamente evaluador Mentor fake; sin requests a Gateway, sin producción y sin escrituras de datos académicos.
 - La existencia de eventos productivos no se infiere a partir de pruebas fake.
