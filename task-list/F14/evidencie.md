@@ -280,3 +280,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El timer normal se ejecutó a las 05:01:08 UTC; `fragments-release-apply.service` quedó `Result=success`, `ExecMainStatus=0`. No se invocó un deploy manual ni se detuvo producción.
 - Verificación pública cache-bypass: `/health` devolvió `ok` y `database=ready`; el bundle `/assets/index-DGKk1qQh.js` contiene `v0.5.30` y el SHA completo exacto `863dd4fde725a038fd2a181f985d504bc0a8ad83`.
 - No se modificó el entorno ni los gates técnicos F14. Hash del backup previo y labels de imágenes del host continúan NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.31 — 2026-11-23
+
+- PR #157 se integró mediante merge normal en `376bb94bb9961b11cd9e70c4e8e5c43e0d67539a`; la tag anotada `v0.5.31` apunta al SHA exacto de `main`.
+- F14 run `45119521437`: `verify-build`, `attest-package` y `publish-approved-release` terminaron SUCCESS.
+- El aplicador automático `fragments-release-apply.service` terminó `Result=success`, `ExecMainStatus=0` (05:50:30 UTC). SSH fue de solo lectura; no se usó deploy manual ni se reinició producción.
+- API y web estaban `running/healthy` en imágenes con SHA `376bb94bb9961b11cd9e70c4e8e5c43e0d67539a`; healthcheck del origen en puerto 3001 respondió 200.
+- Salud pública cache-bypass: `/health` respondió 200 con `status=ok`, `database=ready`. Bundle `/assets/index-BWzdK7A_.js` respondió 200 y contiene `v0.5.31` y el SHA completo exacto.
+- Entorno `fragments-production` y gates técnicos F14 conservados. Hash/retención del backup y labels host siguen NO COMPROBADOS.
+- Sin interrupción de producción. Se confirmó la aplicación del artefacto; esto no valida el recorrido académico completo ni la estabilidad para piloto.
