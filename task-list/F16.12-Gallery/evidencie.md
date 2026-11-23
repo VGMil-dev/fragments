@@ -20,6 +20,6 @@ Estado: implementación y verificación local completadas; integración central 
 
 ## Pendiente de integración
 
-- Hash de commit: pendiente de commit.
+- Commit de implementación: `9823b60d81c1a0ef604dca0ed6f8c1128de20b40` (`feat(gallery): mejora galeria Pixel Night`).
 - `task-list/TASKS.md` no se editó por límite explícito de ownership; la actualización central corresponde al planner.
 - Publicación de rama y PR: pendiente.
