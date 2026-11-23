@@ -164,6 +164,14 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Bloqueo concreto sin cambio: faltan outputs Review completos por SHA A/B/C (hallazgos, citas e `inputDigest`) y un manifest/export de QA autorizado. Los fixtures fake no permiten valorar semántica.
 - Calidad Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS; no se ejecutó IA pagada ni se alteraron prompts/rúbricas.
 
+## Inventario reproducible de evidencia local A/B/C · 2026-11-23
+
+- Se confirmó que `evals/` contiene metadatos/fixtures y pruebas, pero no outputs Review auténticos ni snapshots locales para A/B/C. El fixture incluye referencias conductuales y paths, y el proveedor offline está etiquetado `fake`.
+- `auditSemanticCorpus` y su CLI ahora exponen `evidenceInventory` por caso: metadata/reference disponibles; output Review ausente, sintético o presente no verificado; `inputDigest` solo por formato; snapshot disponible para el commit o mismatched; manifest ausente/presente no verificado. El resumen entrega conteos, no contenido de outputs o archivos. No llama modelos ni servicios.
+- `node evals/scripts/audit-semantic-corpus.mjs`: estado `BLOCKED`; A/B/C tienen metadata/reference 3/3, outputs ausentes 3/3, inputDigest ausente 3/3, snapshots locales ausentes 3/3 y manifest `MISSING`. `qualityComparison=NOT_PERFORMED`, `scoreComputed=false`.
+- TDD: primero fallaron los dos tests nuevos por `evidenceInventory` inexistente; tras la implementación suite focal `audit-semantic-corpus.test.mjs` 10/10 PASS. Suite offline F25 (compare, audit, fake provider, referencias locales) 27/27 PASS; `git diff --check` PASS.
+- Los estados indican disponibilidad/formato, no autenticidad del proveedor, autorización criptográfica del export, validez semántica de citas ni calidad de puntuación. Calidad Mentor/Review permanece **NO COMPROBADA**; faltan outputs completos por SHA A/B/C, snapshots/manifest autorizados y presupuesto/proveedor verificables.
+
 ## Validador estructural de citas contra snapshot local — 2026-11-23
 
 - Se agregó `validateCitationsAgainstSnapshot` al auditor offline F25. Si se entrega un `RepositorySnapshot` ya disponible localmente, verifica el digest SHA-256 canónico del snapshot, los SHA Git de blobs, rutas exactas, rangos de líneas inclusivos, digest citado y consistencia opcional de `finding.file/lines`.

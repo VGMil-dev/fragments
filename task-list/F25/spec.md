@@ -18,3 +18,5 @@
 - Las etiquetas correct/false-positive/omission son concordancia mecánica con metadatos A/B/C no revalidados; no constituyen ground truth técnico ni quality score.
 - Si faltan corpus o herramientas, se registra NO COMPROBADO y la causa.
 - No se ejecuta código de repositorios estudiantiles.
+- El informe offline por caso clasifica de forma reproducible los metadatos de referencia, ReviewOutput ausente/sintético/no autenticado, el formato de `inputDigest`, la presencia/mismatch de snapshot local y el manifest ausente/presente no verificado; entrega conteos agregados sin revelar contenido.
+- La CLI usa solo fixtures locales y no abre red ni proveedores. Las etiquetas de disponibilidad/formato no equivalen a export autorizado, provenance autenticada, soporte semántico o calidad de puntuación.
