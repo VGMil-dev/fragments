@@ -4,6 +4,7 @@ import test from "node:test";
 import FakeLocalReviewProvider from "../providers/fake-review-provider.mjs";
 import {
   classifyReferenceBehaviors,
+  classifyAgainstVerifiedReference,
   compareReviewCorpus,
   comparePersistedReview,
   digestReviewOutput,
@@ -75,6 +76,76 @@ function fakeFinding(criterionId, status = "verified") {
     guidanceLevel: 1,
   };
 }
+
+function fakeMarkerVerification(caseReference) {
+  return {
+    status: "REFERENCE_MARKERS_MATCH",
+    referenceSource: "LOCAL_GIT_COMMIT_OBJECTS",
+    execution: "SOURCE_NOT_EXECUTED",
+    cases: [{
+      label: caseReference.label,
+      commitSha: caseReference.commitSha,
+      status: "REFERENCE_MARKERS_MATCH",
+      checks: Object.entries(caseReference.behaviorReference).map(([behaviorId, present]) => ({
+        behaviorId,
+        expectedPresent: present,
+        detectedPresent: present,
+        status: "MATCH",
+      })),
+    }],
+  };
+}
+
+test("el gate exige cotejo estático del SHA y todos los marcadores antes de clasificar", () => {
+  const output = makeFakeOutput({
+    commitSha: caseB.commitSha,
+    findings: [fakeFinding("required_validation"), fakeFinding("name_search")],
+  });
+  const coverage = { complete: true, criterionIds: Object.keys(caseB.behaviorReference) };
+  const markerReport = fakeMarkerVerification(caseB);
+
+  const accepted = classifyAgainstVerifiedReference({
+    caseReference: caseB,
+    reviewOutput: output,
+    coverage,
+    referenceVerification: markerReport,
+  });
+  assert.equal(accepted.status, "MECHANICAL_REFERENCE_CLASSIFIED");
+  assert.equal(accepted.referenceValidation, "STATIC_SOURCE_MARKERS_MATCHED");
+  assert.deepEqual(accepted.classification.falsePositives.map((item) => item.criterionId), ["name_search"]);
+  assert.equal(accepted.semanticValidity, "NOT_VALIDATED");
+  assert.equal(accepted.referenceReportAuthentication, "NOT_AUTHENTICATED");
+  assert.equal(accepted.inputProvenance, "CALLER_SUPPLIED_OUTPUT_NOT_AUTHENTICATED");
+
+  markerReport.cases[0].checks[0].detectedPresent = false;
+  markerReport.cases[0].checks[0].status = "MISMATCH";
+  const blocked = classifyAgainstVerifiedReference({
+    caseReference: caseB,
+    reviewOutput: output,
+    coverage,
+    referenceVerification: markerReport,
+  });
+  assert.equal(blocked.status, "BLOCKED");
+  assert.equal(blocked.classification, null);
+  assert.deepEqual(blocked.blockers, ["reference_not_verified_against_local_markers"]);
+
+  markerReport.cases[0].status = "REFERENCE_MARKERS_MATCH";
+  markerReport.cases[0].checks = Object.entries(caseB.behaviorReference).map(([behaviorId, present]) => ({
+    behaviorId,
+    expectedPresent: present,
+    detectedPresent: present,
+    status: "MATCH",
+  }));
+  markerReport.cases[0].commitSha = caseC.commitSha;
+  const wrongCommit = classifyAgainstVerifiedReference({
+    caseReference: caseB,
+    reviewOutput: output,
+    coverage,
+    referenceVerification: markerReport,
+  });
+  assert.equal(wrongCommit.status, "BLOCKED");
+  assert.equal(wrongCommit.classification, null);
+});
 
 test("la clasificación mecánica con output fake etiqueta correctos, falsos positivos y omisiones", () => {
   const comparisonB = classifyReferenceBehaviors({
