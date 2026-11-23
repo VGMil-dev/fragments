@@ -1,6 +1,6 @@
 # F10.3 — Evidencia
 
-Estado: implementado y verificado localmente; no desplegado. Rama: `codex/f10-trainer-lab`.
+Estado: implementado, integrado y desplegado como `v0.5.36`. Rama: `codex/f10-trainer-lab`.
 
 ## Cambios
 
@@ -24,5 +24,9 @@ Estado: implementado y verificado localmente; no desplegado. Rama: `codex/f10-tr
 
 ## Limitaciones y commits
 
-- No se usó Ego Lite ni navegador; QA visual responsive, foco real, contraste y lector de pantalla siguen pendientes. No se afirma aprobación visual.
+- PR #176 integrado por merge normal en `main` como `cf2edb14ad97fda4b07a87e806d3ae9e3191e1be`; CI del PR `45151950478` SUCCESS. Revisión reflexiva independiente: sin hallazgos bloqueantes.
 - Commit de implementación: `020a99318f044c3968c0461f7bb9b7e3c437a799` (`feat(f10): refina empty state trainer`).
+- F14 tag anotada `v0.5.36` → SHA exacto `cf2edb14ad97fda4b07a87e806d3ae9e3191e1be`; workflow `45153003708`: `verify-build`, ARM64, atestación Sigstore y publicación SUCCESS.
+- Verificación pública cache-bypass: `/health` HTTP 200, `status=ok`, `database=ready`; bundle `/assets/index-CCBddJ1x.js` contiene `v0.5.36` y el SHA exacto. Durante la aplicación automática hubo una lectura HTTP 502 transitoria; la observación siguiente recuperó HTTP 200 y bundle nuevo. No se invocó deploy manual ni se apagó/reinició producción.
+- Ego Lite en una pestaña nueva de la sesión estudiantil existente: H1 «Entrenamiento», estado vacío y CTA `/student/review` visibles; con Tab el CTA mostró contorno lima sólido de 3 px. A 390 px el link quedó visible (121×48), `scrollWidth=390`, sin overflow horizontal. No se pulsó CTA ni se escribieron datos. Sesiones y pestañas previas permanecieron abiertas.
+- El gate local impidió inspeccionar el componente antes del deploy; la comprobación productiva posterior sí observó la UI real. No se revisó lector de pantalla. El estado se presenta como guía inicial, no como lista explícita vacía.

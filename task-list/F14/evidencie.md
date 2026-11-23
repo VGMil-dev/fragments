@@ -321,3 +321,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45140042384`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; la validación confirmó tag anotada, SHA exacto y ascendencia en `main`. Release publicó `fragments-images.tar.gz`, `release-manifest.json` y `fragments-images.attestation.jsonl`.
 - Verificación pública posterior: `/health` HTTP 200 (`status=ok`, `database=ready`); bundle `/assets/index-B3UmVzeh.js` incluye `v0.5.35` y SHA `befbc7c3116bf9df2a33f5d344bbb7040b806939`.
 - Se conservaron entorno `fragments-production`, workflow, agente pull y controles técnicos. No hubo deploy manual, parada, reinicio, migración ni cambio de infraestructura. Integridad/retención del backup de esta release y estado interno del ledger quedan NO COMPROBADOS.
+
+## Release y aplicación pública v0.5.36 — 2026-11-23
+
+- PR #176 se integró normalmente como `cf2edb14ad97fda4b07a87e806d3ae9e3191e1be`; CI del PR `45151950478` SUCCESS. Tag anotada `v0.5.36` apunta al SHA exacto de `main`.
+- F14 run `45153003708`: validación de tag/SHA/main, tests, typecheck, lint/build, metadata del bundle, PostgreSQL desechable y restore, imágenes ARM64, atestación Sigstore y publicación a la cola protegida terminaron SUCCESS.
+- Health público previo: HTTP 200 `ok/ready`. Durante la ventana de aplicación automática, una lectura pública devolvió HTTP 502; la siguiente observación volvió a HTTP 200 `ok/ready`, y el bundle `/assets/index-CCBddJ1x.js` confirmó `v0.5.36` y el SHA completo exacto.
+- Sin invocación manual, reinicio solicitado, pausa ni cambio de infraestructura. Se conservaron el entorno `fragments-production`, el workflow, el poller y todos los gates técnicos. Ledger del host e integridad/retención independiente del backup NO COMPROBADOS.
