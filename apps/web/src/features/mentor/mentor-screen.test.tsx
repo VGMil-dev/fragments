@@ -17,6 +17,11 @@ async function openEvaluationStage() {
   await act(async () => stage?.click());
 }
 
+async function openIdeaStage() {
+  const stage = Array.from(mountedContainer?.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button") ?? []).find((button) => button.textContent?.includes("Idea"));
+  await act(async () => stage?.click());
+}
+
 const proposal = {
   id: "proposal-1",
   version: 1,
@@ -189,7 +194,7 @@ describe("MentorScreen", () => {
     await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
 
     expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
-    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Idea");
+    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Contexto");
     expect(mountedContainer.querySelector(".mentor-stage-nav__state--current")?.textContent).toBe("Etapa actual");
     const continueButton = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-form__actions button")).find((button) => button.textContent?.includes("Guardar y continuar"));
     expect(continueButton).toBeDefined();
@@ -197,7 +202,7 @@ describe("MentorScreen", () => {
     await act(async () => continueButton?.click());
 
     expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ expectedVersion: proposal.version }));
-    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
   });
 
   it("no marca como anterior completada una etapa incompleta", async () => {
@@ -225,7 +230,7 @@ describe("MentorScreen", () => {
     await act(async () => continueButton?.click());
 
     expect(onSave).toHaveBeenCalledOnce();
-    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
     expect(mountedContainer.textContent).toContain("No pudimos guardar tu propuesta.");
   });
 
@@ -248,6 +253,7 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+    await openIdeaStage();
     const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Diario cambiado");
     await act(async () => title?.dispatchEvent(new Event("input", { bubbles: true })));
@@ -279,6 +285,8 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+
+    await openIdeaStage();
 
     const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Título sin guardar");
@@ -369,10 +377,15 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
-    expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
+    expect(mountedContainer.querySelector(".mentor-field input")).toBeNull();
+    expect(mountedContainer.textContent).toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-stage-nav")).not.toBeNull();
     expect(mountedContainer.textContent).toContain("Borrador completado: 0 %");
     const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    expect(context?.getAttribute("aria-current")).toBe("step");
+    await openIdeaStage();
+    expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
+    expect(mountedContainer.querySelector(".mentor-context--personal")).toBeNull();
     await act(async () => context?.click());
     expect(mountedContainer.textContent).toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
@@ -398,10 +411,8 @@ describe("MentorScreen", () => {
         },
       } }} />);
     });
-    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
-    await act(async () => context?.click());
     expect(mountedContainer.querySelector("#mentor-title")?.textContent).toBe("Tu proyecto en contexto");
-    expect(mountedContainer.querySelector(".student-screen__lead")?.textContent).toBe("Relaciona tu idea con la materia, la consigna y las condiciones de tu aula.");
+    expect(mountedContainer.querySelector(".student-screen__lead")?.textContent).toBe("Revisa primero la materia, la consigna y las condiciones de tu aula.");
     expect(mountedContainer.textContent).toContain("Contexto académico disponible");
     expect(mountedContainer.textContent).toContain("Proyectos de aula");
     expect(mountedContainer.textContent).toContain("Investigación escolar");
@@ -421,11 +432,11 @@ describe("MentorScreen", () => {
     expect(contextForm?.querySelector(".mentor-form__footer")).not.toBeNull();
     expect(contextForm?.closest(".mentor-stage-layout")?.querySelector(".mentor-choices--context")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-choices--context")?.closest(".mentor-stage-layout")).toBeNull();
-    expect(mountedContainer.querySelector(".mentor-form__footer > button")?.textContent).toContain("Anterior");
+    expect(mountedContainer.querySelector(".mentor-form__footer > button")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar borrador");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar y continuar");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).not.toContain("Anterior");
-    expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).not.toContain("Guarda los cambios");
+    expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).toContain("Guarda los cambios con «Guardar borrador»");
   });
 
   it("keeps context loading and failures distinct from personal mode", async () => {
@@ -433,8 +444,6 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} contextState={{ status: "loading" }} />); });
-    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
-    await act(async () => context?.click());
     expect(mountedContainer.querySelector('[role="status"]')?.textContent).toContain("Cargando el contexto académico");
     expect(mountedContainer.textContent).not.toContain("Modo personal");
     expect(mountedContainer.textContent).not.toContain("Contexto académico disponible");
@@ -479,12 +488,10 @@ describe("MentorScreen", () => {
       <MentorScreen {...actions} onBack={vi.fn()} />,
     );
 
-    expect(html).toContain("Tu idea toma forma");
+    expect(html).toContain("Tu proyecto en contexto");
     expect(html).toContain("Guardar borrador");
-    expect(html).toContain("Descargar plantilla Word");
-    expect(html).toContain("/templates/fragments-mentor-propuesta.docx");
-    expect(html).toContain("Importar propuesta (.docx)");
-    expect(html).toContain("Crear propuesta directamente");
+    expect(html).toContain("Modo personal");
+    expect(html).not.toContain("Tu propuesta</h2>");
     expect(html).not.toContain("72/100");
     expect(html).not.toContain("scope necesita");
   });
@@ -523,58 +530,65 @@ describe("MentorScreen", () => {
     expect(Array.from(mountedContainer.querySelectorAll<HTMLInputElement>(".mentor-objectives__row input")).map((field) => field.value)).toEqual(["Comparar crecimiento", "Guardar una observación"]);
   });
 
-  it("lists saved proposals and opens the selected one", () => {
+  it("lists saved proposals and opens the selected one", async () => {
     const onOpenProposal = vi.fn();
-    const html = renderToStaticMarkup(
-      <MentorScreen {...actions} savedProposals={[proposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />,
-    );
-
-    expect(html).toContain("Mis propuestas guardadas");
-    expect(html).toContain("Diario de plantas");
-    expect(html).toContain("Abrir propuesta");
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} savedProposals={[proposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />));
+    await openIdeaStage();
+    expect(mountedContainer.textContent).toContain("Mis propuestas guardadas");
+    expect(mountedContainer.textContent).toContain("Diario de plantas");
+    const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
+    await act(async () => open?.click());
+    expect(onOpenProposal).toHaveBeenCalledWith(proposal);
   });
 
-  it("identifies each saved proposal in its open button's accessible name", () => {
+  it("identifies each saved proposal in its open button's accessible name", async () => {
     const untitledProposal = { ...proposal, id: "proposal-2", proposal: { ...proposal.proposal, title: "" } };
-    const html = renderToStaticMarkup(
-      <MentorScreen {...actions} savedProposals={[proposal, untitledProposal]} onBack={vi.fn()} />,
-    );
-
-    expect(html).toContain('aria-label="Abrir propuesta: Diario de plantas"');
-    expect(html).toContain('aria-label="Abrir propuesta: Borrador sin título"');
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} savedProposals={[proposal, untitledProposal]} onBack={vi.fn()} />));
+    await openIdeaStage();
+    expect(mountedContainer.innerHTML).toContain('aria-label="Abrir propuesta: Diario de plantas"');
+    expect(mountedContainer.innerHTML).toContain('aria-label="Abrir propuesta: Borrador sin título"');
   });
 
-  it("shows the saved mission theme and pinned Mentor context version without private rubric details", () => {
-    const html = renderToStaticMarkup(
-      <MentorScreen {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />,
-    );
-
-    expect(html).toContain("Misión vinculada");
-    expect(html).toContain("Navegación con Expo Router");
-    expect(html).toContain("Contexto Mentor v4");
-    expect(html).not.toContain("Rúbrica privada del docente");
-    expect(html).not.toContain("Criterio privado");
-    expect(html).not.toContain("Requisito privado");
+  it("shows the saved mission theme and pinned Mentor context version without private rubric details", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />));
+    await openIdeaStage();
+    expect(mountedContainer.textContent).toContain("Misión vinculada");
+    expect(mountedContainer.textContent).toContain("Navegación con Expo Router");
+    expect(mountedContainer.textContent).toContain("Contexto Mentor v4");
+    expect(mountedContainer.textContent).not.toContain("Rúbrica privada del docente");
+    expect(mountedContainer.textContent).not.toContain("Criterio privado");
+    expect(mountedContainer.textContent).not.toContain("Requisito privado");
   });
 
-  it("shows a linked mission without inventing context when the saved context is unavailable", () => {
-    const html = renderToStaticMarkup(
-      <MentorScreen {...actions} savedProposals={[{ ...proposal, assignmentVersionId: "assignment-version-1", assignmentContext: null }]} onBack={vi.fn()} />,
-    );
-
-    expect(html).toContain("Misión vinculada");
-    expect(html).toContain("contexto académico no disponible");
-    expect(html).not.toContain("Contexto Mentor v");
-    expect(html).not.toContain("Navegación con Expo Router");
+  it("shows a linked mission without inventing context when the saved context is unavailable", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} savedProposals={[{ ...proposal, assignmentVersionId: "assignment-version-1", assignmentContext: null }]} onBack={vi.fn()} />));
+    await openIdeaStage();
+    expect(mountedContainer.textContent).toContain("Misión vinculada");
+    expect(mountedContainer.textContent).toContain("contexto académico no disponible");
+    expect(mountedContainer.textContent).not.toContain("Contexto Mentor v");
+    expect(mountedContainer.textContent).not.toContain("Navegación con Expo Router");
   });
 
-  it("does not show a mission marker for a proposal without an assignment", () => {
-    const html = renderToStaticMarkup(
-      <MentorScreen {...actions} savedProposals={[proposal]} onBack={vi.fn()} />,
-    );
-
-    expect(html).not.toContain("Misión vinculada");
-    expect(html).not.toContain("Contexto Mentor v");
+  it("does not show a mission marker for a proposal without an assignment", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} savedProposals={[proposal]} onBack={vi.fn()} />));
+    await openIdeaStage();
+    expect(mountedContainer.textContent).not.toContain("Misión vinculada");
+    expect(mountedContainer.textContent).not.toContain("Contexto Mentor v");
   });
 
   it("does not report an empty list when saved proposals failed to load", async () => {
@@ -585,6 +599,7 @@ describe("MentorScreen", () => {
     await act(async () => {
       mountedRoot?.render(<MentorScreen {...actions} proposalsError onRetryProposals={retry} onBack={vi.fn()} />);
     });
+    await openIdeaStage();
 
     expect(mountedContainer.textContent).toContain("No pudimos cargar tus propuestas guardadas.");
     expect(mountedContainer.textContent).not.toContain("Aún no tienes propuestas guardadas.");
@@ -601,6 +616,7 @@ describe("MentorScreen", () => {
     await act(async () => {
       mountedRoot?.render(<MentorScreen {...actions} savedProposals={[proposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />);
     });
+    await openIdeaStage();
 
     const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
     await act(async () => open?.click());
@@ -616,6 +632,8 @@ describe("MentorScreen", () => {
     await act(async () => {
       mountedRoot?.render(<MentorScreen key="new-proposal" {...actions} savedProposals={[linkedProposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />);
     });
+
+    await openIdeaStage();
 
     expect(mountedContainer.textContent).toContain("Navegación con Expo Router");
     expect(mountedContainer.textContent).toContain("Contexto Mentor v4");
@@ -654,6 +672,8 @@ describe("MentorScreen", () => {
     await act(async () => {
       mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />);
     });
+
+    await openIdeaStage();
 
     const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
     expect(title).not.toBeNull();

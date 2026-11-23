@@ -80,6 +80,8 @@ describe("TrainerScreen", () => {
     try {
       await act(async () => root.render(<TrainerScreen api={api} onStartReview={vi.fn()} />));
       expect(container.querySelector(".trainer-controls select")?.textContent).toContain("student/demo");
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain("Repositoriostudent/demo");
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain(`Commit analizado${"a".repeat(40)}`);
       expect(container.textContent).toContain("Sortear reto");
       expect(container.textContent).toContain("Historial de práctica");
       expect(container.textContent).toContain("FUENTE DE PRÁCTICA");

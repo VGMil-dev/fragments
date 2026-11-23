@@ -32,6 +32,19 @@
   letter-spacing: -.035em;
 }
 
+.student-dashboard--pixel .student-dashboard__identity-link {
+  color: inherit;
+  text-decoration-color: var(--dashboard-lime);
+  text-decoration-thickness: .08em;
+  text-underline-offset: .12em;
+}
+
+.student-dashboard--pixel .student-dashboard__identity-link:focus-visible {
+  border-radius: .15em;
+  outline: 3px solid var(--dashboard-lime);
+  outline-offset: 4px;
+}
+
 .student-dashboard--pixel .student-dashboard__heading > p:last-of-type {
   max-width: 42rem;
   color: var(--dashboard-muted);
