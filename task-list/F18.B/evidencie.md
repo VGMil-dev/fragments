@@ -345,3 +345,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Caso corrupto/mismatch: el test de contexto enlazado a otra versión ahora exige el fallback “Misión vinculada · contexto no disponible” y que no se filtren sus habilidades.
 - Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS; `pnpm --filter @fragments/web typecheck` y `git diff --check` PASS.
 - No se modifican contratos, API, backend, rutas, migraciones, DB ni servicios productivos. Sin navegador, IA ni producción.
+- Commit local `bf2513f` en `codex/f18b-next-ui`; sin push ni despliegue.
