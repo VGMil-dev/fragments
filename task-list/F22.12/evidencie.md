@@ -53,6 +53,7 @@ Fecha: 2026-11-23.
 - `pnpm --filter @fragments/api exec vitest run src/features/admin-mentor-events/better-auth.integration.test.ts src/features/admin-mentor-events/http.test.ts src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts --maxWorkers=1` — PASS, 4 archivos, 13/13 pruebas.
 - `pnpm --filter @fragments/contracts build` — PASS; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
 - Better Auth real significa que el adapter, sesión/cookie, lectura de rol y endpoint corrieron localmente con Prisma/PostgreSQL; el proveedor Mentor, el evento, el admin y sus credenciales son sintéticos. AI Gateway, producción, cuentas reales, eventos productivos y sesión admin productiva siguen **NO COMPROBADOS**.
+- Commit de integración: `1a31b1dad298e2266af759cc5aaa0a7154e19d38` en `codex/f22-auth-session-integration`; sin push, PR ni release.
 
 ## Integración normal de la prueba compuesta · 2026-11-23
 
