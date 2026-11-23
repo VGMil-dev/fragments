@@ -453,3 +453,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Reconciliación posterior: Ego Lite confirmó el bundle `/assets/index-BR26dvq9.js` con `v0.5.48` y SHA exacto `e2794c93f04e3912698daffce6a237a4cc008495`. La app aplicó la release automáticamente por F14.
 - QA funcional read-only PASS desde la sesión estudiante existente: Mis aulas mostró misión publicada/contexto Mentor v1 y habilidad autorizada; el CTA abrió Mentor > Habilidades con el aula de esa misión preseleccionada entre varias aulas y la habilidad requerida fijada/no editable. “Quiero reforzar” no ofrecía habilidades de otra aula. No se cambió selección, no se abrió/reemplazó el borrador persistido, no se guardó/evaluó ni se llamó IA. Las sesiones y pestañas estudiante/docente quedaron abiertas.
 - La selección de habilidades optativas queda COMPROBADA para el escenario productivo observado. Dashboard resumen continúa visualmente NO COMPROBADO por borrador prioritario; evaluación IA real, Review productiva enlazada en Trainer, Galería e identidad cruzada permanecen NO COMPROBADAS.
+
+## Revalidación aislada del recorrido académico · 2026-11-23
+
+- Se ejecutó `apps/api/src/features/assignments/academic-flow.integration.test.ts` en PostgreSQL efímero. Antes de migrar, `SELECT current_database()` devolvió `fragments_test`; se aplicaron las siete migraciones versionadas y el contenedor se eliminó al terminar.
+- Resultado fresco: **4/4 PASS**. Comprueba publicación y fijación de misión/contexto, matrícula y habilidades, creación de propuesta Mentor y recorrido hasta Review/Trainer usando evaluadores/workers fake deterministas. No es una evaluación semántica real ni una comprobación productiva.
+- Un intento anterior contra un contenedor QA ya existente fue rechazado por autenticación TCP antes de ejecutar el `SELECT current_database()` del test; no se escribieron datos. Se repitió correctamente en el contenedor desechable descrito arriba.
+- No se modificó código ni producción. Calidad IA real, Review productiva enlazada en Trainer, Galería e identidad cruzada permanecen **NO COMPROBADAS**; la QA visual autenticada sigue pendiente de Ego Lite.
