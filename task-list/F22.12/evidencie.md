@@ -40,10 +40,19 @@ Fecha: 2026-11-23.
 
 - La cobertura anterior probaba por separado la emisión de eventos Mentor y la lectura del endpoint admin. Se agregó una prueba compuesta que ejecuta `createMentorHttp` con `createLocalMentorEvaluator`, registra el evento en `createMentorOperationalLog` y consulta el buffer mediante `createAdminMentorEventsHttp`.
 - El escenario confirma respuesta de evaluación 200, un evento `mentor_evaluation_completed` redactado en la respuesta admin, y orden de auditoría `admin.mentor_events.read` antes de la lectura del buffer. La salida no contiene IDs de estudiante/propuesta, puntuación, prompt ni proveedor.
-- Es prueba local sintética: el verificador admin y el actor se representan con fixtures; no usa Better Auth productivo, PostgreSQL, AI Gateway ni producción. Eventos reales y sesión admin en producción permanecen **NO COMPROBADOS**.
+- Esta primera prueba local sintética representa el verificador admin y actor con fixtures; no usa Better Auth ni PostgreSQL. Eventos reales y sesión admin en producción permanecen **NO COMPROBADOS**.
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts src/features/admin-mentor-events/http.test.ts --maxWorkers=1` — PASS, 3 archivos, 12/12 pruebas.
 - `pnpm --filter @fragments/contracts build` — PASS; se regeneraron tipos de trabajo ignorados desde el source actual. `pnpm --filter @fragments/api typecheck` — PASS. La primera ejecución previa al build detectó `dist` de contratos desactualizado; no hubo cambios a los contratos fuente.
 - `git diff --check` — PASS. No se usó PostgreSQL, Better Auth productivo, Gateway, ni se efectuaron escrituras de datos académicos. La respuesta administrativa usa un verificador/actor fake; la sesión admin real sigue NO COMPROBADA.
+
+## Integración con sesión Better Auth sintética · 2026-11-23
+
+- Se agregó `better-auth.integration.test.ts`. En una base efímera local `fragments_test` (contenedor sin volumen, enlazado solo a `127.0.0.1`) se aplicaron las cinco migraciones versionadas y `prisma migrate status` confirmó el esquema actualizado.
+- La prueba crea un solo usuario admin QA con Better Auth `signUpEmail`, actualiza el rol del fixture, obtiene una sesión mediante `signInEmail` y sirve el endpoint a través de `createHttpHandler` con la instancia real de Better Auth/Prisma. Inserta un evento Mentor sintético en el buffer.
+- Resultado por HTTP: 401 sin cookie; 403 con la sesión mientras el mismo usuario no tiene rol admin; 200 después de restaurar el rol. La respuesta contiene únicamente el evento redactado y el audit sink recibe `admin.mentor_events.read` con el actor fixture. No se creó otro usuario, aula, propuesta o dato académico. `afterAll` elimina por ID propio la identidad QA y sus relaciones en cascada; el contenedor efímero se eliminó al detenerlo.
+- `pnpm --filter @fragments/api exec vitest run src/features/admin-mentor-events/better-auth.integration.test.ts src/features/admin-mentor-events/http.test.ts src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts --maxWorkers=1` — PASS, 4 archivos, 13/13 pruebas.
+- `pnpm --filter @fragments/contracts build` — PASS; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
+- Better Auth real significa que el adapter, sesión/cookie, lectura de rol y endpoint corrieron localmente con Prisma/PostgreSQL; el proveedor Mentor, el evento, el admin y sus credenciales son sintéticos. AI Gateway, producción, cuentas reales, eventos productivos y sesión admin productiva siguen **NO COMPROBADOS**.
 
 ## Integración normal de la prueba compuesta · 2026-11-23
 
