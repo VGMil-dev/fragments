@@ -300,4 +300,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `pnpm --filter @fragments/web typecheck` — PASS. `git diff --check` — PASS.
 - Sin API/contratos, backend, evaluación, rutas o datos productivos; sin navegador. Las sesiones Ego Lite permanecen intactas.
 - Límite: el contexto recuperado expone requisitos como texto, no como un campo estructurado de habilidades. La extracción requiere el prefijo exacto y la coincidencia de versión; no se valida IA ni recorrido remoto.
-- Commit local pendiente al completar esta evidencia.
+- Commit de implementación local: `0e47317` en `codex/f18b-required-mission-skills`; sin push.
