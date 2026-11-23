@@ -1,6 +1,7 @@
 import { ArrowRight, ClipboardCheck, GraduationCap, Image, Layers3 } from "lucide-react";
 import type { ClassroomSummary, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
 import type { AsyncState } from "../../hooks/async-state";
+import "./StudentDashboard.css";
 
 type StudentDashboardProps = {
   student: StudentMe;
@@ -27,18 +28,18 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
   const continueProposal = proposals[0];
 
   return (
-    <main className="student-dashboard" aria-labelledby="student-dashboard-title">
+    <main className="student-dashboard student-dashboard--pixel" aria-labelledby="student-dashboard-title">
       <header className="student-dashboard__heading">
-        <p className="student-screen__eyebrow">MI ESPACIO</p>
+        <p className="student-screen__eyebrow">CENTRO DE MISIONES</p>
         <h1 id="student-dashboard-title">Hola, {student.githubLogin ? `@${student.githubLogin}` : "estudiante"}</h1>
-        <p>Tu espacio para continuar propuestas y consultar tu actividad real.</p>
+        <p>Tu siguiente paso de aprendizaje, con tus propuestas y actividad en un solo lugar.</p>
         {student.avatarUrl ? <img className="student-dashboard__avatar" src={student.avatarUrl} alt="" width="56" height="56" /> : null}
       </header>
 
-      <section className="student-dashboard__project" aria-label="Continuar tu proyecto">
+      <section className="student-dashboard__project" aria-label="Siguiente paso de tu proyecto">
         <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
         <div className="student-dashboard__project-copy">
-          {proposalsLoading ? <><span className="student-dashboard__status">Cargando</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Sin conexión</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Borrador guardado · versión {continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : <><span className="student-dashboard__status">Listo para empezar</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
+          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : <><span className="student-dashboard__status">Siguiente paso</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
         </div>
         <div className="student-dashboard__project-action">
           {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear mi primer proyecto <ArrowRight size={17} aria-hidden="true" /></button>}
