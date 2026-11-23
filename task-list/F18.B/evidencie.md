@@ -292,3 +292,26 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Ego Lite QA local sintética en TaskSpaces preservados 44 (docente) y 46 (estudiante): docente creó y publicó misión v1 con habilidad requerida; estudiante vio «Misión publicada v1 · Contexto Mentor v1», abrió Mentor, guardó una propuesta ficticia y tras recargar la recuperó. GET local verificó `assignmentVersionId`, contexto v1, tema y habilidad requerida. No se cerraron pestañas existentes.
 - Sin evaluación IA ni llamadas pagadas, sin escrituras productivas. Prueba unitaria/regresión 9/9, integración HTTP/PostgreSQL efímera `fragments_test` 3/3, API typecheck y `git diff --check` PASS.
 - Los snapshots publicados antes del fix no conservan asunto histórico; usan el fallback al asunto actual y no se puede reconstruir el pasado sin una fuente confiable. Evaluación IA real, datos de misión en producción e identidad cruzada siguen NO COMPROBADOS.
+# Habilidades requeridas del snapshot en Mentor · 2026-11-23
+
+- TDD: añadí primero pruebas para inicio de misión, recuperación con contexto fijado, fallback de Mentor general y separación de selección opcional. Las pruebas de composición/UI fallaron inicialmente porque la lista requerida no llegaba a Mentor.
+- Implementación: `App` pasa los nombres de `selectedAssignment.requiredSkills`; al recuperar, deriva solo los requisitos con prefijo exacto `Habilidad requerida: ` cuando `assignmentContext.assignmentVersionId` coincide con el de la propuesta. `MentorScreen` los presenta como lista de referencia, separada de la selección editable del catálogo.
+- Prueba focal: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 33 pruebas PASS.
+- `pnpm --filter @fragments/web typecheck` — PASS. `git diff --check` — PASS.
+- Sin API/contratos, backend, evaluación ni datos productivos. QA Ego Lite con autenticación sintética local en `127.0.0.1:5174`: misión v1/Contexto v1 muestra la habilidad requerida fijada/read-only, 1 requerida y 0 controles; `Quiero reforzar` aparece separado; Mentor general muestra “Sin asignación”. No se guardó ni evaluó. Sesiones conservadas.
+- Límite: el contexto recuperado expone requisitos como texto, no como un campo estructurado de habilidades. La extracción requiere el prefijo exacto y la coincidencia de versión; no se valida IA ni recorrido remoto.
+- Commit de implementación: `0e47317` en `codex/f18b-required-mission-skills`.
+
+## Regresión por contexto vinculado a otra versión · 2026-11-23
+
+- Añadí una prueba de composición para propuesta ligada a `mission-v1` cuyo `assignmentContext` apunta a `mission-v2`; Mentor no debe mostrar habilidades de ese contexto obsoleto.
+- Mutación de control: al retirar temporalmente la comparación de `assignmentVersionId`, la prueba falla y muestra `No debe mostrarse`; restaurado el guard, la regresión pasa.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS. Typecheck y `git diff --check` PASS.
+
+## Evitar duplicar habilidades requeridas en el selector optativo · 2026-11-23
+
+- QA visual detectó que una habilidad fijada en el snapshot también aparecía como botón optativo cuando pertenecía al catálogo activo.
+- TDD: amplié la prueba de Mentor con el catálogo que incluye “Navegación fijada” (requerida) y “Accesibilidad” (optativa). Antes del ajuste, fallaba mostrando ambas como botones; después, solo permite seleccionar “Accesibilidad” y el payload contiene únicamente su ID.
+- El filtro usa el nombre normalizado del snapshot para no ocultar otras opciones autorizadas; la misma prop se usa en inicio y recuperación. Se conserva la regresión de contexto con `assignmentVersionId` discrepante.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS; typecheck y `git diff --check` PASS.
+- Commit de corrección local: `37b518d12dae9c26ad13137e89ee8add83e31d75` en `codex/f18b-required-mission-skills`.

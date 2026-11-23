@@ -84,4 +84,11 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Alcance: navegación y estado en `apps/web/src/App.tsx`, con regresión de composición en `apps/web/src/App.student-flow.test.tsx`; sin contratos, endpoints, persistencia o producción.
 - Criterio: una prueba de ruta real de componentes confirma que el borrador iniciado desde la misión lleva su versión publicada, y que después de volver y abrir Mentor por navegación el borrador nuevo no lleva esa asociación y usa el contexto general vigente.
 
+## Incremento UI — habilidades requeridas de misión en Mentor
+
+- Problema: Mentor mostraba siempre que no había habilidades requeridas aunque se abriese desde una misión publicada con habilidades obligatorias.
+- Objetivo: mostrar las habilidades requeridas del snapshot de misión como referencia de solo lectura, tanto al iniciar una propuesta desde la misión como al recuperar una propuesta con contexto fijado.
+- Las habilidades optativas del catálogo activo siguen siendo una selección independiente y editable; Mentor general conserva su estado vacío.
+- No objetivos: alterar evaluación, API, contratos, rutas, backend, migraciones o selección optativa.
+
 - Dar a cada botón de recuperación de propuesta un nombre accesible que identifique su acción y título, con fallback para borradores sin título.
