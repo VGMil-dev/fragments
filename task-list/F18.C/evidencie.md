@@ -2,13 +2,12 @@
 
 ## Corrección de ruta en producción — 2026-11-23
 
-- Tras desplegar PR #150 en `v0.5.28`, Ego Lite docente observó que `/teacher/review` cargaba pero `GET /api/teacher/classrooms/:id/reviews` respondía 404 `NOT_FOUND`. No hubo filas; no se pulsó Reintentar ni se modificaron datos.
-- Verificación read-only de host: contenedores API y web ambos llevan el label `org.opencontainers.image.revision=17f810503ed3c56759a1b6ad2015eb52bc07e11c`, el SHA exacto de PR #150. Por tanto, se descartó una mezcla de versiones de imagen.
-- Causa reproducida localmente: `classroomHandler` respondía su 404 catch-all antes de que el router compuesto invocara `reviewHandler`.
-- Se añadió una regresión en `apps/api/src/http/app-routing.test.ts`; antes del fix falló con HTTP 404. El fix despacha Review antes del catch-all de Classroom Studio. Luego `pnpm --filter @fragments/api exec vitest run src/http/app-routing.test.ts --maxWorkers=1` — 2/2 PASS; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
-- Verificación fresca adicional tras el fix: `pnpm --filter @fragments/api test` — 45 archivos PASS/17 omitidos, 163 pruebas PASS/70 omitidas por requerir PostgreSQL o fixtures específicos. La prueba de orden de rutas forma parte de esta suite.
-- Commit de corrección: `f59480bfe103c9ade022b17245d608f72e0b6952` en `codex/f18c-review-route-dispatch`; rama aún no publicada al registrar este commit de evidencia.
-- La corrección aún no está integrada ni desplegada; requiere PR/CI y un tag F14 normal. No usar Retry ni enviar Reviews en producción hasta que llegue la corrección y se vuelva a verificar.
+- Tras desplegar PR #150 en `v0.5.28`, Ego Lite docente observó que `/teacher/review` cargaba pero `GET /api/teacher/classrooms/:id/reviews` respondía 404 `NOT_FOUND`. No hubo filas; no se pulsó Reintentar ni se modificaron datos. Labels de API y web confirmaron SHA `17f810503ed3c56759a1b6ad2015eb52bc07e11c`, por lo que se descartó una mezcla de versiones.
+- Causa: `classroomHandler` respondía su 404 catch-all antes de que el router compuesto invocara `reviewHandler`. Se añadió un test del router montado; antes del fix falló con 404 y confirmó que el store de Review no se llamaba.
+- Corrección: despachar `reviewHandler` antes del catch-all. Verificación local: `pnpm --filter @fragments/api exec vitest run src/http/app-routing.test.ts --maxWorkers=1` — 2/2 PASS; `pnpm --filter @fragments/api test` — 45 archivos PASS/17 omitidos, 163 pruebas PASS/70 omitidas por PostgreSQL/fixtures; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS. Revisión reflexiva independiente — PASS.
+- Commit de código: `f59480bfe103c9ade022b17245d608f72e0b6952`. PR #151 integrada normalmente como `7123eca519aa2b02c4d79851595900de50a3690b`; CI `45108818652` SUCCESS. Tag anotada `v0.5.29` apunta al merge exacto; F14 run `45109104699` SUCCESS en build, ARM64, atestación y publicación.
+- Aplicación normal observada: el timer poller y `fragments-release-apply.service` terminaron `success` (ExecMainStatus 0). La comprobación pública posterior dio `/health ok/ready` y bundle `/assets/index-WkZ1HQx5.js` con `v0.5.29` y el SHA exacto.
+- Ego Lite docente, tras una sola recarga de la pestaña Review existente: el GET respondió 200 y la UI mostró «Aún no hay revisiones que estudiantes hayan compartido con esta aula», sin error, carga pendiente ni filas. No se pulsó Reintentar ni se creó una Review; la sesión estudiante y las demás pestañas permanecieron abiertas. No se capturó pantalla porque el marco muestra datos personales.
 
 ## Implementación local
 
@@ -23,13 +22,13 @@
 - `pnpm run typecheck` y `pnpm run build` — PASS, 5/5 y 4/4 tareas Turbo respectivamente.
 - PostgreSQL efímero local `fragments_test` en `127.0.0.1:55478`: `prisma migrate deploy` y `academic-flow.integration.test.ts` — 3/3 PASS, incluidos propiedad de propuesta/repositorio, matrícula/aula, opt-in, exclusión de Review sin vínculo, aislamiento ante 101 jobs antiguos de estudiantes inactivos y retry ligado tras cambio de login. Contenedor retirado al terminar; no se modificó producción.
 - `git diff --check` — PASS.
-- Revisión reflexiva independiente de PR #150 PASS para autorizaciones, privacidad, orden de filtros y retry. El chequeo post-release Ego Lite descubrió por separado el defecto de despacho documentado arriba; la revisión reflexiva del hotfix también dio PASS.
+- Revisión reflexiva independiente de PR #150 PASS para autorizaciones, privacidad, orden de filtros y retry. La revisión reflexiva del hotfix también dio PASS.
 - Commit de implementación: `c25de8e2922fdc76a258bad604bea0e8fbd747f2` en `codex/f18-review-linking`.
 - Commit de evidencia/estado: `692ef08a473d6bb37c3972f296add776f29129ea`.
 
 ## Límites / estado
 
-- PR #150 integrada en `17f810503ed3c56759a1b6ad2015eb52bc07e11c`; CI final `45106362852` SUCCESS. F14 `v0.5.28`, run `45106690945`, se aplicó y el bundle público y `/health` confirman versión/SHA y DB ready. SSH read-only confirmó ambos labels de imagen en el mismo SHA.
-- Ego Lite abrió la vista docente `/teacher/review`, pero el endpoint devolvió HTTP 404 `NOT_FOUND`; esa observación invalida la disponibilidad funcional del feed hasta integrar el hotfix. La sesión docente quedó abierta en Review y la sesión estudiante intacta.
+- PR #150 y hotfix PR #151 están integradas; el release F14 vigente para este incremento es `v0.5.29` y su SHA/health se verificaron. El GET docente ahora responde 200 y el estado vacío se valida en Ego Lite.
+- **Límite:** no hay Reviews vinculadas reales compartidas con esta aula, por lo que el resultado no vacío, la persistencia real de un vínculo y su visualización con datos permanecen NO COMPROBADOS. No se hicieron escrituras productivas.
 - Evaluaciones IA reales/calidad semántica NO COMPROBADAS; no se hicieron llamadas a proveedores.
-- Hotfix F18.C `f59480bfe103c9ade022b17245d608f72e0b6952` está local y probado; PR, CI remoto, tag F14 y revalidación Ego Lite siguen pendientes. No se pulsó Reintentar ni se escribieron datos productivos.
+- Ledger del host, hash del backup y labels Docker de `v0.5.29` NO COMPROBADOS. No se usó deploy manual ni se reiniciaron servicios.
