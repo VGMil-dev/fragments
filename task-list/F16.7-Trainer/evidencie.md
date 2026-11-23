@@ -13,4 +13,5 @@
 - No se realizaron capturas autenticadas ni despliegues.
 
 ## Commit
-Pendiente de registrar al terminar el commit de implementación.
+- Implementación: `feda22a336d448549c9ce4ae7e9f2266d9875fa6` (`feat(f16.7): rediseña laboratorio Trainer`).
+- La tarea F16.7 no se añadió a `task-list/TASKS.md` porque el encargo asigna ese archivo exclusivamente al planner.
