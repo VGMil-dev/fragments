@@ -18,6 +18,13 @@
 - `GET /api/admin/mentor-events?limit=50`: solo admin Better Auth; validar `limit` entre 1 y 50; escribir `admin.mentor_events.read` en el audit log antes de leer; auth/audit no disponibles fallan cerrado.
 - `/admin/mentor-events`: vista administrativa de solo lectura con estados de carga, vacío, error/403 y reintento, accesible y responsive.
 
+## Continuidad de administración — auditar consultas Mentor desde el registro
+
+- El API de registro administrativo ya admite `admin.mentor_events.read`. El cliente web debe aceptar ese evento con la misma validación estricta de forma y exponer una opción de filtro y etiqueta en español.
+- GIVEN la muestra contiene una lectura auditada del feed Mentor, WHEN se carga `/admin/audit-log`, THEN el evento permanece en la muestra y se presenta con su correlación de solicitud, sin convertir la respuesta completa en inválida.
+- WHEN se elige el filtro “Eventos operativos de Mentor consultados”, THEN solo aparecen las lecturas de Mentor de la muestra actual; no se solicita una lectura adicional al servidor.
+- No se debilita la allowlist ni se aceptan campos extra en el cliente.
+
 ## Verificación
 
 - Pruebas API/UI con fakes para éxito, fallo, redacción, límites, auditoría antes de lectura, 401/403 y fallo cerrado.
