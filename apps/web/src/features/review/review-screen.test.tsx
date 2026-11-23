@@ -59,6 +59,14 @@ describe("ReviewScreen", () => {
     expect(html).not.toContain("84/100");
   });
 
+  it("frames the commit workflow with a decorative Git icon and keeps the form controls labeled", () => {
+    const html = renderToStaticMarkup(<ReviewScreen {...actions} onBack={vi.fn()} />);
+
+    expect(html).toContain("review-screen__identity");
+    expect(html).toContain("review-screen__commit-mark");
+    expect(html).toContain('aria-label="SHA del commit"');
+  });
+
   it("shows only the score and evidence-backed findings from a completed response", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: completed }} onBack={vi.fn()} />);
 
