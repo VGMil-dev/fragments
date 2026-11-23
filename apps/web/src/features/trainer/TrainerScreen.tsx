@@ -160,10 +160,6 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
             <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review <ArrowRight size={17} aria-hidden="true" /></a>
             <p className="trainer-empty-state__footnote">No hay retos ni historial disponibles hasta contar con un análisis completado.</p>
           </div>
-          <div className="trainer-empty-state__art" aria-hidden="true">
-            <img src="/f16/Typing_Girl_and_Sleeping_Cat.webp" alt="" />
-            <span>PREPARA TU PRÓXIMA SESIÓN</span>
-          </div>
         </section>
       ) : null}
 
