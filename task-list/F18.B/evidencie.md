@@ -385,4 +385,5 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 
 - PR #178 abierta contra `main`: https://github.com/VGMil-dev/fragments/pull/178. Run CI `45159579982` sigue `IN_PROGRESS`; no se ha fusionado ni creado tag.
 - La revisión reflexiva independiente recomendó integrar y su único P2 (validar habilidad vacía o >100 caracteres en el cliente) quedó corregido; `trainer-api.test.ts` cubre ambos casos, 2/2 PASS.
-- Próximo paso: esperar CI y protecciones normales. Si merge y gates pasan, la siguiente release legítima será `v0.5.37` por F14; no existe deploy manual ni salto de gates.
+- Run CI `45159579982` falló en integración PostgreSQL: el snapshot incluye `description` en habilidades y el resolver usaba un esquema estricto que la rechazaba, omitiendo la lista. Se cambió a `AssignmentSkillSnapshotSchema` y el test unitario ahora incluye descripciones; verificación focal `pnpm --filter @fragments/api exec vitest run src/features/review/academic-link.test.ts` — 2/2 PASS; `git diff --check` — PASS.
+- El run `45159831451` también falló antes de esta corrección (mismo head funcional); falta publicar esta corrección y obtener CI completo sobre el nuevo head. No fusionar ni crear tag hasta entonces. Si merge y gates pasan, la siguiente release legítima será `v0.5.37` por F14; no existe deploy manual ni salto de gates.

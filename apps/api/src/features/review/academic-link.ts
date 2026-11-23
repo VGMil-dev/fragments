@@ -1,4 +1,4 @@
-import { AssignmentRequiredSkillSchema, ReviewAcademicLinkSchema, type ReviewAcademicLink } from "@fragments/contracts";
+import { AssignmentSkillSnapshotSchema, ReviewAcademicLinkSchema, type ReviewAcademicLink } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 
 function textField(value: unknown, key: string): string {
@@ -10,7 +10,7 @@ function textField(value: unknown, key: string): string {
 function requiredSkillNames(value: unknown): string[] | undefined {
   if (!Array.isArray(value) || value.length > 20) return undefined;
   const names = value.flatMap((item) => {
-    const parsed = AssignmentRequiredSkillSchema.safeParse(item);
+    const parsed = AssignmentSkillSnapshotSchema.safeParse(item);
     return parsed.success ? [parsed.data.name] : [];
   });
   return names.length === value.length ? names : undefined;

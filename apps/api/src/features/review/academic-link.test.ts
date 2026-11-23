@@ -6,7 +6,7 @@ describe("Review academic link resolver", () => {
     const database = {
       proposal: { findFirst: vi.fn(async () => ({ id: "proposal-1", version: 2, proposalJson: { title: "App móvil" }, assignmentVersionId: "mission-version-1" })) },
       classroomAssignmentVersion: { findUnique: vi.fn(async () => ({ id: "mission-version-1", version: 1, mentorContextVersion: 4,
-        snapshotJson: { title: "Navegación con Expo", requiredSkills: [{ id: "skill-1", name: "Navegación" }, { id: "skill-2", name: "Componentes" }] },
+        snapshotJson: { title: "Navegación con Expo", requiredSkills: [{ id: "skill-1", name: "Navegación", description: "Rutas de la app." }, { id: "skill-2", name: "Componentes", description: null }] },
         assignment: { status: "published", classroomId: "class-1", classroom: { id: "class-1", title: "3ro B", status: "active" } } })) },
       classEnrollment: { findFirst: vi.fn(async () => ({ id: "enrollment-1" })) },
     };
