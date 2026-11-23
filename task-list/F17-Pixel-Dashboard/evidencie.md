@@ -1,21 +1,28 @@
-# Evidencia — F17 Pixel Night Dashboard
+# F17 Pixel Night Dashboard — Evidencia
 
-## Implementado
-- `apps/web/src/features/student/StudentDashboard.tsx`: título/jerarquía de centro de misiones; copia de siguiente paso con los mismos datos, callbacks y estados.
-- `apps/web/src/features/student/StudentDashboard.css`: estilos Pixel Night aislados al Dashboard, responsive, foco visible y reduced-motion; no se tocó la hoja compartida.
-- `apps/web/src/features/student/StudentDashboard.test.tsx`: cubre jerarquía, identidad, CTA único y ausencia de KPI ficticio.
+## Implementación y verificación de código
 
-PR #182 se integró por merge normal como `75e548314b81df35bf960c245fac3594ea830c35`; CI `45170211839` SUCCESS. Commit de código `66b29aada6630943e423cb817d88ff007653646c` en `codex/pixel-night-dashboard`. Referencia candidata, no validada en Ego Lite.
+- `apps/web/src/features/student/StudentDashboard.tsx`: jerarquía del centro de misiones con los mismos datos y estados existentes.
+- `apps/web/src/features/student/StudentDashboard.css`: estilos Pixel Night aislados, responsive, foco visible y reduced-motion; sin modificar estilos globales.
+- `apps/web/src/features/student/StudentDashboard.test.tsx`: jerarquía, identidad, CTA único y ausencia de KPI ficticio.
+- PR #182 integrada como `75e548314b81df35bf960c245fac3594ea830c35`; CI `45170211839` SUCCESS. Commit de código `66b29aada6630943e423cb817d88ff007653646c`.
+- Pruebas focales **4/4 PASS**; contracts build, typecheck, build web y `git diff --check` PASS.
+- Typecheck pasó tras generar `@fragments/contracts`; la ejecución previa no halló los tipos generados.
+- Revisión reflexiva independiente: sin defecto funcional encontrado.
 
-## Verificación
-- `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx` — PASS, 4 pruebas.
-- `pnpm --filter @fragments/contracts build` — PASS.
-- `pnpm --filter @fragments/web typecheck` — PASS tras build de contratos.
-- `pnpm --filter @fragments/web build` — PASS. Advertencias preexistentes del bundle >500 kB y directivas `use client` de lucide-react.
-- `git diff --check` — PASS antes del commit.
+Release F14 `v0.5.39`, aplicada con imagen/SHA `e202ec6302b9f35727673e2c6f34a74b4ce2d540`.
 
-## Pendiente
-- La prueba inicial de typecheck antes de generar los tipos de `@fragments/contracts` falló por ausencia de `packages/contracts/dist`; después de compilar contratos pasó.
-- Referencia visual aún candidata. No hubo validación en Ego Lite ni vista final a 320/390/768/1024/1440 px; QA independiente debe cubrirla con las sesiones existentes.
-- Revisión reflexiva independiente: sin defecto funcional encontrado; cobertura visual, teclado, foco y viewports sigue pendiente.
-- Despliegue y QA visual Ego Lite pendientes; el planner registra el estado en `task-list/TASKS.md`.
+## QA visual Ego Lite — producción v0.5.39
+
+- Fecha: 2026-11-23. Página autenticada `/student/dashboard`; UI `v0.5.39`, SHA `e202ec6302b9f35727673e2c6f34a74b4ce2d540`.
+- Viewports emulados 320, 390, 768, 1024 y 1440 px: página cargó en todos; `scrollWidth <= innerWidth`.
+- Teclado: 13 pulsaciones Tab alcanzaron «Continuar en Mentor»; `:focus-visible` activo, outline sólido lima de 3 px.
+- `prefers-reduced-motion: reduce`: media query activa y pantalla cargada.
+- Datos renderizados: dos aulas activas, cero entregas y un borrador. No se crearon ni modificaron recursos.
+- Capturas PNG originales Ego Lite fuera del repositorio: `C:\Users\vgmil\ego\pixel-night-dashboard-1440.png` SHA-256 `609C47755D397AEEDDCBD7E5B20C90A2F6A24ADDF780B031957FC00D75B81E14`; `C:\Users\vgmil\ego\pixel-night-dashboard-390.png` SHA-256 `7B8C0AE0D74A9AC7B3AA893FD29A47E0E8354B831CF0A7525E7407920BA01AB9`.
+
+## Límites
+
+- Zoom al 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
+- Validez de datos no se reconsultó por API; la evidencia cubre el render y la navegación observados.
+- Referencia visual candidata, pendiente de revisión del propietario. Sesión preservada; no hubo escrituras.
