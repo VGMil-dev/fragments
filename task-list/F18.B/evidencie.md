@@ -298,6 +298,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Implementación: `App` pasa los nombres de `selectedAssignment.requiredSkills`; al recuperar, deriva solo los requisitos con prefijo exacto `Habilidad requerida: ` cuando `assignmentContext.assignmentVersionId` coincide con el de la propuesta. `MentorScreen` los presenta como lista de referencia, separada de la selección editable del catálogo.
 - Prueba focal: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 33 pruebas PASS.
 - `pnpm --filter @fragments/web typecheck` — PASS. `git diff --check` — PASS.
-- Sin API/contratos, backend, evaluación, rutas o datos productivos; sin navegador. Las sesiones Ego Lite permanecen intactas.
+- Sin API/contratos, backend, evaluación ni datos productivos. QA Ego Lite con autenticación sintética local en `127.0.0.1:5174`: misión v1/Contexto v1 muestra la habilidad requerida fijada/read-only, 1 requerida y 0 controles; `Quiero reforzar` aparece separado; Mentor general muestra “Sin asignación”. No se guardó ni evaluó. Sesiones conservadas.
 - Límite: el contexto recuperado expone requisitos como texto, no como un campo estructurado de habilidades. La extracción requiere el prefijo exacto y la coincidencia de versión; no se valida IA ni recorrido remoto.
-- Commit de implementación local: `0e47317` en `codex/f18b-required-mission-skills`; sin push.
+- Commit de implementación: `0e47317` en `codex/f18b-required-mission-skills`.
+
+## Regresión por contexto vinculado a otra versión · 2026-11-23
+
+- Añadí una prueba de composición para propuesta ligada a `mission-v1` cuyo `assignmentContext` apunta a `mission-v2`; Mentor no debe mostrar habilidades de ese contexto obsoleto.
+- Mutación de control: al retirar temporalmente la comparación de `assignmentVersionId`, la prueba falla y muestra `No debe mostrarse`; restaurado el guard, la regresión pasa.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS. Typecheck y `git diff --check` PASS.

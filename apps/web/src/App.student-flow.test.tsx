@@ -106,6 +106,20 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
   });
 
+  it("does not restore required skills from a context pinned to a different assignment version", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "stale-context-proposal", version: 2, proposal: { title: "Contexto desactualizado" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
+        assignmentContext: { assignmentVersionId: "mission-v2", mentorContext: { version: 8, config: { requirements: ["Habilidad requerida: No debe mostrarse"] } } } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+    const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Contexto desactualizado"]');
+    await act(async () => continueProposal?.click());
+
+    expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("");
+  });
+
   it("identifies each saved proposal in the Mis proyectos continuation action", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
