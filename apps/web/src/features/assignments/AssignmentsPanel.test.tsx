@@ -93,7 +93,8 @@ describe("AssignmentsPanel", () => {
     const studentAssignment = {
       id: "fixture-version", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
       title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
-      requiredSkills: [{ id: skill.id, name: skill.name, description: null }], optionalSkills: [], status: "published",
+      requiredSkills: [{ id: skill.id, name: skill.name, description: "Registra hallazgos verificables en el entorno." }],
+      optionalSkills: [{ id: "fixture-optional-skill", name: "Accesibilidad", description: "Comprueba el contenido con lector de pantalla." }], status: "published",
       mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: {
         subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
         rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
@@ -104,6 +105,10 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Misiones del aula");
     expect(html).toContain("Habilidades requeridas");
     expect(html).toContain("Observación");
+    expect(html).toContain("Registra hallazgos verificables en el entorno.");
+    expect(html).toContain("Habilidades optativas");
+    expect(html).toContain("Accesibilidad");
+    expect(html).toContain("Comprueba el contenido con lector de pantalla.");
     expect(html).toContain("Iniciar propuesta");
     expect(html).toContain("Contexto para tu propuesta · versión 3");
     expect(html).toContain("Misión publicada v1 · Contexto Mentor v3");
@@ -132,8 +137,8 @@ describe("AssignmentsPanel", () => {
         id: "fixture-version",
         assignmentId: "fixture-assignment",
         version: 1,
-        requiredSkills: [{ id: "fixture-skill", name: "Observación", description: null }],
-        optionalSkills: [],
+        requiredSkills: [{ id: "fixture-skill", name: "Observación", description: "Registra hallazgos verificables en el entorno." }],
+        optionalSkills: [{ id: "fixture-optional-skill", name: "Accesibilidad", description: "Comprueba el contenido con lector de pantalla." }],
         mentorContextVersion: 3,
       });
     } finally {
