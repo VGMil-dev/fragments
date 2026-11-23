@@ -73,6 +73,8 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Diseño de pantallas");
     expect(html).toContain("Presenta una pantalla accesible");
+    expect(html).toContain("<p>Habilidades obligatorias</p>");
+    expect(html).toMatch(/<ul[^>]*aria-label="Habilidades obligatorias"[^>]*>[\s\S]*?<li>Accesibilidad<\/li>[\s\S]*?<\/ul>/);
     expect(html).toContain('aria-label="Iniciar misión: Diseño de pantallas"');
     expect(html).not.toContain("0 XP");
     expect(html).not.toContain("0% de progreso");

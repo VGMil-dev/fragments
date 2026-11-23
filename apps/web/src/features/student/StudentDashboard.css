@@ -230,10 +230,23 @@
   display: flex;
   flex-wrap: wrap;
   gap: .35rem;
-  margin: auto 0 .85rem;
+  margin: .35rem 0 .85rem;
+  padding: 0;
+  list-style: none;
 }
 
-.student-dashboard--pixel .student-dashboard__mission-skills span {
+.student-dashboard--pixel .student-dashboard__mission-skill-group {
+  margin-top: auto;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skill-group > p {
+  margin: 0;
+  color: var(--dashboard-copy);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skills li {
   padding: .2rem .45rem;
   border: 1px solid #516380;
   border-radius: 999px;

@@ -80,10 +80,13 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
               <p className="student-dashboard__mission-source">{mission.subject} <span aria-hidden="true">·</span> {mission.classroomTitle}</p>
               <h3>{mission.title}</h3>
               <p className="student-dashboard__mission-objective"><strong>Objetivo</strong>{mission.objectives[0] ?? "Sin objetivo publicado."}</p>
-              <div className="student-dashboard__mission-skills" aria-label="Habilidades obligatorias">
-                {mission.requiredSkills.slice(0, 3).map((skill) => <span key={skill.id}>{skill.name}</span>)}
-                {mission.requiredSkills.length > 3 ? <span>+{mission.requiredSkills.length - 3} habilidades</span> : null}
-              </div>
+              {mission.requiredSkills.length ? <div className="student-dashboard__mission-skill-group">
+                <p>Habilidades obligatorias</p>
+                <ul className="student-dashboard__mission-skills" aria-label="Habilidades obligatorias">
+                  {mission.requiredSkills.slice(0, 3).map((skill) => <li key={skill.id}>{skill.name}</li>)}
+                  {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
+                </ul>
+              </div> : null}
               <button type="button" className="student-dashboard__mission-action" aria-label={`Iniciar misión: ${mission.title}`} onClick={() => onStartMission(mission)}>
                 Iniciar en Mentor <ArrowRight size={16} aria-hidden="true" />
               </button>
