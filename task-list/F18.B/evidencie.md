@@ -427,4 +427,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx` — 7/7 PASS; `pnpm --filter @fragments/web test` — 49 archivos, 235/235 PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS; `git diff --check` PASS.
 - Revisión reflexiva estática independiente: PASS, sin hallazgos; confirmó prioridad del borrador y uso del snapshot sin mezclar contexto actual.
 - Ego Lite verificó en la sesión existente v0.5.46 el recorrido Mis aulas → misión QA → Mentor, con misión v1, contexto v1 y skill requerida fijada; borrador al 0 %, sin guardar, evaluar ni invocar IA. Esta comprobación es previa al nuevo resumen del Dashboard; su visualización en producción queda pendiente del PR/release F14 y QA posterior.
-- F18.B permanece abierta: calidad real Mentor/Review, Review productiva enlazada en Trainer, Gallery, e identidad cruzada siguen NO COMPROBADAS.
+- F18.B permanece abierta: calidad real Mentor/Review, Review productiva enlazada en Trainer, Galería e identidad cruzada siguen NO COMPROBADAS.
+
+## Release y comprobación productiva del Dashboard · v0.5.47 · 2026-11-23
+
+- PR [#203](https://github.com/VGMil-dev/fragments/pull/203) merge normal como `a8b130f5ac923e50a9eee21c7b8448ec747087ec`; CI `45241996231` PASS. Tag anotada `v0.5.47` sobre ese SHA; F14 `45242460718` SUCCESS: verify-build, attestation del paquete y publicación a la cola aprobada.
+- La sesión Ego Lite estudiante existente confirmó `/` 200 y asset `/assets/index-CCF9C_eS.js` 200 con `v0.5.47` y SHA exacto. Responsive Dashboard a 320, 390, 768, 1024 y 1440 px: sin overflow; viewport restaurado a 1908×944.
+- El Dashboard productivo conserva prioridad a un borrador real existente; por eso el resumen de misión/contexto/habilidades no aparece y su render visual concreto queda **NO COMPROBADO**. No se reemplazó el borrador, no se guardó ni evaluó, y las sesiones/pestañas Ego Lite permanecen abiertas.
+- F18.B sigue abierta: no se validaron calidad semántica de evaluaciones Mentor/Review, Review productiva en Trainer, Galería ni identidad cruzada.
