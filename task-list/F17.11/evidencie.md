@@ -1,7 +1,7 @@
 # Evidencia F17.11
 
 ## Estado
-Implementación en rama; integración y release F14 pendientes.
+Implementación en rama; integración y release F14 pendientes. Commit de código `ff19cda` (`feat(F17): inicia misiones desde dashboard`).
 
 ## Código
 - `apps/web/src/App.tsx`: carga las misiones por aula activa y entrega el snapshot publicado al Dashboard.
