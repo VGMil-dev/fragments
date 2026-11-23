@@ -77,7 +77,7 @@ Fecha: 2026-11-23.
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/admin-audit-log-api.test.ts src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — **PASS**, 2 archivos, 10/10 pruebas.
 - `pnpm --filter @fragments/contracts build` y `pnpm --filter @fragments/web typecheck` — **PASS**. El primer typecheck, antes de construir los tipos del paquete workspace requerido, falló por `@fragments/contracts` no generado; tras construirlo, el typecheck web pasó.
 - `pnpm --filter @fragments/web build` — **PASS**; conserva los avisos existentes de chunk >500 KB y directivas `use client` de lucide-react. No existe script `lint` en `@fragments/web`; `git diff --check` — **PASS**.
-- No se consultó producción ni se usaron sesiones/productores IA; esto valida la interpretación UI de eventos sintéticos y no demuestra actividad ni sesión admin productiva. Commit/CI del PR pendientes.
+- Implementación y pruebas en commit `708e259acf76469b74b4a417336666d4a6094c98` (`feat(F22.12): muestra auditoria de consultas Mentor`). No se consultó producción ni se usaron sesiones/productores IA; esto valida la interpretación UI de eventos sintéticos y no demuestra actividad ni sesión admin productiva. CI del PR pendiente.
 ## Reejecución independiente y merge PR #156 · 2026-11-23
 
 - Coordinador volvió a crear PostgreSQL 16 local efímero sin volumen, ligado a `127.0.0.1`, con `current_database=fragments_test`; aplicó las cinco migraciones versionadas. La suite corrió con `DATABASE_URL` apuntando a esa instancia, no se omitió el test de integración.
