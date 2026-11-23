@@ -20,4 +20,16 @@
 - Ego Lite posterior a release en Dashboard real.
 - Revisión visual propietaria; no se encontró mockup canónico verificado para esta candidata.
 - Zoom 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
-- PR/merge, release F14 y estado productivo: **PENDIENTES**.
+- PR #190, release F14 y estado productivo: **COMPLETADOS** según la sección de verificación posterior a release.
+
+## Release y Ego Lite — 2026-11-23
+
+- PR #190 integrada por merge normal como `e184280f992f9b4a90603fbc4dd79c856ddf38a2`; CI `45193340720` SUCCESS. El código funcional es `9ec0905`; las fichas están en `c85e940`.
+- Tag anotada `v0.5.42`, objeto `5eed3047f8c91ee2c1ee4a913726996ea7fe260b`, apunta exactamente a `e184280`. F14 run `45193941563` SUCCESS.
+- Producción: `/health` HTTP 200 (`ok`, `database=ready`); `/assets/index-yKTmZzCk.js` contiene v0.5.42 y el SHA del merge.
+- Ego Lite, `/student/dashboard`: perfil real se presentó como enlace GitHub (href del dominio `github.com`); no se imprimió ni exportó el login. En 320/390/768/1024/1440 CSS px no hubo overflow horizontal.
+- Foco de teclado de 3 px lime y preferencia de movimiento reducido se probaron en la navegación existente de Mentor. Captura Dashboard quedó local únicamente por mostrar identidad/datos académicos.
+- Ficha de pantalla sigue como candidata hasta aprobación visual del propietario. Contraste formal, zoom 200 % y lector de pantalla **NO COMPROBADOS**.
+- No se escribieron datos académicos ni se alteró la sesión.
+
+- Notion F16, F17 y F10 actualizado con merge/release, QA observada y límites NO COMPROBADOS.
