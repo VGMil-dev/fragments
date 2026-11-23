@@ -10,3 +10,9 @@
 - El progreso conserva su semántica de campos obligatorios válidos y es independiente de la etapa visitada.
 - El shell global permanece intacto y no aparece un segundo título “Tu propuesta”.
 - No se cambian contratos, rutas, permisos, proveedor ni persistencia.
+
+## Incremento — estado de Idea según límites reales de campo
+
+- La etapa Idea solo se etiqueta como completada cuando cada campo satisface el mismo máximo que su formulario: título 160 caracteres; problema, solución y descripción 3000; propósito 1000.
+- Si un valor existente supera el máximo, el stepper muestra Idea como pendiente. El cambio no modifica validación al guardar, progreso total, navegación ni datos.
+- Pruebas de regresión cubren título de 161 y propósito de 1001 caracteres.

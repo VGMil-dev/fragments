@@ -295,7 +295,11 @@ export function MentorScreen({
   const savedSkillsUnavailable = selectedSkillIds.filter((id) => !optionalSkillCatalog.some((skill) => skill.id === id));
   const completedStage = (index: number) => {
     switch (index) {
-      case 0: return [fields.title, fields.problem, fields.solution, fields.description, fields.purpose].every((value) => validText(value, 3000));
+      case 0: return validText(fields.title, 160)
+          && validText(fields.problem, 3000)
+          && validText(fields.solution, 3000)
+          && validText(fields.description, 3000)
+          && validText(fields.purpose, 1000);
       case 1: return contextState.status === "success" || contextState.status === "empty";
       case 2: return Boolean(proposal && !isDirty && !skillsChanged);
       case 3: return validText(fields.scope, 3000) && Boolean(goals.length) && !validateTechnologyList(fields.technologies);

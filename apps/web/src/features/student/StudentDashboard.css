@@ -154,6 +154,29 @@
   padding: 1.2rem;
 }
 
+.student-dashboard--pixel .student-dashboard__classroom-list {
+  display: grid;
+  gap: .55rem;
+  width: 100%;
+  margin: 0 0 .75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.student-dashboard--pixel .student-dashboard__classroom-list li {
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+  padding-left: .7rem;
+  border-left: 2px solid var(--dashboard-lime);
+  overflow-wrap: anywhere;
+}
+
+.student-dashboard--pixel .student-dashboard__classroom-list span {
+  color: var(--dashboard-muted);
+  font-size: .9rem;
+}
+
 .student-dashboard--pixel .student-dashboard__card h2,
 .student-dashboard--pixel .student-dashboard__gallery h2 {
   font-size: 1.05rem;
