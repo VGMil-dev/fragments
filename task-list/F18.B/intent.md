@@ -69,6 +69,13 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Owner de tarea: PLANNER. Implementación local a la vista docente de misiones y su prueba UI.
 - Criterio: resumen plegable por misión; al abrir, cada versión publicada muestra texto, objetivos, categorías de habilidades y `mentorContextVersion`.
 
+## Incremento F18.B — recuperación del listado de misiones docentes
+
+- Problema: si falla la consulta de misiones del aula docente, la vista acababa mostrando “Aún no hay misiones en esta aula”, confundiendo una caída de carga con una respuesta vacía válida.
+- Objetivo: distinguir error, carga y vacío; ofrecer un reintento que consulte solo el listado de misiones del aula.
+- Alcance: estado local y vista de `ClassroomStudio` / `AssignmentsPanel`; sin cambios de API, contrato, persistencia o datos.
+- Criterio: una prueba de UI falla primero la lectura y comprueba el error accesible, ausencia del vacío falso, reintento y estado vacío tras la respuesta vacía válida.
+
 ## Incremento UI estudiantil — reintentar recursos del aula
 
 - Problema: si falla la carga de habilidades o misiones de un aula activa, el estudiante ve el error sin poder recuperarlo de forma local.

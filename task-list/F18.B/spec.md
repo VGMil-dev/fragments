@@ -54,6 +54,13 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - GIVEN una misión docente con versiones publicadas, WHEN el docente expande “Revisar versiones publicadas”, THEN cada versión disponible presenta su consigna y objetivos inmutables, las habilidades snapshot distinguidas como requeridas u optativas y el número de versión Mentor fijado.
 - El historial es un `<details>` accesible cerrado por defecto. La vista solo lee los objetos `versions` ya cargados y no ofrece controles de escritura sobre versiones publicadas.
 
+## Incremento F18.B — recuperar la carga de misiones docentes
+
+- Si falla `GET /api/teacher/classrooms/:classroomId/assignments`, el detalle no debe presentar el estado vacío como si no existieran misiones.
+- Mostrar un error accesible y un control “Reintentar carga de misiones”; al activarlo, volver a consultar únicamente las misiones de esa aula.
+- Tras una respuesta vacía válida, se muestra el estado vacío; tras error, se oculta. Durante la solicitud se anuncia carga y el control de reintento desaparece hasta que termina.
+- Este incremento no cambia APIs, contratos, persistencia ni datos.
+
 ## Incremento UI estudiantil — reintentar recursos del aula
 
 - GIVEN falla la carga de misiones de un aula activa, WHEN el estudiante activa “Reintentar misiones”, THEN se vuelve a solicitar solo esa lista y desaparece el error tras una respuesta exitosa.
