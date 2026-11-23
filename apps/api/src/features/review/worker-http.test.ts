@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "../../db/open.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { createReviewHttp } from "./http.js";
@@ -9,7 +9,7 @@ import { createPrismaReviewStore } from "./prisma-store.js";
 import { createReviewWorker } from "./worker.js";
 import { createReviewOperationalLog } from "./operational-log.js";
 import { createAdminReviewEventsHttp } from "../admin-review-events/http.js";
-import { assertIsFragmentsTest } from "../../../test-support/fragments-test-database.js";
+import { assertIsFragmentsTest, cleanupReviewFixtureRows } from "../../../test-support/fragments-test-database.js";
 
 const commitSha = "a".repeat(40);
 const fileSha = "b".repeat(40);
@@ -20,24 +20,21 @@ const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para ejecutar Review worker con PostgreSQL.");
 const describePostgres = databaseUrl ? describe : describe.skip;
 const databases: PrismaClient[] = [];
-beforeEach(async () => {
-  if (!databaseUrl) return;
-  const database = openDatabase(databaseUrl);
-  try {
-    await assertIsFragmentsTest(database, databaseUrl);
-    await database.submission.deleteMany({ where: { kind: "review" } });
-    await database.job.deleteMany({ where: { type: "review" } });
-  } finally { await database.$disconnect(); }
-});
+const createdReviewJobIds = new Set<string>();
 afterEach(async () => {
+  const jobIds = [...createdReviewJobIds];
+  createdReviewJobIds.clear();
   for (const database of databases.splice(0)) {
     try {
-      await assertIsFragmentsTest(database, databaseUrl!);
-      await database.submission.deleteMany({ where: { kind: "review" } });
-      await database.job.deleteMany({ where: { type: "review" } });
+      await cleanupReviewFixtureRows(database, databaseUrl!, jobIds);
     } finally { await database.$disconnect(); }
   }
 });
+
+function trackReviewJob<T extends { id: string }>(job: T): T {
+  createdReviewJobIds.add(job.id);
+  return job;
+}
 
 async function fixture() {
   const id = `review-test-${randomUUID()}`;
@@ -47,6 +44,8 @@ async function fixture() {
   await assertIsFragmentsTest(database, databaseUrl!);
   databases.push(database);
   const store = createPrismaReviewStore(database);
+  const enqueue = store.enqueue.bind(store);
+  vi.spyOn(store, "enqueue").mockImplementation(async (input) => trackReviewJob(await enqueue(input)));
   const snapshotContent = { owner: testRequest.owner, repo: testRequest.repo, commitSha, files: [{ path: "src/index.ts", content: source, sha: fileSha }] };
   const digest = await digestSnapshot(snapshotContent);
   const packedText = `Commit ${commitSha}\n${source}`;

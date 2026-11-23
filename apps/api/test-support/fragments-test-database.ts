@@ -27,3 +27,13 @@ export async function assertIsFragmentsTest(database: TestDatabaseClient, databa
     throw new Error("No se pudo verificar fragments_test; no se ejecutaron escrituras.");
   }
 }
+
+/** Delete only Review fixture rows whose job IDs were recorded by this test run. */
+export async function cleanupReviewFixtureRows(database: PrismaClient, databaseUrl: string, jobIds: readonly string[]): Promise<void> {
+  await assertIsFragmentsTest(database, databaseUrl);
+  const ids = [...new Set(jobIds)];
+  if (ids.length === 0) return;
+
+  await database.submission.deleteMany({ where: { kind: "review", sourceId: { in: ids } } });
+  await database.job.deleteMany({ where: { type: "review", id: { in: ids } } });
+}
