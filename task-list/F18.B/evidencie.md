@@ -284,4 +284,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Integración HTTP PostgreSQL: contenedor PostgreSQL 18.6 efímero, sin volumen, publicado solo en `127.0.0.1:55445`; `current_database()` se comprobó como `fragments_test`; se desplegaron las cinco migraciones vigentes. `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 3/3 PASS. La prueba edita el asunto después de publicar v2 y verifica el asunto original en el listado estudiantil, propuesta recuperada y evaluación HTTP del snapshot v1. El contenedor se detuvo y eliminó.
 - `git diff --check` — PASS. Sin producción, proveedores pagados ni sesiones Ego Lite.
 - Límite legacy: snapshots publicados antes de este cambio no contienen el asunto histórico y mantienen el fallback al asunto actual; no existe evidencia suficiente para reconstruir su valor original sin una fuente histórica o una migración/backfill con datos confiables.
-- Commit local pendiente de registrar.
+- Commit de implementación local `49e1a7ad41b5b38e96a7e3ff3bc58ff4a465752c` en `codex/f18b-proposal-recovery-evidence`; sin push.
