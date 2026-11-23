@@ -110,6 +110,13 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Alcance: presentación del snapshot en el Dashboard estudiantil; el borrador más reciente conserva prioridad. No cambiar APIs, contratos, persistencia, permisos ni datos.
 - Owner: PLANNER, UI en `StudentDashboard` y pruebas de componente.
 
+## Incremento — aula de habilidades desde misión
+
+- Problema: al iniciar Mentor desde una misión publicada, la habilidad requerida llega fijada pero el catálogo optativo no selecciona el aula de esa misión cuando hay varias matrículas activas.
+- Objetivo: preseleccionar el aula autorizada que publicó la misión para consultar habilidades optativas pertinentes sin pedir al estudiante que la elija otra vez.
+- No objetivos: cambiar selección persistida de propuestas recuperadas, contratos, permisos, API, datos o contenido de evaluación.
+- Owner: PLANNER, integración de prop en `App.tsx` y selección local en `MentorScreen`.
+
 ## Incremento de continuidad — limpiar selección de misión al volver a Mentor
 
 - Problema: al volver desde una propuesta iniciada con misión, la selección de la misión podía sobrevivir al cambio de ruta. Abrir Mentor desde la navegación podía asociar por error una propuesta nueva a la versión anterior.

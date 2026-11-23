@@ -368,6 +368,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             <MentorScreen
               key={selectedProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
               initialProposal={selectedProposal ? proposalForMentor(selectedProposal) : undefined}
+              missionClassroomId={!selectedProposal ? selectedAssignment?.classroomId : undefined}
               requiredMissionSkills={requiredMissionSkills}
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
