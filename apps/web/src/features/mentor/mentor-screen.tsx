@@ -584,6 +584,13 @@ export function MentorScreen({
               <li key={saved.id}>
                 <span>{saved.proposal.title || "Borrador sin título"}</span>
                 <span className="mentor-saved-proposals__version">Versión {saved.version}</span>
+                {saved.assignmentVersionId || saved.assignmentContext?.assignmentVersionId ? (
+                  <span className="mentor-saved-proposals__mission">
+                    Misión vinculada{saved.assignmentContext?.mentorContext
+                      ? <> · {saved.assignmentContext.mentorContext.config.theme} · Contexto Mentor v{saved.assignmentContext.mentorContext.version}</>
+                      : " · contexto académico no disponible"}
+                  </span>
+                ) : null}
                 <button type="button" onClick={() => onOpenProposal(saved)}>{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
               </li>
             ))}
