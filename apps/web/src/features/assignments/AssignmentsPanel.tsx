@@ -62,6 +62,19 @@ export function AssignmentsPanel({ assignments, skills, busy = false, loading = 
   </section>;
 }
 
+function AssignmentSkillSnapshotList({ label, skills }: { label: string; skills: StudentAssignment["requiredSkills"] }) {
+  return <section className="student-assignments__skill-group" aria-label={label}>
+    <h4>{label}</h4>
+    <ul>{skills.map((skill) => <li key={skill.id}>
+      <strong>{skill.name}</strong>
+      {skill.description ? <details className="student-assignments__skill-description">
+        <summary aria-label={`Ver descripción de ${skill.name}`}>Ver descripción</summary>
+        <p>{skill.description}</p>
+      </details> : null}
+    </li>)}</ul>
+  </section>;
+}
+
 export function StudentAssignmentsList({ assignments, onStartProposal }: { assignments: StudentAssignment[]; onStartProposal?: (assignment: StudentAssignment) => void }) {
   return <section className="student-assignments" aria-labelledby="student-assignments-title">
     <h2 id="student-assignments-title">Misiones del aula</h2>
@@ -73,9 +86,8 @@ export function StudentAssignmentsList({ assignments, onStartProposal }: { assig
         <p>{assignment.instructions}</p>
         <h4>Objetivos</h4>
         <ul>{assignment.objectives.map((objective) => <li key={objective}>{objective}</li>)}</ul>
-        <h4>Habilidades requeridas</h4>
-        <p>{assignment.requiredSkills.map((skill) => skill.name).join(", ")}</p>
-        {assignment.optionalSkills.length ? <><h4>Habilidades optativas</h4><p>{assignment.optionalSkills.map((skill) => skill.name).join(", ")}</p></> : null}
+        <AssignmentSkillSnapshotList label="Habilidades requeridas" skills={assignment.requiredSkills} />
+        {assignment.optionalSkills.length ? <AssignmentSkillSnapshotList label="Habilidades optativas" skills={assignment.optionalSkills} /> : null}
         <details className="student-assignments__context">
           <summary>Contexto para tu propuesta · versión {assignment.mentorContext.version}</summary>
           <div>

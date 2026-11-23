@@ -93,7 +93,8 @@ describe("AssignmentsPanel", () => {
     const studentAssignment = {
       id: "fixture-version", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
       title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
-      requiredSkills: [{ id: skill.id, name: skill.name, description: null }], optionalSkills: [], status: "published",
+      requiredSkills: [{ id: skill.id, name: skill.name, description: "Registra hallazgos verificables en el entorno." }],
+      optionalSkills: [{ id: "fixture-optional-skill", name: "Accesibilidad", description: "Comprueba el contenido con lector de pantalla." }], status: "published",
       mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: {
         subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
         rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
@@ -104,6 +105,10 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Misiones del aula");
     expect(html).toContain("Habilidades requeridas");
     expect(html).toContain("Observación");
+    expect(html).toContain("Registra hallazgos verificables en el entorno.");
+    expect(html).toContain("Habilidades optativas");
+    expect(html).toContain("Accesibilidad");
+    expect(html).toContain("Comprueba el contenido con lector de pantalla.");
     expect(html).toContain("Iniciar propuesta");
     expect(html).toContain("Contexto para tu propuesta · versión 3");
     expect(html).toContain("Misión publicada v1 · Contexto Mentor v3");
@@ -132,10 +137,55 @@ describe("AssignmentsPanel", () => {
         id: "fixture-version",
         assignmentId: "fixture-assignment",
         version: 1,
-        requiredSkills: [{ id: "fixture-skill", name: "Observación", description: null }],
-        optionalSkills: [],
+        requiredSkills: [{ id: "fixture-skill", name: "Observación", description: "Registra hallazgos verificables en el entorno." }],
+        optionalSkills: [{ id: "fixture-optional-skill", name: "Accesibilidad", description: "Comprueba el contenido con lector de pantalla." }],
         mentorContextVersion: 3,
       });
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("keeps skill names visible and puts only existing descriptions behind individual disclosures", async () => {
+    const longDescription = "D".repeat(1000);
+    const studentAssignment = {
+      id: "fixture-version-long-skills", assignmentId: "fixture-assignment", version: 2, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
+      title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
+      requiredSkills: [
+        { id: "fixture-long", name: "Arquitectura", description: longDescription },
+        { id: "fixture-empty-description", name: "Lectura", description: null },
+      ], optionalSkills: [], status: "published",
+      mentorContextVersion: 4, mentorContext: { version: 4, publishedAt: "2026-11-23T00:00:00.000Z", config: {
+        subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
+        rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
+      } }, createdAt: "2026-11-23T00:00:00.000Z",
+    } as StudentAssignment;
+
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} />);
+    expect(html).toContain("Arquitectura");
+    expect(html).toContain("Lectura");
+    expect(html).toContain(longDescription);
+    expect(html).toContain('aria-label="Ver descripción de Arquitectura"');
+    expect(html).not.toContain('aria-label="Ver descripción de Lectura"');
+    expect(html).not.toContain("Habilidades optativas");
+    expect(html).not.toMatch(/<details[^>]*open/);
+
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} />));
+      const details = container.querySelector<HTMLDetailsElement>(".student-assignments__skill-description");
+      const summary = details?.querySelector("summary");
+      expect(details?.open).toBe(false);
+      expect(container.querySelector(".student-assignments__skill-group li > strong")?.textContent).toBe("Arquitectura");
+      expect(summary?.tabIndex).toBe(0);
+      summary?.focus();
+      expect(document.activeElement).toBe(summary);
+      await act(async () => summary?.click());
+      expect(details?.open).toBe(true);
     } finally {
       await act(async () => root.unmount());
       container.remove();

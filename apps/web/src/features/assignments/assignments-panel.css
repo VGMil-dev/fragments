@@ -33,6 +33,10 @@
 .assignments-panel__list p, .student-assignments article > p:not(.assignments-panel__eyebrow) { color: var(--f16-text-secondary, #adbBD3); }
 .assignments-panel__empty, .assignments-panel__message { padding: .9rem 1rem; border-left: 3px solid var(--f16-info, #8ab4ff); background: var(--f16-surface, #121c32); }
 .student-assignments h4 { margin-bottom: .2rem; }
+.student-assignments__skill-group ul { display: grid; gap: .5rem; margin: .5rem 0 1rem; padding-left: 1.25rem; }
+.student-assignments__skill-description { margin-top: .2rem; }
+.student-assignments__skill-description summary { width: fit-content; color: var(--f16-info, #8ab4ff); cursor: pointer; text-decoration: underline; }
+.student-assignments__skill-description > p { margin: .15rem 0 0; color: var(--f16-text-secondary, #adbBD3); overflow-wrap: anywhere; }
 .student-assignments__mission-version { margin: .2rem 0 .6rem; color: var(--f16-text-secondary, #adbBD3); font-size: .9rem; font-weight: 650; }
 .student-assignments__context { margin: 1rem 0; padding: .8rem; border: 1px solid var(--f16-border, #334565); border-radius: var(--f16-radius-control, .55rem); background: var(--f16-night, #0b1220); }
 .student-assignments__context summary { color: var(--f16-info, #8ab4ff); font-weight: 700; cursor: pointer; }
