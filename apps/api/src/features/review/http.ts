@@ -2,10 +2,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   ApiResultSchema,
   CreateReviewSubmissionRequestSchema,
+  ReviewAcademicLinkSchema,
   ReviewQueuedResponseSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
+  TeacherClassroomReviewsResponseSchema,
   VerifySubmissionResponseSchema,
 } from "@fragments/contracts";
 import { reviewIdempotencyKey, type ReviewContext } from "./review.service.js";
@@ -16,10 +18,26 @@ type Store = ReturnType<typeof createPrismaReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
 type RouteResult = "handled" | "unhandled";
 export type ReviewContextResolver = (request: IncomingMessage, input: ReturnType<typeof ReviewRequestSchema.parse>) => Promise<ReviewContext | null>;
+export type ReviewAcademicLinkResolver = (studentId: string, proposalId: string) => Promise<unknown | null>;
+export type ReviewTeacherIdResolver = (request: IncomingMessage) => Promise<string | null>;
 
-export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> }) {
+export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null>;
+  resolveAcademicLink?: ReviewAcademicLinkResolver; resolveTeacherId?: ReviewTeacherIdResolver }) {
   return async function handleReviewHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
+    const teacherReviewsMatch = request.method === "GET" && url.pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/reviews$/);
+    if (teacherReviewsMatch) {
+      const teacherId = options.resolveTeacherId ? await options.resolveTeacherId(request).catch(() => null) : null;
+      if (!teacherId) { sendError(response, 403, "FORBIDDEN", "Esta acción requiere permisos docentes."); return "handled"; }
+      try {
+        const items = await options.store.listForTeacherClassroom(teacherId, teacherReviewsMatch[1]!);
+        if (items === null) { sendError(response, 404, "NOT_FOUND", "No se encontró el aula solicitada."); return "handled"; }
+        sendJson(response, 200, items);
+      } catch {
+        sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudieron consultar las revisiones vinculadas.");
+      }
+      return "handled";
+    }
     const studentRoute = (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
     const studentId = studentRoute && options.resolveStudentId ? await options.resolveStudentId(request) : null;
     if (studentRoute && options.resolveStudentId && !studentId) {
@@ -27,6 +45,18 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       return "handled";
     }
     const ownsJob = async (id: string) => !options.resolveStudentId || Boolean(studentId && await options.store.getStudentIdForJob(id) === studentId);
+    const resolveRequestContext = async (input: ReturnType<typeof ReviewRequestSchema.parse>, storedAcademicLink?: ReviewContext["academicLink"]): Promise<ReviewContext | null> => {
+      const context = await options.resolveContext(request, input);
+      if (!context || !input.linkedProposalId) return context;
+      if (storedAcademicLink) {
+        const savedLink = ReviewAcademicLinkSchema.safeParse(storedAcademicLink);
+        return savedLink.success ? { ...context, academicLink: savedLink.data } : null;
+      }
+      if (!context.githubLogin || context.githubLogin.toLowerCase() !== input.owner.toLowerCase()) return null;
+      if (!studentId || !options.resolveAcademicLink) return null;
+      const link = ReviewAcademicLinkSchema.safeParse(await options.resolveAcademicLink(studentId, input.linkedProposalId));
+      return link.success ? { ...context, academicLink: link.data } : null;
+    };
 
     if (request.method === "POST" && url.pathname === "/api/reviews") {
       const raw = await readJson(request, response);
@@ -37,9 +67,10 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         return "handled";
       }
       try {
-        const context = await options.resolveContext(request, parsed.data);
+        const context = await resolveRequestContext(parsed.data);
         if (!context) {
-          sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo determinar el proyecto y la rúbrica para esta revisión.");
+          if (parsed.data.linkedProposalId) sendError(response, 404, "ACADEMIC_LINK_UNAVAILABLE", "No se encontró una propuesta de misión disponible para esta revisión.");
+          else sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo determinar el proyecto y la rúbrica para esta revisión.");
           return "handled";
         }
         if (options.resolveStudentId && context.studentId !== studentId) {
@@ -70,8 +101,9 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
         }
-        const reviewRequest = ReviewRequestSchema.parse({ owner: current.owner, repo: current.repo, commitSha: current.commitSha });
-        const context = await options.resolveContext(request, reviewRequest);
+        const reviewRequest = ReviewRequestSchema.parse({ owner: current.owner, repo: current.repo, commitSha: current.commitSha,
+          ...(current.linkedProposalId ? { linkedProposalId: current.linkedProposalId } : {}) });
+        const context = await resolveRequestContext(reviewRequest, current.academicLink);
         if (!context || await reviewIdempotencyKey(reviewRequest, context) !== current.key) {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
           return "handled";
@@ -213,13 +245,13 @@ async function readJson(request: IncomingMessage, response: ServerResponse): Pro
 }
 
 function sendJson(response: ServerResponse, status: number, data: unknown): void {
-  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema)).parse({ ok: true, data });
+  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema)).parse({ ok: true, data });
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" });
   response.end(JSON.stringify(body));
 }
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
-  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema)).parse({ ok: false, error: { code, message } });
+  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema)).parse({ ok: false, error: { code, message } });
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" });
   response.end(JSON.stringify(body));
 }

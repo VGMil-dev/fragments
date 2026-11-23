@@ -6,6 +6,7 @@ import type {
   ReviewRequest,
   ReviewResponse,
   ReviewSubmissionResponse,
+  ProposalDraftResponse,
 } from "@fragments/contracts";
 import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
@@ -22,6 +23,7 @@ export interface ReviewScreenProps {
   onPdf: (submissionId: string) => Promise<ApiResult<Blob>>;
   onBack: () => void;
   mode?: DataMode;
+  linkedProposals?: ProposalDraftResponse[];
 }
 
 const EMPTY_FIELDS: ReviewFields = { owner: "", repo: "", commitSha: "" };
@@ -32,7 +34,7 @@ function evidenceLabel(evidence: EvidenceReference): string {
     : `Campo: ${evidence.field}`;
 }
 
-export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, mode = "real" }: ReviewScreenProps) {
+export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, mode = "real", linkedProposals = [] }: ReviewScreenProps) {
   const initialData = initialReview?.status === "success" ? initialReview.data : undefined;
   const [fields, setFields] = useState<ReviewFields>(() => initialData
     ? { owner: initialData.owner, repo: initialData.repo, commitSha: initialData.commitSha }
@@ -40,6 +42,8 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ReviewFields, string>>>({});
   const [reviewState, setReviewState] = useState<AsyncState<ReviewResponse> | null>(initialReview ?? null);
   const [submission, setSubmission] = useState<AsyncState<ReviewSubmissionResponse> | null>(null);
+  const [linkedProposalId, setLinkedProposalId] = useState("");
+  const linkedProposal = linkedProposals.find((proposal) => proposal.id === linkedProposalId);
 
   function updateField(field: keyof ReviewFields, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
@@ -60,7 +64,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
     setReviewState({ status: "loading" });
     setSubmission(null);
     try {
-      const result = await onQueue(validated.data);
+      const result = await onQueue({ ...validated.data, ...(linkedProposal ? { linkedProposalId: linkedProposal.id } : {}) });
       setReviewState(result.ok
         ? { status: "success", data: result.data }
         : { status: "error", retry: () => void queueReview() });
@@ -138,8 +142,18 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
           <small id="review-sha-help">Pega el identificador completo del commit, de 40 o 64 caracteres hexadecimales.</small>
           {fieldErrors.commitSha ? <small id="review-sha-error" role="alert">{fieldErrors.commitSha}</small> : null}
         </label>
+        {linkedProposals.length ? <label className="review-field review-field--wide">
+          <span>Vincular a una propuesta y compartir con el docente (opcional)</span>
+          <select aria-label="Vincular Review a una propuesta" value={linkedProposalId} disabled={reviewIsBusy} onChange={(event) => { setLinkedProposalId(event.target.value); setReviewState(null); setSubmission(null); }}>
+            <option value="">Sin vínculo académico</option>
+            {linkedProposals.map((proposal) => <option key={proposal.id} value={proposal.id}>
+              {(proposal.proposal.title || "Propuesta sin título")} · {proposal.assignmentContext?.mentorContext.config.theme} · Contexto Mentor v{proposal.assignmentContext?.mentorContext.version}
+            </option>)}
+          </select>
+          {linkedProposal ? <small>Solo puedes compartir un repositorio cuyo propietario sea tu cuenta GitHub vinculada. El docente de esa aula verá el estado, la puntuación y el commit.</small> : null}
+        </label> : null}
         <div className="review-form__footer">
-          <p>La revisión se vincula al commit que elegiste.</p>
+          <p>{linkedProposal ? `Se compartirá con el docente de ${linkedProposal.assignmentContext?.mentorContext.config.theme}.` : "La revisión se vincula al commit que elegiste."}</p>
           <button className="button button--primary" type="submit" disabled={reviewIsBusy}>
             {reviewIsBusy ? "Enviando commit…" : "Evaluar commit"}
           </button>
@@ -157,6 +171,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
           ) : null}
         </div>
         {!reviewState ? <p className="review-screen__hint">Envía un commit para ver el estado de su revisión.</p> : null}
+        {reviewState?.status === "success" && linkedProposal ? <p className="review-screen__hint" role="status">Revisión vinculada a “{linkedProposal.proposal.title || "Propuesta sin título"}”. El docente autorizado podrá consultar su progreso.</p> : null}
         {reviewState?.status === "loading" ? <AsyncStateView state={reviewState} render={() => null} /> : null}
         {reviewState?.status === "error" ? <AsyncStateView state={reviewState} render={() => null} /> : null}
         {currentReview?.status === "queued" ? (

@@ -35,6 +35,7 @@ import {
   ReviewRequestSchema,
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
+  TeacherClassroomReviewsResponseSchema,
   RepositorySnapshotSchema,
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
@@ -436,7 +437,24 @@ describe("shared API contracts", () => {
   it("accepts a GitHub owner/repo/commit request and rejects arbitrary repository URLs", () => {
     const request = { owner: "student", repo: "course-project", commitSha: "b".repeat(40) };
     expect(ReviewRequestSchema.safeParse(request).success).toBe(true);
+    expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "proposal-1" }).success).toBe(true);
+    expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, repositoryUrl: "http://127.0.0.1/secret" }).success).toBe(false);
+  });
+
+  it("validates a minimal classroom Review progress row", () => {
+    expect(TeacherClassroomReviewsResponseSchema.safeParse([{
+      reviewId: "review-1", studentLabel: "vgmilton", proposalTitle: "Navegación móvil", proposalVersion: 2,
+      missionTitle: "Navegación con Expo", missionVersion: 1, mentorContextVersion: 4,
+      repositoryOwner: "vgmilton", repositoryName: "mobile-app", commitSha: "b".repeat(40),
+      status: "completed", score: 84, updatedAt: now,
+    }]).success).toBe(true);
+    expect(TeacherClassroomReviewsResponseSchema.safeParse([{
+      reviewId: "review-1", studentLabel: "vgmilton", proposalTitle: "", proposalVersion: 2,
+      missionTitle: "Navegación con Expo", missionVersion: 1, mentorContextVersion: 4,
+      repositoryOwner: "vgmilton", repositoryName: "mobile-app", commitSha: "b".repeat(40),
+      status: "completed", score: 84, updatedAt: now, studentEmail: "private@example.test",
+    }]).success).toBe(false);
   });
 
   it("validates queued and completed Review responses without unsafe exception fields", () => {

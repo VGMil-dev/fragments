@@ -30,7 +30,7 @@ vi.mock("./features/mentor", () => ({
   ),
 }));
 vi.mock("./features/review", () => ({
-  ReviewScreen: ({ onBack }: { onBack: () => void }) => <button type="button" onClick={onBack}>Volver desde Review</button>,
+  ReviewScreen: ({ onBack, linkedProposals }: { onBack: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }> }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><button type="button" onClick={onBack}>Volver desde Review</button></section>,
 }));
 
 import { App } from "./App";
@@ -76,6 +76,21 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("offers only owned proposals still carrying their published mission context in Review", async () => {
+    window.history.replaceState({}, "", "/student/review");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "linked-proposal", version: 1, proposal: { title: "Navegación con Expo" }, assignmentVersionId: mission.id,
+        assignmentContext: { assignmentVersionId: mission.id, mentorContext: { version: 7, config: { theme: "Navegación" } } } },
+      { id: "stale-proposal", version: 1, proposal: { title: "Sin contexto" }, assignmentVersionId: "old-mission",
+        assignmentContext: { assignmentVersionId: "other-mission", mentorContext: { version: 1, config: { theme: "Otro" } } } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    expect(mocks.studentApi.getMyProposals).toHaveBeenCalledOnce();
+    expect(container?.querySelector("[data-testid=review-linked-proposals]")?.textContent).toBe("linked-proposal:Navegación con Expo");
+  });
+
   it("identifies each saved proposal in the Mis proyectos continuation action", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [

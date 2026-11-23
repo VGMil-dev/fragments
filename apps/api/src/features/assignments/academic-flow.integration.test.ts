@@ -9,6 +9,10 @@ import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "../mentor/
 import { createMentorService } from "../mentor/service.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createHttpHandler } from "../../http/app.js";
+import { createReviewHttp } from "../review/http.js";
+import { createReviewAcademicLinkResolver } from "../review/academic-link.js";
+import { createReviewService } from "../review/review.service.js";
+import { createPrismaReviewStore } from "../review/prisma-store.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL para probar el recorrido académico PostgreSQL.");
@@ -38,7 +42,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
 
     await database.user.createMany({ data: [
       { id: teacherId, name: "Fixture docente", email: `${teacherId}@example.test`, emailVerified: true, isTeacher: true },
-      { id: studentId, name: "Fixture estudiante", email: `${studentId}@example.test`, emailVerified: true, githubLogin: studentId },
+      { id: studentId, name: "Fixture estudiante", email: `${studentId}@example.test`, emailVerified: true, githubLogin: "fixture-student" },
     ] });
     const now = new Date();
     await database.classroom.create({ data: { id: classroomId, teacherId, title: "Aula fixture", subject: "Programación móvil", identityKey: namespace, status: "active", createdAt: now, updatedAt: now } });
@@ -56,6 +60,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
   afterAll(async () => {
     if (!database) return;
     try {
+      await database.job.deleteMany({ where: { type: "review", payloadJson: { path: ["context", "academicLink", "classroomId"], equals: classroomId } } });
       await database.proposal.deleteMany({ where: { ownerUserId: studentId } });
       await database.classroomAssignmentVersion.deleteMany({ where: { assignment: { classroomId } } });
       await database.classroomAssignment.deleteMany({ where: { classroomId } });
@@ -217,5 +222,91 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
     expect(evaluation.mentorContextVersion).toBe(recovered!.assignmentContext!.mentorContext.version);
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
+  });
+
+  it("links Review to a mission proposal only with student consent and shows it to its active classroom teacher", async () => {
+    const db = database!;
+    const assignments = createAssignmentRepository(db);
+    const created = await assignments.create(teacherId, classroomId, {
+      title: "Misión para Review", instructions: "Usa un commit real.", objectives: ["Demostrar navegación"],
+      requiredSkillIds: [skillId], optionalSkillIds: [],
+    });
+    if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
+    const published = await assignments.publish(teacherId, classroomId, created.id, 1);
+    if (published.kind !== "ok") throw new Error("No se publicó la versión fixture.");
+    const mission = published.assignment.versions.find((version) => version.version === 1)!;
+    const mentorRepository = createPrismaMentorRepository(db);
+    const proposal = await mentorRepository.createProposalDraftByUser({
+      title: "Proyecto de navegación", problem: "El grupo necesita conectar pantallas.",
+      solution: "Una navegación sencilla separa las vistas.", description: "Una aplicación móvil educativa.",
+      purpose: "Practicar navegación.", goals: ["Conectar dos pantallas"], skills: [],
+      scope: "Dos pantallas y un recorrido verificable.", constraints: [],
+    }, studentId, mission.id);
+
+    const store = createPrismaReviewStore(db);
+    const service = createReviewService({
+      repository: { async getCommitSnapshot() { throw new Error("No se ejecuta el worker en esta prueba."); } },
+      packer: { async pack() { throw new Error("No se ejecuta el worker en esta prueba."); } },
+      ai: { async analyze() { throw new Error("No se ejecuta el worker en esta prueba."); } },
+      evaluations: store.evaluations,
+      submissions: store.submissions,
+      pdf: createMinimalPdfRenderer(),
+    });
+    const resolveLink = createReviewAcademicLinkResolver(db);
+    let fixtureGithubLogin = "fixture-student";
+    const handler = createReviewHttp({
+      store, service,
+      resolveStudentId: async (request) => request.headers["x-fixture-role"] === "student" ? String(request.headers["x-fixture-user"] ?? "") || null : null,
+      resolveTeacherId: async (request) => request.headers["x-fixture-role"] === "teacher" ? String(request.headers["x-fixture-user"] ?? "") || null : null,
+      resolveAcademicLink: resolveLink,
+      resolveContext: async (request, input) => ({ projectId: `${input.owner}/${input.repo}`, rubricVersion: "review-test-v1",
+        evaluatorVersion: "fake-offline-v1", ...(typeof request.headers["x-fixture-user"] === "string" ? { studentId: request.headers["x-fixture-user"], githubLogin: fixtureGithubLogin } : {}) }),
+    });
+    const server = createServer((request, response) => { void handler(request, response); });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected local Review HTTP address");
+    const base = `http://127.0.0.1:${address.port}`;
+    const linkedRequest = { owner: "fixture-student", repo: "expo-app", commitSha: "c".repeat(40), linkedProposalId: proposal.id };
+    try {
+      const rejectedLink = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": "fixture-other-student", "x-fixture-role": "student" }, body: JSON.stringify(linkedRequest) });
+      expect(rejectedLink.status).toBe(404);
+      expect(await db.job.count({ where: { type: "review", payloadJson: { path: ["context", "academicLink", "classroomId"], equals: classroomId } } })).toBe(0);
+      const wrongRepositoryOwner = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": studentId, "x-fixture-role": "student" }, body: JSON.stringify({ ...linkedRequest, owner: "someone-elses-account" }) });
+      expect(wrongRepositoryOwner.status).toBe(404);
+      expect(await db.job.count({ where: { type: "review", payloadJson: { path: ["context", "academicLink", "classroomId"], equals: classroomId } } })).toBe(0);
+
+      const linkedResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", "x-fixture-user": studentId, "x-fixture-role": "student" }, body: JSON.stringify(linkedRequest) });
+      expect(linkedResponse.status).toBe(202);
+      const linkedBody = await linkedResponse.json() as { data: { id: string; status: string } };
+      expect(linkedBody.data.status).toBe("queued");
+      const job = await db.job.findUniqueOrThrow({ where: { id: linkedBody.data.id } });
+      expect(job.payloadJson).toMatchObject({ context: { academicLink: { proposalId: proposal.id, assignmentVersionId: mission.id,
+        missionTitle: "Misión para Review", mentorContextVersion: mission.mentorContextVersion, classroomId } } });
+      expect(await store.getJob(linkedBody.data.id)).toMatchObject({ linkedProposalId: proposal.id, academicLink: { proposalId: proposal.id, classroomId } });
+
+      for (let index = 1; index <= 101; index++) await store.enqueue({ request: { owner: "fixture-former-student", repo: "old-work", commitSha: index.toString(16).padStart(40, "0") },
+        context: { projectId: "fixture-former-student/old-work", rubricVersion: "review-test-v1", evaluatorVersion: "fake-offline-v1", studentId: "fixture-former-student",
+          academicLink: { proposalId: proposal.id, proposalVersion: proposal.version, proposalTitle: "Proyecto de navegación", assignmentVersionId: mission.id,
+            missionTitle: "Misión para Review", missionVersion: mission.version, mentorContextVersion: mission.mentorContextVersion, classroomId, classroomTitle: "Aula fixture" } } });
+      const unlinked = await store.enqueue({ request: { owner: "fixture-student", repo: "private-work", commitSha: "d".repeat(40) },
+        context: { projectId: "fixture-student/private-work", rubricVersion: "review-test-v1", evaluatorVersion: "fake-offline-v1", studentId } });
+      const teacherResponse = await fetch(`${base}/api/teacher/classrooms/${classroomId}/reviews`, { headers: { "x-fixture-user": teacherId, "x-fixture-role": "teacher" } });
+      const teacherBody = await teacherResponse.json() as { data: Array<Record<string, unknown>> };
+      expect(teacherBody.data).toHaveLength(1);
+      expect(teacherBody.data[0]).toMatchObject({ reviewId: linkedBody.data.id, proposalTitle: "Proyecto de navegación", missionTitle: "Misión para Review", status: "queued" });
+      expect(JSON.stringify(teacherBody.data)).not.toContain(studentId);
+      expect(JSON.stringify(teacherBody.data)).not.toContain(unlinked.id);
+      await db.job.update({ where: { id: linkedBody.data.id }, data: { status: "failed", attempts: 1, retryClass: "transient", nextRetryAt: new Date(Date.now() - 1_000) } });
+      fixtureGithubLogin = "renamed-github-account";
+      const retryResponse = await fetch(`${base}/api/reviews/${linkedBody.data.id}/retry`, { method: "POST", headers: { "x-fixture-user": studentId, "x-fixture-role": "student" } });
+      expect(retryResponse.status).toBe(202);
+      expect(await store.getJob(linkedBody.data.id)).toMatchObject({ status: "queued", linkedProposalId: proposal.id, academicLink: { proposalId: proposal.id, classroomId } });
+      expect((await fetch(`${base}/api/teacher/classrooms/${classroomId}/reviews`, { headers: { "x-fixture-user": studentId, "x-fixture-role": "student" } })).status).toBe(403);
+      expect((await fetch(`${base}/api/teacher/classrooms/${classroomId}/reviews`, { headers: { "x-fixture-user": "fixture-other-teacher", "x-fixture-role": "teacher" } })).status).toBe(404);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });

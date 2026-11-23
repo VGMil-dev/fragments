@@ -143,7 +143,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   }, [selectedId]);
 
   useEffect(() => {
-    if (!["/student/mentor", "/student/dashboard", "/student/projects"].includes(path) || !student) return;
+    if (!["/student/mentor", "/student/dashboard", "/student/projects", "/student/review"].includes(path) || !student) return;
     let active = true;
     setProposalsLoading(true);
     setProposalsError(false);
@@ -326,6 +326,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
+            linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
             onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}

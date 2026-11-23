@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
-  ReviewRequestSchema, ReviewResponseSchema, SubmissionResponseSchema,
+  ReviewAcademicLinkSchema, ReviewRequestSchema, ReviewResponseSchema, SubmissionResponseSchema, TeacherClassroomReviewsResponseSchema,
   type ReviewRequest,
 } from "@fragments/contracts";
 import type { ReviewContext, ReviewRecord } from "./review.service.js";
@@ -13,6 +13,7 @@ export type ReviewJobStatus = "queued" | "running" | "completed" | "failed";
 export type ReviewJobView = {
   id: string; key: string; owner: string; repo: string; commitSha: string; status: ReviewJobStatus;
   progress: number; createdAt: string; updatedAt: string; message?: string; record?: ReviewRecord;
+  linkedProposalId?: string; academicLink?: ReviewContext["academicLink"];
 };
 export type ClaimedReviewJob = ReviewJobView & { status: "running"; request: ReviewRequest; context: ReviewContext; attempts: number };
 type ReviewPayload = { request: ReviewRequest; context: ReviewContext; record?: ReviewRecord; message?: string };
@@ -36,8 +37,10 @@ function parseContext(value: unknown): ReviewContext {
   for (const field of ["projectId", "rubricVersion", "evaluatorVersion"] as const) {
     if (typeof context[field] !== "string" || !context[field].trim()) throw new Error("Contexto Review inválido en almacenamiento.");
   }
+  const academicLink = context.academicLink === undefined ? undefined : ReviewAcademicLinkSchema.parse(context.academicLink);
   return { projectId: String(context.projectId), rubricVersion: String(context.rubricVersion), evaluatorVersion: String(context.evaluatorVersion),
-    ...(typeof context.studentId === "string" ? { studentId: context.studentId } : {}) };
+    ...(typeof context.studentId === "string" ? { studentId: context.studentId } : {}),
+    ...(typeof context.githubLogin === "string" ? { githubLogin: context.githubLogin } : {}), ...(academicLink ? { academicLink } : {}) };
 }
 function parsePayload(raw: unknown): ReviewPayload {
   const value = typeof raw === "string" ? JSON.parse(raw) as ReviewPayload : raw as ReviewPayload;
@@ -69,7 +72,8 @@ function view(row: JobRow): ReviewJobView {
   return { id: row.id, key: row.idempotencyKey, owner: payload.request.owner, repo: payload.request.repo, commitSha: payload.request.commitSha,
     status: result.status, progress: result.status === "completed" ? 100 : result.status === "running" ? result.progress : 0,
     createdAt, updatedAt, ...(result.status === "failed" ? { message: result.message } : {}),
-    ...(result.status === "completed" && payload.record ? { record: payload.record } : {}) };
+    ...(result.status === "completed" && payload.record ? { record: payload.record } : {}),
+    ...(payload.request.linkedProposalId ? { linkedProposalId: payload.request.linkedProposalId } : {}), ...(payload.context.academicLink ? { academicLink: payload.context.academicLink } : {}) };
 }
 
 export function createPrismaReviewStore(database: PrismaClient) {
@@ -207,6 +211,40 @@ export function createPrismaReviewStore(database: PrismaClient) {
       const rows = await database.job.findMany({ where: { type: jobType, status: "done" }, orderBy: { updatedAt: "desc" }, take: 100 }) as JobRow[];
       return rows.map(view).filter((job) => job.record && parsePayload(rows.find((row) => row.id === job.id)!.payloadJson).context.studentId === studentId)
         .map(({ id, owner, repo, commitSha, updatedAt }) => ({ id, owner, repo, commitSha, updatedAt }));
+    },
+    async listForTeacherClassroom(teacherId: string, classroomId: string) {
+      const classroom = await database.classroom.findFirst({ where: { id: classroomId, teacherId, status: "active" }, select: { id: true } });
+      if (!classroom) return null;
+      const enrollments = await database.classEnrollment.findMany({ where: { classroomId, status: "active", classroom: { status: "active" } },
+        select: { studentId: true, student: { select: { githubLogin: true } } } });
+      if (!enrollments.length) return [];
+      const studentLabels = new Map(enrollments.map((row) => [row.studentId, row.student.githubLogin?.trim() || "Estudiante"]));
+      const rows = await database.$queryRaw<Array<Pick<JobRow, "id" | "payloadJson" | "status" | "updatedAt" | "createdAt">>>`
+        SELECT j.id, j.payload_json AS "payloadJson", j.status, j.updated_at AS "updatedAt", j.created_at AS "createdAt"
+        FROM jobs AS j
+        INNER JOIN class_enrollments AS e
+          ON e.student_id = j.payload_json #>> '{context,studentId}'
+         AND e.classroom_id = ${classroomId}
+         AND e.status = 'active'
+        WHERE j.type = ${jobType}
+          AND j.status IN ('pending', 'leased', 'done', 'failed')
+          AND j.payload_json #>> '{context,academicLink,classroomId}' = ${classroomId}
+        ORDER BY j.updated_at DESC, j.created_at DESC
+        LIMIT 100
+      `;
+      const items = rows.flatMap((row) => {
+        const payload = parsePayload(row.payloadJson);
+        const link = payload.context.academicLink;
+        const studentId = payload.context.studentId;
+        if (!link || link.classroomId !== classroomId || !studentId || !studentLabels.has(studentId)) return [];
+        const status: "queued" | "running" | "completed" | "failed" = row.status === "done" ? "completed" : row.status === "failed" ? "failed" : row.status === "leased" ? "running" : "queued";
+        const score = status === "completed" && payload.record ? payload.record.analysis.score : undefined;
+        return [{ reviewId: row.id, studentLabel: studentLabels.get(studentId)!, proposalTitle: link.proposalTitle,
+          proposalVersion: link.proposalVersion, missionTitle: link.missionTitle, missionVersion: link.missionVersion,
+          mentorContextVersion: link.mentorContextVersion, repositoryOwner: payload.request.owner, repositoryName: payload.request.repo,
+          commitSha: payload.request.commitSha, status, ...(typeof score === "number" ? { score } : {}), updatedAt: row.updatedAt.toISOString() }];
+      });
+      return TeacherClassroomReviewsResponseSchema.parse(items);
     },
     async getLatestCommit(projectId: string): Promise<string | null> {
       const rows = await database.job.findMany({ where: { type: jobType, status: "done" }, orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }] }) as JobRow[];
