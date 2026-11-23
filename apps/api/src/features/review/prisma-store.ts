@@ -8,6 +8,7 @@ import {
 import type { ReviewContext, ReviewRecord } from "./review.service.js";
 import { reviewIdempotencyKey } from "./review.service.js";
 import type { ReviewFailure, ReviewStage } from "./review-errors.js";
+import { trainerAcademicContextFromPayload } from "../trainer/academic-context.js";
 
 export type ReviewJobStatus = "queued" | "running" | "completed" | "failed";
 export type ReviewJobView = {
@@ -209,8 +210,15 @@ export function createPrismaReviewStore(database: PrismaClient) {
     },
     async listCompletedForStudent(studentId: string) {
       const rows = await database.job.findMany({ where: { type: jobType, status: "done" }, orderBy: { updatedAt: "desc" }, take: 100 }) as JobRow[];
-      return rows.map(view).filter((job) => job.record && parsePayload(rows.find((row) => row.id === job.id)!.payloadJson).context.studentId === studentId)
-        .map(({ id, owner, repo, commitSha, updatedAt }) => ({ id, owner, repo, commitSha, updatedAt }));
+      return rows.flatMap((row) => {
+        const job = view(row);
+        if (!job.record) return [];
+        const academicContext = trainerAcademicContextFromPayload(row.payloadJson, studentId);
+        const payload = parsePayload(row.payloadJson);
+        if (payload.context.studentId !== studentId) return [];
+        return [{ id: job.id, owner: job.owner, repo: job.repo, commitSha: job.commitSha, updatedAt: job.updatedAt,
+          ...(academicContext ? { academicContext } : {}) }];
+      });
     },
     async listForTeacherClassroom(teacherId: string, classroomId: string) {
       const classroom = await database.classroom.findFirst({ where: { id: classroomId, teacherId, status: "active" }, select: { id: true } });

@@ -369,3 +369,21 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Desde la misión, Mentor mostró asignatura, consigna, contexto y habilidad requerida del snapshot v1. Se guardó una propuesta propia vinculada. Tras recargar y reabrir, se recuperaron los campos y el contexto de misión v1. Después se añadieron objetivo y alcance, se guardó, recargó y abrió de nuevo; ambos valores persistieron, el contexto seguía vigente y la propuesta alcanzó 100% de preparación.
 - En la etapa de habilidades se observó la habilidad requerida fijada por la misión y el catálogo del aula QA. No se seleccionaron habilidades opcionales. El botón «Evaluar propuesta» quedó habilitado, pero no se accionó: proveedor/presupuesto no están verificados y no se realizaron llamadas IA.
 - Validación real cubre aula→habilidad→misión→matrícula→contexto Mentor→borrador persistido/recuperado. Evaluación real, salida/puntuación, publicación automática en Galería, interacción de retry e identidad cruzada permanecen NO COMPROBADAS. No se escribió fuera de los recursos propios QA ni se cerraron pestañas.
+
+## Incremento F18.B — continuidad académica de Review a Trainer · 2026-11-23
+
+- Se amplió opcionalmente `ReviewAcademicLinkSchema` para conservar hasta 20 nombres de habilidades requeridas del snapshot publicado. El resolver solo toma los nombres del snapshot inmutable; los trabajos históricos sin la propiedad siguen siendo válidos.
+- `GET /api/trainer/reviews` presenta un resumen de misión solo si Review está completado, pertenece al estudiante consultante, y el `linkedProposalId` coincide con `academicLink.proposalId`. El DTO contiene título de misión/aula, versiones y nombres de habilidades; no contiene IDs, puntuación, rúbrica ni contenido de propuesta.
+- Trainer muestra ese resumen para la revisión elegida. Diferencia una lista vacía de habilidades de un snapshot histórico que no las conserva. No cambia prompts, modelo, rúbrica, generación de retos, rutas ni tablas.
+- TDD: la prueba de pantalla falló inicialmente porque no aparecía «Misión vinculada»; después pasó. Pruebas focales: API/contexto y resolver Review **7/7 PASS**; web Trainer **7/7 PASS**; contratos incluidos en la suite.
+- Verificación fresca: `pnpm test` — contratos **31/31**, web **217/217**, API **177 PASS / 72 omitidas** (requieren PostgreSQL/fixtures); `pnpm typecheck` — **5 tareas PASS**; `pnpm build` — **4 tareas PASS**; `pnpm lint` — **1 tarea PASS** (`contracts` ejecuta TypeScript); `git diff --check` — PASS.
+- El build mantiene avisos de bundle Vite >500 KB y directivas `use client` de `lucide-react`; no son nuevos cambios del incremento. No se usó proveedor ni se ejecutó una evaluación IA.
+- PostgreSQL end-to-end del nuevo resumen y QA visual Ego Lite con una Review vinculada: **NO COMPROBADOS**. La integración académica PostgreSQL se omitió por falta de `DATABASE_URL`; no había una Review QA vinculada autorizada para mostrar en la UI. Calidad real Mentor/Review continúa **NO COMPROBADA**.
+- Commit de código: `b7e3a6109726a8a55aa6c036e47a60e9f6db1dfa` (`feat(F18.B): enlaza misión académica con Trainer`), branch `codex/f18-trainer-academic-context`. CI, PR y release F14 están pendientes.
+
+## PR #178 — estado de integración · 2026-11-23
+
+- PR #178 abierta contra `main`: https://github.com/VGMil-dev/fragments/pull/178. Run CI `45159579982` sigue `IN_PROGRESS`; no se ha fusionado ni creado tag.
+- La revisión reflexiva independiente recomendó integrar y su único P2 (validar habilidad vacía o >100 caracteres en el cliente) quedó corregido; `trainer-api.test.ts` cubre ambos casos, 2/2 PASS.
+- Run CI `45159579982` falló en integración PostgreSQL: el snapshot incluye `description` en habilidades y el resolver usaba un esquema estricto que la rechazaba, omitiendo la lista. Se cambió a `AssignmentSkillSnapshotSchema` y el test unitario ahora incluye descripciones; verificación focal `pnpm --filter @fragments/api exec vitest run src/features/review/academic-link.test.ts` — 2/2 PASS; `git diff --check` — PASS.
+- El run `45159831451` también falló antes de esta corrección (mismo head funcional); falta publicar esta corrección y obtener CI completo sobre el nuevo head. No fusionar ni crear tag hasta entonces. Si merge y gates pasan, la siguiente release legítima será `v0.5.37` por F14; no existe deploy manual ni salto de gates.

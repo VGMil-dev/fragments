@@ -528,6 +528,7 @@ export const ReviewAcademicLinkSchema = z.object({
   mentorContextVersion: z.number().int().positive(),
   classroomId: identifier,
   classroomTitle: nonEmptyText.max(160),
+  requiredSkills: z.array(classroomText(100)).max(20).optional(),
 }).strict();
 export const TeacherClassroomReviewSchema = z.object({
   reviewId: identifier,

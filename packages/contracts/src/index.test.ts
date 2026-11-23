@@ -33,6 +33,7 @@ import {
   TeacherLoginRequestSchema,
   TeacherSessionResponseSchema,
   ReviewRequestSchema,
+  ReviewAcademicLinkSchema,
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
   TeacherClassroomReviewsResponseSchema,
@@ -443,6 +444,16 @@ describe("shared API contracts", () => {
     expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "proposal-1" }).success).toBe(true);
     expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, repositoryUrl: "http://127.0.0.1/secret" }).success).toBe(false);
+  });
+
+  it("keeps mission skill names in a bounded optional Review academic snapshot", () => {
+    const link = { proposalId: "proposal-1", proposalVersion: 1, proposalTitle: "Mi propuesta", assignmentVersionId: "mission-v1",
+      missionTitle: "Proyecto móvil", missionVersion: 1, mentorContextVersion: 2, classroomId: "class-1", classroomTitle: "Tercero",
+      requiredSkills: ["Navegación", "Componentes"] };
+    expect(ReviewAcademicLinkSchema.safeParse(link).success).toBe(true);
+    expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: Array.from({ length: 21 }, () => "Skill") }).success).toBe(false);
+    expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: ["Navegación", 1] }).success).toBe(false);
+    expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: undefined }).success).toBe(true);
   });
 
   it("validates a minimal classroom Review progress row", () => {

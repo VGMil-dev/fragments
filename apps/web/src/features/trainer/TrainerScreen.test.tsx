@@ -87,4 +87,26 @@ describe("TrainerScreen", () => {
       container.remove();
     }
   });
+
+  it("shows the linked mission and required skills for this student's Review", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const api = {
+      reviews: async () => ({ ok: true, data: [{ id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z",
+        academicContext: { missionTitle: "Programación Móvil", missionVersion: 2, mentorContextVersion: 3, classroomTitle: "Programación Móvil Terceros", requiredSkills: ["Navegación", "Componentes"] } }] }),
+      history: async () => ({ ok: true, data: [] }),
+    } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      expect(container.textContent).toContain("Misión vinculada");
+      expect(container.textContent).toContain("Programación Móvil · v2");
+      expect(container.textContent).toContain("Contexto Mentor v3");
+      expect(container.textContent).toContain("Navegación");
+      expect(container.textContent).toContain("Componentes");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
 });
