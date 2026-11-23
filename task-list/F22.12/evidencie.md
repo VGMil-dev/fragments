@@ -68,6 +68,16 @@ Fecha: 2026-11-23.
 - Revalidación focal: 3 archivos API, 12/12 pruebas PASS; API typecheck y `git diff --check` PASS. No hubo cambio runtime ni release por este PR de prueba.
 - Better Auth real, sesión administrativa y eventos de evaluaciones productivas siguen NO COMPROBADOS; no se usó Gateway ni hubo escrituras académicas.
 - Commit de implementación y prueba: `4ab1bd4185d8f8f139a64b081bd75e6535a17f88` en `codex/f22-admin-events-e2e`; aún sin PR ni release.
+
+## Continuidad UI del registro administrativo · 2026-11-23
+
+- Hueco reproducido en el cliente web: la API de auditoría admitía `admin.mentor_events.read`, pero el parser local no; un evento de esa clase hacía fallar la página completa. También faltaban su opción de filtro y etiqueta legible.
+- Pruebas primero en rojo: los dos casos nuevos fallaron (rechazo `INVALID_RESPONSE` y etiqueta/filtro ausentes). Tras el cambio, `/admin/audit-log` admite únicamente ese evento añadido a la allowlist explícita y lo puede filtrar sin nueva llamada de red.
+- Implementación: `apps/web/src/features/admin-audit-log/{admin-audit-log-api.ts,AdminAuditLogScreen.tsx}`; regresiones en los tests de API y componente; alcance sin cambios a rutas, contratos, persistencia o backend.
+- `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/admin-audit-log-api.test.ts src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — **PASS**, 2 archivos, 10/10 pruebas.
+- `pnpm --filter @fragments/contracts build` y `pnpm --filter @fragments/web typecheck` — **PASS**. El primer typecheck, antes de construir los tipos del paquete workspace requerido, falló por `@fragments/contracts` no generado; tras construirlo, el typecheck web pasó.
+- `pnpm --filter @fragments/web build` — **PASS**; conserva los avisos existentes de chunk >500 KB y directivas `use client` de lucide-react. No existe script `lint` en `@fragments/web`; `git diff --check` — **PASS**.
+- Implementación y pruebas en commit `708e259acf76469b74b4a417336666d4a6094c98` (`feat(F22.12): muestra auditoria de consultas Mentor`). No se consultó producción ni se usaron sesiones/productores IA; esto valida la interpretación UI de eventos sintéticos y no demuestra actividad ni sesión admin productiva. CI del PR pendiente.
 ## Reejecución independiente y merge PR #156 · 2026-11-23
 
 - Coordinador volvió a crear PostgreSQL 16 local efímero sin volumen, ligado a `127.0.0.1`, con `current_database=fragments_test`; aplicó las cinco migraciones versionadas. La suite corrió con `DATABASE_URL` apuntando a esa instancia, no se omitió el test de integración.
