@@ -54,7 +54,10 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
       <div className="student-dashboard__grid">
         <section className="student-dashboard__card" aria-labelledby="student-dashboard-classrooms">
           <h2 id="student-dashboard-classrooms"><GraduationCap size={20} aria-hidden="true" />En tus aulas</h2>
-          {classroomsLoading ? <p role="status">Consultando tus aulas…</p> : classroomsError ? <><p role="alert">{classroomsError}</p><button className="student-dashboard__link" type="button" onClick={onRetryClassrooms}>Reintentar</button></> : <p>{classrooms.length ? `Tienes ${classrooms.length} aula${classrooms.length === 1 ? " activa" : "s activas"}${classroomRequests.some((request) => request.status === "pending") ? " y solicitudes pendientes de aprobación" : ""}.` : "Aún no tienes aulas activas. Puedes solicitar ingreso con el código de tu docente."}</p>}
+          {classroomsLoading ? <p role="status">Consultando tus aulas…</p> : classroomsError ? <><p role="alert">{classroomsError}</p><button className="student-dashboard__link" type="button" onClick={onRetryClassrooms}>Reintentar</button></> : <>
+            <p>{classrooms.length ? `Tienes ${classrooms.length} aula${classrooms.length === 1 ? " activa" : "s activas"}${classroomRequests.some((request) => request.status === "pending") ? " y solicitudes pendientes de aprobación" : ""}.` : "Aún no tienes aulas activas. Puedes solicitar ingreso con el código de tu docente."}</p>
+            {classrooms.length ? <ul className="student-dashboard__classroom-list" aria-label="Aulas activas">{classrooms.map((classroom) => <li key={classroom.id}><strong>{classroom.title}</strong><span>{[classroom.subject, classroom.groupLabel].filter(Boolean).join(" · ")}</span></li>)}</ul> : null}
+          </>}
           <button type="button" className="student-dashboard__link" onClick={() => onNavigate("/student/classrooms")}>Ver Mis aulas <ArrowRight size={16} aria-hidden="true" /></button>
         </section>
 
