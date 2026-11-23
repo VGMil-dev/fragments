@@ -21,6 +21,7 @@
 ## Verificación
 
 - Pruebas API/UI con fakes para éxito, fallo, redacción, límites, auditoría antes de lectura, 401/403 y fallo cerrado.
+- Una prueba compuesta con proveedor Mentor fake confirma evaluación HTTP → buffer operativo → GET admin autorizado, auditoría antes de lectura y respuesta redactada.
 - Typecheck, pruebas focales y `git diff --check`; CI requerido en PR.
 - Pruebas usan únicamente evaluador Mentor fake; sin requests a Gateway, sin producción y sin escrituras de datos académicos.
 - La existencia de eventos productivos no se infiere a partir de pruebas fake.

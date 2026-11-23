@@ -35,3 +35,13 @@ Fecha: 2026-11-23.
 - No se generó una evaluación real de Mentor. Existencia/retención de eventos productivos y acceso con una sesión admin quedan **NO COMPROBADOS**.
 - Ego Lite: **NO COMPROBADO**. El verificador conservó las pestañas, encontró sesiones de perfil Milton, docente y estudiante, sin sesión admin disponible; no abrió la ruta, no consultó el endpoint y no accedió a producción.
 - El buffer se pierde al reiniciar el proceso de API; no sustituye almacenamiento duradero ni logs externos.
+
+## Recorrido compuesto local · 2026-11-23
+
+- La cobertura anterior probaba por separado la emisión de eventos Mentor y la lectura del endpoint admin. Se agregó una prueba compuesta que ejecuta `createMentorHttp` con `createLocalMentorEvaluator`, registra el evento en `createMentorOperationalLog` y consulta el buffer mediante `createAdminMentorEventsHttp`.
+- El escenario confirma respuesta de evaluación 200, un evento `mentor_evaluation_completed` redactado en la respuesta admin, y orden de auditoría `admin.mentor_events.read` antes de la lectura del buffer. La salida no contiene IDs de estudiante/propuesta, puntuación, prompt ni proveedor.
+- Es prueba local sintética: el verificador admin y el actor se representan con fixtures; no usa Better Auth productivo, PostgreSQL, AI Gateway ni producción. Eventos reales y sesión admin en producción permanecen **NO COMPROBADOS**.
+- `pnpm --filter @fragments/api exec vitest run src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts src/features/admin-mentor-events/http.test.ts --maxWorkers=1` — PASS, 3 archivos, 12/12 pruebas.
+- `pnpm --filter @fragments/contracts build` — PASS; se regeneraron tipos de trabajo ignorados desde el source actual. `pnpm --filter @fragments/api typecheck` — PASS. La primera ejecución previa al build detectó `dist` de contratos desactualizado; no hubo cambios a los contratos fuente.
+- `git diff --check` — PASS. No se usó PostgreSQL, Better Auth productivo, Gateway, ni se efectuaron escrituras de datos académicos. La respuesta administrativa usa un verificador/actor fake; la sesión admin real sigue NO COMPROBADA.
+- Commit de implementación y prueba: `4ab1bd4185d8f8f139a64b081bd75e6535a17f88` en `codex/f22-admin-events-e2e`; aún sin PR ni release.

@@ -4,6 +4,8 @@ import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createMentorHttp } from "./http.js";
 import { safeOperationalEvent } from "./operational-events.js";
+import { createMentorOperationalLog } from "./operational-log.js";
+import { createAdminMentorEventsHttp } from "../admin-mentor-events/http.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
 import { createMentorService, MentorEvaluationFailure, type MentorEvaluator } from "./service.js";
 
@@ -60,6 +62,37 @@ async function sendEvaluation(evaluator: MentorEvaluator, logEvent: (event: unkn
 }
 
 describe("Mentor operational event allowlist", () => {
+  it("connects a fake evaluation to the buffered event and audited admin feed", async () => {
+    const operationalLog = createMentorOperationalLog();
+    const localEvaluator = createLocalMentorEvaluator();
+    const evaluation = await sendEvaluation({ async evaluate(input) { return localEvaluator.evaluate(input); } }, (event) => operationalLog.record(event));
+    expect(evaluation.response.status).toBe(200);
+
+    const calls: string[] = [];
+    const server = createServer(createAdminMentorEventsHttp(
+      { list(limit) { calls.push(`list:${limit}`); return operationalLog.list(limit); } },
+      async (request) => request.headers["x-fixture-admin"] === "true",
+      {
+        async getActorId() { return "fixture-admin"; },
+        async write(event) { calls.push("audit"); expect(event).toMatchObject({ event: "admin.mentor_events.read", adminActorId: "fixture-admin" }); },
+      },
+    ));
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    try {
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/admin/mentor-events?limit=10`, { headers: { "x-fixture-admin": "true" } });
+      const body = await response.json() as { data: { events: Array<Record<string, unknown>> } };
+      expect(response.status).toBe(200);
+      expect(body.data.events).toHaveLength(1);
+      expect(body.data.events[0]).toMatchObject({ event: "mentor_evaluation_completed", stage: "evaluation", result: "success", error_code: "none" });
+      expect(JSON.stringify(body)).not.toMatch(/student-secret|proposal-secret|score|prompt|provider/);
+      expect(calls).toEqual(["audit", "list:10"]);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
   it("emits success and failure events through the HTTP handler with a fake Mentor evaluator", async () => {
     const events: unknown[] = [];
     const local = createLocalMentorEvaluator();
