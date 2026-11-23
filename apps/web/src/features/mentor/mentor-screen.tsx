@@ -560,7 +560,7 @@ export function MentorScreen({
     <main className="student-screen mentor-screen" aria-labelledby="mentor-title">
       <header className="student-screen__header mentor-screen__header">
         <div className="mentor-screen__heading">
-          <p className="student-screen__eyebrow">MENTOR <span aria-hidden="true">·</span> TU PROPUESTA</p>
+          <p className="student-screen__eyebrow">MENTOR <span aria-hidden="true">·</span> RUTA DE PROYECTO</p>
           <h1 id="mentor-title">{stageHeadings[activeStage]}</h1>
           <p className="student-screen__lead">{stageDescription}</p>
         </div>

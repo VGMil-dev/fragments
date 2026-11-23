@@ -129,6 +129,16 @@ afterEach(() => {
 });
 
 describe("MentorScreen", () => {
+  it("presenta una sola etapa activa en la ruta de proyecto", () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    act(() => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+
+    expect(mountedContainer?.querySelector(".student-screen__eyebrow")?.textContent).toContain("RUTA DE PROYECTO");
+    expect(mountedContainer?.querySelectorAll(".mentor-stage-nav li button[aria-current='step']")).toHaveLength(1);
+  });
+
   it("shows mission-required skills read-only without merging them into the optional classroom selection", async () => {
     const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación renombrada" };
     const optionalSkill = { ...skillFixture(2), id: "optional-1", name: "Accesibilidad" };
