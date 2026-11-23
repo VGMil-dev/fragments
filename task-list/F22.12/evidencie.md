@@ -53,7 +53,7 @@ Fecha: 2026-11-23.
 - `pnpm --filter @fragments/api exec vitest run src/features/admin-mentor-events/better-auth.integration.test.ts src/features/admin-mentor-events/http.test.ts src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts --maxWorkers=1` — PASS, 4 archivos, 13/13 pruebas.
 - `pnpm --filter @fragments/contracts build` — PASS; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
 - Better Auth real significa que el adapter, sesión/cookie, lectura de rol y endpoint corrieron localmente con Prisma/PostgreSQL; el proveedor Mentor, el evento, el admin y sus credenciales son sintéticos. AI Gateway, producción, cuentas reales, eventos productivos y sesión admin productiva siguen **NO COMPROBADOS**.
-- Commit de integración: `1a31b1dad298e2266af759cc5aaa0a7154e19d38` en `codex/f22-auth-session-integration`; sin push, PR ni release.
+- Implementación `1a31b1dad298e2266af759cc5aaa0a7154e19d38`; PR #156 se integró normalmente en `main` como `3fa16a150de410df7637385d92944cc44954cca2`, CI run `45117312137` SUCCESS. Es solo cobertura de prueba: no generó release F14.
 
 ## Integración normal de la prueba compuesta · 2026-11-23
 
@@ -61,3 +61,8 @@ Fecha: 2026-11-23.
 - Revalidación focal: 3 archivos API, 12/12 pruebas PASS; API typecheck y `git diff --check` PASS. No hubo cambio runtime ni release por este PR de prueba.
 - Better Auth real, sesión administrativa y eventos de evaluaciones productivas siguen NO COMPROBADOS; no se usó Gateway ni hubo escrituras académicas.
 - Commit de implementación y prueba: `4ab1bd4185d8f8f139a64b081bd75e6535a17f88` en `codex/f22-admin-events-e2e`; aún sin PR ni release.
+## Reejecución independiente y merge PR #156 · 2026-11-23
+
+- Coordinador volvió a crear PostgreSQL 16 local efímero sin volumen, ligado a `127.0.0.1`, con `current_database=fragments_test`; aplicó las cinco migraciones versionadas. La suite corrió con `DATABASE_URL` apuntando a esa instancia, no se omitió el test de integración.
+- Salida fresca: los cuatro archivos focales completados y **13/13 PASS**; API typecheck, build de contratos y `git diff --check` PASS. El fixture usuario se limpió por ID y el contenedor se retiró en `finally`.
+- PR #156 merge normal `3fa16a150de410df7637385d92944cc44954cca2`; CI `45117312137` SUCCESS. Sin cambio de runtime, release, producción ni AI Gateway. La sesión es sintética Better Auth local; acceso admin productivo, existencia de eventos productivos y calidad IA siguen NO COMPROBADOS.
