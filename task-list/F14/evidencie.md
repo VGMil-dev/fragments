@@ -299,3 +299,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El ledger del agente registró `v0.5.32`, release `455059507`, SHA `42b0539e8ae010a9e24228bcdb74c10eb4983635`, estado `deployed`. El evento de apply informó imágenes API/web con ese SHA.
 - Verificación pública cache-bypass: `/health` respondió 200 (`status=ok`, `database=ready`); bundle `/assets/index-CXzLlLHM.js` respondió 200 y contiene `v0.5.32` y el SHA completo exacto.
 - Entorno `fragments-production` y controles técnicos F14 se conservaron. El apply registró un hash de backup; su integridad/retención y una restauración independiente no se comprobaron en esta verificación. Esto no valida el recorrido académico completo ni la estabilidad para piloto.
+
+## Release y aplicación automática v0.5.33 — 2026-11-23
+
+- Tag anotada `v0.5.33` apunta a `main` SHA `f256b6a02c54891040e1f4ba3591c2f85eea2c75`, que incluye PR #162 (F22), #164 (F18.B) y #165 (F25). F14 run `45126688900`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; release publicado a las 06:54:20 UTC.
+- El timer normal encoló release `455078583` a las 06:57:20 UTC. `fragments-release-apply.service` terminó `Result=success`, `ExecMainStatus=0` a las 06:59:09 UTC. No hubo deploy manual, parada de producción ni cambio de gates.
+- Ledger verificó tag, SHA, release ID y estado `deployed`. API y web aparecen `running/healthy` con imágenes `sha-f256b6a02c54891040e1f4ba3591c2f85eea2c75`.
+- Comprobación pública cache-bypass: `/health` 200 (`status=ok`, `database=ready`); bundle `/assets/index-uKrjHQQz.js` contiene v0.5.33, SHA exacto, la acción «Reintentar carga de misiones» y el evento admin `admin.mentor_events.read`.
+- `fragments-production` y controles técnicos F14 siguen activos. Apply registró un hash de backup; integridad/retención independiente de ese backup no comprobada. Ningún despliegue por sí solo valida un piloto académico.

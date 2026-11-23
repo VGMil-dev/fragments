@@ -77,9 +77,15 @@ Fecha: 2026-11-23.
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-audit-log/admin-audit-log-api.test.ts src/features/admin-audit-log/AdminAuditLogScreen.test.tsx --maxWorkers=1` — **PASS**, 2 archivos, 10/10 pruebas.
 - `pnpm --filter @fragments/contracts build` y `pnpm --filter @fragments/web typecheck` — **PASS**. El primer typecheck, antes de construir los tipos del paquete workspace requerido, falló por `@fragments/contracts` no generado; tras construirlo, el typecheck web pasó.
 - `pnpm --filter @fragments/web build` — **PASS**; conserva los avisos existentes de chunk >500 KB y directivas `use client` de lucide-react. No existe script `lint` en `@fragments/web`; `git diff --check` — **PASS**.
-- Implementación y pruebas en commit `708e259acf76469b74b4a417336666d4a6094c98` (`feat(F22.12): muestra auditoria de consultas Mentor`). No se consultó producción ni se usaron sesiones/productores IA; esto valida la interpretación UI de eventos sintéticos y no demuestra actividad ni sesión admin productiva. CI del PR pendiente.
+- Implementación y pruebas en commit `708e259acf76469b74b4a417336666d4a6094c98` (`feat(F22.12): muestra auditoria de consultas Mentor`). PR #162 se integró normalmente como `44c968e`; CI final `45125584446` SUCCESS. F14 `v0.5.33` ya está aplicada; el bundle público confirma la opción de auditoría Mentor. No se consultó producción con sesión admin ni se usaron eventos reales; actividad, acceso admin y retención siguen NO COMPROBADOS.
 ## Reejecución independiente y merge PR #156 · 2026-11-23
 
 - Coordinador volvió a crear PostgreSQL 16 local efímero sin volumen, ligado a `127.0.0.1`, con `current_database=fragments_test`; aplicó las cinco migraciones versionadas. La suite corrió con `DATABASE_URL` apuntando a esa instancia, no se omitió el test de integración.
 - Salida fresca: los cuatro archivos focales completados y **13/13 PASS**; API typecheck, build de contratos y `git diff --check` PASS. El fixture usuario se limpió por ID y el contenedor se retiró en `finally`.
 - PR #156 merge normal `3fa16a150de410df7637385d92944cc44954cca2`; CI `45117312137` SUCCESS. Sin cambio de runtime, release, producción ni AI Gateway. La sesión es sintética Better Auth local; acceso admin productivo, existencia de eventos productivos y calidad IA siguen NO COMPROBADOS.
+
+## Auditoría Mentor en Admin Audit Log — F14 v0.5.33 · 2026-11-23
+
+- PR #162 se integró normalmente como `44c968e0f610bbf228b3d847236f9bb2d15030b5`; CI `45125584446` SUCCESS, pruebas focales 10/10, contratos/typecheck/build y diff-check PASS. La UI permite interpretar y filtrar `admin.mentor_events.read` en la allowlist del audit log.
+- F14 `v0.5.33` aplicada automáticamente al main SHA `f256b6a02c54891040e1f4ba3591c2f85eea2c75`; API/web healthy, `/health` DB ready y el bundle exacto contiene el evento nuevo.
+- El cambio corrige lectura UI de eventos sintéticos; no prueba login admin ni existencia de eventos Mentor reales en producción. Esos dos puntos y retención histórica permanecen NO COMPROBADOS; no se crearon evaluaciones ni se alteraron datos.
