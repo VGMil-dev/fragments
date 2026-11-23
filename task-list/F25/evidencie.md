@@ -200,3 +200,9 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - PR #170 se integró normalmente en `main` como `68eaa41afb98c1156c3f792d337f62610615c90f`; CI `45135799530` SUCCESS y revisión independiente PASS.
 - La suite offline focal post-merge pasó 28/28; `git diff --check` PASS. El cotejo local verificó 9/9 marcadores A/B/C sin ejecutar fuentes evaluadas. El comparador clasifica mecánicamente solo cuando coinciden SHA y marcadores y etiqueta la comparación como no semántica.
 - Ejecución vigente: `BLOCKED` para A/B/C por falta de outputs Review completos y manifest autorizado; `qualityComparison=NOT_PERFORMED`, `semanticValidity=NOT_VALIDATED`. Calidad de puntajes Mentor/Review, proveedor/modelo y presupuesto permanecen **NO COMPROBADOS**. No hubo llamadas pagadas, red ni ejecución de repos estudiantiles.
+
+## Progresión de referencias A/B/C · PR #174 · 2026-11-23
+
+- PR #174 se integró normalmente en `main` como merge `23e1a5b6c518f942d47383205c5e7fafc7497641`. CI del head `f26c30a2176d5a53900c4babba7b983143af662f`, run `45147145612`, terminó SUCCESS. Suite focal F25: 32/32 PASS.
+- `auditReferenceProgression` compara marcadores por capacidad en orden A/B/C y detecta regresiones. Referencias inconsistentes o checks nulos bloquean también el estado global; nuevas pruebas cubren esos casos. Cotejo A/B/C: 9/9 marcadores, progresión `REFERENCE_PROGRESSION_MATCH`.
+- Alcance sigue en `STATIC_SOURCE_MARKERS_ONLY` y `SOURCE_NOT_EXECUTED`. No evalúa semántica ni puntuaciones; `semanticValidity=NOT_VALIDATED`. Faltan outputs Review completos y manifest QA autorizado. Sin llamadas a proveedores.
