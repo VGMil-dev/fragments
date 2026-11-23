@@ -330,3 +330,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Suite general `pnpm test`: PASS, 5 tareas Turbo; API 166 pruebas PASS y 71 omitidas, incluyendo el test PostgreSQL por la configuración offline predeterminada. Contratos 30 PASS; suites restantes PASS.
 - Integración PostgreSQL separada: contenedor efímero nuevo sin volumen, publicado solo en `127.0.0.1:55447`; se aplicaron las cinco migraciones vigentes y se confirmó `current_database() = fragments_test`. `academic-flow.integration.test.ts` 3/3 PASS; la recuperación v1 tras publicar v2 confirmó ID y nombre de la habilidad fijada. El contenedor se eliminó al terminar; no se tocó ningún contenedor preexistente.
 - Commits de implementación `5a697d1` y `d394bce` en `codex/f18b-structured-mission-skills`; documentación/evidencia `5115bd1`. Fusión reciente de `origin/main` preserva PR #159. CI/revisión/merge PR #160 y release F14 siguen pendientes; no está desplegado.
+
+## Reintento del listado de misiones docentes · 2026-11-23
+
+- Comprobación del gap: una falla de `assignmentsApi.listTeacher` caía en un mensaje genérico del aula y la lista vacía seguía renderizando “Aún no hay misiones en esta aula”, confundiendo error con ausencia de datos.
+- Cambio: `ClassroomStudio` separa la carga/error del recurso de misiones del resto del aula. `AssignmentsPanel` anuncia carga, presenta el error con `role="alert"`, oculta el estado vacío durante errores y ofrece “Reintentar carga de misiones”; durante el reintento el botón se reemplaza por el estado de carga.
+- Prueba focal `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx src/features/assignments/AssignmentsPanel.test.tsx`: 2 archivos, 10/10 PASS. La regresión produce fallo de red, confirma que no aparece un falso vacío, reintenta solo `listTeacher` (sin repetir solicitudes de matrículas ni habilidades), comprueba el anuncio de carga y termina en vacío solo tras respuesta válida vacía.
+- `pnpm --filter @fragments/contracts build` PASS; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
+- Commit de implementación `69c74a00c07e6880b729e394965e73814963e845` en `codex/f18b-next-ui`. Sin cambios de contrato, API, base de datos, producción, proveedor IA o sesiones Ego Lite. La PR y CI quedan pendientes de publicación.
