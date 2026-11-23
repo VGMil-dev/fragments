@@ -179,3 +179,9 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - La comprobación ahora exige que `snapshot.commitSha` corresponda al SHA del caso; el conteo excluye la línea vacía inexistente tras LF final; `finding.lines` requiere exactamente dos enteros positivos y un rango válido antes de compararse con evidencia.
 - Verificación final local: `node --test evals/scripts/audit-semantic-corpus.test.mjs` 8/8 PASS; suite offline F25 (cuatro scripts) 25/25 PASS; `git diff --check` PASS. No se hicieron llamadas externas ni se leyó contenido de repositorios remotos.
 - La validación sigue siendo estructural: `SNAPSHOT_CHECKED_NO_SEMANTICS`. Falsos positivos/omisiones semánticos y outputs completos A/B/C permanecen NO COMPROBADOS.
+
+## Merge y verificación final del validador offline · 2026-11-23
+
+- PR #165 quedó integrado normalmente en main `f256b6a02c54891040e1f4ba3591c2f85eea2c75`; CI del head final `50569c11b26adca071193b3512e0cc6da6454208`, run `45126241465` SUCCESS; revisión independiente PASS tras corregir snapshot/commit, LF final y rangos incompletos.
+- Suite F25 offline 25/25 PASS y `git diff --check` PASS. El verificador comprueba referencias estructurales contra snapshots locales; no juzga significado, no incluye contenido y no evalúa puntuaciones.
+- F14 `v0.5.33` incluye esta herramienta offline y los cambios UI; no hubo llamadas pagadas ni ejecución de repositorios estudiantiles. A/B/C siguen sin outputs completos persistidos e inputDigest autorizado; proveedor/modelo/presupuesto y calidad semántica Mentor/Review continúan NO COMPROBADOS.
