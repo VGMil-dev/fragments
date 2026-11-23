@@ -147,16 +147,18 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       });
       expect(edit.status).toBe(200);
       expect((await request(`${basePath}/${created.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 3 })).status).toBe(200);
+      await db.classroom.update({ where: { id: classroomId }, data: { subject: "Diseño de interfaces" } });
       const owned = await request("/api/me/proposals", "student");
       expect(owned.status).toBe(200);
-      expect(owned.body.data).toMatchObject([{ id: createdDraft.body.data!.id, assignmentVersionId: version.id, assignmentContext: { mentorContext: { config: { theme: "Misión HTTP v1" } } } }]);
+      expect(owned.body.data).toMatchObject([{ id: createdDraft.body.data!.id, assignmentVersionId: version.id, assignmentContext: { mentorContext: { config: { subject: "Programación móvil", theme: "Misión HTTP v1" } } } }]);
 
       const evaluation = await request(`/api/proposals/${createdDraft.body.data!.id}/review`, "student", "POST");
       expect(evaluation.status).toBe(200);
-      expect(evaluatedConfig).toMatchObject({ theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
+      expect(evaluatedConfig).toMatchObject({ subject: "Programación móvil", theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
       expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
       expect(evaluation.body.data).toMatchObject({ mentorContextVersion: pinnedContextVersion, proposalId: createdDraft.body.data!.id });
     } finally {
+      await db.classroom.update({ where: { id: classroomId }, data: { subject: "Programación móvil" } });
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
@@ -199,12 +201,19 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect(second.assignment.versions.find((version) => version.version === 2)).toMatchObject({
       requiredSkills: [{ id: skillId, name: "Navegación" }], optionalSkills: [{ id: optionalSkillId, name: "Accesibilidad" }],
     });
-    expect((await db.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: missionV1.id } })).snapshotJson).toMatchObject({ title: "Misión v1", requiredSkills: [{ id: skillId }] });
+    const missionV2 = second.assignment.versions.find((version) => version.version === 2)!;
+    expect((await db.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: missionV1.id } })).snapshotJson).toMatchObject({
+      title: "Misión v1", _classroomSubject: "Programación móvil", requiredSkills: [{ id: skillId }],
+    });
+
+    await db.classroom.update({ where: { id: classroomId }, data: { subject: "Diseño de interfaces" } });
+    const missionsAfterClassroomEdit = await assignments.listStudent(studentId, classroomId);
+    expect(missionsAfterClassroomEdit?.find((item) => item.id === missionV2.id)?.mentorContext.config.subject).toBe("Programación móvil");
 
     const recovered = await mentorRepository.getOwnedProposalDraftByUser(saved.id, studentId);
     expect(recovered?.assignmentVersionId).toBe(missionV1.id);
     expect(recovered?.assignmentContext?.mentorContext.config).toMatchObject({
-      theme: "Misión v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]),
+      subject: "Programación móvil", theme: "Misión v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]),
     });
     expect(recovered?.assignmentContext?.mentorContext.config.requirements).not.toContain("Habilidad optativa: Accesibilidad");
 
@@ -218,7 +227,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       config: recovered!.assignmentContext!.mentorContext.config,
       version: recovered!.assignmentContext!.mentorContext.version,
     });
-    expect(evaluatedConfig).toMatchObject({ theme: "Misión v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
+    expect(evaluatedConfig).toMatchObject({ subject: "Programación móvil", theme: "Misión v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
     expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
     expect(evaluation.mentorContextVersion).toBe(recovered!.assignmentContext!.mentorContext.version);
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");

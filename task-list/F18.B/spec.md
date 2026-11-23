@@ -27,7 +27,7 @@ Una asignación pertenece a un aula transversal y tiene borrador versionado. Pub
 7. GIVEN cliente envía `teacherId`, `studentId`, versiones publicadas editables o IDs de habilidad no habilitadas, WHEN guarda/publica, THEN se rechaza sin persistencia parcial.
 8. Las pruebas de integración confirman la base efectiva `fragments_test`; ninguna prueba F18.B conecta a `fragments_prod`.
 9. Al iniciar propuesta desde una misión, el backend fija la `assignmentVersionId` publicada e inmutable; editar la propuesta no puede cambiarla.
-10. Mentor evalúa con el snapshot de la misión y la versión F11 (`mentorContextVersion`) referenciados, nunca con la versión activa más reciente si la misión está vinculada.
+10. Mentor evalúa con el snapshot de la misión (incluido el asunto de aula vigente al publicar) y la versión F11 (`mentorContextVersion`) referenciados, nunca con valores actuales que hayan cambiado después de publicar ni con la versión activa más reciente si la misión está vinculada.
 11. El contexto efectivo combina sin omisiones los hasta 12 objetivos, 20 habilidades obligatorias, 20 optativas y 20 requisitos F11; las optativas se identifican como optativas. La edición/publicación base F11 mantiene el límite original de 20 requisitos.
 12. La prueba PostgreSQL publica v1, liga una propuesta estudiantil a su `assignmentVersionId`, publica v2 y verifica que recuperar/evaluar el borrador conserva el snapshot y contexto de v1; usa únicamente el proveedor Mentor fake y confirma `current_database() = fragments_test`.
 
