@@ -264,3 +264,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El servicio aplicador normal terminó `Result=success`, `ExecMainStatus=0`; no se ejecutó despliegue manual ni reinicio.
 - Verificación pública cache-bypass: `/health` `ok`, database `ready`; `/assets/index-CyC9Ismb.js` contiene `v0.5.26` y SHA exacto `1aa0690fa2573d18cd2fa46c2a5780833e523bb5`.
 - `Required reviewers` OFF; entorno `fragments-production` y gates técnicos F14 intactos. Hash backup previo y labels de imágenes del host siguen NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.27 — 2026-11-23
+
+- PR #148 integrada mediante merge normal en `6a7740d948b3a07c63396097e9400494cdfba0fb`; tag SemVer anotada `v0.5.27` apunta a ese SHA exacto de `main`.
+- F14 run `45099728508`: `verify-build`, PostgreSQL desechable, backup/restore, pruebas/typecheck/lint/build, verificación de bundle, ARM64, atestación Sigstore y `publish-approved-release` terminaron SUCCESS.
+- El timer normal sondeó a las 02:28:08 UTC; `fragments-release-apply.service` terminó a las 02:30:10 UTC con `Result=success`, `ExecMainStatus=0`. No se realizó deploy manual ni reinicio.
+- SSH solo lectura verificó `fragments-api-1` y `fragments-web-1` `running/healthy`, ambos en imagen `sha-6a7740d948b3a07c63396097e9400494cdfba0fb`. Verificación pública cache-bypass: `/health` `status=ok`, `database=ready`; bundle `/assets/index-32veZvDP.js` contiene `v0.5.27`, SHA exacto y `/admin/mentor-events`.
+- `fragments-production` conservó el flujo F14 y no requirió aprobación manual. No se alteraron sus controles técnicos. Eventos Mentor reales, acceso admin autenticado, rotación y hash del backup siguen NO COMPROBADOS.
