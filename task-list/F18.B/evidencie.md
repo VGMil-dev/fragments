@@ -250,3 +250,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Se conservaron abiertas las sesiones y pestañas Estudiante (TaskSpace 46) y Fragments-Docente (TaskSpace 44). Los dashboards y accesos a aulas cargaron sin errores de acceso.
 - Estudiante: Programación Móvil · 2026–2027 muestra matrícula activa y no tiene misiones publicadas. Docente: el dashboard y detalle del aula cargan; se ven las secciones Habilidades y Misiones; “Crear misión” está deshabilitado porque no hay habilidades activas. No se guardaron cambios.
 - El label de versión con una tarjeta real y el recorrido misión→propuesta→Mentor siguen NO COMPROBADOS porque no existe misión publicada. La pestaña original del estudiante que dejó de responder se conservó; la lectura se completó en una pestaña nueva del mismo TaskSpace.
+
+## Continuidad UI — propuestas guardadas con contexto de misión
+
+- PR #141 añade en cada propuesta guardada un marcador de misión vinculada, tema y versión de contexto Mentor. La UI no expone criterios ni rúbrica.
+- Prueba actualizada: 27/27 PASS, typecheck PASS, CI `45089888475` SUCCESS y revisión independiente PASS. Merge normal `073819c31881fd1ae3513bf72a7afe322e5051e6`.
+- Release anotada `v0.5.24` en ese SHA; F14 run `45090388470` SUCCESS. Aplicador normal terminó SUCCESS a 00:54 UTC; API/web healthy en imagen `sha-073819c31881fd1ae3513bf72a7afe322e5051e6`. Salud pública `/health`: `ok`, database `ready`; bundle `/assets/index-C_-XL4FG.js` contiene `v0.5.24` y SHA exacto.
+- NO COMPROBADO: visualización del indicador con una misión productiva activa y evaluación IA real. Ego Lite muestra aula matriculada sin misión/habilidades activas; no se escribieron datos.

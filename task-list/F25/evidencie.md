@@ -147,3 +147,10 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - En el clon autorizado `fragments-test-app`, los tres commits A/B/C estaban presentes; las nueve referencias declaradas de validación, búsqueda y marcado recuperado coinciden (`REFERENCE_MARKERS_MATCH`). Progresión estática: A ninguno; B validación; C validación, búsqueda y recuperado.
 - Pruebas F25 offline combinadas: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs evals/scripts/verify-local-reference.test.mjs` — 20/20 PASS. El comparador de outputs IA mantiene A/B/C `BLOCKED` por `missing_persisted_output`.
 - Alcance: `STATIC_SOURCE_MARKERS_ONLY`, `SOURCE_NOT_EXECUTED`, `qualityComparison=NOT_PERFORMED`, `semanticValidity=NOT_VALIDATED`, `scoreComputed=false`. Falsos positivos/negativos, citas, scores y recomendaciones IA reales siguen NO COMPROBADOS: faltan outputs completos y manifest QA autorizado. Sin llamadas pagadas ni cambios a prompts, modelo, rúbricas o DB.
+
+## Ejecución offline posterior al checkpoint nocturno — 2026-11-23
+
+- En el worktree existente, `node evals/scripts/compare-review-behaviors.mjs` terminó y dejó A/B/C como `BLOCKED`: `missing_persisted_output`.
+- Suite offline focal: 18/18 PASS. No calculó puntuaciones ni hizo llamadas externas.
+- Bloqueo concreto sin cambio: faltan outputs Review completos por SHA A/B/C (hallazgos, citas e `inputDigest`) y un manifest/export de QA autorizado. Los fixtures fake no permiten valorar semántica.
+- Calidad Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS; no se ejecutó IA pagada ni se alteraron prompts/rúbricas.
