@@ -44,7 +44,10 @@ vi.mock("./features/mentor", () => ({
   ),
 }));
 vi.mock("./features/review", () => ({
-  ReviewScreen: ({ onBack, linkedProposals }: { onBack: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }> }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><button type="button" onClick={onBack}>Volver desde Review</button></section>,
+  ReviewScreen: ({ onBack, onOpenTrainer, linkedProposals }: { onBack: () => void; onOpenTrainer?: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }> }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><button type="button" onClick={onBack}>Volver desde Review</button><button type="button" data-testid="review-to-trainer" onClick={onOpenTrainer}>Continuar en Trainer</button></section>,
+}));
+vi.mock("./features/trainer", () => ({
+  TrainerScreen: ({ onStartReview }: { onStartReview?: () => void }) => <section><button type="button" data-testid="trainer-to-review" onClick={onStartReview}>Empezar en Review</button></section>,
 }));
 
 import { App } from "./App";
@@ -90,6 +93,19 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("navigates between Review and Trainer through their integrated continuation links", async () => {
+    window.history.replaceState({}, "", "/student/trainer");
+    await act(async () => root?.render(<App />));
+
+    await act(async () => container?.querySelector<HTMLButtonElement>("[data-testid=trainer-to-review]")?.click());
+    expect(window.location.pathname).toBe("/student/review");
+    expect(container?.querySelector("[data-testid=review-linked-proposals]")).not.toBeNull();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>("[data-testid=review-to-trainer]")?.click());
+    expect(window.location.pathname).toBe("/student/trainer");
+    expect(container?.querySelector("[data-testid=trainer-to-review]")).not.toBeNull();
+  });
+
   it("offers only owned proposals still carrying their published mission context in Review", async () => {
     window.history.replaceState({}, "", "/student/review");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
