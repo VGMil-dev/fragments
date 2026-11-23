@@ -16,4 +16,5 @@ En `apps/web/src/features/mentor/mentor-screen.test.tsx`, se añadió una regres
 - `pnpm --filter @fragments/web build`: PASS, exit 0. Vite informó el aviso preexistente/ajeno al cambio sobre bundle >500 kB y directivas `use client` de Lucide.
 - No se realizó prueba visual con Ego Lite, sesión autenticada, despliegue ni validación de producción.
 
-Commit: pendiente al preparar este archivo; se añadirá el SHA después de confirmar el commit.
+Commit de implementación: `c2346fad8f90071adacbfb3b0b991fda554560d8` (`fix(F16.6): refleja contexto real en el stepper`).
+
