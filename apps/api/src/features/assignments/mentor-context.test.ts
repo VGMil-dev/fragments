@@ -9,6 +9,14 @@ describe("assignment mentor context", () => {
     expect(value).toMatchObject({ subject: "Aplicaciones móviles", theme: "Misión v1", assignment: "Consigna v1", requirements: ["Objetivo v1", "Habilidad requerida: Navegación", "Restricción F11"], rubricTitle: "Rúbrica F11", criteria: base.criteria });
   });
 
+  it("uses the subject captured by the published mission rather than a later classroom subject", () => {
+    const snapshot = { title: "Misión v1", instructions: "Consigna v1", objectives: ["Objetivo"], requiredSkills: [], optionalSkills: [], _classroomSubject: "Programación móvil" };
+
+    const value = buildAssignmentMentorConfig(base, snapshot, "Asignatura editada después de publicar");
+
+    expect(value.subject).toBe("Programación móvil");
+  });
+
   it("validates and bounds all context fields", () => {
     expect(() => buildAssignmentMentorConfig(base, { instructions: "x".repeat(3001) }, "Materia")).not.toThrow();
     expect(() => buildAssignmentMentorConfig({ ...base, criteria: [] }, {}, "Materia")).toThrow();

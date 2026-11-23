@@ -274,3 +274,14 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Ego Lite posterior al despliegue confirmó `v0.5.26`: el botón único anuncia «Continuar propuesta:» con el título y navega a Mentor mostrando la misma propuesta. La pestaña nueva y las sesiones existentes quedaron abiertas; no hubo escrituras.
 - Al continuar, Mentor intentó GET `/api/proposals/:proposalId/review` y recibió 404 porque no existe evaluación persistida para la propuesta. Esto confirma el intento de restauración, no la recuperación de un resultado.
 - **NO COMPROBADO:** recuperación de evaluación persistida, handoff con una misión vinculada, identidad cruzada y calidad de puntuación IA. El test de App comprueba `restoreEvaluation=true` en el límite de Mentor simulado; no sustituye una recuperación evaluativa end-to-end en Ego Lite.
+
+## Hotfix — congelar asunto del aula en versiones de misión · 2026-11-23
+
+- Hallazgo: `classroom.subject` se puede editar después de publicar una misión y se usaba al reconstruir `mentorContext` tanto para estudiante/propuesta recuperada como para evaluar. Así, una misión y propuesta v1 podían cambiar de asignatura sin cambiar su versión publicada.
+- TDD: la prueba focal de `mentor-context.test.ts` falló antes del fix: esperaba el asunto `Programación móvil` del snapshot y recibió `Asignatura editada después de publicar`.
+- Fix F18.B: la publicación captura el asunto de aula en un campo interno del snapshot JSON; el compositor usa ese valor fijado para las lecturas y evaluación Mentor. Los DTO docente/estudiante retiran el campo interno y no cambia ningún contrato ni migración.
+- Pruebas: `pnpm --filter @fragments/api exec vitest run src/features/assignments/mentor-context.test.ts src/features/assignments/repository.test.ts --maxWorkers=1` — 9/9 PASS; `pnpm --filter @fragments/api typecheck` — PASS.
+- Integración HTTP PostgreSQL: contenedor PostgreSQL 18.6 efímero, sin volumen, publicado solo en `127.0.0.1:55445`; `current_database()` se comprobó como `fragments_test`; se desplegaron las cinco migraciones vigentes. `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 3/3 PASS. La prueba edita el asunto después de publicar v2 y verifica el asunto original en el listado estudiantil, propuesta recuperada y evaluación HTTP del snapshot v1. El contenedor se detuvo y eliminó.
+- `git diff --check` — PASS. Sin producción, proveedores pagados ni sesiones Ego Lite.
+- Límite legacy: snapshots publicados antes de este cambio no contienen el asunto histórico y mantienen el fallback al asunto actual; no existe evidencia suficiente para reconstruir su valor original sin una fuente histórica o una migración/backfill con datos confiables.
+- Commit de implementación local `49e1a7ad41b5b38e96a7e3ff3bc58ff4a465752c` en `codex/f18b-proposal-recovery-evidence`; sin push.

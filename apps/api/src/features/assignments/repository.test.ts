@@ -44,9 +44,14 @@ describe("assignment repository", () => {
     expect(created?.draftVersion).toBe(1);
     const first = await repository.publish("fixture-teacher", "fixture-class", created!.id, 1);
     expect(first.kind).toBe("ok");
-    state.enrollment = { status: "active", classroom: { id: "fixture-class", title: "Ciencias", subject: "Ciencias" } };
+    expect(state.versions[0].snapshotJson).toMatchObject({ _classroomSubject: "Ciencias" });
+    expect(first.kind === "ok" && first.assignment.versions[0]).not.toHaveProperty("_classroomSubject");
+    state.enrollment = { status: "active", classroom: { id: "fixture-class", title: "Ciencias", subject: "Materia editada" } };
     const studentRows = await repository.listStudent("fixture-student", "fixture-class");
     expect(studentRows).toMatchObject([{ id: state.versions[0].id, assignmentId: created!.id, version: 1, requiredSkills: [{ id: "fixture-skill", name: "Observación" }] }]);
+    expect(studentRows?.[0]).not.toHaveProperty("_classroomSubject");
+    expect(studentRows?.[0]?.mentorContext.config.subject).toBe("Ciencias");
+    expect(studentRows?.[0]?.subject).toBe("Materia editada");
     expect((await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 1, draft)).kind).toBe("conflict");
     const edited = { ...draft, title: "Misión revisada" };
     const update = await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 2, edited);

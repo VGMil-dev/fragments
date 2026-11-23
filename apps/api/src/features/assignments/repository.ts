@@ -6,6 +6,12 @@ import { buildAssignmentMentorConfig } from "./mentor-context.js";
 type Draft = { title: string; instructions: string; objectives: string[]; requiredSkillIds: string[]; optionalSkillIds: string[] };
 type Db = PrismaClient | Prisma.TransactionClient;
 
+function publicSnapshot(value: Prisma.JsonValue): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const { _classroomSubject: _privateSubject, ...snapshot } = value as Record<string, unknown>;
+  return snapshot;
+}
+
 export function createAssignmentRepository(database: PrismaClient) {
   async function ownedActiveClassroom(tx: Db, teacherId: string, classroomId: string) {
     return tx.classroom.findFirst({ where: { id: classroomId, teacherId, status: "active" } });
@@ -19,7 +25,7 @@ export function createAssignmentRepository(database: PrismaClient) {
   async function dto(tx: Db, row: { id: string; classroomId: string; status: string; draftVersion: number; publishedVersion: number | null; draftJson: Prisma.JsonValue; updatedAt: Date }) {
     const versions = await tx.classroomAssignmentVersion.findMany({ where: { assignmentId: row.id }, orderBy: { version: "asc" } });
     return ClassroomAssignmentSchema.parse({ id: row.id, classroomId: row.classroomId, status: row.status, draftVersion: row.draftVersion,
-      publishedVersion: row.publishedVersion, draft: row.draftJson, versions: versions.map((v) => ({ ...v.snapshotJson as object, id: v.id,
+      publishedVersion: row.publishedVersion, draft: row.draftJson, versions: versions.map((v) => ({ ...publicSnapshot(v.snapshotJson), id: v.id,
         version: v.version, assignmentId: row.id, status: "published", mentorContextVersion: v.mentorContextVersion, createdAt: v.createdAt.toISOString() })), updatedAt: row.updatedAt.toISOString() });
   }
   return {
@@ -50,7 +56,8 @@ export function createAssignmentRepository(database: PrismaClient) {
     },
     async publish(teacherId: string, classroomId: string, assignmentId: string, expectedVersion: number) {
       return database.$transaction(async (tx) => {
-        if (!await ownedActiveClassroom(tx, teacherId, classroomId)) return { kind: "not_found" as const };
+        const classroom = await ownedActiveClassroom(tx, teacherId, classroomId);
+        if (!classroom) return { kind: "not_found" as const };
         const row = await tx.classroomAssignment.findFirst({ where: { id: assignmentId, classroomId } });
         if (!row) return { kind: "not_found" as const };
         if (row.draftVersion !== expectedVersion || row.status === "archived") return { kind: "conflict" as const };
@@ -61,6 +68,7 @@ export function createAssignmentRepository(database: PrismaClient) {
         const context = await tx.mentorControlVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } });
         const version = (row.publishedVersion ?? 0) + 1, now = new Date(), versionId = randomUUID();
         const snapshot = { title: draft.title, instructions: draft.instructions, objectives: draft.objectives,
+          _classroomSubject: classroom.subject,
           requiredSkills: draft.requiredSkillIds.map((id) => skills.get(id)!), optionalSkills: draft.optionalSkillIds.map((id) => skills.get(id)!) };
         const claimed = await tx.classroomAssignment.updateMany({ where: { id: assignmentId, classroomId, draftVersion: expectedVersion, publishedVersion: row.publishedVersion, status: { not: "archived" } }, data: { status: "published", publishedVersion: version, draftVersion: { increment: 1 }, updatedAt: now } });
         if (claimed.count !== 1) return { kind: "conflict" as const };
@@ -80,7 +88,7 @@ export function createAssignmentRepository(database: PrismaClient) {
         const context = MentorEvaluationContextSchema.parse({ version: control.version, publishedAt: control.publishedAt.toISOString(), config: {
           ...buildAssignmentMentorConfig(control.configJson, version.snapshotJson, enrollment.classroom.subject),
         } });
-        output.push(StudentAssignmentSchema.parse({ ...version.snapshotJson as object, id: version.id, assignmentId: row.id, version: version.version,
+        output.push(StudentAssignmentSchema.parse({ ...publicSnapshot(version.snapshotJson), id: version.id, assignmentId: row.id, version: version.version,
           classroomId, classroomTitle: enrollment.classroom.title, subject: enrollment.classroom.subject, status: "published",
           mentorContextVersion: version.mentorContextVersion, mentorContext: context, createdAt: version.createdAt.toISOString() }));
       }
