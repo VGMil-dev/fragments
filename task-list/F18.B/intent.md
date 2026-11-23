@@ -13,6 +13,7 @@ Después de crear aulas y habilitar habilidades, falta el núcleo pedagógico qu
 - Al editar una tarea publicada, crear un nuevo borrador/versionado sin cambiar la versión previa.
 - Listar tareas del docente dueño y tareas publicadas de aulas activas del estudiante autenticado.
 - Integrar UI docente en el detalle del aula y lectura estudiantil en Mis aulas, preservando shells/rutas existentes.
+- Al recuperar una propuesta guardada, indicar su misión publicada/contexto vinculados sin exponer rúbrica ni perder la identidad de la propuesta.
 
 ## No objetivos
 
@@ -82,3 +83,12 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Objetivo: al abandonar la propuesta hacia el catálogo o abrir Mentor desde la navegación, limpiar el snapshot de misión seleccionado. Iniciar una propuesta desde una misión debe seguir conservando exactamente ese snapshot y su `assignmentVersionId`.
 - Alcance: navegación y estado en `apps/web/src/App.tsx`, con regresión de composición en `apps/web/src/App.student-flow.test.tsx`; sin contratos, endpoints, persistencia o producción.
 - Criterio: una prueba de ruta real de componentes confirma que el borrador iniciado desde la misión lleva su versión publicada, y que después de volver y abrir Mentor por navegación el borrador nuevo no lleva esa asociación y usa el contexto general vigente.
+
+## Incremento UI — habilidades requeridas de misión en Mentor
+
+- Problema: Mentor mostraba siempre que no había habilidades requeridas aunque se abriese desde una misión publicada con habilidades obligatorias.
+- Objetivo: mostrar las habilidades requeridas del snapshot de misión como referencia de solo lectura, tanto al iniciar una propuesta desde la misión como al recuperar una propuesta con contexto fijado.
+- Las habilidades optativas del catálogo activo siguen siendo una selección independiente y editable; Mentor general conserva su estado vacío.
+- No objetivos: alterar evaluación, API, contratos, rutas, backend, migraciones o selección optativa.
+
+- Dar a cada botón de recuperación de propuesta un nombre accesible que identifique su acción y título, con fallback para borradores sin título.

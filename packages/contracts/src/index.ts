@@ -515,7 +515,35 @@ export const ReviewRequestSchema = z.object({
   owner: githubOwner,
   repo: githubRepo,
   commitSha: gitObjectId,
+  linkedProposalId: identifier.optional(),
 }).strict();
+export const ReviewAcademicLinkSchema = z.object({
+  proposalId: identifier,
+  proposalVersion: z.number().int().positive(),
+  proposalTitle: z.string().max(160),
+  assignmentVersionId: identifier,
+  missionTitle: nonEmptyText.max(160),
+  missionVersion: z.number().int().positive(),
+  mentorContextVersion: z.number().int().positive(),
+  classroomId: identifier,
+  classroomTitle: nonEmptyText.max(160),
+}).strict();
+export const TeacherClassroomReviewSchema = z.object({
+  reviewId: identifier,
+  studentLabel: nonEmptyText.max(100),
+  proposalTitle: z.string().max(160),
+  proposalVersion: z.number().int().positive(),
+  missionTitle: nonEmptyText.max(160),
+  missionVersion: z.number().int().positive(),
+  mentorContextVersion: z.number().int().positive(),
+  repositoryOwner: githubOwner,
+  repositoryName: githubRepo,
+  commitSha: gitObjectId,
+  status: z.enum(["queued", "running", "completed", "failed"]),
+  score: z.number().min(0).max(100).optional(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+export const TeacherClassroomReviewsResponseSchema = z.array(TeacherClassroomReviewSchema).max(100);
 export const ReviewQueuedResponseSchema = z.object({
   id: identifier,
   owner: githubOwner,
@@ -618,6 +646,8 @@ export type ProposalEvaluationResponse = z.infer<typeof ProposalEvaluationRespon
 export type MentorControlEvaluationHistoryItem = z.infer<typeof MentorControlEvaluationHistoryItemSchema>;
 export type MentorControlWorkspaceResponse = z.infer<typeof MentorControlWorkspaceResponseSchema>;
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
+export type ReviewAcademicLink = z.infer<typeof ReviewAcademicLinkSchema>;
+export type TeacherClassroomReview = z.infer<typeof TeacherClassroomReviewSchema>;
 export type ReviewQueuedResponse = z.infer<typeof ReviewQueuedResponseSchema>;
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
 export type CreateMentorSubmissionRequest = z.infer<typeof CreateMentorSubmissionRequestSchema>;

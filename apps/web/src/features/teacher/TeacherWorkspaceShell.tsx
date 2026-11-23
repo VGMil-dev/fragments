@@ -8,6 +8,7 @@ import { createInspectorApi } from "../../lib/api/inspector-api.js";
 import { classroomApi } from "../../lib/api/classroom-api.js";
 import { MentorControlWorkspace } from "../mentor-control/MentorControlWorkspace.js";
 import { TeacherStudentsWorkspace } from "./TeacherStudentsWorkspace.js";
+import { TeacherReviewWorkspace } from "./TeacherReviewWorkspace.js";
 import type { TeacherDashboardSummary } from "@fragments/contracts";
 import "./teacher-workspace-shell.css";
 
@@ -167,12 +168,6 @@ function TeacherSettings({ identity, navigate }: { identity: TeacherIdentity; na
   </main>;
 }
 
-function ReviewUnavailable() {
-  return <main className="teacher-settings" aria-labelledby="teacher-review-title"><p className="teacher-shell-eyebrow">REVIEW · ACCESO DOCENTE</p><h1 id="teacher-review-title">Review</h1>
-    <p>La vista docente de resultados aún no está disponible. No se muestran revisiones sin un vínculo autorizado entre aula, estudiante, proyecto y commit.</p>
-  </main>;
-}
-
 function renderWorkspace(path: string, navigate: (path: string) => void, identity: TeacherIdentity): ReactNode {
   if (path === "/teacher/dashboard" || path === "/teacher") return <TeacherDashboard navigate={navigate} />;
   if (path === "/teacher/classrooms" || path.startsWith("/teacher/classrooms/") || path === "/teacher/skills") return <ClassroomStudio path={path} navigate={navigate} embedded />;
@@ -180,7 +175,7 @@ function renderWorkspace(path: string, navigate: (path: string) => void, identit
   if (path === "/teacher/inspector") return <TeacherGate inspectorApi={inspectorApi} navigate={navigate} />;
   if (path === "/teacher/mentor-control") return <MentorControlWorkspace navigate={navigate} />;
   if (path === "/teacher/settings") return <TeacherSettings identity={identity} navigate={navigate} />;
-  if (path === "/teacher/review") return <ReviewUnavailable />;
+  if (path === "/teacher/review") return <TeacherReviewWorkspace />;
   return <main className="teacher-settings"><h1>No se encontró esta sección</h1><a href="/teacher/dashboard" onClick={(event) => { event.preventDefault(); navigate("/teacher/dashboard"); }}>Volver al inicio docente</a></main>;
 }
 

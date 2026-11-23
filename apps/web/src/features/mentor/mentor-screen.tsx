@@ -24,6 +24,7 @@ import "./mentor-screen.css";
 
 export interface MentorScreenProps {
   initialProposal?: ProposalDraftResponse | undefined;
+  requiredMissionSkills?: string[];
   initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
   restoreEvaluation?: boolean;
   savedProposals: ProposalDraftResponse[];
@@ -180,6 +181,7 @@ function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
 
 export function MentorScreen({
   initialProposal,
+  requiredMissionSkills = [],
   initialEvaluation,
   restoreEvaluation = false,
   savedProposals,
@@ -234,6 +236,7 @@ export function MentorScreen({
   const [importError, setImportError] = useState<string | null>(null);
   const [coverCopyMessage, setCoverCopyMessage] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
+  const visibleRequiredMissionSkills = requiredMissionSkills.map((skill) => skill.trim()).filter(Boolean);
   const validText = (value: string, max: number) => value.trim().length > 0 && value.trim().length <= max;
   const goalRows = fields.goals.length ? fields.goals.split(/\r?\n/) : [];
   const goals = fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -270,16 +273,19 @@ export function MentorScreen({
       : activeStage === 2
         ? "Revisa las habilidades de tu actividad y elige en cuáles quieres enfocarte."
       : `Etapa ${activeStage + 1} de ${MENTOR_STAGES.length} · ${activeStageLabel}`;
-  const selectedSkillIds = skillClassroomId ? skillSelections[skillClassroomId] ?? [] : [];
   const activeSkillCatalogState = skillClassroomId ? skillCatalogs[skillClassroomId] : undefined;
   const showClassroomSelect = classrooms.length > 1 || (classrooms.length === 1 && !skillClassroomId) || Boolean(skillClassroomId && !classrooms.some((classroom) => classroom.id === skillClassroomId));
   const activeSkillCatalog = activeSkillCatalogState?.status === "success" ? activeSkillCatalogState.data : [];
+  const requiredSkillNames = new Set(visibleRequiredMissionSkills.map((skill) => skill.toLocaleLowerCase("es")));
+  const optionalSkillCatalog = activeSkillCatalog.filter((skill) => !requiredSkillNames.has(skill.name.trim().toLocaleLowerCase("es")));
+  const requiredSkillIds = new Set(activeSkillCatalog.filter((skill) => requiredSkillNames.has(skill.name.trim().toLocaleLowerCase("es"))).map((skill) => skill.id));
+  const selectedSkillIds = (skillClassroomId ? skillSelections[skillClassroomId] ?? [] : []).filter((id) => !requiredSkillIds.has(id));
   const normalizedSkillSearch = skillSearch.trim().toLocaleLowerCase("es");
   const matchingSkills = normalizedSkillSearch
-    ? activeSkillCatalog.filter((skill) => skill.name.toLocaleLowerCase("es").includes(normalizedSkillSearch))
-    : activeSkillCatalog;
+    ? optionalSkillCatalog.filter((skill) => skill.name.toLocaleLowerCase("es").includes(normalizedSkillSearch))
+    : optionalSkillCatalog;
   const visibleSkills = matchingSkills.slice(0, skillLimit);
-  const skillNameById = new Map(activeSkillCatalog.map((skill) => [skill.id, skill.name]));
+  const skillNameById = new Map(optionalSkillCatalog.map((skill) => [skill.id, skill.name]));
   const savedSkillSelection = proposal?.proposal.mentorSkills;
   const proposalClassroom = classrooms.find((classroom) => classroom.id === proposal?.proposal.mentorSkills?.classroomId);
   if (savedSkillSelection?.classroomId === skillClassroomId) {
@@ -287,7 +293,7 @@ export function MentorScreen({
       if (!skillNameById.has(id) && proposal?.proposal.skills?.[index]) skillNameById.set(id, proposal.proposal.skills[index]!);
     });
   }
-  const savedSkillsUnavailable = selectedSkillIds.filter((id) => !activeSkillCatalog.some((skill) => skill.id === id));
+  const savedSkillsUnavailable = selectedSkillIds.filter((id) => !optionalSkillCatalog.some((skill) => skill.id === id));
   const completedStage = (index: number) => {
     switch (index) {
       case 0: return [fields.title, fields.problem, fields.solution, fields.description, fields.purpose].every((value) => validText(value, 3000));
@@ -371,7 +377,7 @@ export function MentorScreen({
   function toggleSkill(skillId: string) {
     if (!skillClassroomId) return;
     setSkillSelections((current) => {
-      const currentSelection = current[skillClassroomId] ?? [];
+      const currentSelection = (current[skillClassroomId] ?? []).filter((id) => !requiredSkillIds.has(id));
       const currentlySelected = currentSelection.includes(skillId);
       if (!currentlySelected && currentSelection.length >= 20) return current;
       const nextSelection = currentlySelected
@@ -424,7 +430,7 @@ export function MentorScreen({
     try {
       const basePayload = draftPayload(fields);
       const payload: CreateProposalDraftRequest = !proposal || skillsChanged
-        ? { ...basePayload, proposal: { ...basePayload.proposal, mentorSkills: { classroomId: skillClassroomId, selectedSkillIds: skillClassroomId ? skillSelections[skillClassroomId] ?? [] : [] } } }
+        ? { ...basePayload, proposal: { ...basePayload.proposal, mentorSkills: { classroomId: skillClassroomId, selectedSkillIds } } }
         : basePayload;
       payload.proposal.technologyIds = technologyIds;
       const result = proposal
@@ -584,7 +590,18 @@ export function MentorScreen({
               <li key={saved.id}>
                 <span>{saved.proposal.title || "Borrador sin título"}</span>
                 <span className="mentor-saved-proposals__version">Versión {saved.version}</span>
-                <button type="button" onClick={() => onOpenProposal(saved)}>{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
+                {saved.assignmentVersionId || saved.assignmentContext?.assignmentVersionId ? (
+                  <span className="mentor-saved-proposals__mission">
+                    Misión vinculada{saved.assignmentContext?.mentorContext
+                      ? <> · {saved.assignmentContext.mentorContext.config.theme} · Contexto Mentor v{saved.assignmentContext.mentorContext.version}</>
+                      : " · contexto académico no disponible"}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={`${proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}: ${saved.proposal.title || "Borrador sin título"}`}
+                  onClick={() => onOpenProposal(saved)}
+                >{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
               </li>
             ))}
           </ul>
@@ -656,9 +673,16 @@ export function MentorScreen({
           <section className="mentor-skills__required" aria-labelledby="mentor-skills-required-title">
             <div className="mentor-skills__section-heading">
               <span className="mentor-skills__section-icon" aria-hidden="true">▱</span>
-              <div><h2 id="mentor-skills-required-title">Habilidades requeridas</h2><p>No hay habilidades marcadas como obligatorias por una fuente académica para esta actividad.</p></div>
-              <span className="mentor-skills__count">Sin asignación</span>
+              <div><h2 id="mentor-skills-required-title">Habilidades requeridas</h2><p>{visibleRequiredMissionSkills.length
+                ? "Fijadas por la misión publicada; se muestran como referencia y no se editan aquí."
+                : "No hay habilidades marcadas como obligatorias por una fuente académica para esta actividad."}</p></div>
+              <span className="mentor-skills__count">{visibleRequiredMissionSkills.length
+                ? `${visibleRequiredMissionSkills.length} ${visibleRequiredMissionSkills.length === 1 ? "requerida" : "requeridas"}`
+                : "Sin asignación"}</span>
             </div>
+            {visibleRequiredMissionSkills.length ? <ul className="mentor-skills__required-list" aria-label="Habilidades fijadas por la misión">
+              {visibleRequiredMissionSkills.map((skill, index) => <li key={`${index}-${skill}`}>{skill}</li>)}
+            </ul> : null}
           </section>
 
           <section className="mentor-skills__reinforce" aria-labelledby="mentor-skills-reinforce-title" aria-busy={Boolean(skillClassroomId && activeSkillCatalogState?.status === "loading")}>
@@ -696,7 +720,8 @@ export function MentorScreen({
             {skillClassroomId && activeSkillCatalogState?.status === "error" ? <div className="mentor-skills__state mentor-skills__state--error" role="alert"><p>No pudimos consultar las habilidades de esta aula. Tu borrador sigue disponible.</p><button type="button" onClick={() => setSkillRetry((value) => value + 1)}>Volver a cargar habilidades</button></div> : null}
             {!skillClassroomId && classrooms.length > 1 ? <p className="mentor-skills__state">Elige un aula para consultar las habilidades autorizadas.</p> : null}
             {skillClassroomId && activeSkillCatalogState?.status === "success" && activeSkillCatalog.length === 0 ? <p className="mentor-skills__state">Esta aula aún no tiene habilidades disponibles.</p> : null}
-            {skillClassroomId && activeSkillCatalogState?.status === "success" && activeSkillCatalog.length > 0 ? <>
+            {skillClassroomId && activeSkillCatalogState?.status === "success" && activeSkillCatalog.length > 0 && optionalSkillCatalog.length === 0 ? <p className="mentor-skills__state">No hay otras habilidades disponibles para reforzar en esta misión.</p> : null}
+            {skillClassroomId && activeSkillCatalogState?.status === "success" && optionalSkillCatalog.length > 0 ? <>
               {visibleSkills.length ? <div className="mentor-skills__list" aria-label="Habilidades disponibles">{visibleSkills.map((skill) => {
                 const selected = selectedSkillIds.includes(skill.id);
                 return <button className={`mentor-skills__option${selected ? " is-selected" : ""}`} type="button" key={skill.id} aria-pressed={selected} disabled={formBusy || (!selected && selectedSkillIds.length >= 20)} onClick={() => toggleSkill(skill.id)}>

@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ReviewScreen } from "./review-screen";
@@ -87,5 +90,44 @@ describe("ReviewScreen", () => {
 
     expect(html).toContain("No se pudo completar este análisis");
     expect(html).not.toContain("server-private");
+  });
+
+  it("shares a review only after the student explicitly selects their mission proposal", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    const onQueue = vi.fn(async () => actions.onQueue());
+    const linkedProposal = { id: "proposal-1", proposal: { title: "Rutas de Expo" }, assignmentVersionId: "mission-v1",
+      assignmentContext: { assignmentVersionId: "mission-v1", mentorContext: { version: 2, config: { theme: "Programación móvil" } } } } as never;
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} linkedProposals={[linkedProposal]} onBack={vi.fn()} />));
+      const inputs = [...container.querySelectorAll<HTMLInputElement>(".review-form input")];
+      const setInput = (input: HTMLInputElement, value: string) => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+        setter.call(input, value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      await act(async () => {
+        setInput(inputs[0]!, "fixture-student");
+        setInput(inputs[1]!, "expo-app");
+        setInput(inputs[2]!, "a".repeat(40));
+        container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      });
+      expect(onQueue).toHaveBeenLastCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "a".repeat(40) });
+
+      const select = container.querySelector<HTMLSelectElement>('select[aria-label="Vincular Review a una propuesta"]')!;
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!;
+        setter.call(select, "proposal-1");
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await act(async () => container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+      expect(onQueue).toHaveBeenLastCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "a".repeat(40), linkedProposalId: "proposal-1" });
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
   });
 });

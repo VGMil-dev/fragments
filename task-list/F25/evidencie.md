@@ -148,3 +148,18 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - `node evals/scripts/compare-review-behaviors.mjs` — exit 0; A/B/C `BLOCKED` por `missing_persisted_output`; `qualityComparison=NOT_PERFORMED`, `scoreComputed=false`, `semanticValidity=NOT_VALIDATED`.
 - No acceso a base, producción o secretos; no llamadas IA, ni modificaciones al modelo, prompts o rúbricas. Calidad semántica Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS.
 - Bloqueo que requiere al propietario: outputs Review íntegros por SHA con hallazgos/citas/inputDigest y un manifest/export QA autorizado. Sin ese corpus no se calcula ni se juzga puntuación.
+
+## Verificador local de referencias A/B/C · 2026-11-22
+
+- PR #134 integrada normalmente en `main` como `f730931399c34435fc98e7e706d6c4df4c12870a`; CI `45082467290` SUCCESS y revisión independiente PASS. Implementación `evals/scripts/verify-local-reference.mjs`, commit `724b7b8f134dd5a042333a2c3a17b882517f5594`.
+- Consulta objetos Git mediante `ls-tree`, `cat-file` y `show`; no hace checkout, importa ni ejecuta el código del repositorio evaluado. Limita tamaño por archivo y devuelve solo marcadores, sin contenido ni rutas source.
+- En el clon autorizado `fragments-test-app`, los tres commits A/B/C estaban presentes; las nueve referencias declaradas de validación, búsqueda y marcado recuperado coinciden (`REFERENCE_MARKERS_MATCH`). Progresión estática: A ninguno; B validación; C validación, búsqueda y recuperado.
+- Pruebas F25 offline combinadas: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs evals/scripts/verify-local-reference.test.mjs` — 20/20 PASS. El comparador de outputs IA mantiene A/B/C `BLOCKED` por `missing_persisted_output`.
+- Alcance: `STATIC_SOURCE_MARKERS_ONLY`, `SOURCE_NOT_EXECUTED`, `qualityComparison=NOT_PERFORMED`, `semanticValidity=NOT_VALIDATED`, `scoreComputed=false`. Falsos positivos/negativos, citas, scores y recomendaciones IA reales siguen NO COMPROBADOS: faltan outputs completos y manifest QA autorizado. Sin llamadas pagadas ni cambios a prompts, modelo, rúbricas o DB.
+
+## Ejecución offline posterior al checkpoint nocturno — 2026-11-23
+
+- En el worktree existente, `node evals/scripts/compare-review-behaviors.mjs` terminó y dejó A/B/C como `BLOCKED`: `missing_persisted_output`.
+- Suite offline focal: 18/18 PASS. No calculó puntuaciones ni hizo llamadas externas.
+- Bloqueo concreto sin cambio: faltan outputs Review completos por SHA A/B/C (hallazgos, citas e `inputDigest`) y un manifest/export de QA autorizado. Los fixtures fake no permiten valorar semántica.
+- Calidad Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS; no se ejecutó IA pagada ni se alteraron prompts/rúbricas.

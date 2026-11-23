@@ -1,0 +1,17 @@
+.admin-mentor-events { width: min(100% - 2rem, 80rem); margin: clamp(1.25rem, 4vw, 3rem) auto; color: var(--f16-text-primary); }
+.admin-mentor-events__header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--f16-border); }
+.admin-mentor-events__eyebrow { color: var(--f16-lime); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+.admin-mentor-events h1 { margin: .35rem 0 .65rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.04em; }
+.admin-mentor-events__header > p:not(.admin-mentor-events__eyebrow) { max-width: 70ch; color: var(--f16-text-secondary); line-height: 1.55; }
+.admin-mentor-events button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--f16-border); border-radius: .7rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; font-weight: 700; cursor: pointer; }
+.admin-mentor-events button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-mentor-events button:disabled { cursor: wait; opacity: .65; }
+.admin-mentor-events__retention { color: var(--f16-text-secondary); font-size: .9rem; line-height: 1.5; }
+.admin-mentor-events__table-wrap { overflow-x: auto; border: 1px solid var(--f16-border); border-radius: .85rem; background: var(--f16-surface); }
+.admin-mentor-events__table-wrap:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-mentor-events table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.admin-mentor-events caption { padding: .9rem; color: var(--f16-text-secondary); text-align: left; }
+.admin-mentor-events th, .admin-mentor-events td { padding: .75rem; border-top: 1px solid var(--f16-border); text-align: left; white-space: nowrap; }
+.admin-mentor-events th { color: var(--f16-text-secondary); font-size: .78rem; }
+.admin-mentor-events td small { display: block; margin-top: .25rem; color: var(--f16-text-secondary); }
+@media (max-width: 600px) { .admin-mentor-events { width: min(100% - 1rem, 80rem); } }

@@ -11,7 +11,7 @@ import type { createMentorService } from "../features/mentor/service.js";
 import { createInspectorHttp } from "../features/inspector/http.js";
 import type { createInspectorService } from "../features/inspector/service.js";
 import { createReviewHttp } from "../features/review/http.js";
-import type { ReviewContextResolver } from "../features/review/http.js";
+import type { ReviewAcademicLinkResolver, ReviewContextResolver, ReviewTeacherIdResolver } from "../features/review/http.js";
 import type { createReviewService } from "../features/review/review.service.js";
 import type { createPrismaReviewStore } from "../features/review/prisma-store.js";
 import { createTrainerHttp } from "../features/trainer/http.js";
@@ -30,6 +30,9 @@ import { createAdminAuditLogHttp } from "../features/admin-audit-log/http.js";
 import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/admin-audit-log/store.js";
 import { createAdminReviewEventsHttp } from "../features/admin-review-events/http.js";
 import type { createReviewOperationalLog } from "../features/review/operational-log.js";
+import { createAdminMentorEventsHttp } from "../features/admin-mentor-events/http.js";
+import type { MentorOperationalEvent } from "../features/mentor/operational-events.js";
+import type { createMentorOperationalLog } from "../features/mentor/operational-log.js";
 import { createAdminTeachersHttp } from "../features/admin-teachers/http.js";
 import { createAdminTeachersRepository } from "../features/admin-teachers/repository.js";
 import { createAdminTeachersService } from "../features/admin-teachers/service.js";
@@ -43,12 +46,14 @@ type HttpOptions = {
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
+  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver;
+    resolveStudentId?: (request: IncomingMessage) => Promise<string | null>; resolveTeacherId?: ReviewTeacherIdResolver; resolveAcademicLink?: ReviewAcademicLinkResolver };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
   adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
   reviewOperationalLog?: ReturnType<typeof createReviewOperationalLog>;
+  mentorOperationalLog?: ReturnType<typeof createMentorOperationalLog>;
 };
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
@@ -83,6 +88,10 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
     write: (event) => adminAuditLog.write(event),
   }) : undefined;
+  const adminMentorEventsHandler = options.mentorOperationalLog ? createAdminMentorEventsHttp(options.mentorOperationalLog, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
+    getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+    write: (event) => adminAuditLog.write(event),
+  }) : undefined;
   const adminTeachersHandler = createAdminTeachersHttp(
     createAdminTeachersService(createAdminTeachersRepository(database)),
     async (request) => options.auth ? options.auth.adminCheck(request) : null,
@@ -99,6 +108,10 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
   const mentorHandler = options.mentor ? createMentorHttp(database, options.mentor, {
     ...(options.auth ? { auth: options.auth } : {}),
     ...(options.logFailure ? { logFailure: options.logFailure } : {}),
+    ...(options.mentorOperationalLog ? { logEvent: (event: MentorOperationalEvent) => {
+      options.mentorOperationalLog?.record(event);
+      console.log(JSON.stringify(event));
+    } } : {}),
   }) : undefined;
   const mentorControlHandler = options.mentor ? createMentorControlHttp(database, options.auth) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
@@ -121,6 +134,8 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
     if (await assignmentHandler(request, response) === "handled") return;
+    // Review has a teacher classroom route; dispatch it before Classroom Studio's prefix catch-all.
+    if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     if (classroomHandler && await classroomHandler(request, response) === "handled") return;
     if (await technologyCatalogHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
@@ -140,11 +155,11 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (mentorControlHandler && await mentorControlHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     if (trainerHandler && await trainerHandler(request, response) === "handled") return;
-    if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminQueueSummaryHandler(request, response) === "handled") return;
     if (await adminAuditLogHandler(request, response) === "handled") return;
     if (adminReviewEventsHandler && await adminReviewEventsHandler(request, response) === "handled") return;
+    if (adminMentorEventsHandler && await adminMentorEventsHandler(request, response) === "handled") return;
     if (await adminTeachersHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
@@ -152,4 +167,4 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
   };
 }
 
-export function createApiServer(database: PrismaClient, options: Omit<HttpOptions, "review"> & { review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver } } = {}) { return createServer(createHttpHandler(database, options)); }
+export function createApiServer(database: PrismaClient, options: HttpOptions = {}) { return createServer(createHttpHandler(database, options)); }

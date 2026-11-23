@@ -190,6 +190,14 @@
   font-size: var(--f16-type-meta, .875rem);
 }
 
+.mentor-saved-proposals__mission {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line, #314363);
+  border-radius: 999px;
+  color: var(--text, #F3F7FF);
+  font-size: var(--f16-type-meta, .875rem);
+}
+
 /* Mentor visual pass: keep the same stage flow, with the form as the main surface. */
 .mentor-screen.student-screen {
   box-sizing: border-box;
@@ -616,6 +624,8 @@
 .mentor-skills__section-heading h2 { margin: 0; color: #f7f9ff; font-size: clamp(1.02rem, 2vw, 1.25rem); }
 .mentor-skills__section-heading p { margin: .18rem 0 0; color: #c5d5ee; font-size: .92rem; line-height: 1.4; }
 .mentor-skills__required .mentor-skills__section-heading p { max-width: 70ch; }
+.mentor-skills__required-list { margin: 0; padding-left: 1.35rem; color: #e9f2ff; line-height: 1.5; }
+.mentor-skills__required-list li + li { margin-top: .2rem; }
 .mentor-skills__classroom { display: grid; gap: .3rem; color: #d7e7ff; font-weight: 700; }
 .mentor-skills__classroom select {
   width: 100%; min-height: 2.65rem; padding: .55rem .75rem; border: 1px solid #526f99; border-radius: .65rem;

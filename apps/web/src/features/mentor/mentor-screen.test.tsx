@@ -37,6 +37,27 @@ const proposal = {
   updatedAt: "2026-11-04T12:00:00.000Z",
 };
 
+const linkedProposal = {
+  ...proposal,
+  assignmentVersionId: "assignment-version-1",
+  assignmentContext: {
+    assignmentVersionId: "assignment-version-1",
+    mentorContext: {
+      version: 4,
+      publishedAt: "2026-11-03T12:00:00.000Z",
+      config: {
+        subject: "Programación Móvil",
+        theme: "Navegación con Expo Router",
+        assignment: "Diseña una navegación comprobable.",
+        expectedLevel: "Tercero de bachillerato",
+        rubricTitle: "Rúbrica privada del docente",
+        criteria: [{ id: "private-criterion", title: "Criterio privado", description: "Detalle privado", weight: 100 }],
+        requirements: ["Requisito privado"],
+      },
+    },
+  },
+};
+
 const evaluation = {
   evaluationId: "evaluation-1",
   proposalId: "proposal-1",
@@ -102,6 +123,37 @@ afterEach(() => {
 });
 
 describe("MentorScreen", () => {
+  it("shows mission-required skills read-only without merging them into the optional classroom selection", async () => {
+    const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación fijada" };
+    const optionalSkill = { ...skillFixture(2), id: "optional-1", name: "Accesibilidad" };
+    const loadSkills = vi.fn(async () => ({ ok: true as const, data: [requiredSkill, optionalSkill] }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} requiredMissionSkills={["Navegación fijada"]} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    const required = mountedContainer.querySelector(".mentor-skills__required");
+    expect(required?.textContent).toContain("Navegación fijada");
+    expect(required?.textContent).not.toContain("Sin asignación");
+    expect(required?.querySelectorAll("button")).toHaveLength(0);
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent ?? "").not.toContain("Navegación fijada");
+
+    const optionalButtons = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__option"));
+    expect(optionalButtons.map((button) => button.lastElementChild?.textContent?.trim())).toEqual(["Accesibilidad"]);
+    const optional = optionalButtons[0];
+    await act(async () => optional?.click());
+    expect(required?.textContent).toContain("Navegación fijada");
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Accesibilidad");
+
+    await act(async () => mountedContainer?.querySelector<HTMLFormElement>("#mentor-proposal-form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(actions.onSave).toHaveBeenCalledWith(expect.objectContaining({
+      proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["optional-1"] } }),
+    }));
+  });
+
   it("muestra la evaluación con navegación horizontal, resumen real y rueda derivada del borrador", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
@@ -433,6 +485,49 @@ describe("MentorScreen", () => {
     expect(html).toContain("Abrir propuesta");
   });
 
+  it("identifies each saved proposal in its open button's accessible name", () => {
+    const untitledProposal = { ...proposal, id: "proposal-2", proposal: { ...proposal.proposal, title: "" } };
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[proposal, untitledProposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain('aria-label="Abrir propuesta: Diario de plantas"');
+    expect(html).toContain('aria-label="Abrir propuesta: Borrador sin título"');
+  });
+
+  it("shows the saved mission theme and pinned Mentor context version without private rubric details", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain("Misión vinculada");
+    expect(html).toContain("Navegación con Expo Router");
+    expect(html).toContain("Contexto Mentor v4");
+    expect(html).not.toContain("Rúbrica privada del docente");
+    expect(html).not.toContain("Criterio privado");
+    expect(html).not.toContain("Requisito privado");
+  });
+
+  it("shows a linked mission without inventing context when the saved context is unavailable", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[{ ...proposal, assignmentVersionId: "assignment-version-1", assignmentContext: null }]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain("Misión vinculada");
+    expect(html).toContain("contexto académico no disponible");
+    expect(html).not.toContain("Contexto Mentor v");
+    expect(html).not.toContain("Navegación con Expo Router");
+  });
+
+  it("does not show a mission marker for a proposal without an assignment", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[proposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).not.toContain("Misión vinculada");
+    expect(html).not.toContain("Contexto Mentor v");
+  });
+
   it("does not report an empty list when saved proposals failed to load", async () => {
     const retry = vi.fn();
     mountedContainer = document.createElement("div");
@@ -463,18 +558,32 @@ describe("MentorScreen", () => {
     expect(onOpenProposal).toHaveBeenCalledWith(proposal);
   });
 
-  it("recovers an evaluation when reopening a saved proposal", async () => {
+  it("shows the saved context and recovers its persisted evaluation when reopening a linked proposal", async () => {
     const recover = vi.fn(async () => ({ ok: true as const, data: evaluation }));
+    const onOpenProposal = vi.fn();
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => {
+      mountedRoot?.render(<MentorScreen key="new-proposal" {...actions} savedProposals={[linkedProposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />);
+    });
+
+    expect(mountedContainer.textContent).toContain("Navegación con Expo Router");
+    expect(mountedContainer.textContent).toContain("Contexto Mentor v4");
+    const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
+    await act(async () => open?.click());
+    expect(onOpenProposal).toHaveBeenCalledOnce();
+    expect(onOpenProposal).toHaveBeenCalledWith(linkedProposal);
+    const reopenedProposal = onOpenProposal.mock.calls[0]?.[0];
+    expect(reopenedProposal).toBeDefined();
+    if (!reopenedProposal) throw new Error("Abrir propuesta no entregó la propuesta seleccionada.");
+    await act(async () => {
       mountedRoot?.render(
-        <MentorScreen {...actions} initialProposal={proposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
+        <MentorScreen key={reopenedProposal.id} {...actions} initialProposal={reopenedProposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
       );
     });
 
-    expect(recover).toHaveBeenCalledWith(proposal.id);
+    expect(recover).toHaveBeenCalledWith(reopenedProposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
   });
 

@@ -15,9 +15,11 @@ import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./features
 import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
 import { createPrismaReviewStore } from "./features/review/prisma-store.js";
+import { createReviewAcademicLinkResolver } from "./features/review/academic-link.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
 import { createReviewOperationalLog } from "./features/review/operational-log.js";
+import { createMentorOperationalLog } from "./features/mentor/operational-log.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -44,6 +46,7 @@ const mentor = createMentorService({
 
 const reviewStore = createPrismaReviewStore(database);
 const reviewOperationalLog = createReviewOperationalLog();
+const mentorOperationalLog = createMentorOperationalLog();
 function writeReviewEvent(event: Parameters<typeof writeReviewOperationalEvent>[0]) {
   const safeEvent = projectReviewOperationalEvent(event);
   if (!safeEvent) return;
@@ -101,11 +104,14 @@ const betterAuth = config.authEnabled && process.env.BETTER_AUTH_SECRET
   ? createFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
   : undefined;
 const auth = betterAuth ? createFragmentsAuthService(betterAuth, database) : undefined;
+const resolveReviewAcademicLink = createReviewAcademicLinkResolver(database);
 
 const review = {
   store: reviewStore,
   service: reviewService,
   resolveStudentId: async (request: Parameters<NonNullable<typeof auth>['student']>[0]) => (await auth?.student(request))?.id ?? null,
+  resolveTeacherId: async (request: Parameters<NonNullable<typeof auth>['teacherId']>[0]) => (await auth?.teacherId(request)) ?? null,
+  resolveAcademicLink: resolveReviewAcademicLink,
   resolveContext: async (request: Parameters<NonNullable<typeof auth>['student']>[0], input: { owner: string; repo: string }) => {
     const student = await auth?.student(request);
     return student ? {
@@ -113,11 +119,12 @@ const review = {
       rubricVersion: "review-v1",
       evaluatorVersion: "gateway-structured-v2",
       studentId: student.id,
+      ...(student.githubLogin ? { githubLogin: student.githubLogin } : {}),
     } : null;
   },
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });

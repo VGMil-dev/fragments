@@ -27,6 +27,8 @@ import { AdminAuditLogScreen } from "./features/admin-audit-log/AdminAuditLogScr
 import { adminAuditLogApi } from "./features/admin-audit-log/admin-audit-log-api.js";
 import { AdminReviewEventsScreen } from "./features/admin-review-events/AdminReviewEventsScreen.js";
 import { adminReviewEventsApi } from "./features/admin-review-events/admin-review-events-api.js";
+import { AdminMentorEventsScreen } from "./features/admin-mentor-events/AdminMentorEventsScreen.js";
+import { adminMentorEventsApi } from "./features/admin-mentor-events/admin-mentor-events-api.js";
 import { AdminTeachersPanel } from "./features/admin-teachers/AdminTeachersPanel.js";
 import { adminTeachersApi } from "./features/admin-teachers/admin-teachers-api.js";
 import "./features/landing/public-landing-f162.css";
@@ -36,6 +38,15 @@ import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const trainerApi = createTrainerApi();
+const REQUIRED_SKILL_REQUIREMENT_PREFIX = "Habilidad requerida: ";
+
+function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): string[] {
+  const context = proposal.assignmentContext;
+  if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return [];
+  return context.mentorContext.config.requirements.flatMap((requirement) => requirement.startsWith(REQUIRED_SKILL_REQUIREMENT_PREFIX)
+    ? [requirement.slice(REQUIRED_SKILL_REQUIREMENT_PREFIX.length).trim()]
+    : []);
+}
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<AcademicGalleryEntry[]>>({ status: "loading" });
@@ -55,6 +66,9 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const requiredMissionSkills = selectedProposal
+    ? requiredSkillsFromProposalContext(selectedProposal)
+    : selectedAssignment?.requiredSkills.map((skill) => skill.name) ?? [];
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -141,7 +155,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   }, [selectedId]);
 
   useEffect(() => {
-    if (!["/student/mentor", "/student/dashboard", "/student/projects"].includes(path) || !student) return;
+    if (!["/student/mentor", "/student/dashboard", "/student/projects", "/student/review"].includes(path) || !student) return;
     let active = true;
     setProposalsLoading(true);
     setProposalsError(false);
@@ -253,7 +267,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         /> : null}
         {path === "/student/classrooms" ? <StudentClassroomsScreen classrooms={myClassrooms} requests={myClassroomRequests} loading={classroomsLoading} error={classroomsError} onRefresh={() => setClassroomsReload((value) => value + 1)} onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }} /> : null}
         {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
-          {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => <li key={item.id}><span className="student-project-list__cover" aria-hidden="true">✳</span><span><strong>{item.proposal.title || "Borrador sin título"}</strong><small>Borrador guardado · versión {item.version}</small></span><button type="button" onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button></li>)}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
+          {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => <li key={item.id}><span className="student-project-list__cover" aria-hidden="true">✳</span><span><strong>{item.proposal.title || "Borrador sin título"}</strong><small>Borrador guardado · versión {item.version}</small></span><button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button></li>)}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
           <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Crear una propuesta</button>
         </main> : null}
         {path === "/student/submissions" ? <main className="student-portal" aria-labelledby="submissions-title"><p className="student-screen__eyebrow">RESULTADOS</p><h1 id="submissions-title">Mis entregas</h1>
@@ -282,6 +296,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             <MentorScreen
               key={selectedProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
               initialProposal={selectedProposal}
+              requiredMissionSkills={requiredMissionSkills}
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
             savedProposals={ownedProposals}
@@ -324,6 +339,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
+            linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
             onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
@@ -365,6 +381,7 @@ export function App() {
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/audit-log") return <><div id="route-content" tabIndex={-1}><AdminAuditLogScreen api={adminAuditLogApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/review-events") return <><div id="route-content" tabIndex={-1}><AdminReviewEventsScreen api={adminReviewEventsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/mentor-events") return <><div id="route-content" tabIndex={-1}><AdminMentorEventsScreen api={adminMentorEventsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/teachers") return <><div id="route-content" tabIndex={-1}><AdminTeachersPanel api={adminTeachersApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 

@@ -222,3 +222,100 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Fuente de datos: `StudentAssignment` ya contiene ambos números versionados. Sin cambios a contratos, API, rutas, esquema/migraciones, datos productivos o sesiones. No se usó navegador ni se hizo release.
 - Commit de implementación: `c8e222b2d65e77497566e76afa551e51ae3e3c6a`.
 - PR #133 abierto contra `main` (`codex/f18b-student-mission-version`), head de código `e1caa2545d495860faa9d4526fcd7edbcd6cba34`; CI `verify` run `45081014837` SUCCESS. La actualización documental del PR queda en un commit separado, sin cambios de código.
+
+## Aplicación F18.B v0.5.23 y comprobación Ego Lite · 2026-11-22
+
+- PR #133 integrada normalmente en `main` como `411747c5ad55e630d2bb572f2ba71d1d96aba97b`; CI `45081295834` SUCCESS y revisión independiente PASS. Tag anotada `v0.5.23` en el SHA exacto; F14 `45081907608` terminó SUCCESS en verify-build, attest-package y publish-approved-release.
+- Aplicación por el mecanismo pull normal: API/web healthy en imagen `sha-411747c5...`; `/health` status ok/database ready. Bundle cache-bypass `/assets/index-NaEOWqTZ.js` contiene v0.5.23, SHA exacto y la etiqueta de versiones.
+- Ego Lite: perfil estudiante y TaskSpace existentes permanecieron abiertos. `/student/classrooms` muestra Programación Móvil sin misiones publicadas y 0 tarjetas. La etiqueta y su posición fuera del disclosure quedan NO COMPROBADAS porque no hubo una tarjeta que observar. No se guardó ni alteró nada.
+- El recorrido misión→propuesta→Mentor sobre recursos reales y calidad IA siguen NO COMPROBADOS; no se crearon habilidades ni misiones productivas.
+
+## Revalidación del recorrido académico en PostgreSQL desechable · 2026-11-22
+
+- Sobre `fcfe599185dcc4700577159552c8206ac5a08075` se levantó un contenedor PostgreSQL 18.6 temporal, sin volumen y publicado únicamente en `127.0.0.1:55444`. Se aplicaron las cinco migraciones vigentes solo en la base `fragments_test`; `current_database()` confirmó ese nombre antes de ejecutar el test.
+- `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS. Recorrió HTTP: acceso anónimo y docente ajeno denegados, misión v1 publicada, estudiante sin matrícula denegado, matrícula activa y misión visible, draft ligado a `assignmentVersionId`, publicación docente v2 y recuperación/evaluación Mentor fake con snapshot/contexto v1 preservados.
+- La prueba usa auth fixture y `fake/local-heuristic-v1`; confirma integración de rutas/repositorios/PostgreSQL, no Better Auth ni proveedor IA reales. El contenedor temporal se detuvo y eliminó sin volumen persistente.
+- **NO COMPROBADO:** UI con misión activa en Ego Lite, persistencia en producción, Better Auth real y calidad de puntuación IA real. La vista Ego Lite sigue mostrando un aula sin misiones, por lo que el label visual permanece NO COMPROBADO.
+
+## Aserción exacta de versión de contexto en evaluación HTTP · 2026-11-22
+
+- Revisión independiente recomendó reemplazar la aserción `expect.any(Number)` de la evaluación Mentor por la versión exacta fijada en el contexto del borrador. Añadí esa comparación en `academic-flow.integration.test.ts`; tras publicar v2, la respuesta de evaluación debe seguir reportando el contexto Mentor v1 asociado al borrador.
+- PostgreSQL 18.6 desechable, enlazado solo a `127.0.0.1:55444`; `current_database()` fue comprobado por el test y se aplicaron las cinco migraciones vigentes en `fragments_test`.
+- Comando `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 2/2 PASS; `git diff --check` — PASS. El contenedor temporal se detuvo y eliminó; F23 y UX08 quedaron activos.
+- Commit de test: `b06f5e2`. CI run `45084702142` SUCCESS; revisión independiente PASS; PR #138 integrado normalmente como `bc6aaf9487b0710a41e101dfd69bcec5b9433eca`.
+- El test usa HTTP local, auth fixture y Mentor fake. No prueba Better Auth real, proveedor IA real, UI de misión activa ni datos de producción.
+
+## Ego Lite · estado de las aulas sin escritura · 2026-11-22
+
+- Se conservaron abiertas las sesiones y pestañas Estudiante (TaskSpace 46) y Fragments-Docente (TaskSpace 44). Los dashboards y accesos a aulas cargaron sin errores de acceso.
+- Estudiante: Programación Móvil · 2026–2027 muestra matrícula activa y no tiene misiones publicadas. Docente: el dashboard y detalle del aula cargan; se ven las secciones Habilidades y Misiones; “Crear misión” está deshabilitado porque no hay habilidades activas. No se guardaron cambios.
+- El label de versión con una tarjeta real y el recorrido misión→propuesta→Mentor siguen NO COMPROBADOS porque no existe misión publicada. La pestaña original del estudiante que dejó de responder se conservó; la lectura se completó en una pestaña nueva del mismo TaskSpace.
+
+## Continuidad UI — propuestas guardadas con contexto de misión
+
+- PR #141 añade en cada propuesta guardada un marcador de misión vinculada, tema y versión de contexto Mentor. La UI no expone criterios ni rúbrica.
+- Prueba actualizada: 27/27 PASS, typecheck PASS, CI `45089888475` SUCCESS y revisión independiente PASS. Merge normal `073819c31881fd1ae3513bf72a7afe322e5051e6`.
+- Release anotada `v0.5.24` en ese SHA; F14 run `45090388470` SUCCESS. Aplicador normal terminó SUCCESS a 00:54 UTC; API/web healthy en imagen `sha-073819c31881fd1ae3513bf72a7afe322e5051e6`. Salud pública `/health`: `ok`, database `ready`; bundle `/assets/index-C_-XL4FG.js` contiene `v0.5.24` y SHA exacto.
+- NO COMPROBADO: visualización del indicador con una misión productiva activa y evaluación IA real. Ego Lite muestra aula matriculada sin misión/habilidades activas; no se escribieron datos.
+
+## Accesibilidad de acciones en propuestas guardadas · 2026-11-23
+
+- PR #143 corrige nombres accesibles idénticos en acciones «Abrir propuesta». El lector de pantalla identifica la acción y el título, usando «Borrador sin título» cuando corresponde; no cambia el callback ni la identidad usada para recuperar.
+- Regresión TDD fallaba antes del cambio; prueba focal 28/28, typecheck y diff-check PASS. CI `45092564145` SUCCESS, revisión independiente PASS; merge normal `52917ec6fcba790f487a7d2f9807c3c52927400d`.
+- Release anotada `v0.5.25` sobre el SHA exacto; F14 run `45092884337` SUCCESS en los tres jobs. Aplicación automática verificada: API/web healthy en SHA exacto, `/health` público `ok/ready`, bundle `/assets/index-Iviv3wW8.js` confirma versión y SHA.
+- Ego Lite conserva sesiones abiertas en v0.5.23; propuesta visible no está ligada a misión/contexto. Render con datos enlazados sigue NO COMPROBADO; no hubo escrituras académicas.
+
+## Recuperación accesible desde Mis proyectos · v0.5.26 · 2026-11-23
+
+- La observación de Ego Lite identificó que en «Mis proyectos» el botón «Continuar» no distinguía las propuestas. PR #146 añade el título o el fallback «Borrador sin título» al nombre accesible sin alterar la propuesta seleccionada ni su callback.
+- La regresión de composición renderiza la App real en `/student/projects`, verifica nombre/fallback, pulsa «Continuar» y comprueba navegación a Mentor con la misma propuesta y `restoreEvaluation=true`. MentorScreen se simula solo como límite de props; su recuperación interna sigue cubierta por pruebas propias.
+- Prueba focal 2/2 PASS; `pnpm --filter @fragments/web typecheck` y `git diff --check` PASS; CI `45095304380` SUCCESS y revisión independiente PASS sobre head `437bdc30398e09da9921960af0dc4e9ec8b2c29f`. PR integrada mediante merge normal en `1aa0690fa2573d18cd2fa46c2a5780833e523bb5`.
+- F14 tag anotada `v0.5.26` en el SHA exacto; run `45095642953` completó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. El sondeo/aplicador normal terminó con `Result=success`; verificación pública: `/health` `ok/ready`, bundle `/assets/index-CyC9Ismb.js` incluye `v0.5.26` y SHA completo exacto.
+- Ego Lite posterior al despliegue confirmó `v0.5.26`: el botón único anuncia «Continuar propuesta:» con el título y navega a Mentor mostrando la misma propuesta. La pestaña nueva y las sesiones existentes quedaron abiertas; no hubo escrituras.
+- Al continuar, Mentor intentó GET `/api/proposals/:proposalId/review` y recibió 404 porque no existe evaluación persistida para la propuesta. Esto confirma el intento de restauración, no la recuperación de un resultado.
+- **NO COMPROBADO:** recuperación de evaluación persistida, handoff con una misión vinculada, identidad cruzada y calidad de puntuación IA. El test de App comprueba `restoreEvaluation=true` en el límite de Mentor simulado; no sustituye una recuperación evaluativa end-to-end en Ego Lite.
+
+## Hotfix — congelar asunto del aula en versiones de misión · 2026-11-23
+
+- Hallazgo: `classroom.subject` se puede editar después de publicar una misión y se usaba al reconstruir `mentorContext` tanto para estudiante/propuesta recuperada como para evaluar. Así, una misión y propuesta v1 podían cambiar de asignatura sin cambiar su versión publicada.
+- TDD: la prueba focal de `mentor-context.test.ts` falló antes del fix: esperaba el asunto `Programación móvil` del snapshot y recibió `Asignatura editada después de publicar`.
+- Fix F18.B: la publicación captura el asunto de aula en un campo interno del snapshot JSON; el compositor usa ese valor fijado para las lecturas y evaluación Mentor. Los DTO docente/estudiante retiran el campo interno y no cambia ningún contrato ni migración.
+- Pruebas: `pnpm --filter @fragments/api exec vitest run src/features/assignments/mentor-context.test.ts src/features/assignments/repository.test.ts --maxWorkers=1` — 9/9 PASS; `pnpm --filter @fragments/api typecheck` — PASS.
+- Integración HTTP PostgreSQL: contenedor PostgreSQL 18.6 efímero, sin volumen, publicado solo en `127.0.0.1:55445`; `current_database()` se comprobó como `fragments_test`; se desplegaron las cinco migraciones vigentes. `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts --maxWorkers=1` — 3/3 PASS. La prueba edita el asunto después de publicar v2 y verifica el asunto original en el listado estudiantil, propuesta recuperada y evaluación HTTP del snapshot v1. El contenedor se detuvo y eliminó.
+- `git diff --check` — PASS. Sin producción, proveedores pagados ni sesiones Ego Lite.
+- Límite legacy: snapshots publicados antes de este cambio no contienen el asunto histórico y mantienen el fallback al asunto actual; no existe evidencia suficiente para reconstruir su valor original sin una fuente histórica o una migración/backfill con datos confiables.
+- Commit de implementación local `49e1a7ad41b5b38e96a7e3ff3bc58ff4a465752c` en `codex/f18b-proposal-recovery-evidence`; sin push.
+
+## Merge y validación funcional local · v0.5.30 · 2026-11-23
+
+- PR #154 `fix(F18.B): conserva la asignatura en el snapshot de misión` se integró mediante merge normal en `863dd4fde725a038fd2a181f985d504bc0a8ad83`; CI run `45113979791` SUCCESS. F14 publicó y aplicó `v0.5.30` sobre el SHA exacto; ver `task-list/F14/evidencie.md`.
+- Ego Lite QA local sintética en TaskSpaces preservados 44 (docente) y 46 (estudiante): docente creó y publicó misión v1 con habilidad requerida; estudiante vio «Misión publicada v1 · Contexto Mentor v1», abrió Mentor, guardó una propuesta ficticia y tras recargar la recuperó. GET local verificó `assignmentVersionId`, contexto v1, tema y habilidad requerida. No se cerraron pestañas existentes.
+- Sin evaluación IA ni llamadas pagadas, sin escrituras productivas. Prueba unitaria/regresión 9/9, integración HTTP/PostgreSQL efímera `fragments_test` 3/3, API typecheck y `git diff --check` PASS.
+- Los snapshots publicados antes del fix no conservan asunto histórico; usan el fallback al asunto actual y no se puede reconstruir el pasado sin una fuente confiable. Evaluación IA real, datos de misión en producción e identidad cruzada siguen NO COMPROBADOS.
+# Habilidades requeridas del snapshot en Mentor · 2026-11-23
+
+- TDD: añadí primero pruebas para inicio de misión, recuperación con contexto fijado, fallback de Mentor general y separación de selección opcional. Las pruebas de composición/UI fallaron inicialmente porque la lista requerida no llegaba a Mentor.
+- Implementación: `App` pasa los nombres de `selectedAssignment.requiredSkills`; al recuperar, deriva solo los requisitos con prefijo exacto `Habilidad requerida: ` cuando `assignmentContext.assignmentVersionId` coincide con el de la propuesta. `MentorScreen` los presenta como lista de referencia, separada de la selección editable del catálogo.
+- Prueba focal: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 33 pruebas PASS.
+- `pnpm --filter @fragments/web typecheck` — PASS. `git diff --check` — PASS.
+- Sin API/contratos, backend, evaluación ni datos productivos. QA Ego Lite con autenticación sintética local en `127.0.0.1:5174`: misión v1/Contexto v1 muestra la habilidad requerida fijada/read-only, 1 requerida y 0 controles; `Quiero reforzar` aparece separado; Mentor general muestra “Sin asignación”. No se guardó ni evaluó. Sesiones conservadas.
+- Límite: el contexto recuperado expone requisitos como texto, no como un campo estructurado de habilidades. La extracción requiere el prefijo exacto y la coincidencia de versión; no se valida IA ni recorrido remoto.
+- Commit de implementación: `0e47317` en `codex/f18b-required-mission-skills`.
+
+## Regresión por contexto vinculado a otra versión · 2026-11-23
+
+- Añadí una prueba de composición para propuesta ligada a `mission-v1` cuyo `assignmentContext` apunta a `mission-v2`; Mentor no debe mostrar habilidades de ese contexto obsoleto.
+- Mutación de control: al retirar temporalmente la comparación de `assignmentVersionId`, la prueba falla y muestra `No debe mostrarse`; restaurado el guard, la regresión pasa.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS. Typecheck y `git diff --check` PASS.
+
+## Evitar duplicar habilidades requeridas en el selector optativo · 2026-11-23
+
+- QA visual detectó que una habilidad fijada en el snapshot también aparecía como botón optativo cuando pertenecía al catálogo activo.
+- TDD: amplié la prueba de Mentor con el catálogo que incluye “Navegación fijada” (requerida) y “Accesibilidad” (optativa). Antes del ajuste, fallaba mostrando ambas como botones; después, solo permite seleccionar “Accesibilidad” y el payload contiene únicamente su ID.
+- El filtro usa el nombre normalizado del snapshot para no ocultar otras opciones autorizadas; la misma prop se usa en inicio y recuperación. Se conserva la regresión de contexto con `assignmentVersionId` discrepante.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS; typecheck y `git diff --check` PASS.
+- Commit de corrección local: `37b518d12dae9c26ad13137e89ee8add83e31d75` en `codex/f18b-required-mission-skills`.
+- PR #157 integrada normalmente como `376bb94bb9961b11cd9e70c4e8e5c43e0d67539a`; CI `45119166378` SUCCESS. F14 publicó y aplicó `v0.5.31` sobre ese SHA exacto; aplicación y healthchecks están documentados en F14.
+- Reejecución independiente después del merge: suite focal web 34/34 PASS, web typecheck PASS y `git diff --check` PASS.
+- Ego Lite posterior al filtro: en la misión QA existente, “Navegación móvil QA” sigue visible en el bloque de habilidades requeridas y ya no aparece como optativa. No se guardó ni evaluó. La misión no ofrecía otra habilidad opcional, por lo que la selección visual de una optativa distinta queda NO COMPROBADA; la prueba de componente confirma que “Accesibilidad” distinta sigue disponible y que su ID es el único que se enviaría.
+- TaskSpaces 44 (docente) y 46 (estudiante), pestañas y sesiones se conservaron. Sin recursos nuevos, datos productivos ni llamadas pagadas. Calidad Mentor/Review real, recuperación evaluativa end-to-end, recorridos con misión productiva e identidad cruzada siguen NO COMPROBADOS.
