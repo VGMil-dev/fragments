@@ -38,14 +38,27 @@ describe("StudentDashboard", () => {
   });
 
   it("surfaces the published classroom mission as the next step when no proposal exists", () => {
-    const mission = { id: "mission-v4", createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"] } as StudentAssignment;
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[mission]} />);
 
     expect(html).toContain("Misión publicada · Programación Móvil");
+    expect(html).toContain("Misión publicada v4");
+    expect(html).toContain("Contexto Mentor v7");
+    expect(html).toContain("Habilidades obligatorias");
+    expect(html).toContain("Navegación móvil");
     expect(html).toContain("Navegación con Expo");
     expect(html).toContain("Implementa una navegación observable");
     expect(html).toContain("Iniciar misión en Mentor");
     expect(html).not.toContain("Crear mi primer proyecto");
+  });
+
+  it("keeps mission metadata hidden when a saved proposal has priority", () => {
+    const mission = { id: "mission-v1", version: 1, mentorContextVersion: 2, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
+
+    expect(html).toContain("Bitácora de jardín");
+    expect(html).not.toContain("Misión publicada v1");
+    expect(html).not.toContain("Habilidades obligatorias");
   });
 
   it("summarizes authorized classes and pending enrollment truthfully", () => {

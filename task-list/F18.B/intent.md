@@ -103,6 +103,13 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - No objetivos: cambiar creación/edición de propuestas, contratos, rutas, datos, versionado o API.
 - Owner de tarea: PLANNER. Implementación local a `StudentAssignmentsList` y su prueba existente.
 
+## Incremento — Dashboard como centro de la misión publicada
+
+- Problema: la acción de iniciar una misión en el Dashboard mostraba el título y primer objetivo, pero no las versiones ni las habilidades obligatorias que acompañan el recorrido a Mentor.
+- Objetivo: hacer visible el contexto académico inmutable antes de entrar a Mentor, usando el mismo objeto `StudentAssignment` que recibe el CTA.
+- Alcance: presentación del snapshot en el Dashboard estudiantil; el borrador más reciente conserva prioridad. No cambiar APIs, contratos, persistencia, permisos ni datos.
+- Owner: PLANNER, UI en `StudentDashboard` y pruebas de componente.
+
 ## Incremento de continuidad — limpiar selección de misión al volver a Mentor
 
 - Problema: al volver desde una propuesta iniciada con misión, la selección de la misión podía sobrevivir al cambio de ruta. Abrir Mentor desde la navegación podía asociar por error una propuesta nueva a la versión anterior.

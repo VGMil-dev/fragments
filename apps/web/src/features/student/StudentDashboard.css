@@ -123,6 +123,32 @@
   color: #dce7f7;
 }
 
+.student-dashboard--pixel .student-dashboard__mission-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  margin: .85rem 0 0;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-snapshot > div {
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-snapshot dt {
+  color: var(--dashboard-muted);
+  font-size: .76rem;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-snapshot dd {
+  margin: 0;
+  color: var(--dashboard-text);
+  font-size: .9rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .student-dashboard--pixel .student-dashboard__project-action .button--primary {
   min-height: 48px;
   padding: .7rem 1rem;

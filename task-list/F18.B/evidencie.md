@@ -418,4 +418,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Desde la sesión existente Fragments-Estudiante se abrió `/student/classrooms` en modo solo lectura. Al menos una matrícula activa mostró una misión QA publicada v1, contexto Mentor v1 y una habilidad requerida autorizada.
 - El disclosure «Ver descripción» de la habilidad estaba cerrado (`details.open=false`). En otra aula activa visible no se mostraron habilidades autorizadas ni misiones publicadas.
 - La observación confirma presentación productiva de snapshot, versión y habilidad en Mis aulas. No se inició ni guardó una propuesta, no se pulsó «Evaluar propuesta», no se realizaron llamadas IA y no se escribieron datos.
-- No valida el paso de esa misión hasta el formulario Mentor ni la salida/puntuación semántica. Calidad Mentor/Review, Review productiva enlazada en Trainer, Galería e identidad cruzada siguen **NO COMPROBADAS**. Las pestañas y sesiones existentes se conservaron.
+- En aquella primera observación aún no se había abierto la misión en Mentor; la comprobación posterior de esa transición se registra en la sección siguiente. Calidad semántica Mentor/Review, Review productiva enlazada en Trainer, Galería e identidad cruzada siguen **NO COMPROBADAS**. Las pestañas y sesiones existentes se conservaron.
+
+## Dashboard — resumen del snapshot de misión · 2026-11-23
+
+- Commit funcional `87cbf51ef5e62beaae4c096b319f15463ba82d5e`: el Dashboard muestra versión publicada, versión de contexto Mentor y habilidades obligatorias desde el mismo `StudentAssignment` del CTA. Se mantiene la prioridad del borrador más reciente y no se consulta el catálogo para reconstruir el snapshot. Sin contratos, API, rutas, persistencia o datos.
+- TDD: el test nuevo primero falló porque no existía el resumen de versión (`Misión publicada v4`); después del cambio pasó.
+- Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx` — 7/7 PASS; `pnpm --filter @fragments/web test` — 49 archivos, 235/235 PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS; `git diff --check` PASS.
+- Revisión reflexiva estática independiente: PASS, sin hallazgos; confirmó prioridad del borrador y uso del snapshot sin mezclar contexto actual.
+- Ego Lite verificó en la sesión existente v0.5.46 el recorrido Mis aulas → misión QA → Mentor, con misión v1, contexto v1 y skill requerida fijada; borrador al 0 %, sin guardar, evaluar ni invocar IA. Esta comprobación es previa al nuevo resumen del Dashboard; su visualización en producción queda pendiente del PR/release F14 y QA posterior.
+- F18.B permanece abierta: calidad real Mentor/Review, Review productiva enlazada en Trainer, Gallery, e identidad cruzada siguen NO COMPROBADAS.
