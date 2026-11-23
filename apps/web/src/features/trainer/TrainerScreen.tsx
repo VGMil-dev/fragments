@@ -20,6 +20,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   const [category, setCategory] = useState<keyof typeof categoryLabels | null>(null);
   const [bankSize, setBankSize] = useState<number | null>(null);
   const [shownHints, setShownHints] = useState(0);
+  const [recordedChallengeId, setRecordedChallengeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [drawing, setDrawing] = useState(false);
@@ -81,7 +82,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
     if (!selectedReview || drawing) return;
     setDrawing(true); setMessage(""); setShownHints(0);
     const result = await api.draw(selectedReview);
-    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); }
+    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); setRecordedChallengeId(null); }
     else setMessage(result.error.message);
     setDrawing(false);
   }
@@ -93,6 +94,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
     setHistory((current) => [result.data, ...current].slice(0, 200));
     setHistoryState("ready");
     setHistoryError("");
+    setRecordedChallengeId(challenge.id);
     setMessage(`Progreso guardado: ${statusLabels[status].toLowerCase()}.`);
   }
 
@@ -123,7 +125,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         <div className="trainer-section-kicker"><span>01</span><p>FUENTE DE PRÁCTICA</p></div>
         <label htmlFor="trainer-review">Elige el análisis que quieres practicar</label>
         <div className="trainer-controls__row">
-          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading}>
+          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading}>
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
         </div>
@@ -187,11 +189,21 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         {historyState === "ready" && !history.length ? <p className="trainer-empty">Aún no hay intentos registrados para esta revisión y sesión.</p> : null}
       </section> : null}
 
-      <aside className="trainer-next" aria-label="Próxima capacidad">
+      {challenge ? <aside className="trainer-next" aria-label="Siguiente paso">
+        <div className="trainer-next__icon" aria-hidden="true"><Code2 size={19} /></div>
+        <div><p className="trainer-next__eyebrow">SIGUIENTE PASO</p>
+          <h2>{recordedChallengeId === challenge.id ? "Continúa desde esta revisión" : "Registra cómo te fue"}</h2>
+          <p>{recordedChallengeId === challenge.id
+            ? "Intento guardado en el historial de práctica. Puedes volver a sortear desde los mismos hallazgos."
+            : "Cuando termines de observar el código, registra tu estado para incorporarlo al historial real."}</p>
+          <small>La autoevaluación guiada sigue en preparación.</small>
+        </div>
+        {recordedChallengeId === challenge.id ? <button className="trainer-next__action" type="button" onClick={() => void draw()} disabled={drawing}>{drawing ? "Buscando reto…" : "Volver a sortear desde este análisis"}</button> : <span className="trainer-next__status">Registra tu intento arriba</span>}
+      </aside> : <aside className="trainer-next" aria-label="Próxima capacidad">
         <div className="trainer-next__icon" aria-hidden="true"><Code2 size={19} /></div>
         <div><p className="trainer-next__eyebrow">SIGUIENTE ETAPA</p><h2>Autoevaluación guiada</h2><p>La autoevaluación guiada está en preparación; todavía no forma parte de Trainer.</p></div>
         <span className="trainer-next__status">En preparación</span>
-      </aside>
+      </aside>}
     </main>
   );
 }

@@ -40,3 +40,11 @@ PR #183 se integró por merge normal como `c6e8a77f274481c7199b207c0bd75c4f1605f
 - Solo se observó el estado vacío auténtico disponible; Review vinculada, reto real, pistas e historial poblado: **NO COMPROBADOS** en producción.
 - No se hicieron escrituras ni llamadas de evaluación a proveedores externos.
 - Revisión reflexiva confirmó los estados de carga/error/vacío; no ejecutó tests.
+
+## Incremento — siguiente paso de práctica · 2026-11-23
+
+- Cuando el API confirma que se registró el intento, el CTA permite volver a sortear desde la Review seleccionada. Antes de eso invita a registrar el intento; no inventa XP, racha, puntuación ni garantiza un reto diferente.
+- Conserva source Review, commit, habilidades, reto observable, pistas e historial del API. No añade ruta, contrato, persistencia, reto fake ni ejecución de código del estudiante.
+- Commit `a720a6f70b1e333fab85f5b419bc10e824072eba` (`feat(F10): encadenar la práctica desde Trainer`), sobre `d5d25527b67e9c4a3ed799154f76c187e351ece5`.
+- TDD: prueba de recorrido falló antes del cambio y luego cubrió selección/source, commit, habilidad, challenge, hint, intento/historial y sorteo posterior. Focal **7/7 PASS**; typecheck y `git diff --check` PASS; worktree limpio.
+- PR, CI, QA Ego Lite y release F14: pendientes. La pantalla sigue candidata y la respuesta visual de QA está **NO COMPROBADA**.
