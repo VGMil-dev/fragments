@@ -219,6 +219,23 @@ describe("MentorScreen", () => {
     expect(idea?.querySelector(".mentor-stage-nav__state")?.textContent).toBe("Pendiente");
   });
 
+  it.each([
+    ["título", { title: "T".repeat(161) }],
+    ["propósito", { purpose: "P".repeat(1001) }],
+  ])("mantiene Idea pendiente cuando el %s excede su límite", async (_field, values) => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    const invalidIdea = { ...proposal, proposal: { ...proposal.proposal, ...values } };
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={invalidIdea} onBack={vi.fn()} />));
+
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => context?.click());
+
+    const idea = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Idea"));
+    expect(idea?.getAttribute("aria-label")).toBe("Idea: Pendiente");
+  });
+
   it("mantiene la etapa cuando falla Guardar y continuar", async () => {
     const onSave = vi.fn(async () => ({ ok: false as const, error: { code: "UNAVAILABLE", message: "Temporalmente no disponible." } }));
     mountedContainer = document.createElement("div");
