@@ -127,6 +127,14 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - El corpus real disponible sigue sin outputs Review ni manifest: A/B/C permanecen **BLOCKED**. No se ejecutaron proveedores, llamadas externas ni código de estudiantes; no se tocaron prompts/rúbricas.
 - Commits locales: `9d75e4f` (`test(F25): compara hallazgos con referencia A-B-C`) y `69bc4c3` (`fix(F25): endurece provenance de outputs fake`). Rama `codex/f25-offline-response-validator`; cambios aún no publicados.
 
+## Clasificación offline de hallazgo y cita no listados · 2026-11-23
+
+- Caso A: el provider fake local `missing_file` genera un finding `missing-file` con cita `src/invented.ts`; el fixture A lista solo `App.tsx` en `evidence` y no tiene ese ID en `behaviorReference`.
+- `classifyReferenceBehaviors` ahora informa ese ID como `unclassifiedFindings` y la ruta como `citationsNotInEvidenceList`. Es una comprobación de pertenencia al array `evidence` del fixture, no prueba que el archivo no exista, que las líneas/digest correspondan ni que el hallazgo sea semánticamente correcto.
+- La ausencia de outputs persistidos se conserva como `BLOCKED` (`missing_persisted_output`) para A/B/C. `qualityComparison: NOT_PERFORMED`, `scoreComputed: false`, `semanticValidity: NOT_VALIDATED`.
+- Pruebas y typecheck: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **19/19**; `pnpm typecheck` — exit 0, **5 tareas correctas**; `node evals/scripts/compare-review-behaviors.mjs` — exit 0, A/B/C `BLOCKED`; `git diff --check` — exit 0.
+- No hubo llamadas externas, secretos, proveedor ni ejecución de código estudiantil. Calidad real Mentor/Review sigue **NO COMPROBADA**.
+
 ## Comprobación offline final del corpus A/B/C — 2026-11-22
 
 - Se revisó el árbol versionado de `origin/main` tras integrar PR #114. `evals/fixtures/fragments-test-commits.json` contiene SHA y metadata `verified/notPresent/behaviorReference`, pero no salidas `reviewOutput` completas; no hay manifest/export autorizado del corpus.
