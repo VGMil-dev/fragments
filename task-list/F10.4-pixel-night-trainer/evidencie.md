@@ -47,4 +47,11 @@ PR #183 se integró por merge normal como `c6e8a77f274481c7199b207c0bd75c4f1605f
 - Conserva source Review, commit, habilidades, reto observable, pistas e historial del API. No añade ruta, contrato, persistencia, reto fake ni ejecución de código del estudiante.
 - Commit `a720a6f70b1e333fab85f5b419bc10e824072eba` (`feat(F10): encadenar la práctica desde Trainer`), sobre `d5d25527b67e9c4a3ed799154f76c187e351ece5`.
 - TDD: prueba de recorrido falló antes del cambio y luego cubrió selección/source, commit, habilidad, challenge, hint, intento/historial y sorteo posterior. Focal **7/7 PASS**; typecheck y `git diff --check` PASS; worktree limpio.
-- PR, CI, QA Ego Lite y release F14: pendientes. La pantalla sigue candidata y la respuesta visual de QA está **NO COMPROBADA**.
+- Estado previo a integración; ver cierre factual de v0.5.45 a continuación. La pantalla sigue candidata.
+
+## Cierre del siguiente paso de práctica — v0.5.45 · 2026-11-23
+
+- PR [#198](https://github.com/VGMil-dev/fragments/pull/198) merge normal `9ce99253a174ede418c15bc592016decf4948613`; CI actualizado sobre la base actual `45224329236` PASS. Focal 7/7, typecheck, diff-check y revisión reflexiva independiente PASS.
+- F14 run `45224953451` SUCCESS; health público `ok` y DB `ready`. Bundle `index-CnhVRAW5.js` contiene v0.5.45 y el SHA integrado exacto.
+- Ego Lite solo lectura: Trainer cargó estado vacío real, sin alertas ni opción Reintentar; cinco viewports sin overflow, foco visible de 3 px a 1024 y reduced-motion reconocida. Sin escrituras.
+- No había Review activa; origen real, reto, pistas, historial poblado y nuevo sorteo en producción **NO COMPROBADOS**. No se usó IA. Zoom 200 %, contraste formal y lector de pantalla siguen **NO COMPROBADOS**.

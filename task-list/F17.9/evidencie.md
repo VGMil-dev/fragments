@@ -52,6 +52,12 @@
 - Corrección: `completedStage(0)` usa ahora los mismos límites por campo. No cambia guardado, avance, persistencia, rutas, contratos ni API.
 - Commit `cfef9a65e522039060f5ed19d534652b84ad432a` (`fix(mentor): alinear estado de Idea con sus límites`), rama `codex/pixel-night-mentor-redesign` sobre `d5d25527b67e9c4a3ed799154f76c187e351ece5`.
 - TDD: dos regresiones por título 161 y propósito 1001; antes del fix ambas mostraban el estado incorrecto. Verificación fresca del commit: `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 34/34 PASS; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check origin/main...HEAD` PASS. Revisión reflexiva independiente PASS.
-- PR, CI, revisión visual Ego Lite y F14 para este cambio: pendientes. La vista sigue candidata y no se declara validada visualmente.
+- Estado previo a integración; ver cierre factual de v0.5.45 a continuación. La vista sigue candidata y no se declara validada visualmente.
+
+## Cierre del fix de límites de Idea — v0.5.45 · 2026-11-23
+
+- PR [#196](https://github.com/VGMil-dev/fragments/pull/196) merge normal `5be6f3d10ae52766ad35e82119409064982f289e`; CI `45222727471` PASS. TDD focal 34/34, typecheck, diff-check y revisión reflexiva PASS.
+- F14 run `45224953451` SUCCESS; la release v0.5.45 contiene el merge final `9ce99253a174ede418c15bc592016decf4948613`. Health público `ok`, DB `ready`; bundle `index-CnhVRAW5.js` verificó tag y SHA exactos.
+- Mentor post-release **NO COMPROBADO**: la sesión abierta tenía un input divergente del default y un bundle anterior; no se recargó para no perder posibles cambios sin guardar. No se escribió ni evaluó nada.
 
 - Notion F16, F17 y F10 actualizado con merge/release, QA observada y límites NO COMPROBADOS.

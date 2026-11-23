@@ -32,4 +32,11 @@ Release F14 `v0.5.39`, aplicada con imagen/SHA `e202ec6302b9f35727673e2c6f34a74b
 - Renderiza nombre, materia y grupo de las aulas que ya entrega el DTO, dentro de la tarjeta «En tus aulas». No añade endpoint, estado, escritura ni métrica.
 - Commit de implementación `fd5050aca6c976cc06d946397e57ba854ae48661` (`feat(F17): muestra aulas reales en dashboard`), sobre `d5d25527b67e9c4a3ed799154f76c187e351ece5`.
 - Prueba focal `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx`: **5/5 PASS**. Typecheck y `git diff --check`: PASS; worktree limpio tras el commit.
-- PR, CI, Ego Lite y release F14: pendientes. No declarar validación visual ni despliegue.
+- Estado previo a integración; ver cierre factual de v0.5.45 a continuación.
+
+## Cierre del listado de aulas reales — v0.5.45 · 2026-11-23
+
+- PR [#197](https://github.com/VGMil-dev/fragments/pull/197) merge normal `54cff0fbb71a615ac41a80838ee51ccb90aaa075`; CI actualizado sobre la base actual `45223579794` PASS. Focal 5/5, typecheck y diff-check PASS; revisión reflexiva independiente PASS.
+- F14 run `45224953451` SUCCESS sobre SHA `9ce99253a174ede418c15bc592016decf4948613`. Health público `ok`, DB `ready`; bundle `index-CnhVRAW5.js` contiene tag y SHA exactos.
+- Ego Lite solo lectura: Dashboard mostró una aula/clase sin registrar nombre; sin alertas, sin overflow a 320/390/768/1024/1440, foco visible de 3 px y reduced-motion reconocida. Sin escrituras.
+- Zoom 200 %, contraste formal y lector de pantalla **NO COMPROBADOS**. Referencia visual candidata, pendiente del propietario.
