@@ -19,9 +19,11 @@ vi.mock("./lib/api/trainer-api", () => ({ createTrainerApi: vi.fn(() => ({})) })
 vi.mock("./lib/api/student-api-instance", () => ({ studentApi: mocks.studentApi }));
 vi.mock("./features/assignments/assignments-api.js", () => ({ assignmentsApi: mocks.assignmentsApi }));
 vi.mock("./features/mentor", () => ({
-  MentorScreen: ({ contextState, onSave, onBack }: { contextState: { status: string; data?: { version: number } }; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
+  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, onSave, onBack }: { contextState: { status: string; data?: { version: number } }; initialProposal?: { id: string; proposal: { title: string } }; restoreEvaluation?: boolean; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
     <section>
       <p data-testid="mentor-context">{contextState.status === "success" ? contextState.data?.version : contextState.status}</p>
+      {initialProposal ? <p data-testid="mentor-proposal">{initialProposal.id}:{initialProposal.proposal.title}</p> : null}
+      <p data-testid="mentor-restore-evaluation">{String(Boolean(restoreEvaluation))}</p>
       <button type="button" onClick={() => void onSave({ proposal: { title: "Borrador de misión" } })}>Guardar borrador</button>
       <button type="button" onClick={onBack}>Volver al catálogo</button>
     </section>
@@ -74,6 +76,29 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("identifies each saved proposal in the Mis proyectos continuation action", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "proposal-one", version: 1, proposal: { title: "Huerto escolar" }, updatedAt: "2026-11-22T00:00:00.000Z" },
+      { id: "proposal-two", version: 1, proposal: { title: "" }, updatedAt: "2026-11-22T00:00:00.000Z" },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    const labels = [...(container?.querySelectorAll<HTMLButtonElement>(".student-project-list button") ?? [])]
+      .map((button) => button.getAttribute("aria-label"));
+    expect(labels).toEqual([
+      "Continuar propuesta: Huerto escolar",
+      "Continuar propuesta: Borrador sin título",
+    ]);
+
+    const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Huerto escolar"]');
+    await act(async () => continueProposal?.click());
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("proposal-one:Huerto escolar");
+    expect(container?.querySelector("[data-testid=mentor-restore-evaluation]")?.textContent).toBe("true");
+  });
+
   it("keeps the published context and version when the student starts and saves a proposal", async () => {
     await act(async () => root?.render(<App />));
     const start = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Aplicación móvil"]');
