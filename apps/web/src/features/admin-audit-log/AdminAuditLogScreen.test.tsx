@@ -9,6 +9,7 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const events = [
   { requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652d", event: "admin.queue_summary.read" as const, occurredAt: "2026-11-22T15:00:00.000Z", actorType: "admin" as const },
   { requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652e", event: "admin.teachers.list" as const, occurredAt: "2026-11-22T15:05:00.000Z", actorType: "admin" as const },
+  { requestId: "a8bb1a68-c5f4-4f1f-a52d-65535a5b652f", event: "admin.mentor_events.read" as const, occurredAt: "2026-11-22T15:10:00.000Z", actorType: "admin" as const },
 ];
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
@@ -56,6 +57,18 @@ describe("AdminAuditLogScreen", () => {
     });
     expect(view.textContent).toContain("No hay eventos para este tipo de evento en la muestra actual.");
     expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows and filters reads of Mentor operational events", async () => {
+    const view = await render({ read: vi.fn().mockResolvedValue({ ok: true, data: { events } }) });
+    const filter = view.querySelector<HTMLSelectElement>("#admin-audit-log-event-filter")!;
+    expect(view.textContent).toContain("Eventos operativos de Mentor consultados");
+    await act(async () => {
+      filter.value = "admin.mentor_events.read";
+      filter.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(view.querySelector("tbody")?.textContent).toContain("Eventos operativos de Mentor consultados");
+    expect(view.querySelector("tbody")?.textContent).not.toContain("Cola de trabajos consultada");
   });
 
   it("keeps the selected event filter when the sample is updated", async () => {
