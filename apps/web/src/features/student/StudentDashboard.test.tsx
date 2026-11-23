@@ -52,13 +52,42 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Crear mi primer proyecto");
   });
 
-  it("keeps mission metadata hidden when a saved proposal has priority", () => {
+  it("keeps a saved proposal primary while retaining published mission context", () => {
     const mission = { id: "mission-v1", version: 1, mentorContextVersion: 2, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
 
     expect(html).toContain("Bitácora de jardín");
     expect(html).not.toContain("Misión publicada v1");
-    expect(html).not.toContain("Habilidades obligatorias");
+    expect(html).not.toContain("Versiones fijadas");
+    expect(html).toContain("Misiones en tus aulas");
+  });
+
+  it("shows the remaining published missions as secondary routes without replacing the primary mission", () => {
+    const earlierMission = { id: "mission-earlier", version: 2, mentorContextVersion: 4, createdAt: "2026-11-20T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Diseño de pantallas", objectives: ["Presenta una pantalla accesible"], requiredSkills: [{ id: "skill-a11y", name: "Accesibilidad", description: null }] } as StudentAssignment;
+    const latestMission = { id: "mission-latest", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission]} />);
+
+    expect(html).toContain("Navegación con Expo");
+    expect(html).toContain("Materia");
+    expect(html).toContain("Aplicaciones móviles");
+    expect(html).toContain("Misiones en tus aulas");
+    expect(html).toContain("Diseño de pantallas");
+    expect(html).toContain("Presenta una pantalla accesible");
+    expect(html).toContain('aria-label="Iniciar misión: Diseño de pantallas"');
+    expect(html).not.toContain("0 XP");
+    expect(html).not.toContain("0% de progreso");
+  });
+
+  it("keeps the most recent proposal primary while retaining missions as secondary options", () => {
+    const mission = { id: "mission-secondary", version: 1, mentorContextVersion: 2, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Primera navegación", objectives: ["Muestra el flujo de pantallas"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
+
+    expect(html).toContain("Bitácora de jardín");
+    expect(html).toContain("Continuar en Mentor");
+    expect(html).toContain("Misiones en tus aulas");
+    expect(html).toContain("Primera navegación");
+    expect(html).not.toContain("Misión publicada v1");
+    expect(html).not.toContain("Crear mi primer proyecto");
   });
 
   it("summarizes authorized classes and pending enrollment truthfully", () => {
@@ -71,7 +100,7 @@ describe("StudentDashboard", () => {
   it("offers one create action when no proposal exists and shows a real latest submission", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} submissions={{ status: "success", data: [{ id: "fixture-submission", kind: "mentor", sourceId: "fixture-proposal", label: "Bitácora evaluada", score: 72, rubricVersion: "fake-rubric-v1", createdAt: "2026-11-19T13:00:00.000Z" }] }} />);
 
-    expect(html).toContain("Crear mi primer proyecto");
+    expect(html).toContain("Crear propuesta en Mentor");
     expect(html).toContain("Bitácora evaluada");
     expect(html).toContain("72/100");
     expect(html).toContain("no es aprobación docente");
@@ -82,8 +111,8 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} />);
 
     expect(html).toContain("@fixture-student");
-    expect(html).toContain("Tu primer proyecto");
-    expect(html).toContain("Crear mi primer proyecto");
+    expect(html).toContain("Empieza con una idea propia");
+    expect(html).toContain("Crear propuesta en Mentor");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
     expect(html).not.toContain("0 puntos");
     expect(html).not.toContain("0% de progreso");

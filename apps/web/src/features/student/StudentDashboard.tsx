@@ -1,4 +1,4 @@
-import { ArrowRight, ClipboardCheck, GraduationCap, Image, Layers3 } from "lucide-react";
+import { ArrowRight, ClipboardCheck, Flag, GraduationCap, Image, Layers3 } from "lucide-react";
 import type { ClassroomSummary, ProposalDraftResponse, StudentAssignment, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
 import type { AsyncState } from "../../hooks/async-state";
 import "./StudentDashboard.css";
@@ -31,8 +31,13 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
   const continueProposal = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
-  const nextMission = [...missions].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  const publishedMissions = [...missions].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const nextMission = publishedMissions[0];
   const dashboardMission = proposalsLoading || proposalsError || continueProposal || missionsLoading || missionsError ? undefined : nextMission;
+  const otherMissions = proposalsLoading || proposalsError || missionsLoading || missionsError
+    ? []
+    : publishedMissions.filter((mission) => mission.id !== dashboardMission?.id);
+  const visibleOtherMissions = otherMissions.slice(0, 3);
   const githubIdentity = student.githubLogin
     ? student.profileUrl
       ? <a className="student-dashboard__identity-link" href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a>
@@ -51,16 +56,44 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
       <section className="student-dashboard__project" aria-label="Siguiente paso de tu proyecto">
         <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
         <div className="student-dashboard__project-copy">
-          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa tu aprendizaje con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Siguiente paso</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
-          {dashboardMission ? <dl className="student-dashboard__mission-snapshot" aria-label="Versión y habilidades de la misión">
+          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Sin misión publicada</span><h2>Empieza con una idea propia</h2><p>Aún no hay una misión activa en tus aulas. Puedes crear una propuesta en Mentor o revisar tus aulas.</p></>}
+          {dashboardMission ? <dl className="student-dashboard__mission-snapshot" aria-label="Contexto de la misión">
+            <div><dt>Materia</dt><dd>{dashboardMission.subject}</dd></div>
             <div><dt>Versiones fijadas</dt><dd>Misión publicada v{dashboardMission.version} · Contexto Mentor v{dashboardMission.mentorContextVersion}</dd></div>
             <div><dt>Habilidades obligatorias</dt><dd>{dashboardMission.requiredSkills.length ? dashboardMission.requiredSkills.map((skill) => skill.name).join(" · ") : "Sin habilidades obligatorias"}</dd></div>
           </dl> : null}
         </div>
         <div className="student-dashboard__project-action">
-          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : dashboardMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(dashboardMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear mi primer proyecto <ArrowRight size={17} aria-hidden="true" /></button>}
+          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : dashboardMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(dashboardMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
         </div>
       </section>
+
+      {visibleOtherMissions.length ? <section className="student-dashboard__missions" aria-labelledby="student-dashboard-missions">
+        <header className="student-dashboard__missions-heading">
+          <p className="student-screen__eyebrow">PUBLICADAS POR TUS DOCENTES</p>
+          <h2 id="student-dashboard-missions"><Flag size={19} aria-hidden="true" />Misiones en tus aulas</h2>
+          <p>Elige un objetivo de aprendizaje y continúa en Mentor con su contexto publicado.</p>
+        </header>
+        <ul className="student-dashboard__mission-list">
+          {visibleOtherMissions.map((mission) => <li key={mission.id}>
+            <article className="student-dashboard__mission-card">
+              <p className="student-dashboard__mission-source">{mission.subject} <span aria-hidden="true">·</span> {mission.classroomTitle}</p>
+              <h3>{mission.title}</h3>
+              <p className="student-dashboard__mission-objective"><strong>Objetivo</strong>{mission.objectives[0] ?? "Sin objetivo publicado."}</p>
+              <div className="student-dashboard__mission-skills" aria-label="Habilidades obligatorias">
+                {mission.requiredSkills.slice(0, 3).map((skill) => <span key={skill.id}>{skill.name}</span>)}
+                {mission.requiredSkills.length > 3 ? <span>+{mission.requiredSkills.length - 3} habilidades</span> : null}
+              </div>
+              <button type="button" className="student-dashboard__mission-action" aria-label={`Iniciar misión: ${mission.title}`} onClick={() => onStartMission(mission)}>
+                Iniciar en Mentor <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </article>
+          </li>)}
+        </ul>
+        {otherMissions.length > visibleOtherMissions.length ? <button type="button" className="student-dashboard__link student-dashboard__all-missions" onClick={() => onNavigate("/student/classrooms")}>
+          Ver todas tus misiones ({otherMissions.length - visibleOtherMissions.length} más) <ArrowRight size={16} aria-hidden="true" />
+        </button> : null}
+      </section> : null}
 
       <div className="student-dashboard__grid">
         <section className="student-dashboard__card" aria-labelledby="student-dashboard-classrooms">
