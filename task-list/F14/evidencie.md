@@ -307,3 +307,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Ledger verificó tag, SHA, release ID y estado `deployed`. API y web aparecen `running/healthy` con imágenes `sha-f256b6a02c54891040e1f4ba3591c2f85eea2c75`.
 - Comprobación pública cache-bypass: `/health` 200 (`status=ok`, `database=ready`); bundle `/assets/index-uKrjHQQz.js` contiene v0.5.33, SHA exacto, la acción «Reintentar carga de misiones» y el evento admin `admin.mentor_events.read`.
 - `fragments-production` y controles técnicos F14 siguen activos. Apply registró un hash de backup; integridad/retención independiente de ese backup no comprobada. Ningún despliegue por sí solo valida un piloto académico.
+
+## Release y aplicación pública v0.5.34 — 2026-11-23
+
+- PR #169 se integró mediante merge normal en `main` como `5ab32afde23e7ed29724a757ce7a064c3b40704b`; CI del PR `45134521042` SUCCESS. La tag anotada `v0.5.34` apunta al SHA exacto.
+- F14 run `45134914694`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; paquete, manifiesto y atestación publicados como release `v0.5.34` a las 08:02:35 UTC.
+- Aplicación productiva comprobada públicamente después de la publicación: `/health` HTTP 200, `status=ok`, `database=ready`; bundle `/assets/index-CZSFpu9d.js` contiene `v0.5.34` y el SHA completo `5ab32afde23e7ed29724a757ce7a064c3b40704b`.
+- No se hizo deploy manual, reinicio ni se cambió el workflow/entorno. F14 gates y agente pull se conservaron. El hash/integridad/retención del backup y la inspección del ledger/host no se verificaron en esta comprobación.

@@ -194,3 +194,9 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - PR #165 quedó integrado normalmente en main `f256b6a02c54891040e1f4ba3591c2f85eea2c75`; CI del head final `50569c11b26adca071193b3512e0cc6da6454208`, run `45126241465` SUCCESS; revisión independiente PASS tras corregir snapshot/commit, LF final y rangos incompletos.
 - Suite F25 offline 25/25 PASS y `git diff --check` PASS. El verificador comprueba referencias estructurales contra snapshots locales; no juzga significado, no incluye contenido y no evalúa puntuaciones.
 - F14 `v0.5.33` incluye esta herramienta offline y los cambios UI; no hubo llamadas pagadas ni ejecución de repositorios estudiantiles. A/B/C siguen sin outputs completos persistidos e inputDigest autorizado; proveedor/modelo/presupuesto y calidad semántica Mentor/Review continúan NO COMPROBADOS.
+
+## Incremento mecánico offline F25 · PR #170 · 2026-11-23
+
+- PR #170 se integró normalmente en `main` como `68eaa41afb98c1156c3f792d337f62610615c90f`; CI `45135799530` SUCCESS y revisión independiente PASS.
+- La suite offline focal post-merge pasó 28/28; `git diff --check` PASS. El cotejo local verificó 9/9 marcadores A/B/C sin ejecutar fuentes evaluadas. El comparador clasifica mecánicamente solo cuando coinciden SHA y marcadores y etiqueta la comparación como no semántica.
+- Ejecución vigente: `BLOCKED` para A/B/C por falta de outputs Review completos y manifest autorizado; `qualityComparison=NOT_PERFORMED`, `semanticValidity=NOT_VALIDATED`. Calidad de puntajes Mentor/Review, proveedor/modelo y presupuesto permanecen **NO COMPROBADOS**. No hubo llamadas pagadas, red ni ejecución de repos estudiantiles.

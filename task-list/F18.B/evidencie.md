@@ -354,4 +354,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Regresión demuestra que un mismatch `mission-v1`/`mission-v2` deja Mentor en error y no expone el tema, rúbrica ni habilidad stale. La revisión independiente del fix resultó PASS.
 - Verificación fresca `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1`: 2 archivos, **35/35 PASS**; web typecheck y `git diff --check` PASS.
 - Ego Lite visual: **NO COMPROBADO**. Las pestañas QA existentes muestran el aula docente y `/student/mentor`, no “Mis proyectos”; no se navegó, recargó, hizo clic ni escribió para preservar las sesiones. TaskSpaces 44 y 46 quedaron abiertos.
-- Commits funcionales `bf2513f642c07e51ebc94c5aa3628f9d40a6df8b` y `20c011e4125b86550d54d97e8da9c1e0b8e28184`; evidencia `2b5d247` y `7f73ebc`. Merge actualizado desde main `b375922`. PR #169 abierta; CI `45134334848` en curso para el head `b37592287d7e3adb3d659e55ab8ffe8f24e5ac70`. Sin cambios de contratos/API/rutas/DB, producción o proveedores IA; despliegue pendiente.
+- Commits funcionales `bf2513f642c07e51ebc94c5aa3628f9d40a6df8b` y `20c011e4125b86550d54d97e8da9c1e0b8e28184`; evidencia `2b5d247` y `7f73ebc`. PR #169 abierta; CI en curso. Sin cambios de contratos/API/rutas/DB.
+
+## PR #169 y QA read-only posterior a v0.5.34 · 2026-11-23
+
+- PR #169 se integró normalmente como `5ab32afde23e7ed29724a757ce7a064c3b40704b`; CI `45134521042` SUCCESS. F14 `v0.5.34` se aplicó; health pública `ok/database=ready` y bundle `/assets/index-CZSFpu9d.js` contienen versión y SHA exactos.
+- En Ego Lite estudiante, `/student/projects` mostró colección vacía, CTA para crear y ningún error/loader. No había proyecto propio QA vinculado a misión; la presentación/recuperación visual del snapshot queda **NO COMPROBADA por falta de fixture**, sin evidencia de defecto. No se escribieron datos.
+- En Ego Lite docente, «Cuenta y seguridad» abrió `/teacher/settings`; se confirmó el heading «Configuración» y se regresó la misma pestaña a `/teacher/dashboard`, donde cargó «Espacio docente». Todas las sesiones/tabs permanecieron abiertas.
+- Suite focal F18.B 35/35, typecheck y `git diff --check` PASS; revisión independiente PASS. Los asserts UI son fake; no se ejecutó evaluación IA ni se creó recurso académico productivo. Identidad cruzada y recuperación/evaluación real siguen NO COMPROBADAS.
