@@ -1,0 +1,17 @@
+# F22.12 — Eventos operativos de evaluaciones Mentor
+
+## Problema
+
+La consola F22 ya expone eventos operativos de Review, pero los fallos y resultados de Mentor no están disponibles en el feed administrativo. Diagnosticar una evaluación requiere revisar el host y la información dispersa de stdout.
+
+## Resultado esperado
+
+Registrar eventos reales de éxito/fallo en la frontera de evaluación Mentor y exponer una muestra acotada en una vista admin de solo lectura. Los datos se redactan antes de escribirlos y antes de mostrarlos. El buffer es volátil y no crea tablas ni migraciones.
+
+## Límites
+
+- No invocar proveedores IA reales durante tests.
+- No mostrar puntuación, rúbrica, propuesta, identidad, IDs académicos, prompts, modelo/proveedor ni mensajes de excepción.
+- La consulta admin exige Better Auth admin y registra auditoría antes de leer; si auth o auditoría falla, no devuelve eventos.
+- No cambiar la ruta existente de Review ni su retención.
+- Producción y eventos de Mentor reales quedan NO COMPROBADOS si no ocurre una evaluación legítima después del despliegue.

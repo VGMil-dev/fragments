@@ -27,6 +27,8 @@ import { AdminAuditLogScreen } from "./features/admin-audit-log/AdminAuditLogScr
 import { adminAuditLogApi } from "./features/admin-audit-log/admin-audit-log-api.js";
 import { AdminReviewEventsScreen } from "./features/admin-review-events/AdminReviewEventsScreen.js";
 import { adminReviewEventsApi } from "./features/admin-review-events/admin-review-events-api.js";
+import { AdminMentorEventsScreen } from "./features/admin-mentor-events/AdminMentorEventsScreen.js";
+import { adminMentorEventsApi } from "./features/admin-mentor-events/admin-mentor-events-api.js";
 import { AdminTeachersPanel } from "./features/admin-teachers/AdminTeachersPanel.js";
 import { adminTeachersApi } from "./features/admin-teachers/admin-teachers-api.js";
 import "./features/landing/public-landing-f162.css";
@@ -365,6 +367,7 @@ export function App() {
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/audit-log") return <><div id="route-content" tabIndex={-1}><AdminAuditLogScreen api={adminAuditLogApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/review-events") return <><div id="route-content" tabIndex={-1}><AdminReviewEventsScreen api={adminReviewEventsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/mentor-events") return <><div id="route-content" tabIndex={-1}><AdminMentorEventsScreen api={adminMentorEventsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/teachers") return <><div id="route-content" tabIndex={-1}><AdminTeachersPanel api={adminTeachersApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/teacher" || path.startsWith("/teacher/")) return <><TeacherWorkspaceShell path={path} navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
 

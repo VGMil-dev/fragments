@@ -19,7 +19,8 @@ import {
 import { createPrismaMentorRepository } from "./prisma-repository.js";
 import { createPrismaMentorControlRepository } from "./prisma-control-repository.js";
 import { proposalEvaluationResponse } from "./evaluation-response.js";
-import { MentorEvaluationFailure, MentorInputError, type createMentorService } from "./service.js";
+import { MentorEvaluationFailure, MentorInputError, type createMentorService, type MentorEvaluationFailureStage } from "./service.js";
+import { safeOperationalEvent, type MentorOperationalEvent } from "./operational-events.js";
 import { validateStudentSkillSelection } from "./skills-validation.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createClassroomRepository } from "../classroom/repository.js";
@@ -43,16 +44,42 @@ export type MentorEvaluationDiagnostic = {
   gateway_generation_id: string | null;
 };
 
+function writeMentorOperationalEvent(event: MentorOperationalEvent): void {
+  console.log(JSON.stringify(event));
+}
+
+function failureCode(stage: MentorEvaluationFailureStage, budgetExceeded: boolean): MentorOperationalEvent["error_code"] {
+  if (budgetExceeded) return "budget_exceeded";
+  switch (stage) {
+    case "input_validation": return "invalid_input";
+    case "configuration": return "configuration_unavailable";
+    case "budget_reservation": return "budget_unavailable";
+    case "budget_settlement": return "budget_settlement_failed";
+    case "provider_response": return "provider_response_invalid";
+    case "response_validation": return "response_validation_failed";
+    default: return "evaluation_failed";
+  }
+}
+
+function writeMentorFailureDiagnostic(diagnostic: MentorEvaluationDiagnostic): void {
+  const stage = ["configuration", "input_validation", "budget_reservation", "budget_settlement", "provider_request", "provider_response", "response_validation", "evaluation"].includes(diagnostic.stage)
+    ? diagnostic.stage as MentorEvaluationFailureStage : "evaluation";
+  const errorCode = failureCode(stage, diagnostic.http_status === 402);
+  const safe = safeOperationalEvent({ event: "mentor_evaluation_failed", stage, result: "failure", error_code: errorCode, duration_ms: diagnostic.duration_ms });
+  console.error(JSON.stringify(safe));
+}
+
 export function createMentorHttp(
   database: PrismaClient,
   service: MentorService,
-  options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void; auth?: FragmentsAuthService } = {},
+  options: { logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void; logEvent?: (event: MentorOperationalEvent) => void; auth?: FragmentsAuthService } = {},
 ) {
   const repository = createPrismaMentorRepository(database);
   const classrooms = createClassroomRepository(database);
   const control = createPrismaMentorControlRepository(database);
   const pending = new Map<string, Promise<{ id: string; evaluation: Awaited<ReturnType<MentorService["evaluate"]>>; evaluatedAt: string }>>();
-  const logFailure = options.logFailure ?? ((diagnostic: MentorEvaluationDiagnostic) => console.error(JSON.stringify(diagnostic)));
+  const logFailure = options.logFailure ?? writeMentorFailureDiagnostic;
+  const logEvent = options.logEvent ?? writeMentorOperationalEvent;
 
   return async function handleMentorHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
@@ -253,6 +280,7 @@ export function createMentorHttp(
         }
         const responseData = proposalEvaluationResponse(stored.id, proposal.id, proposal.version, stored.evaluation, stored.evaluatedAt);
         sendJson(response, 200, { ok: true, data: responseData });
+        try { logEvent(safeOperationalEvent({ event: "mentor_evaluation_completed", stage: "evaluation", result: "success", error_code: "none", duration_ms: performance.now() - startedAt })); } catch { /* event sinks must not change the route result */ }
       } catch (error) {
         const failure = error instanceof MentorEvaluationFailure ? error : null;
         const errorType = failure?.errorType ?? (error instanceof MentorInputError ? error.name : error instanceof Error ? error.name : "UnknownError");
@@ -270,6 +298,10 @@ export function createMentorHttp(
           retry_after_ms: failure?.retryAfterMs ?? null,
           gateway_generation_id: failure?.gatewayGenerationId ?? null,
         };
+        const failureStage = ["configuration", "input_validation", "budget_reservation", "budget_settlement", "provider_request", "provider_response", "response_validation", "evaluation"].includes(diagnostic.stage)
+          ? diagnostic.stage as MentorEvaluationFailureStage : "evaluation";
+        const errorCode = failureCode(failureStage, failure?.providerHttpStatus === 402 || failure?.gatewayHttpStatus === 402);
+        try { logEvent(safeOperationalEvent({ event: "mentor_evaluation_failed", stage: failureStage, result: "failure", error_code: errorCode, duration_ms: diagnostic.duration_ms })); } catch { /* event sinks must not change the route result */ }
         try { logFailure(diagnostic); } catch { /* diagnostics must not change the route result */ }
         if (failure?.providerHttpStatus === 402 || failure?.gatewayHttpStatus === 402) {
           sendError(response, 402, "AI_GATEWAY_BUDGET_EXCEEDED", "La evaluación no está disponible porque Vercel AI Gateway alcanzó su presupuesto.");

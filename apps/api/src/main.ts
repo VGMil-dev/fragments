@@ -18,6 +18,7 @@ import { createPrismaReviewStore } from "./features/review/prisma-store.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
 import { createReviewOperationalLog } from "./features/review/operational-log.js";
+import { createMentorOperationalLog } from "./features/mentor/operational-log.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -44,6 +45,7 @@ const mentor = createMentorService({
 
 const reviewStore = createPrismaReviewStore(database);
 const reviewOperationalLog = createReviewOperationalLog();
+const mentorOperationalLog = createMentorOperationalLog();
 function writeReviewEvent(event: Parameters<typeof writeReviewOperationalEvent>[0]) {
   const safeEvent = projectReviewOperationalEvent(event);
   if (!safeEvent) return;
@@ -117,7 +119,7 @@ const review = {
   },
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });
