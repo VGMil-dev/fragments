@@ -268,11 +268,28 @@
   cursor: pointer;
 }
 
+.student-dashboard--pixel .student-dashboard__mission-action--secondary {
+  padding-inline: .2rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dashboard-lime);
+  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: .2em;
+}
+
 .student-dashboard--pixel .student-dashboard__mission-action:hover {
   background: #1c67e5;
 }
 
+.student-dashboard--pixel .student-dashboard__mission-action--secondary:hover {
+  background: transparent;
+  text-decoration-color: currentColor;
+}
+
 .student-dashboard--pixel .student-dashboard__mission-action:focus-visible,
+.student-dashboard--pixel .student-dashboard__mission-action--secondary:focus-visible,
 .student-dashboard--pixel .student-dashboard__all-missions:focus-visible {
   outline: 3px solid var(--dashboard-lime);
   outline-offset: 3px;
