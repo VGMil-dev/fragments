@@ -109,6 +109,68 @@ function verifyCase(repoPath, item) {
   };
 }
 
+/** Reports fixture-order marker regressions; it does not assess behavior meaning. */
+export function auditReferenceProgression(cases) {
+  const items = Array.isArray(cases) ? cases : [];
+  const blockers = [];
+  if (items.length < 2) blockers.push("insufficient_cases");
+
+  const firstChecks = Array.isArray(items[0]?.checks) ? items[0].checks : [];
+  const behaviorIds = firstChecks.map((check) => check?.behaviorId).sort();
+  if (behaviorIds.length === 0 || behaviorIds.some((id) => typeof id !== "string" || !id.trim())
+    || new Set(behaviorIds).size !== behaviorIds.length) {
+    blockers.push("invalid_behavior_ids");
+  }
+
+  for (const item of items) {
+    const checks = Array.isArray(item?.checks) ? item.checks : [];
+    const ids = checks.map((check) => check?.behaviorId).sort();
+    if (item?.status !== "REFERENCE_MARKERS_MATCH"
+      || ids.length !== behaviorIds.length
+      || ids.some((id, index) => id !== behaviorIds[index])
+      || checks.some((check) => check?.status !== "MATCH"
+        || typeof check.expectedPresent !== "boolean"
+        || check.detectedPresent !== check.expectedPresent)) {
+      blockers.push(`unverified_case:${item?.label ?? "unknown"}`);
+    }
+  }
+
+  if (blockers.length) {
+    return {
+      status: "BLOCKED",
+      blockers: [...new Set(blockers)],
+      caseOrder: items.map((item) => item?.label ?? null),
+      behaviors: [],
+      regressions: [],
+      basis: "STATIC_SOURCE_MARKERS_ONLY",
+      semanticValidity: "NOT_VALIDATED",
+    };
+  }
+
+  const behaviors = behaviorIds.map((behaviorId) => {
+    const detectedPresent = items.map((item) => item.checks.find((check) => check.behaviorId === behaviorId).detectedPresent);
+    return { behaviorId, detectedPresent };
+  });
+  const regressions = [];
+  for (const behavior of behaviors) {
+    for (let index = 1; index < behavior.detectedPresent.length; index += 1) {
+      if (behavior.detectedPresent[index - 1] && !behavior.detectedPresent[index]) {
+        regressions.push({ behaviorId: behavior.behaviorId, from: items[index - 1].label, to: items[index].label });
+      }
+    }
+  }
+
+  return {
+    status: regressions.length ? "REFERENCE_PROGRESSION_MISMATCH" : "REFERENCE_PROGRESSION_MATCH",
+    blockers: [],
+    caseOrder: items.map((item) => item.label),
+    behaviors,
+    regressions,
+    basis: "STATIC_SOURCE_MARKERS_ONLY",
+    semanticValidity: "NOT_VALIDATED",
+  };
+}
+
 export function verifyLocalReferenceCorpus({ repoPath, cases }) {
   if (typeof repoPath !== "string" || !repoPath.trim()) {
     return {
@@ -134,15 +196,22 @@ export function verifyLocalReferenceCorpus({ repoPath, cases }) {
   }
   const inputCases = Array.isArray(cases) ? cases : [];
   const auditedCases = inputCases.map((item) => verifyCase(repoPath, item));
+  const referenceProgression = auditReferenceProgression(auditedCases);
   const blockedCases = auditedCases.filter((item) => item.status === "BLOCKED" || item.status === "REFERENCE_MISMATCH");
+  const status = blockedCases.length > 0 || referenceProgression.status === "BLOCKED"
+    ? "BLOCKED"
+    : referenceProgression.status === "REFERENCE_PROGRESSION_MISMATCH"
+      ? "REFERENCE_PROGRESSION_MISMATCH"
+      : auditedCases.length > 0 ? "REFERENCE_MARKERS_MATCH" : "BLOCKED";
   return {
-    status: auditedCases.length > 0 && blockedCases.length === 0 ? "REFERENCE_MARKERS_MATCH" : "BLOCKED",
+    status,
     referenceSource: "LOCAL_GIT_COMMIT_OBJECTS",
     referenceInterpretation: "FIXTURE_METADATA_CHECKED_AGAINST_STATIC_SOURCE_MARKERS",
     semanticValidity: "NOT_VALIDATED",
     qualityComparison: "NOT_PERFORMED",
     scoreComputed: false,
     execution: "SOURCE_NOT_EXECUTED",
+    referenceProgression,
     cases: auditedCases,
     blockedLabels: blockedCases.map((item) => item.label),
   };
