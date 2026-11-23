@@ -14,13 +14,19 @@
 - `git diff --check`: **PASS**.
 - Revisión reflexiva independiente de `9ec0905`: **PASS**, sin defectos concretos.
 
-## Pendiente
+## Límites pendientes tras PR #193
 
-- Repetir verificación desde HEAD integrado y CI.
-- Ego Lite posterior a release en Dashboard real.
 - Revisión visual propietaria; no se encontró mockup canónico verificado para esta candidata.
 - Zoom 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
-- PR #190, release F14 y estado productivo: **COMPLETADOS** según la sección de verificación posterior a release.
+- Los datos reales se observaron en la sesión QA, pero no se reconsultaron mediante API en este incremento.
+
+## Continuidad Dashboard — v0.5.43 · 2026-11-23
+
+- El Dashboard de producción elige como siguiente paso la propuesta propia con `updatedAt` más reciente. PR #193 añadió cobertura para entrada fuera de orden; la selección no muta la lista original.
+- PR #193 merge normal en `adfb658fffca57d9426f6fc35a27734154926603`; CI `45207476721` SUCCESS. F14 `v0.5.43`, run `45208001374` SUCCESS; health 200/ready y bundle/SHA exactos verificados.
+- Ego Lite autenticado mostró el borrador y una sola acción primaria “Continuar en Mentor”, perfil enlazado al valor GitHub real recibido. Cinco anchos 320/390/768/1024/1440 sin overflow horizontal. No se alteraron recursos.
+- Capturas locales auténticas en `C:\Users\vgmil\ego\pixel-night-v0543`; excluidas del repo por datos de sesión QA. Captura móvil repetida sin el foco residual del enlace de salto.
+- Zoom 200 %, contraste formal y lector de pantalla **NO COMPROBADOS**. Candidata pendiente de revisión propietaria.
 
 ## Release y Ego Lite — 2026-11-23
 
