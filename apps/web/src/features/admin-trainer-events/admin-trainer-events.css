@@ -1,0 +1,21 @@
+.admin-trainer-events { width: min(100% - 2rem, 80rem); margin: clamp(1.25rem, 4vw, 3rem) auto; color: var(--f16-text-primary); }
+.admin-trainer-events__header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--f16-border); }
+.admin-trainer-events__eyebrow { color: var(--f16-lime); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+.admin-trainer-events h1 { margin: .35rem 0 .65rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.04em; }
+.admin-trainer-events__header > p:not(.admin-trainer-events__eyebrow) { max-width: 70ch; color: var(--f16-text-secondary); line-height: 1.55; }
+.admin-trainer-events button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--f16-border); border-radius: .7rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; font-weight: 700; cursor: pointer; }
+.admin-trainer-events button:focus-visible, .admin-trainer-events select:focus-visible, .admin-trainer-events__table-wrap:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-trainer-events button:disabled { cursor: wait; opacity: .65; }
+.admin-trainer-events > [role="status"], .admin-trainer-events > [role="alert"] { padding: 1rem 1.1rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-card); background: var(--f16-surface); line-height: 1.5; }
+.admin-trainer-events > [role="alert"] { border-color: var(--f16-danger); }
+.admin-trainer-events__filters { display: flex; flex-wrap: wrap; align-items: end; gap: .85rem 1rem; margin: 1rem 0; }
+.admin-trainer-events__filters label { display: grid; gap: .35rem; font-size: .9rem; font-weight: 700; }
+.admin-trainer-events__filters select { min-height: 44px; min-width: 12rem; padding: .5rem .75rem; border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; }
+.admin-trainer-events__filters span { color: var(--f16-text-secondary); font-size: .9rem; }
+.admin-trainer-events__table-wrap { overflow-x: auto; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-card); background: var(--f16-surface); }
+.admin-trainer-events table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.admin-trainer-events caption { padding: .9rem; color: var(--f16-text-secondary); text-align: left; }
+.admin-trainer-events th, .admin-trainer-events td { padding: .8rem .9rem; border-top: 1px solid var(--f16-border); text-align: left; white-space: nowrap; }
+.admin-trainer-events th { color: var(--f16-text-secondary); font-size: .875rem; }
+.admin-trainer-events td small { display: block; margin-top: .25rem; color: var(--f16-text-secondary); }
+@media (max-width: 600px) { .admin-trainer-events { width: min(100% - 1rem, 80rem); } }

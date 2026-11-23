@@ -18,7 +18,7 @@ import { createPrismaReviewStore } from "./features/review/prisma-store.js";
 import { createReviewAcademicLinkResolver } from "./features/review/academic-link.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
-import { createPrismaReviewOperationalLog, createPrismaMentorOperationalLog } from "./features/admin-operational-events/prisma-store.js";
+import { createPrismaReviewOperationalLog, createPrismaMentorOperationalLog, createPrismaTrainerOperationalLog } from "./features/admin-operational-events/prisma-store.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -46,11 +46,12 @@ const mentor = createMentorService({
 const reviewStore = createPrismaReviewStore(database);
 const reviewOperationalLog = createPrismaReviewOperationalLog(database);
 const mentorOperationalLog = createPrismaMentorOperationalLog(database);
+const trainerOperationalLog = createPrismaTrainerOperationalLog(database);
 const operationalEventsRetentionTimer = setInterval(() => {
-  void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune()]);
+  void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune(), trainerOperationalLog.prune()]);
 }, 60 * 60 * 1000);
 operationalEventsRetentionTimer.unref?.();
-void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune()]);
+void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune(), trainerOperationalLog.prune()]);
 function writeReviewEvent(event: Parameters<typeof writeReviewOperationalEvent>[0]) {
   const safeEvent = projectReviewOperationalEvent(event);
   if (!safeEvent) return;
@@ -128,7 +129,7 @@ const review = {
   },
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog, trainerOperationalLog });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });
