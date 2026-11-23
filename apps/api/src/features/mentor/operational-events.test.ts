@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
@@ -79,6 +79,26 @@ describe("Mentor operational event allowlist", () => {
     const local = createLocalMentorEvaluator();
     const result = await sendEvaluation({ async evaluate(input) { return local.evaluate(input); } }, () => { throw new Error("private sink failure"); });
     expect(result.response.status).toBe(200);
+  });
+
+  it("keeps the default failure diagnostic redacted and preserves safe failure stages", async () => {
+    const errorOutput: unknown[][] = [];
+    const errorSpy = vi.spyOn(console, "error").mockImplementation((...args) => { errorOutput.push(args); });
+    const events: unknown[] = [];
+    try {
+      const result = await sendEvaluation({ async evaluate() {
+        throw new MentorEvaluationFailure({ stage: "response_validation", errorType: "SecretProviderError", providerCode: "private-provider-code", gatewayGenerationId: "private-generation-id" });
+      } }, (event) => events.push(event));
+      expect(result.response.status).toBe(503);
+      expect(events[0]).toMatchObject({ stage: "response_validation", error_code: "response_validation_failed" });
+      expect(errorOutput).toHaveLength(1);
+      const fallback = JSON.parse(String(errorOutput[0]![0])) as Record<string, unknown>;
+      expect(fallback).toMatchObject({ event: "mentor_evaluation_failed", stage: "response_validation", result: "failure", error_code: "response_validation_failed" });
+      expect(Object.keys(fallback).sort()).toEqual(["duration_ms", "error_code", "event", "occurred_at", "result", "stage"]);
+      expect(JSON.stringify(fallback)).not.toMatch(/SecretProviderError|private-provider-code|private-generation-id/);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("drops unexpected fields and clamps duration while producing a canonical timestamp", () => {
