@@ -9,6 +9,7 @@ import { createPrismaReviewStore } from "./prisma-store.js";
 import { createReviewWorker } from "./worker.js";
 import { createReviewOperationalLog } from "./operational-log.js";
 import { createAdminReviewEventsHttp } from "../admin-review-events/http.js";
+import { assertIsFragmentsTest } from "../../../test-support/fragments-test-database.js";
 
 const commitSha = "a".repeat(40);
 const fileSha = "b".repeat(40);
@@ -21,23 +22,30 @@ const describePostgres = databaseUrl ? describe : describe.skip;
 const databases: PrismaClient[] = [];
 beforeEach(async () => {
   if (!databaseUrl) return;
-  const database = openDatabase(databaseUrl); await database.$connect();
-  const [current] = await database.$queryRaw<Array<{ databaseName: string }>>`SELECT current_database() AS "databaseName"`;
-  if (current?.databaseName !== "fragments_test") {
-    await database.$disconnect();
-    throw new Error("Review worker integration tests require current_database() = fragments_test.");
-  }
-  await database.submission.deleteMany({ where: { kind: "review" } });
-  await database.job.deleteMany({ where: { type: "review" } });
-  await database.$disconnect();
+  const database = openDatabase(databaseUrl);
+  try {
+    await assertIsFragmentsTest(database, databaseUrl);
+    await database.submission.deleteMany({ where: { kind: "review" } });
+    await database.job.deleteMany({ where: { type: "review" } });
+  } finally { await database.$disconnect(); }
 });
-afterEach(async () => { for (const database of databases.splice(0)) { await database.submission.deleteMany({ where: { kind: "review" } }); await database.job.deleteMany({ where: { type: "review" } }); await database.$disconnect(); } });
+afterEach(async () => {
+  for (const database of databases.splice(0)) {
+    try {
+      await assertIsFragmentsTest(database, databaseUrl!);
+      await database.submission.deleteMany({ where: { kind: "review" } });
+      await database.job.deleteMany({ where: { type: "review" } });
+    } finally { await database.$disconnect(); }
+  }
+});
 
 async function fixture() {
   const id = `review-test-${randomUUID()}`;
   const testRequest = { ...request, repo: id };
   const testContext = { ...context, projectId: id };
-  const database = openDatabase(databaseUrl!); databases.push(database); await database.$connect();
+  const database = openDatabase(databaseUrl!);
+  await assertIsFragmentsTest(database, databaseUrl!);
+  databases.push(database);
   const store = createPrismaReviewStore(database);
   const snapshotContent = { owner: testRequest.owner, repo: testRequest.repo, commitSha, files: [{ path: "src/index.ts", content: source, sha: fileSha }] };
   const digest = await digestSnapshot(snapshotContent);
