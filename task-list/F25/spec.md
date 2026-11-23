@@ -14,6 +14,7 @@
 - La revisión offline no realiza llamadas externas ni lee secretos.
 - Los hallazgos distinguen fixtures sintéticas, datos persistidos y calidad real.
 - La pertenencia de una ruta al array `evidence` solo demuestra coincidencia con metadatos del fixture; no prueba que exista en el snapshot, que las líneas/digest correspondan ni que la cita respalde semánticamente el hallazgo.
+- Cuando el caller ya dispone de un `RepositorySnapshot` local, el auditor puede validar ruta exacta, rango inclusivo, SHA Git de cada archivo y digest canónico del snapshot. Sin snapshot disponible conserva `SHAPE_ONLY`. El resultado estructural nunca se presenta como soporte semántico de la cita.
 - Las etiquetas correct/false-positive/omission son concordancia mecánica con metadatos A/B/C no revalidados; no constituyen ground truth técnico ni quality score.
 - Si faltan corpus o herramientas, se registra NO COMPROBADO y la causa.
 - No se ejecuta código de repositorios estudiantiles.

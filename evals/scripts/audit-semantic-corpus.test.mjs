@@ -1,12 +1,51 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { auditSemanticCorpus } from "./audit-semantic-corpus.mjs";
+import { auditSemanticCorpus, validateCitationsAgainstSnapshot } from "./audit-semantic-corpus.mjs";
 import FakeLocalReviewProvider from "../providers/fake-review-provider.mjs";
 
 const fixture = JSON.parse(
   readFileSync(new URL("../fixtures/fragments-test-commits.json", import.meta.url), "utf8"),
 );
+
+function snapshotFixture({ commitSha = "a".repeat(40), content = "export function total(values) {\n  return values.reduce((a, b) => a + b, 0);\n}" } = {}) {
+  const blob = Buffer.from(content, "utf8");
+  const fileSha = createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${blob.length}\0`), blob])).digest("hex");
+  const snapshot = {
+    owner: "fixture-owner",
+    repo: "fixture-repo",
+    commitSha,
+    files: [{ path: "src/math.ts", content, sha: fileSha }],
+  };
+  const canonical = (value) => Array.isArray(value) ? `[${value.map(canonical).join(",")}]`
+    : value && typeof value === "object" ? `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(",")}}`
+      : JSON.stringify(value);
+  return { ...snapshot, digest: createHash("sha256").update(canonical(snapshot)).digest("hex") };
+}
+
+function validReviewOutput(commitSha, snapshot) {
+  return {
+    status: "completed",
+    commitSha,
+    analysis: {
+      rubricVersion: "v1",
+      score: 75,
+      findings: [{
+        criterionId: "criterion-1",
+        status: "verified",
+        file: "src/math.ts",
+        lines: [1, 1],
+        evidence: [{ source: "repository", path: "src/math.ts", lines: [1, 1], digest: snapshot.digest }],
+        reason: "The referenced line exists in the snapshot.",
+        guidanceLevel: 1,
+      }],
+      limitations: [],
+      modelId: "provider:review-v1",
+      inputDigest: "b".repeat(64),
+    },
+  };
+}
 
 test("el corpus histórico A/B/C bloquea la comparación semántica por falta de respuestas completas", () => {
   const report = auditSemanticCorpus(fixture);
@@ -75,5 +114,87 @@ test("el validador detecta citas con forma inválida sin inferir si su contenido
   assert.ok(report.cases[0].blockers.includes("synthetic_model"));
   assert.ok(report.cases[0].blockers.includes("invalid_citation_shape"));
   assert.equal(report.cases[0].citationValidation, "SHAPE_ONLY");
+  assert.equal(report.qualityComparison, "NOT_PERFORMED");
+});
+
+test("valida ruta, rango de líneas y digest contra un snapshot local sin inferir semántica", () => {
+  const snapshot = snapshotFixture();
+  const analysis = {
+    findings: [{
+      file: "src/math.ts",
+      lines: [1, 2],
+      evidence: [{ source: "repository", path: "src/math.ts", lines: [1, 3], digest: snapshot.digest }],
+    }],
+  };
+
+  const valid = validateCitationsAgainstSnapshot(analysis, snapshot, snapshot.commitSha);
+  assert.equal(valid.status, "SNAPSHOT_CITATIONS_MATCH");
+  assert.equal(valid.citationsChecked, 1);
+  assert.equal(valid.citationValidation, "SNAPSHOT_CHECKED_NO_SEMANTICS");
+
+  const missingPath = structuredClone(analysis);
+  missingPath.findings[0].evidence[0].path = "src/not-in-snapshot.ts";
+  assert.ok(validateCitationsAgainstSnapshot(missingPath, snapshot, snapshot.commitSha).blockers.includes("citation_path_missing_from_snapshot"));
+
+  const invalidLines = structuredClone(analysis);
+  invalidLines.findings[0].evidence[0].lines = [2, 4];
+  assert.ok(validateCitationsAgainstSnapshot(invalidLines, snapshot, snapshot.commitSha).blockers.includes("citation_lines_out_of_range"));
+
+  const invalidDigest = structuredClone(analysis);
+  invalidDigest.findings[0].evidence[0].digest = "b".repeat(64);
+  assert.ok(validateCitationsAgainstSnapshot(invalidDigest, snapshot, snapshot.commitSha).blockers.includes("citation_snapshot_digest_mismatch"));
+
+  const corruptedSnapshot = structuredClone(snapshot);
+  corruptedSnapshot.files[0].content += "\n// altered";
+  const corrupted = validateCitationsAgainstSnapshot(analysis, corruptedSnapshot, corruptedSnapshot.commitSha);
+  assert.ok(corrupted.blockers.includes("snapshot_digest_mismatch"));
+  assert.ok(corrupted.blockers.includes("snapshot_file_sha_mismatch"));
+});
+
+test("bloquea snapshots cuyo commit no coincide con el caso del corpus", () => {
+  const item = fixture.cases[0];
+  const snapshot = snapshotFixture({ commitSha: "a".repeat(40) });
+  const report = auditSemanticCorpus({
+    ...fixture,
+    cases: [{ ...item, reviewOutput: validReviewOutput(item.commitSha, snapshot) }],
+  }, { snapshotsByCommit: { [item.commitSha]: snapshot } });
+
+  assert.ok(report.cases[0].blockers.includes("snapshot_commit_sha_mismatch"));
+  assert.equal(report.cases[0].candidateForManualComparison, false);
+});
+
+test("no acepta líneas fantasma después del LF final ni rangos de hallazgo incompletos", () => {
+  const snapshot = snapshotFixture({ content: "one\n" });
+  const analysis = {
+    findings: [{
+      file: "src/math.ts",
+      lines: [2, 2],
+      evidence: [{ source: "repository", path: "src/math.ts", lines: [2, 2], digest: snapshot.digest }],
+    }],
+  };
+  const phantomLine = validateCitationsAgainstSnapshot(analysis, snapshot, snapshot.commitSha);
+  assert.ok(phantomLine.blockers.includes("citation_lines_out_of_range"));
+
+  const malformedFindingRange = structuredClone(analysis);
+  malformedFindingRange.findings[0].evidence[0].lines = [1, 1];
+  malformedFindingRange.findings[0].lines = [2];
+  const invalidFindingRange = validateCitationsAgainstSnapshot(malformedFindingRange, snapshot, snapshot.commitSha);
+  assert.ok(invalidFindingRange.blockers.includes("finding_location_mismatch"));
+});
+
+test("el reporte aplica la comprobación de snapshot solo cuando se entrega evidencia local", async () => {
+  const fakeResult = await new FakeLocalReviewProvider().callApi("", {
+    vars: { fixture: "grounded", digest: "a".repeat(64), inputDigest: "b".repeat(64) },
+  });
+  const reviewOutput = { status: "completed", commitSha: fixture.cases[0].commitSha, analysis: JSON.parse(fakeResult.output) };
+  const report = auditSemanticCorpus(
+    { ...fixture, cases: [{ ...fixture.cases[0], reviewOutput }] },
+    { snapshotsByCommit: { [fixture.cases[0].commitSha]: snapshotFixture() } },
+  );
+
+  assert.equal(report.cases[0].citationValidation, "SNAPSHOT_CHECKED_NO_SEMANTICS");
+  assert.equal(report.cases[0].citationCheck.status, "BLOCKED");
+  assert.ok(report.cases[0].blockers.includes("citation_snapshot_digest_mismatch"));
+  assert.ok(report.cases[0].blockers.includes("synthetic_model"));
   assert.equal(report.qualityComparison, "NOT_PERFORMED");
 });
