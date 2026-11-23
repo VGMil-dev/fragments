@@ -19,7 +19,7 @@
 
 ## Límites / estado
 
-- PR #150 abierta contra `main`, branch publicada y mergeable. CI Fragments CI run `45105932136` está `in_progress`; sin merge, tag F14 ni despliegue.
+- PR #150 abierta contra `main`, branch publicada y mergeable. CI Fragments CI run `45106017013` concluyó SUCCESS, incluidos tests/typecheck/lint/build y verificaciones PostgreSQL/backup; sin merge, tag F14 ni despliegue todavía.
 - QA Ego Lite de esta nueva vista NO COMPROBADO: el aula productiva observada no tiene habilidad/misión activa y no se navegó ni cerró ninguna sesión docente/estudiantil.
 - Evaluaciones IA reales/calidad semántica NO COMPROBADAS; no se hicieron llamadas a proveedores.
 - QA y release: Ego Lite de vista nueva sigue pendiente; el aula observada no cuenta con misión activa. Merge y release requieren CI satisfactorio y proceso normal F14.
