@@ -405,4 +405,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Commit funcional `422d189da59a32bfb8d21a542527990a00a88c94` (`fix(f18b): plegar descripciones de habilidades`), sobre `f87a093aedd2ebef85679558683249fba1f74311` (`feat(F18.B): mostrar descripciones de habilidades`), rama `codex/f18b-next-mission-cues`.
 - Verificación fresca contra el commit final: `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx --maxWorkers=1` — 5/5 PASS; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check origin/main...HEAD` PASS. Worktree de código limpio al finalizar el implementador.
 - Revisión UX/UI independiente y revisión reflexiva: PASS; sin defectos funcionales encontrados. Ambas anotan que la prueba no simula Enter/Espacio y confía en el comportamiento nativo de `<summary>`; una también señala que el foco visible depende del estilo del navegador. Ego Lite visual: NO COMPROBADO porque no había preview activo. No se usaron sesiones de producción ni se hicieron escrituras.
-- PR, CI y release F14 para este nuevo incremento: pendientes. F18.B permanece abierta; la evaluación real de IA, Review vinculada en Trainer y otras limitaciones ya anotadas no cambian.
+- Estado de PR, CI y F14 pendiente al momento de esa anotación; reconciliado en «Cierre de UI estudiantil» más abajo. F18.B permanece abierta por calidad de evaluación real y recorrido académico completo aún sin comprobar.
+
+## Cierre de UI estudiantil — v0.5.44 · 2026-11-23
+
+- PR [#195](https://github.com/VGMil-dev/fragments/pull/195) merge normal `d5d25527b67e9c4a3ed799154f76c187e351ece5`; CI `45217140767` PASS. F14 run `45217812854` SUCCESS para verify-build, attest-package y publish-approved-release; tag anotada `v0.5.44` sobre el SHA exacto.
+- Producción comprobada sin escritura; Ego Lite abrió Mis aulas, pero no había misiones ni descripciones de habilidades visibles (missionCount 0 y skill disclosure count 0). La representación visual concreta del disclosure queda **NO COMPROBADA**.
+- No se ejecutó Mentor/Review IA real ni se verificó Review productiva vinculada en Trainer. F18.B sigue abierta.
