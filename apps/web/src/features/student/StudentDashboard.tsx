@@ -53,7 +53,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         {student.avatarUrl ? <img className="student-dashboard__avatar" src={student.avatarUrl} alt="" width="56" height="56" /> : null}
       </header>
 
-      <section className="student-dashboard__project" aria-label="Siguiente paso de tu proyecto">
+      <section className="student-dashboard__project" aria-label="Acción prioritaria del dashboard">
         <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
         <div className="student-dashboard__project-copy">
           {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Sin misión publicada</span><h2>Empieza con una idea propia</h2><p>Aún no hay una misión activa en tus aulas. Puedes crear una propuesta en Mentor o revisar tus aulas.</p></>}
@@ -87,7 +87,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
                   {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
                 </ul>
               </div> : null}
-              <button type="button" className="student-dashboard__mission-action" aria-label={`Iniciar misión: ${mission.title}`} onClick={() => onStartMission(mission)}>
+              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={`Iniciar misión: ${mission.title}`} onClick={() => onStartMission(mission)}>
                 Iniciar en Mentor <ArrowRight size={16} aria-hidden="true" />
               </button>
             </article>
