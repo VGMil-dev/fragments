@@ -11,3 +11,9 @@
 - Verificación focal fresca en el commit `0956211`: 7 archivos, **31/31 PASS**, incluidos integración PostgreSQL y Better Auth local. Se confirmó `current_database() = fragments_test`, 6/6 migraciones y `prisma migrate status` actualizado; contracts build, API typecheck/build y `git diff --check` PASS.
 - Producción no consultada ni modificada; no hubo evaluación IA. Sesión admin real, historial de eventos reales, lectura autenticada y retención productiva siguen **NO COMPROBADOS**.
 - Commits de implementación `66e0054` (`feat(F22.13): persiste eventos operativos redactados`) y fix `0956211` (`fix(F22.13): aisla errores sincronicos del sink`) en `codex/f22.13-persisted-admin-events`. No se usaron credenciales productivas.
+
+## Merge y release F14 v0.5.34 · 2026-11-23
+
+- PR #168 se integró normalmente en `main` como `2834dfc637bf93fccd5d073b64de072cdae911f6`; CI `45133686585` SUCCESS. La migración aditiva `20261123100000_admin_operational_events` y persistencia con retención acotada están en el release.
+- F14 `v0.5.34` (run `45134914694`) pasó `verify-build`, `attest-package` y `publish-approved-release`; aplicación pública posteriormente observada en el SHA de `main` `5ab32afde23e7ed29724a757ce7a064c3b40704b`, con health `ok/database=ready`.
+- El estado de la tabla/migración en PostgreSQL productivo, la lectura autenticada del historial, la sesión admin, eventos reales y retención productiva continúan **NO COMPROBADOS**. La salud HTTP no demuestra esos estados. No se escribieron datos admin ni se provocó evaluación real.
