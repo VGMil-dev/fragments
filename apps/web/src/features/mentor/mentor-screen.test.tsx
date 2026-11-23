@@ -222,6 +222,19 @@ describe("MentorScreen", () => {
     expect(idea?.querySelector(".mentor-stage-nav__state")?.textContent).toBe("Pendiente");
   });
 
+  it("no marca el contexto personal vacío como completado en el stepper", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />));
+
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+
+    expect(context?.getAttribute("aria-label")).toBe("Contexto: Modo personal");
+    expect(context?.classList.contains("is-complete")).toBe(false);
+    expect(context?.querySelector(".mentor-stage-nav__state")?.textContent).toBe("Modo personal");
+  });
+
   it.each([
     ["título", { title: "T".repeat(161) }],
     ["propósito", { purpose: "P".repeat(1001) }],
@@ -265,7 +278,7 @@ describe("MentorScreen", () => {
 
     expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(true);
     expect(mountedContainer.querySelector("[aria-label='Preparación de la propuesta']")?.getAttribute("aria-valuenow")).toBe("14");
-    expect(mountedContainer.querySelectorAll(".mentor-stage-nav li button.is-complete")).toHaveLength(2);
+    expect(mountedContainer.querySelectorAll(".mentor-stage-nav li button.is-complete")).toHaveLength(1);
   });
 
   it("bloquea la evaluación cuando hay cambios pendientes de guardar", async () => {
@@ -431,7 +444,7 @@ describe("MentorScreen", () => {
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
     expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
-    expect(mountedContainer.textContent).not.toContain("Modo personal");
+    expect(mountedContainer.querySelector(".mentor-context")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-stage-nav")).not.toBeNull();
     expect(mountedContainer.textContent).toContain("Borrador completado: 0 %");
     const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
