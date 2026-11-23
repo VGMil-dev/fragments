@@ -74,6 +74,23 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("identifies each saved proposal in the Mis proyectos continuation action", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "proposal-one", version: 1, proposal: { title: "Huerto escolar" }, updatedAt: "2026-11-22T00:00:00.000Z" },
+      { id: "proposal-two", version: 1, proposal: { title: "" }, updatedAt: "2026-11-22T00:00:00.000Z" },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    const labels = [...(container?.querySelectorAll<HTMLButtonElement>(".student-project-list button") ?? [])]
+      .map((button) => button.getAttribute("aria-label"));
+    expect(labels).toEqual([
+      "Continuar propuesta: Huerto escolar",
+      "Continuar propuesta: Borrador sin título",
+    ]);
+  });
+
   it("keeps the published context and version when the student starts and saves a proposal", async () => {
     await act(async () => root?.render(<App />));
     const start = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Aplicación móvil"]');
