@@ -142,8 +142,8 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
     <main className="trainer-screen" aria-labelledby="trainer-title">
       <header className="trainer-heading">
         <p className="trainer-eyebrow">PRÁCTICA · EVIDENCIA · REFLEXIÓN</p>
-        <h1 id="trainer-title">Entrenamiento</h1>
-        <p>Un laboratorio de práctica con retos construidos desde revisiones de tu proyecto.</p>
+        <h1 id="trainer-title">Laboratorio de desafíos</h1>
+        <p>Practica con retos vinculados a hallazgos de Review y observa tu propio avance.</p>
       </header>
 
       {loading ? <p className="trainer-load-state" role="status">Buscando análisis completados…</p> : null}
@@ -152,12 +152,18 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
 
       {!loading && !loadFailed && !reviews.length ? (
         <section className="trainer-empty-state" aria-labelledby="trainer-empty-title">
-          <div className="trainer-empty-state__mark" aria-hidden="true"><GitBranch size={25} strokeWidth={1.8} /><span>REVIEW → TRAINER</span></div>
-          <p className="trainer-empty-state__eyebrow">LABORATORIO SIN REVISIÓN ACTIVA</p>
-          <h2 id="trainer-empty-title">Tu entrenamiento empieza con una revisión</h2>
-          <p>Analiza un commit para practicar con retos basados en evidencia de tu proyecto.</p>
-          <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review <ArrowRight size={17} aria-hidden="true" /></a>
-          <p className="trainer-empty-state__footnote">Trainer usará únicamente hallazgos verificados de ese análisis.</p>
+          <div className="trainer-empty-state__content">
+            <div className="trainer-empty-state__mark" aria-hidden="true"><GitBranch size={25} strokeWidth={1.8} /><span>REVIEW → TRAINER</span></div>
+            <p className="trainer-empty-state__eyebrow">LABORATORIO SIN REVISIÓN ACTIVA</p>
+            <h2 id="trainer-empty-title">Tu siguiente reto nace de tu código</h2>
+            <p>Analiza un commit en Review para habilitar prácticas con objetivos observables, pistas y registro de tu progreso.</p>
+            <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review <ArrowRight size={17} aria-hidden="true" /></a>
+            <p className="trainer-empty-state__footnote">No hay retos ni historial disponibles hasta contar con un análisis completado.</p>
+          </div>
+          <div className="trainer-empty-state__art" aria-hidden="true">
+            <img src="/f16/Typing_Girl_and_Sleeping_Cat.webp" alt="" />
+            <span>PREPARA TU PRÓXIMA SESIÓN</span>
+          </div>
         </section>
       ) : null}
 

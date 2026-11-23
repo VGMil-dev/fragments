@@ -9,7 +9,7 @@ import { TrainerScreen } from "./TrainerScreen";
 describe("TrainerScreen", () => {
   it("shows the compact lab heading during load without inventing a Review or a challenge", () => {
     const html = renderToStaticMarkup(<TrainerScreen api={createTrainerApi()} />);
-    expect(html).toContain("Entrenamiento");
+    expect(html).toContain("Laboratorio de desafíos");
     expect(html).toContain("Buscando análisis completados");
     expect(html).not.toContain("Tu entrenamiento empieza con una revisión");
     expect(html).not.toContain("Sortear reto");
@@ -30,14 +30,16 @@ describe("TrainerScreen", () => {
       await act(async () => finish({ ok: true, data: [] }));
       const link = container.querySelector<HTMLAnchorElement>('a[href="/student/review"]');
       expect(link?.textContent).toContain("Ir a Review");
-      expect(container.querySelector("h1")?.textContent).toBe("Entrenamiento");
-      expect(container.textContent).toContain("Tu entrenamiento empieza con una revisión");
+      expect(container.querySelector("h1")?.textContent).toBe("Laboratorio de desafíos");
+      expect(container.textContent).toContain("Tu siguiente reto nace de tu código");
       expect(container.querySelector(".trainer-empty-state")).not.toBeNull();
       expect(container.querySelector(".trainer-controls")).toBeNull();
       expect(container.querySelector(".trainer-history")).toBeNull();
-      expect(container.querySelector(".trainer-empty-state img")).toBeNull();
-      expect(container.querySelector(".trainer-empty-state svg[aria-hidden='true']")).not.toBeNull();
+      const artwork = container.querySelector<HTMLImageElement>(".trainer-empty-state__art img");
+      expect(artwork?.getAttribute("src")).toBe("/f16/Typing_Girl_and_Sleeping_Cat.webp");
+      expect(artwork?.getAttribute("alt")).toBe("");
       expect(container.textContent).toContain("LABORATORIO SIN REVISIÓN ACTIVA");
+      expect(container.textContent).not.toMatch(/\b(?:XP|puntos|racha|nivel 1)\b/i);
       expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
       await act(async () => link!.click());
       expect(onStartReview).toHaveBeenCalledOnce();
