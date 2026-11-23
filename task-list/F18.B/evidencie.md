@@ -307,3 +307,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Añadí una prueba de composición para propuesta ligada a `mission-v1` cuyo `assignmentContext` apunta a `mission-v2`; Mentor no debe mostrar habilidades de ese contexto obsoleto.
 - Mutación de control: al retirar temporalmente la comparación de `assignmentVersionId`, la prueba falla y muestra `No debe mostrarse`; restaurado el guard, la regresión pasa.
 - Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS. Typecheck y `git diff --check` PASS.
+
+## Evitar duplicar habilidades requeridas en el selector optativo · 2026-11-23
+
+- QA visual detectó que una habilidad fijada en el snapshot también aparecía como botón optativo cuando pertenecía al catálogo activo.
+- TDD: amplié la prueba de Mentor con el catálogo que incluye “Navegación fijada” (requerida) y “Accesibilidad” (optativa). Antes del ajuste, fallaba mostrando ambas como botones; después, solo permite seleccionar “Accesibilidad” y el payload contiene únicamente su ID.
+- El filtro usa el nombre normalizado del snapshot para no ocultar otras opciones autorizadas; la misma prop se usa en inicio y recuperación. Se conserva la regresión de contexto con `assignmentVersionId` discrepante.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS; typecheck y `git diff --check` PASS.

@@ -124,7 +124,9 @@ afterEach(() => {
 
 describe("MentorScreen", () => {
   it("shows mission-required skills read-only without merging them into the optional classroom selection", async () => {
-    const loadSkills = vi.fn(async () => ({ ok: true as const, data: [skillFixture(1)] }));
+    const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación fijada" };
+    const optionalSkill = { ...skillFixture(2), id: "optional-1", name: "Accesibilidad" };
+    const loadSkills = vi.fn(async () => ({ ok: true as const, data: [requiredSkill, optionalSkill] }));
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
@@ -139,14 +141,16 @@ describe("MentorScreen", () => {
     expect(required?.querySelectorAll("button")).toHaveLength(0);
     expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent ?? "").not.toContain("Navegación fijada");
 
-    const optional = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__option")).find((button) => button.textContent?.includes("Habilidad 001"));
+    const optionalButtons = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-skills__option"));
+    expect(optionalButtons.map((button) => button.lastElementChild?.textContent?.trim())).toEqual(["Accesibilidad"]);
+    const optional = optionalButtons[0];
     await act(async () => optional?.click());
     expect(required?.textContent).toContain("Navegación fijada");
-    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Habilidad 001");
+    expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Accesibilidad");
 
     await act(async () => mountedContainer?.querySelector<HTMLFormElement>("#mentor-proposal-form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     expect(actions.onSave).toHaveBeenCalledWith(expect.objectContaining({
-      proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["skill-1"] } }),
+      proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["optional-1"] } }),
     }));
   });
 

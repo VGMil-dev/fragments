@@ -77,8 +77,9 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Al iniciar una propuesta desde una versión de misión, la etapa Habilidades muestra los nombres de `requiredSkills` del snapshot como lista no editable.
 - Al recuperar propuesta, mostrar solo las habilidades requeridas que estén codificadas en su `assignmentContext` vinculado al mismo `assignmentVersionId`; no interpretar requisitos optativos o generales como habilidades requeridas.
 - La lista de habilidades seleccionadas del catálogo activo conserva exclusivamente la selección optativa de Mentor y su payload de guardado.
+- Una habilidad fijada como requerida en el snapshot se excluye del selector optativo por nombre normalizado; el catálogo sigue ofreciendo cualquier otra habilidad autorizada del aula.
 - Sin misión o contexto vinculado, conservar el estado “Sin asignación” de Mentor general.
-- Pruebas de composición cubren inicio y recuperación; la prueba de pantalla comprueba separación entre lista fijada y selección editable.
+- Pruebas de composición cubren inicio y recuperación; la prueba de pantalla usa un catálogo que contiene la habilidad requerida y otra opcional, comprobando que solo esta última sigue seleccionable.
 
 ## Propuestas guardadas — contexto vinculado
 
