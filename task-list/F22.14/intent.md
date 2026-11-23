@@ -2,7 +2,7 @@
 
 ## Problema
 
-Los feeds administrativos de Mentor y Review presentan una muestra acotada, pero para buscar fallos por etapa o estado es necesario inspeccionar la tabla completa.
+Los feeds administrativos de Mentor y Review presentan una muestra acotada; hace falta filtrar todas las filas visibles por etapa o estado para ubicar eventos relevantes.
 
 ## Objetivo
 
