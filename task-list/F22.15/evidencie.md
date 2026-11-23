@@ -1,6 +1,6 @@
 # Evidencia
 
-Estado: implementación local lista para revisión; no desplegada.
+Estado: implementación lista para revisión; no desplegada. Commit de código: `10dbdb1e9c52d1970c8a6f995f2d0326158b9005`.
 
 - `pnpm --filter @fragments/api exec vitest run src/features/admin-trainer-events/http.test.ts src/features/admin-operational-events/prisma-store.test.ts src/features/trainer/operational-events.test.ts`: PASS 15/15 (2026-11-23).
 - `pnpm --filter @fragments/web exec vitest run src/features/admin-trainer-events/AdminTrainerEventsScreen.test.tsx`: PASS 6/6 (2026-11-23).
