@@ -15,3 +15,7 @@ Registrar eventos reales de éxito/fallo en la frontera de evaluación Mentor y 
 - La consulta admin exige Better Auth admin y registra auditoría antes de leer; si auth o auditoría falla, no devuelve eventos.
 - No cambiar la ruta existente de Review ni su retención.
 - Producción y eventos de Mentor reales quedan NO COMPROBADOS si no ocurre una evaluación legítima después del despliegue.
+
+## Continuidad de verificación · 2026-11-23
+
+- Cerrar el hueco entre pruebas unitarias separadas conectando un evaluador fake, el buffer operativo y la lectura admin auditada en una sola prueba local. Esto comprueba el cableado del flujo sin inferir que existan eventos en producción ni requerir IA real.
