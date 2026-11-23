@@ -37,6 +37,27 @@ const proposal = {
   updatedAt: "2026-11-04T12:00:00.000Z",
 };
 
+const linkedProposal = {
+  ...proposal,
+  assignmentVersionId: "assignment-version-1",
+  assignmentContext: {
+    assignmentVersionId: "assignment-version-1",
+    mentorContext: {
+      version: 4,
+      publishedAt: "2026-11-03T12:00:00.000Z",
+      config: {
+        subject: "Programación Móvil",
+        theme: "Navegación con Expo Router",
+        assignment: "Diseña una navegación comprobable.",
+        expectedLevel: "Tercero de bachillerato",
+        rubricTitle: "Rúbrica privada del docente",
+        criteria: [{ id: "private-criterion", title: "Criterio privado", description: "Detalle privado", weight: 100 }],
+        requirements: ["Requisito privado"],
+      },
+    },
+  },
+};
+
 const evaluation = {
   evaluationId: "evaluation-1",
   proposalId: "proposal-1",
@@ -433,6 +454,39 @@ describe("MentorScreen", () => {
     expect(html).toContain("Abrir propuesta");
   });
 
+  it("shows the saved mission theme and pinned Mentor context version without private rubric details", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain("Misión vinculada");
+    expect(html).toContain("Navegación con Expo Router");
+    expect(html).toContain("Contexto Mentor v4");
+    expect(html).not.toContain("Rúbrica privada del docente");
+    expect(html).not.toContain("Criterio privado");
+    expect(html).not.toContain("Requisito privado");
+  });
+
+  it("shows a linked mission without inventing context when the saved context is unavailable", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[{ ...proposal, assignmentVersionId: "assignment-version-1", assignmentContext: null }]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain("Misión vinculada");
+    expect(html).toContain("contexto académico no disponible");
+    expect(html).not.toContain("Contexto Mentor v");
+    expect(html).not.toContain("Navegación con Expo Router");
+  });
+
+  it("does not show a mission marker for a proposal without an assignment", () => {
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[proposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).not.toContain("Misión vinculada");
+    expect(html).not.toContain("Contexto Mentor v");
+  });
+
   it("does not report an empty list when saved proposals failed to load", async () => {
     const retry = vi.fn();
     mountedContainer = document.createElement("div");
@@ -463,18 +517,26 @@ describe("MentorScreen", () => {
     expect(onOpenProposal).toHaveBeenCalledWith(proposal);
   });
 
-  it("recovers an evaluation when reopening a saved proposal", async () => {
+  it("shows the saved context and recovers its persisted evaluation when reopening a linked proposal", async () => {
     const recover = vi.fn(async () => ({ ok: true as const, data: evaluation }));
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => {
+      mountedRoot?.render(<MentorScreen key="new-proposal" {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />);
+    });
+
+    expect(mountedContainer.textContent).toContain("Navegación con Expo Router");
+    expect(mountedContainer.textContent).toContain("Contexto Mentor v4");
+    const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
+    await act(async () => open?.click());
+    await act(async () => {
       mountedRoot?.render(
-        <MentorScreen {...actions} initialProposal={proposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
+        <MentorScreen key={linkedProposal.id} {...actions} initialProposal={linkedProposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
       );
     });
 
-    expect(recover).toHaveBeenCalledWith(proposal.id);
+    expect(recover).toHaveBeenCalledWith(linkedProposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
   });
 
