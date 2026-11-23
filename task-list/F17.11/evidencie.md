@@ -27,3 +27,8 @@ Integrada y desplegada mediante F14 `v0.5.46`. Commit de código `ff19cda` (`fea
 
 ## Límites
 Revisión reflexiva independiente: defecto de error de consulta de aulas corregido; re-review **PASS**, regresión confirma estado de error y recuperación tras reintento. Zoom 200 %, contraste formal, lector de pantalla y CTA sin borrador en producción **NO COMPROBADOS**. Sin escrituras productivas.
+
+## Observación adicional Ego Lite · v0.5.52 · 2026-11-23
+
+- En `/student/dashboard` se vio el borrador propio prioritario junto a una misión publicada y su objetivo/habilidad requeridos. Esta observación actualiza el antiguo estado donde el borrador ocultaba toda misión; no se infiere contenido más allá de lo visible.
+- El enlace «Iniciar en Mentor» no se pulsó para evitar crear/cambiar estado académico; su navegación con misión seleccionada sigue **NO COMPROBADA**. Viewports 320/390/768/1024/1440 sin overflow. Captura auténtica local: `C:\Users\vgmil\ego\fragments-continuation-20261123\dashboard-desktop.png`, no se añadió al repositorio.

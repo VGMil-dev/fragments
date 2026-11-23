@@ -9,3 +9,10 @@ Estado: implementación integrada y paquete v0.5.52 aplicado; revisión visual c
 - CI del head actualizado: run `45282207950`, job `verify` SUCCESS. El build conserva avisos preexistentes de chunk grande y directivas `use client` de Lucide.
 - Aplicación F14 confirmada por lectura SSH: contenedores web/API saludables con imagen SHA `7da17eca74f1c5df7efb1e909e3a73abcd14794b`; el asset web `index-GzHAFdj-.js` contiene `v0.5.52` y el SHA. No se leyeron matrículas ni borradores.
 - QA con sesión estudiante: NO COMPROBADO. No se modificaron matrículas, borradores ni misiones de producción. El TaskSpace Ego Lite terminó; QA visual y revisión propietaria siguen pendientes y no se declara candidata aprobada para piloto.
+
+## QA Ego Lite post-release · 2026-11-23
+
+- Página nueva de la sesión estudiantil preservada: `/student/dashboard` sirvió `v0.5.52 · 7da17ec`. Se observó el borrador propio prioritario y una misión publicada con objetivo y habilidad requerida visibles. No se sustituyó/editó el borrador ni se inició la misión; la CTA no se pulsó.
+- En 320/390/768/1024/1440 px: `scrollWidth <= innerWidth`; la vista volvió a 1908×944 tras las mediciones. No se inspeccionaron ni copiaron valores privados de campos.
+- Captura Ego Lite auténtica: `C:\Users\vgmil\ego\fragments-continuation-20261123\dashboard-desktop.png` (fuera de Git, contiene estado autenticado).
+- La CTA específica queda **NO COMPROBADA**; zoom 200 %, contraste formal, lector de pantalla y aprobación propietaria siguen pendientes. La sesión/pestaña previa se conservó.
