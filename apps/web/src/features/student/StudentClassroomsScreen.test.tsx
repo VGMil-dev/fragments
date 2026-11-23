@@ -44,6 +44,7 @@ describe("StudentClassroomsScreen", () => {
     root = createRoot(container);
     await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[pending]} loading={false} error={null} onRefresh={() => undefined} />));
     const markup = container.innerHTML;
+    expect(markup).toContain("student-classrooms--pixel");
     expect(markup).toContain("Aula de prueba");
     expect(markup).toContain("Código de incorporación");
     expect(markup).toContain("Pendiente de aprobación");
