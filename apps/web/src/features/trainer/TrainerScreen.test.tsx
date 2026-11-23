@@ -198,7 +198,9 @@ describe("TrainerScreen", () => {
       await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Mostrar pista 1")!.click());
       expect(container.textContent).toContain("Busca el estado del filtro.");
       await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
-      expect(record).toHaveBeenCalledExactlyOnceWith({ reviewId: review.id, challengeId: firstChallenge.id, status: "in_progress", hintsUsed: 1 });
+      expect(record).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledWith(expect.objectContaining({ reviewId: review.id, challengeId: firstChallenge.id, status: "in_progress", hintsUsed: 1 }));
+      expect(record.mock.calls[0]?.[0].idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(container.textContent).toContain("Filtro de tareas");
       expect(container.textContent).toContain("Historial de práctica");
       expect(container.textContent).toContain("En progreso");
@@ -213,6 +215,143 @@ describe("TrainerScreen", () => {
       expect(container.textContent).toContain("Paginación");
       expect(container.textContent).toContain("src/tasks/pagination.ts:30–42");
       expect(container.querySelector('[aria-label="Siguiente paso"]')?.textContent).toContain("Registra cómo te fue");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("recovers from a rejected redraw without losing the current challenge or history", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z" };
+    const challenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
+      feature: "Filtro de tareas", task: "Sigue el flujo del filtro.", expectedObservation: "La lista visible cambia.", restoration: "Restaura el filtro.", estimatedMinutes: 12,
+      sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24], hints: ["Busca el filtro.", "Sigue el estado.", "Compara el resultado."], createdAt: "2026-11-23T10:00:00Z" };
+    const nextChallenge = { ...challenge, id: "challenge-b", feature: "Paginación", sourcePath: "src/tasks/page.ts", sourceLines: [30, 42] };
+    const attempt = { id: "attempt-1", reviewId: review.id, challengeId: challenge.id, feature: challenge.feature, status: "in_progress" as const, hintsUsed: 1, attemptedAt: "2026-11-23T10:05:00Z" };
+    const draw = vi.fn()
+      .mockResolvedValueOnce({ ok: true, data: { challenge, category: "new", bankSize: 2 } })
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockResolvedValueOnce({ ok: true, data: { challenge: nextChallenge, category: "pending", bankSize: 2 } });
+    const record = vi.fn().mockResolvedValue({ ok: true, data: attempt });
+    const history = vi.fn().mockResolvedValue({ ok: true, data: [] });
+    const api = { reviews: async () => ({ ok: true, data: [review] }), history, draw, record } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Mostrar pista 1")!.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
+      expect(container.textContent).toContain("Filtro de tareas");
+      expect(container.textContent).toContain("Busca el filtro.");
+      expect(container.textContent).toContain("En progreso");
+      expect(record).toHaveBeenCalledWith(expect.objectContaining({ reviewId: review.id, challengeId: challenge.id, status: "in_progress", hintsUsed: 1 }));
+
+      const redraw = [...container.querySelectorAll("button")].find((button) => button.textContent === "Volver a sortear desde este análisis")!;
+      await act(async () => redraw.click());
+
+      expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Filtro de tareas");
+      expect(container.textContent).toContain("Busca el filtro.");
+      expect(container.textContent).toContain("En progreso");
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos sortear");
+      const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === "Volver a sortear desde este análisis");
+      expect(retry?.disabled).toBe(false);
+      await act(async () => retry?.click());
+      expect(draw).toHaveBeenCalledTimes(3);
+      expect(record).toHaveBeenCalledOnce();
+      expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Paginación");
+      expect(container.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("retries an ambiguous progress write with the identical idempotency key and payload", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z" };
+    const challenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
+      feature: "Filtro de tareas", task: "Sigue el flujo del filtro.", expectedObservation: "La lista visible cambia.", restoration: "Restaura el filtro.", estimatedMinutes: 12,
+      sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24], hints: ["Busca el filtro.", "Sigue el estado.", "Compara el resultado."], createdAt: "2026-11-23T10:00:00Z" };
+    const previousAttempt = { id: "attempt-old", reviewId: review.id, challengeId: "older-challenge", feature: "Inicio", status: "completed" as const, hintsUsed: 1, attemptedAt: "2026-11-22T10:00:00Z" };
+    const persistedAttempt = { id: "attempt-new", reviewId: review.id, challengeId: challenge.id, feature: challenge.feature, status: "in_progress" as const, hintsUsed: 0, attemptedAt: "2026-11-23T10:05:00Z" };
+    const history = vi.fn().mockResolvedValue({ ok: true, data: [previousAttempt] });
+    const draw = vi.fn().mockResolvedValue({ ok: true, data: { challenge, category: "new", bankSize: 2 } });
+    const record = vi.fn()
+      .mockRejectedValueOnce(new Error("connection dropped"))
+      .mockResolvedValueOnce({ ok: true, data: persistedAttempt });
+    const api = { reviews: async () => ({ ok: true, data: [review] }), history, draw, record } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
+
+      expect(record).toHaveBeenCalledOnce();
+      expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Filtro de tareas");
+      expect(container.textContent).toContain("Inicio");
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos confirmar");
+      const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar registro");
+      expect(retry).toBeTruthy();
+      expect([...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")].every((button) => button.disabled)).toBe(true);
+
+      await act(async () => retry?.click());
+      expect(history).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(record.mock.calls[0]?.[0]).toBe(record.mock.calls[1]?.[0]);
+      expect(record.mock.calls[0]?.[0]).toMatchObject({
+        reviewId: review.id,
+        challengeId: challenge.id,
+        status: "in_progress",
+        hintsUsed: 0,
+      });
+      expect(record.mock.calls[0]?.[0].idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(container.textContent).toContain("Completado por ti");
+      expect(container.textContent).toContain("En progreso");
+      expect(container.querySelector('[role="alert"]')).toBeNull();
+      expect([...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")].every((button) => button.disabled)).toBe(true);
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")][0]?.click());
+      expect(record).toHaveBeenCalledTimes(2);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("does not duplicate an idempotent attempt when history retry wins the race", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z" };
+    const challenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
+      feature: "Filtro de tareas", task: "Sigue el flujo del filtro.", expectedObservation: "La lista visible cambia.", restoration: "Restaura el filtro.", estimatedMinutes: 12,
+      sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24], hints: ["Busca el filtro.", "Sigue el estado.", "Compara el resultado."], createdAt: "2026-11-23T10:00:00Z" };
+    const persistedAttempt = { id: "attempt-shared", reviewId: review.id, challengeId: challenge.id, feature: challenge.feature, status: "in_progress" as const, hintsUsed: 0, attemptedAt: "2026-11-23T10:05:00Z" };
+    const history = vi.fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: "OFFLINE", message: "Historial no disponible" } })
+      .mockResolvedValueOnce({ ok: true, data: [persistedAttempt] });
+    const draw = vi.fn().mockResolvedValue({ ok: true, data: { challenge, category: "new", bankSize: 2 } });
+    const record = vi.fn()
+      .mockRejectedValueOnce(new Error("response lost after persistence"))
+      .mockResolvedValueOnce({ ok: true, data: persistedAttempt });
+    const api = { reviews: async () => ({ ok: true, data: [review] }), history, draw, record } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("Historial no disponible");
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
+      expect(record).toHaveBeenCalledOnce();
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar historial")!.click());
+      expect(container.querySelectorAll(".trainer-history__list li")).toHaveLength(1);
+      expect(container.querySelector(".trainer-history__list")?.textContent).toContain("Filtro de tareas");
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar registro")!.click());
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(container.querySelectorAll(".trainer-history__list li")).toHaveLength(1);
+      expect(container.textContent).toContain("Progreso guardado: en progreso.");
     } finally {
       await act(async () => root.unmount());
       container.remove();

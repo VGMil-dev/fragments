@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import { TrainerError, type createTrainerService } from "./service.js";
-import { TrainerChallengeSchema, TrainerHistorySchema, TrainerReviewSchema, TrainerStatusSchema } from "./schemas.js";
+import { TrainerAttemptRequestSchema, TrainerChallengeSchema, TrainerHistorySchema, TrainerReviewSchema } from "./schemas.js";
 
 type TrainerService = ReturnType<typeof createTrainerService>;
 type RouteResult = "handled" | "unhandled";
@@ -20,6 +20,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
 function statusCode(value: unknown): number {
   if (!(value instanceof TrainerError)) return 500;
   if (value.code === "REVIEW_NOT_FOUND" || value.code === "CHALLENGE_NOT_FOUND") return 404;
+  if (value.code === "IDEMPOTENCY_CONFLICT") return 409;
   if (value.code === "REVIEW_STALE") return 409;
   if (value.code.startsWith("INVALID_")) return 400;
   if (value.code === "NO_VERIFIED_EVIDENCE" || value.code === "NO_COMPATIBLE_CHALLENGES") return 422;
@@ -69,13 +70,17 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
         json(response, 200, { ok: true, data }); return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/attempts") {
-        const input = z.object({ reviewId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/), challengeId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/), status: TrainerStatusSchema, hintsUsed: z.number().int().min(0).max(3) }).strict().parse(await body(request));
+        const input = TrainerAttemptRequestSchema.parse(await body(request));
         if (!await ownsReview(input.reviewId)) { error(response, 404, "REVIEW_NOT_FOUND", "No se encontró el análisis solicitado."); return "handled"; }
         const result = await service.record({ ...input, sessionHash });
         json(response, 201, { ok: true, data: TrainerHistorySchema.element.parse(result) }); return "handled";
       }
       error(response, 404, "NOT_FOUND", "No se encontró la ruta."); return "handled";
     } catch (cause) {
+      if (cause instanceof z.ZodError) {
+        error(response, 400, "INVALID_INPUT", "La solicitud contiene campos no válidos.");
+        return "handled";
+      }
       const status = statusCode(cause);
       error(response, status, cause instanceof TrainerError ? cause.code : "TRAINER_UNAVAILABLE", cause instanceof TrainerError ? cause.message : "No se pudo completar la solicitud de práctica.");
       return "handled";

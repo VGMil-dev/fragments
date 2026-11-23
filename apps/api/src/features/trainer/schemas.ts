@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 export const TrainerStatusSchema = z.enum(["pending", "in_progress", "completed", "need_more"]);
+export const TrainerAttemptRequestSchema = z.object({
+  reviewId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/),
+  challengeId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/),
+  status: TrainerStatusSchema,
+  hintsUsed: z.number().int().min(0).max(3),
+  idempotencyKey: z.string().uuid(),
+}).strict();
 export const TrainerAcademicContextSchema = z.object({
   missionTitle: z.string().min(1).max(160), missionVersion: z.number().int().positive(), mentorContextVersion: z.number().int().positive(),
   classroomTitle: z.string().min(1).max(160), requiredSkills: z.array(z.string().min(1).max(100)).max(20).optional(),

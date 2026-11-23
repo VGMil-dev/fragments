@@ -51,12 +51,17 @@ describePostgres("Trainer Prisma repository (fragments_test)", () => {
     const now = new Date("2026-11-20T12:00:00.000Z");
     await store.ensureSession(sessionHash, now);
     await store.saveBank(reviewId, commitSha, [challenge], now.toISOString());
-    await store.recordAttempt({ sessionHash, reviewId, challengeId: challenge.id, feature: challenge.feature, status: "completed", hintsUsed: 2, attemptedAt: now.toISOString() });
+    const input = { sessionHash, reviewId, challengeId: challenge.id, feature: challenge.feature, status: "completed" as const, hintsUsed: 2, attemptedAt: now.toISOString(), idempotencyKey: randomUUID() };
+    const [first, same] = await Promise.all([store.recordAttempt(input), secondStore.recordAttempt(input)]);
+    expect(same).toEqual(first);
+    expect(same).toEqual(first);
 
     const reopened = createTrainerRepository(secondDatabase!);
     expect(await reopened.getBank(reviewId, commitSha)).toEqual([challenge]);
     expect(await reopened.history(sessionHash, reviewId)).toMatchObject([{ status: "completed", hintsUsed: 2, feature: "Búsqueda" }]);
+    expect(await reopened.history(sessionHash, reviewId)).toHaveLength(1);
     expect(await reopened.practicedFeatures(reviewId)).toEqual(["Búsqueda"]);
     expect(await reopened.ensureSession(sessionHash, now)).toBe(true);
+    await expect(reopened.recordAttempt({ ...input, status: "need_more" })).rejects.toThrow("El identificador de intento ya se usó con otros datos.");
   });
 });

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { AiAnalysisSchema, EvidenceReferenceSchema, RepositorySnapshotSchema, type AiAnalysis } from "@fragments/contracts";
 import type { InspectorReviewRecord } from "../inspector/review-adapter.js";
 import type { ChallengeDraft, ReviewEvidence } from "../inspector/service.js";
-import type { TrainerAttempt, TrainerChallenge, TrainerStatus } from "./repository.js";
+import { TrainerAttemptIdempotencyConflict, type TrainerAttempt, type TrainerChallenge, type TrainerStatus } from "./repository.js";
 import type { TrainerAcademicContext } from "./schemas.js";
 
 export type TrainerReview = Pick<InspectorReviewRecord, "id" | "projectId" | "owner" | "repo" | "commitSha" | "analysis">;
@@ -139,11 +139,16 @@ export function createTrainerService(dependencies: TrainerDependencies) {
       const selected = (alternatives.length ? alternatives : candidates)[Math.floor(Math.min(Math.max(random(), 0), 0.999999) * (alternatives.length || candidates.length))]!;
       return { challenge: selected, category, bankSize: bank.length };
     },
-    async record(input: { sessionHash: string; reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number }): Promise<TrainerAttempt> {
+    async record(input: { sessionHash: string; reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number; idempotencyKey: string }): Promise<TrainerAttempt> {
       if (!Number.isInteger(input.hintsUsed) || input.hintsUsed < 0 || input.hintsUsed > 3) throw new TrainerError("INVALID_INPUT", "La cantidad de pistas no es válida.");
       const challenge = (await bankFor(input.reviewId)).find((item) => item.id === input.challengeId);
       if (!challenge) throw new TrainerError("CHALLENGE_NOT_FOUND", "No se encontró el reto de esta revisión.");
-      return dependencies.store.recordAttempt({ ...input, feature: challenge.feature, attemptedAt: now().toISOString() });
+      try {
+        return await dependencies.store.recordAttempt({ ...input, feature: challenge.feature, attemptedAt: now().toISOString() });
+      } catch (cause) {
+        if (cause instanceof TrainerAttemptIdempotencyConflict) throw new TrainerError("IDEMPOTENCY_CONFLICT", "Este identificador de intento ya se usó con otra respuesta.");
+        throw cause;
+      }
     },
   };
 }

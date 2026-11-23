@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Code2, GitBranch, Sparkles } from "lucide-react";
 import type { TrainerChallenge, TrainerHistoryItem, TrainerReview, TrainerStatus } from "../../lib/api/trainer-api";
 import type { createTrainerApi } from "../../lib/api/trainer-api";
@@ -6,6 +6,7 @@ import "./trainer-screen.css";
 
 type Api = ReturnType<typeof createTrainerApi>;
 type HistoryState = "loading" | "error" | "ready";
+type TrainerAttemptRequest = { reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number; idempotencyKey: string };
 const statusLabels: Record<TrainerStatus, string> = { pending: "Pendiente", in_progress: "En progreso", completed: "Completado por ti", need_more: "Necesito practicar más" };
 const categoryLabels = { new: "Nuevo", pending: "Pendiente", review: "Repaso" } as const;
 
@@ -24,6 +25,11 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [drawing, setDrawing] = useState(false);
+  const [drawError, setDrawError] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [pendingRecord, setPendingRecord] = useState<TrainerAttemptRequest | null>(null);
+  const [recordError, setRecordError] = useState("");
+  const recordingRef = useRef(false);
   const [message, setMessage] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
   const review = useMemo(() => reviews.find((item) => item.id === selectedReview), [reviews, selectedReview]);
@@ -80,22 +86,56 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
 
   async function draw() {
     if (!selectedReview || drawing) return;
-    setDrawing(true); setMessage(""); setShownHints(0);
-    const result = await api.draw(selectedReview);
-    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); setRecordedChallengeId(null); }
-    else setMessage(result.error.message);
-    setDrawing(false);
+    setDrawing(true); setMessage(""); setDrawError("");
+    try {
+      const result = await api.draw(selectedReview);
+      if (result.ok) {
+        setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); setRecordedChallengeId(null); setShownHints(0);
+      } else {
+        setDrawError("No pudimos sortear un reto. Tu reto actual y tu historial siguen disponibles; inténtalo de nuevo.");
+      }
+    } catch {
+      setDrawError("No pudimos sortear un reto. Tu reto actual y tu historial siguen disponibles; inténtalo de nuevo.");
+    } finally {
+      setDrawing(false);
+    }
   }
 
-  async function record(status: TrainerStatus) {
-    if (!challenge) return;
-    const result = await api.record({ reviewId: challenge.reviewId, challengeId: challenge.id, status, hintsUsed: shownHints });
-    if (!result.ok) { setMessage(result.error.message); return; }
-    setHistory((current) => [result.data, ...current].slice(0, 200));
-    setHistoryState("ready");
-    setHistoryError("");
-    setRecordedChallengeId(challenge.id);
-    setMessage(`Progreso guardado: ${statusLabels[status].toLowerCase()}.`);
+  async function submitRecord(input: TrainerAttemptRequest) {
+    if (recordingRef.current) return;
+    recordingRef.current = true;
+    setRecording(true); setMessage(""); setRecordError("");
+    try {
+      const result = await api.record(input);
+      if (!result.ok) {
+        setRecordError("No pudimos confirmar el registro. Puedes reintentar sin duplicar este intento.");
+        return;
+      }
+      setHistory((current) => [result.data, ...current.filter((item) => item.id !== result.data.id)].slice(0, 200));
+      setHistoryState("ready");
+      setHistoryError("");
+      setRecordedChallengeId(input.challengeId);
+      setPendingRecord(null);
+      setMessage(`Progreso guardado: ${statusLabels[input.status].toLowerCase()}.`);
+    } catch {
+      setRecordError("No pudimos confirmar el registro. Puedes reintentar sin duplicar este intento.");
+    } finally {
+      recordingRef.current = false;
+      setRecording(false);
+    }
+  }
+
+  function record(status: TrainerStatus) {
+    if (!challenge || recordingRef.current || pendingRecord || recordedChallengeId === challenge.id) return;
+    const input: TrainerAttemptRequest = {
+      reviewId: challenge.reviewId,
+      challengeId: challenge.id,
+      status,
+      hintsUsed: shownHints,
+      idempotencyKey: crypto.randomUUID(),
+    };
+    setPendingRecord(input);
+    void submitRecord(input);
   }
 
   return (
@@ -125,7 +165,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         <div className="trainer-section-kicker"><span>01</span><p>FUENTE DE PRÁCTICA</p></div>
         <label htmlFor="trainer-review">Elige el análisis que quieres practicar</label>
         <div className="trainer-controls__row">
-          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading}>
+          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setPendingRecord(null); setRecordError(""); setDrawError(""); setMessage(""); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading || drawing || recording || Boolean(pendingRecord)}>
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
         </div>
@@ -152,6 +192,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         </button>
       </section> : null}
 
+      {drawError ? <p className="trainer-message trainer-message--error" role="alert">{drawError}</p> : null}
       {message && !loadFailed ? <p className="trainer-message" role="status">{message}</p> : null}
 
       {challenge ? (
@@ -171,10 +212,12 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
             {shownHints < 3 ? <button className="trainer-secondary" type="button" onClick={() => setShownHints((count) => Math.min(3, count + 1))}>Mostrar pista {shownHints + 1}</button> : <p>Ya consultaste las tres pistas.</p>}
           </section>
           <div className="trainer-actions" aria-label="Registrar tu progreso">
-            <button type="button" onClick={() => void record("in_progress")}>En progreso</button>
-            <button type="button" onClick={() => void record("need_more")}>Necesito practicar más</button>
-            <button type="button" onClick={() => void record("completed")}>Completado por mí</button>
+            <button type="button" disabled={recording || Boolean(pendingRecord) || recordedChallengeId === challenge.id} onClick={() => record("in_progress")}>En progreso</button>
+            <button type="button" disabled={recording || Boolean(pendingRecord) || recordedChallengeId === challenge.id} onClick={() => record("need_more")}>Necesito practicar más</button>
+            <button type="button" disabled={recording || Boolean(pendingRecord) || recordedChallengeId === challenge.id} onClick={() => record("completed")}>Completado por mí</button>
           </div>
+          {recording ? <p role="status">Registrando tu progreso…</p> : null}
+          {recordError && pendingRecord ? <div className="trainer-message trainer-message--error"><p role="alert">{recordError}</p><button type="button" className="trainer-secondary" disabled={recording} onClick={() => void submitRecord(pendingRecord)}>{recording ? "Reintentando…" : "Reintentar registro"}</button></div> : null}
           <p className="trainer-verification-note">El progreso lo registras tú; no es una verificación automática ni una nota.</p>
           <p className="trainer-restoration"><strong>Al terminar:</strong> {challenge.restoration}</p>
         </article>
