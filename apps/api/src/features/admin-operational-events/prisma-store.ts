@@ -31,19 +31,23 @@ export function createPrismaAdminOperationalLog<T extends StoredEvent>(options: 
       if (!projected) return;
       const persistable = redactForStorage(options.source, projected);
       const recordedAt = now();
-      void options.database.operationalEvent.create({
-        data: {
-          id: newId(),
-          source: options.source,
-          occurredAt: new Date(persistedOccurredAt(persistable)),
-          eventJson: persistable as Prisma.InputJsonValue,
-          recordedAt,
-        },
-      }).then(async () => {
-        await scheduleRetention(options.database, recordedAt);
-      }).catch(() => {
-        // Operational storage is best-effort and cannot change evaluation results.
-      });
+      try {
+        void options.database.operationalEvent.create({
+          data: {
+            id: newId(),
+            source: options.source,
+            occurredAt: new Date(persistedOccurredAt(persistable)),
+            eventJson: persistable as Prisma.InputJsonValue,
+            recordedAt,
+          },
+        }).then(async () => {
+          await scheduleRetention(options.database, recordedAt);
+        }).catch(() => {
+          // Operational storage is best-effort and cannot change evaluation results.
+        });
+      } catch {
+        // Also isolate synchronous adapter failures.
+      }
     },
 
     async list(limit = PAGE_MAX): Promise<T[]> {

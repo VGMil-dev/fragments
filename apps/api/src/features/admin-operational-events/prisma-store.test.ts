@@ -76,6 +76,8 @@ describe("Prisma admin operational logs", () => {
     operationalEvent.create.mockRejectedValueOnce(new Error("database unavailable"));
     expect(() => log.record(mentorEvent)).not.toThrow();
     await vi.waitFor(() => expect(operationalEvent.create).toHaveBeenCalledTimes(2));
+    operationalEvent.create.mockImplementationOnce(() => { throw new Error("synchronous adapter failure"); });
+    expect(() => log.record(mentorEvent)).not.toThrow();
   });
 
   it("removes rows beyond the global retention cap", async () => {
