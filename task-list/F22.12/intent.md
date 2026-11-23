@@ -20,3 +20,4 @@ Registrar eventos reales de éxito/fallo en la frontera de evaluación Mentor y 
 
 - Cerrar el hueco entre pruebas unitarias separadas conectando un evaluador fake, el buffer operativo y la lectura admin auditada en una sola prueba local. Esto comprueba el cableado del flujo sin inferir que existan eventos en producción ni requerir IA real.
 - Verificar adicionalmente que la puerta admin del endpoint funciona con una sesión Better Auth creada por el proveedor real sobre PostgreSQL local efímero, manteniendo sintéticos el usuario y evento y limitando la limpieza al ID propio.
+- Ampliar la prueba compuesta para que la solicitud POST de evaluación atraviese el handler HTTP real con un evaluador Mentor fake local; la misma sesión admin de Better Auth lee el evento generado por el buffer.

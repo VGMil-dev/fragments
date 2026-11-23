@@ -55,6 +55,13 @@ Fecha: 2026-11-23.
 - Better Auth real significa que el adapter, sesión/cookie, lectura de rol y endpoint corrieron localmente con Prisma/PostgreSQL; el proveedor Mentor, el evento, el admin y sus credenciales son sintéticos. AI Gateway, producción, cuentas reales, eventos productivos y sesión admin productiva siguen **NO COMPROBADOS**.
 - Implementación `1a31b1dad298e2266af759cc5aaa0a7154e19d38`; PR #156 se integró normalmente en `main` como `3fa16a150de410df7637385d92944cc44954cca2`, CI run `45117312137` SUCCESS. Es solo cobertura de prueba: no generó release F14.
 
+## Evaluación HTTP Mentor fake con sesión Better Auth real · 2026-11-23
+
+- La integración ahora crea fixtures sintéticos admin/estudiante y una propuesta/configuración local en PostgreSQL efímero `fragments_test`; el estudiante inicia sesión con Better Auth y envía `POST /api/proposals/:id/review` al `createHttpHandler` real. El evaluador es `createLocalMentorEvaluator`, sin Gateway ni proveedor externo.
+- La petición devuelve 200, invoca el fake una vez y produce el evento exitoso en el buffer operacional. La misma sesión admin Better Auth lee `GET /api/admin/mentor-events`; se comprueba que el audit sink precede a `list`, y que el cuerpo no filtra identidades, título de propuesta, puntuación ni metadatos de proveedor/modelo. GET anónimo devuelve 401.
+- Base PostgreSQL efímera ligada a loopback con las cinco migraciones versionadas y estado Prisma actualizado; el test limpia propuesta, versión de control e identidades únicamente por sus IDs de fixture. Sin volúmenes, sin escritura en DB compartida o producción.
+- Salida fresca: 4 archivos focales, **13/13 pruebas PASS**; `pnpm --filter @fragments/api typecheck` PASS; `git diff --check` PASS. Better Auth, Prisma, handler Mentor y endpoint admin son reales/locales; usuario, sesión, evaluación y proveedor son sintéticos. Eventos productivos, cuentas reales, uso de Gateway y release continúan **NO COMPROBADOS**.
+
 ## Integración normal de la prueba compuesta · 2026-11-23
 
 - PR #153 se integró mediante merge normal en `0f12e7fc1e6ff6fdf1663a85e30787667c28f9b9`; CI run `45112711742` SUCCESS. La prueba conecta evaluación Mentor fake → buffer operativo → endpoint admin auditado.
