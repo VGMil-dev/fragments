@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Code2, GitBranch, Sparkles } from "lucide-react";
 import type { TrainerChallenge, TrainerHistoryItem, TrainerReview, TrainerStatus } from "../../lib/api/trainer-api";
 import type { createTrainerApi } from "../../lib/api/trainer-api";
 import "./trainer-screen.css";
 
 type Api = ReturnType<typeof createTrainerApi>;
+type HistoryState = "loading" | "error" | "ready";
 const statusLabels: Record<TrainerStatus, string> = { pending: "Pendiente", in_progress: "En progreso", completed: "Completado por ti", need_more: "Necesito practicar más" };
 const categoryLabels = { new: "Nuevo", pending: "Pendiente", review: "Repaso" } as const;
 
@@ -11,6 +13,9 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   const [reviews, setReviews] = useState<TrainerReview[]>([]);
   const [selectedReview, setSelectedReview] = useState("");
   const [history, setHistory] = useState<TrainerHistoryItem[]>([]);
+  const [historyState, setHistoryState] = useState<HistoryState>("loading");
+  const [historyError, setHistoryError] = useState("");
+  const [historyAttempt, setHistoryAttempt] = useState(0);
   const [challenge, setChallenge] = useState<TrainerChallenge | null>(null);
   const [category, setCategory] = useState<keyof typeof categoryLabels | null>(null);
   const [bankSize, setBankSize] = useState<number | null>(null);
@@ -46,11 +51,31 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   }, [api, loadAttempt]);
 
   useEffect(() => {
-    if (!selectedReview) { setHistory([]); return; }
+    if (!selectedReview) { setHistory([]); setHistoryState("ready"); setHistoryError(""); return; }
     let active = true;
-    void api.history(selectedReview).then((result) => { if (active && result.ok) setHistory(result.data); });
+    setHistory([]);
+    setHistoryState("loading");
+    setHistoryError("");
+    void loadHistory();
     return () => { active = false; };
-  }, [api, selectedReview]);
+    async function loadHistory() {
+      try {
+        const result = await api.history(selectedReview);
+        if (!active) return;
+        if (result.ok) {
+          setHistory(result.data);
+          setHistoryState("ready");
+        } else {
+          setHistoryError(result.error.message);
+          setHistoryState("error");
+        }
+      } catch {
+        if (!active) return;
+        setHistoryError("No pudimos cargar el historial de práctica. Inténtalo de nuevo.");
+        setHistoryState("error");
+      }
+    }
+  }, [api, selectedReview, historyAttempt]);
 
   async function draw() {
     if (!selectedReview || drawing) return;
@@ -66,15 +91,17 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
     const result = await api.record({ reviewId: challenge.reviewId, challengeId: challenge.id, status, hintsUsed: shownHints });
     if (!result.ok) { setMessage(result.error.message); return; }
     setHistory((current) => [result.data, ...current].slice(0, 200));
+    setHistoryState("ready");
+    setHistoryError("");
     setMessage(`Progreso guardado: ${statusLabels[status].toLowerCase()}.`);
   }
 
   return (
     <main className="trainer-screen" aria-labelledby="trainer-title">
       <header className="trainer-heading">
-        <p className="trainer-eyebrow">LABORATORIO DE PRÁCTICA</p>
+        <p className="trainer-eyebrow">PRÁCTICA · EVIDENCIA · REFLEXIÓN</p>
         <h1 id="trainer-title">Entrenamiento</h1>
-        <p>Retos breves basados en las revisiones de tu proyecto.</p>
+        <p>Un laboratorio de práctica con retos construidos desde revisiones de tu proyecto.</p>
       </header>
 
       {loading ? <p className="trainer-load-state" role="status">Buscando análisis completados…</p> : null}
@@ -83,22 +110,22 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
 
       {!loading && !loadFailed && !reviews.length ? (
         <section className="trainer-empty-state" aria-labelledby="trainer-empty-title">
-          <p className="trainer-empty-state__eyebrow">PRIMER PASO</p>
+          <div className="trainer-empty-state__mark" aria-hidden="true"><GitBranch size={25} strokeWidth={1.8} /><span>REVIEW → TRAINER</span></div>
+          <p className="trainer-empty-state__eyebrow">LABORATORIO SIN REVISIÓN ACTIVA</p>
           <h2 id="trainer-empty-title">Tu entrenamiento empieza con una revisión</h2>
           <p>Analiza un commit para practicar con retos basados en evidencia de tu proyecto.</p>
-          <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review</a>
+          <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review <ArrowRight size={17} aria-hidden="true" /></a>
+          <p className="trainer-empty-state__footnote">Trainer usará únicamente hallazgos verificados de ese análisis.</p>
         </section>
       ) : null}
 
       {reviews.length ? <section className="trainer-controls" aria-label="Elegir análisis de Review">
-        <label htmlFor="trainer-review">Revisión activa</label>
+        <div className="trainer-section-kicker"><span>01</span><p>FUENTE DE PRÁCTICA</p></div>
+        <label htmlFor="trainer-review">Elige el análisis que quieres practicar</label>
         <div className="trainer-controls__row">
-          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); }} disabled={loading}>
+          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading}>
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
-          <button className="trainer-draw" type="button" onClick={() => void draw()} disabled={!selectedReview || drawing}>
-            {drawing ? "Preparando reto…" : "🎲 Sortear reto"}
-          </button>
         </div>
         {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
         {review?.academicContext ? <section className="trainer-academic-context" aria-label="Contexto académico de la revisión">
@@ -112,10 +139,19 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         </section> : null}
       </section> : null}
 
+      {reviews.length && !challenge ? <section className="trainer-start" aria-label="Iniciar sesión de práctica">
+        <div className="trainer-start__marker" aria-hidden="true"><Sparkles size={18} /></div>
+        <div className="trainer-start__copy"><p className="trainer-start__eyebrow">02 · SESIÓN DE PRÁCTICA</p><h2>El reto aparecerá después del sorteo</h2><p>El objetivo se define a partir de un hallazgo verificado de la revisión seleccionada.</p></div>
+        <button className="trainer-draw" type="button" onClick={() => void draw()} disabled={!selectedReview || drawing}>
+          {drawing ? "Preparando reto…" : <>Sortear reto <ArrowRight size={17} aria-hidden="true" /></>}
+        </button>
+      </section> : null}
+
       {message && !loadFailed ? <p className="trainer-message" role="status">{message}</p> : null}
 
       {challenge ? (
         <article className="trainer-challenge" aria-labelledby="trainer-challenge-title">
+          <div className="trainer-section-kicker"><span>02</span><p>RETO ACTUAL</p></div>
           {bankSize === 1 ? <p className="trainer-message" role="status">Este análisis solo tiene una funcionalidad compatible. Puedes volver a sortearla para repasar o elegir otra revisión.</p> : null}
           <div className="trainer-challenge__top"><span className={`trainer-badge trainer-badge--${category}`}>{categoryLabels[category ?? "new"]}</span><span>{challenge.estimatedMinutes} min</span></div>
           {bankSize !== null && bankSize > 1 ? <p className="trainer-bank-size">{bankSize} retos compatibles para este análisis.</p> : null}
@@ -140,9 +176,19 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
       ) : null}
 
       {reviews.length ? <section className="trainer-history" aria-labelledby="trainer-history-title">
-        <div className="trainer-history__heading"><div><p className="trainer-eyebrow">TU RECORRIDO</p><h2 id="trainer-history-title">Historial de práctica</h2></div><span>{history.length} {history.length === 1 ? "intento" : "intentos"}</span></div>
-        {history.length ? <ol className="trainer-history__list">{history.map((item) => <li key={item.id}><span><strong>{item.feature}</strong><small>{new Date(item.attemptedAt).toLocaleString("es-CO")} · {item.hintsUsed} pistas consultadas</small></span><span className="trainer-history__status">{statusLabels[item.status]}</span></li>)}</ol> : <p className="trainer-empty">Tus prácticas quedarán guardadas aquí en este navegador.</p>}
+        <div className="trainer-section-kicker"><span>03</span><p>TRAZA PERSONAL</p></div>
+        <div className="trainer-history__heading"><div><p className="trainer-eyebrow">TU RECORRIDO</p><h2 id="trainer-history-title">Historial de práctica</h2></div><span>{historyState === "ready" ? `${history.length} ${history.length === 1 ? "intento" : "intentos"}` : historyState === "loading" ? "Cargando…" : "No disponible"}</span></div>
+        {historyState === "loading" ? <p className="trainer-history-state" role="status">Cargando el historial de práctica…</p> : null}
+        {historyState === "error" ? <div className="trainer-history-error" role="alert"><p>{historyError}</p><button type="button" onClick={() => { setHistoryState("loading"); setHistoryAttempt((attempt) => attempt + 1); }}>Reintentar historial</button></div> : null}
+        {historyState === "ready" && history.length ? <ol className="trainer-history__list">{history.map((item) => <li key={item.id}><span><strong>{item.feature}</strong><small>{new Date(item.attemptedAt).toLocaleString("es-CO")} · {item.hintsUsed} pistas consultadas</small></span><span className="trainer-history__status">{statusLabels[item.status]}</span></li>)}</ol> : null}
+        {historyState === "ready" && !history.length ? <p className="trainer-empty">Aún no hay intentos registrados para esta revisión y sesión.</p> : null}
       </section> : null}
+
+      <aside className="trainer-next" aria-label="Próxima capacidad">
+        <div className="trainer-next__icon" aria-hidden="true"><Code2 size={19} /></div>
+        <div><p className="trainer-next__eyebrow">SIGUIENTE ETAPA</p><h2>Autoevaluación guiada</h2><p>La autoevaluación guiada está en preparación; todavía no forma parte de Trainer.</p></div>
+        <span className="trainer-next__status">En preparación</span>
+      </aside>
     </main>
   );
 }

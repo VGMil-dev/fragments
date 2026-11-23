@@ -36,7 +36,9 @@ describe("TrainerScreen", () => {
       expect(container.querySelector(".trainer-controls")).toBeNull();
       expect(container.querySelector(".trainer-history")).toBeNull();
       expect(container.querySelector(".trainer-empty-state img")).toBeNull();
-      expect(container.querySelector(".trainer-empty-state svg")).toBeNull();
+      expect(container.querySelector(".trainer-empty-state svg[aria-hidden='true']")).not.toBeNull();
+      expect(container.textContent).toContain("LABORATORIO SIN REVISIÓN ACTIVA");
+      expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
       await act(async () => link!.click());
       expect(onStartReview).toHaveBeenCalledOnce();
     } finally {
@@ -80,8 +82,51 @@ describe("TrainerScreen", () => {
       expect(container.querySelector(".trainer-controls select")?.textContent).toContain("student/demo");
       expect(container.textContent).toContain("Sortear reto");
       expect(container.textContent).toContain("Historial de práctica");
+      expect(container.textContent).toContain("FUENTE DE PRÁCTICA");
+      expect(container.textContent).toContain("El reto aparecerá después del sorteo");
+      expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
       expect(container.querySelector(".trainer-empty-state")).toBeNull();
       expect(container.querySelector(".trainer-challenge")).toBeNull();
+      expect(container.textContent).toContain("Aún no hay intentos registrados para esta revisión y sesión.");
+      expect(container.textContent).not.toContain("Tus prácticas quedarán guardadas aquí en este navegador.");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("distinguishes history loading and failure, and retries until a successful empty result", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    let finishFirst!: (result: { ok: false; error: { code: string; message: string } }) => void;
+    const history = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { finishFirst = resolve; }))
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockResolvedValueOnce({ ok: true, data: [] });
+    const api = {
+      reviews: async () => ({ ok: true, data: [{ id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z" }] }),
+      history,
+    } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      expect(container.querySelector('[role="status"]')?.textContent).toContain("Cargando el historial de práctica");
+      expect(container.querySelector(".trainer-history__heading span")?.textContent).toBe("Cargando…");
+      expect(container.textContent).not.toContain("Aún no hay intentos registrados");
+      await act(async () => finishFirst({ ok: false, error: { code: "OFFLINE", message: "Historial no disponible" } }));
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("Historial no disponible");
+      expect(container.textContent).not.toContain("Aún no hay intentos registrados");
+      const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar historial");
+      expect(retry).not.toBeUndefined();
+      await act(async () => retry!.click());
+      expect(history).toHaveBeenCalledTimes(2);
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar el historial");
+      expect(container.textContent).not.toContain("Aún no hay intentos registrados");
+      const retryAgain = [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar historial");
+      await act(async () => retryAgain!.click());
+      expect(history).toHaveBeenCalledTimes(3);
+      expect(container.textContent).toContain("Aún no hay intentos registrados para esta revisión y sesión.");
+      expect(container.querySelector('[role="alert"]')).toBeNull();
     } finally {
       await act(async () => root.unmount());
       container.remove();
