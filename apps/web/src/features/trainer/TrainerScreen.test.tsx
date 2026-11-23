@@ -319,4 +319,42 @@ describe("TrainerScreen", () => {
       container.remove();
     }
   });
+
+  it("does not duplicate an idempotent attempt when history retry wins the race", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z" };
+    const challenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
+      feature: "Filtro de tareas", task: "Sigue el flujo del filtro.", expectedObservation: "La lista visible cambia.", restoration: "Restaura el filtro.", estimatedMinutes: 12,
+      sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24], hints: ["Busca el filtro.", "Sigue el estado.", "Compara el resultado."], createdAt: "2026-11-23T10:00:00Z" };
+    const persistedAttempt = { id: "attempt-shared", reviewId: review.id, challengeId: challenge.id, feature: challenge.feature, status: "in_progress" as const, hintsUsed: 0, attemptedAt: "2026-11-23T10:05:00Z" };
+    const history = vi.fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: "OFFLINE", message: "Historial no disponible" } })
+      .mockResolvedValueOnce({ ok: true, data: [persistedAttempt] });
+    const draw = vi.fn().mockResolvedValue({ ok: true, data: { challenge, category: "new", bankSize: 2 } });
+    const record = vi.fn()
+      .mockRejectedValueOnce(new Error("response lost after persistence"))
+      .mockResolvedValueOnce({ ok: true, data: persistedAttempt });
+    const api = { reviews: async () => ({ ok: true, data: [review] }), history, draw, record } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("Historial no disponible");
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
+      expect(record).toHaveBeenCalledOnce();
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar historial")!.click());
+      expect(container.querySelectorAll(".trainer-history__list li")).toHaveLength(1);
+      expect(container.querySelector(".trainer-history__list")?.textContent).toContain("Filtro de tareas");
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar registro")!.click());
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(container.querySelectorAll(".trainer-history__list li")).toHaveLength(1);
+      expect(container.textContent).toContain("Progreso guardado: en progreso.");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
 });

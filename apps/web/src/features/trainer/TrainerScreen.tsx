@@ -111,7 +111,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         setRecordError("No pudimos confirmar el registro. Puedes reintentar sin duplicar este intento.");
         return;
       }
-      setHistory((current) => [result.data, ...current].slice(0, 200));
+      setHistory((current) => [result.data, ...current.filter((item) => item.id !== result.data.id)].slice(0, 200));
       setHistoryState("ready");
       setHistoryError("");
       setRecordedChallengeId(input.challengeId);
