@@ -17,7 +17,7 @@ Después de crear aulas y habilitar habilidades, falta el núcleo pedagógico qu
 
 ## No objetivos
 
-Review/Inspector, entregas oficiales, nota/F26, fechas, archivos adjuntos, co-docencia, importación DOCX, banco Trainer, cambios de rúbrica, ejecución de código estudiantil, escrituras productivas manuales, migración de producción fuera del F14 autorizado.
+Review/Inspector, entregas oficiales, nota/F26, fechas, archivos adjuntos, co-docencia, importación DOCX, generación/banco de retos Trainer, cambios de rúbrica, ejecución de código estudiantil, escrituras productivas manuales, migración de producción fuera del F14 autorizado.
 
 ## Seguridad y datos
 
@@ -83,6 +83,16 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - No objetivos: cambiar contratos/APIs, la lista principal de aulas, autenticación, datos o sesiones reales.
 - Owner de tarea: PLANNER. Implementación en `StudentClassroomsScreen` y prueba de componente.
 - Criterio: errores accesibles, carga anunciada durante el reintento y deduplicación mientras el mismo recurso/aula tenga una solicitud pendiente.
+
+## Incremento — continuar la misión en Trainer
+
+- Problema: el vínculo académico opcional se conserva en Review y aparece en el seguimiento docente, pero Trainer solo identifica el repositorio y commit; el estudiante pierde de vista la misión, su versión de Mentor y las habilidades obligatorias al pasar a practicar.
+- Objetivo: transportar al listado de Reviews propios un resumen de misión validado desde el snapshot vinculado y mostrarlo junto al análisis seleccionado en Trainer.
+- Contenido: título/aula de misión, versión publicada, versión de contexto Mentor y nombres de habilidades obligatorias. Para trabajos históricos sin snapshot de habilidades, indicarlo como no disponible; una lista explícitamente vacía significa que no hay habilidades obligatorias.
+- Seguridad: derivar el resumen de `academicLink` persistido solo cuando `context.studentId` coincide con el dueño de la consulta y `linkedProposalId` coincide con `academicLink.proposalId`. No devolver IDs internos, rúbrica, score ni contenido de propuesta.
+- No objetivos: cambiar prompts, modelo, rúbrica, evaluación, retos o banco Trainer; agregar rutas, tablas, migraciones o datos productivos.
+- Owner: PLANNER/arquitecto integra contrato y persistencia del payload existente; la UI web solo presenta el DTO.
+- Skill aplicada: `vercel-react-best-practices`; se prefieren datos ya cargados en el listado y renderizado condicional simple, sin una petición extra desde React.
 
 ## Incremento UI estudiantil — identificar snapshot de misión
 

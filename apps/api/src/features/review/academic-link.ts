@@ -1,10 +1,19 @@
-import { ReviewAcademicLinkSchema, type ReviewAcademicLink } from "@fragments/contracts";
+import { AssignmentSkillSnapshotSchema, ReviewAcademicLinkSchema, type ReviewAcademicLink } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 
 function textField(value: unknown, key: string): string {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "";
   const field = (value as Record<string, unknown>)[key];
   return typeof field === "string" ? field.trim() : "";
+}
+
+function requiredSkillNames(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length > 20) return undefined;
+  const names = value.flatMap((item) => {
+    const parsed = AssignmentSkillSnapshotSchema.safeParse(item);
+    return parsed.success ? [parsed.data.name] : [];
+  });
+  return names.length === value.length ? names : undefined;
 }
 
 export function createReviewAcademicLinkResolver(database: PrismaClient) {
@@ -27,6 +36,8 @@ export function createReviewAcademicLinkResolver(database: PrismaClient) {
     });
     if (!enrollment) return null;
 
+    const snapshot = version.snapshotJson;
+    const skills = snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? requiredSkillNames(snapshot.requiredSkills) : undefined;
     return ReviewAcademicLinkSchema.parse({
       proposalId: proposal.id,
       proposalVersion: proposal.version,
@@ -37,6 +48,7 @@ export function createReviewAcademicLinkResolver(database: PrismaClient) {
       mentorContextVersion: version.mentorContextVersion,
       classroomId: version.assignment.classroomId,
       classroomTitle: version.assignment.classroom.title,
+      ...(skills === undefined ? {} : { requiredSkills: skills }),
     });
   };
 }

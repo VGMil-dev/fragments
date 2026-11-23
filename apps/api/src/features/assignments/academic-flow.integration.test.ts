@@ -292,7 +292,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(linkedBody.data.status).toBe("queued");
       const job = await db.job.findUniqueOrThrow({ where: { id: linkedBody.data.id } });
       expect(job.payloadJson).toMatchObject({ context: { academicLink: { proposalId: proposal.id, assignmentVersionId: mission.id,
-        missionTitle: "Misión para Review", mentorContextVersion: mission.mentorContextVersion, classroomId } } });
+        missionTitle: "Misión para Review", mentorContextVersion: mission.mentorContextVersion, classroomId, requiredSkills: ["Navegación"] } } });
       expect(await store.getJob(linkedBody.data.id)).toMatchObject({ linkedProposalId: proposal.id, academicLink: { proposalId: proposal.id, classroomId } });
 
       for (let index = 1; index <= 101; index++) await store.enqueue({ request: { owner: "fixture-former-student", repo: "old-work", commitSha: index.toString(16).padStart(40, "0") },

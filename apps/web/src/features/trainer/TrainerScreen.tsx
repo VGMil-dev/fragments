@@ -101,6 +101,15 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
           </button>
         </div>
         {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
+        {review?.academicContext ? <section className="trainer-academic-context" aria-label="Contexto académico de la revisión">
+          <p className="trainer-academic-context__eyebrow">Misión vinculada</p>
+          <h2>{review.academicContext.missionTitle} · v{review.academicContext.missionVersion}</h2>
+          <p>{review.academicContext.classroomTitle} · Contexto Mentor v{review.academicContext.mentorContextVersion}</p>
+          {review.academicContext.requiredSkills === undefined ? <p>Las habilidades requeridas no están disponibles para esta revisión.</p> : <div>
+            <strong>Habilidades requeridas</strong>
+            {review.academicContext.requiredSkills.length ? <ul>{review.academicContext.requiredSkills.map((skill) => <li key={skill}>{skill}</li>)}</ul> : <p>Esta misión no requiere habilidades específicas.</p>}
+          </div>}
+        </section> : null}
       </section> : null}
 
       {message && !loadFailed ? <p className="trainer-message" role="status">{message}</p> : null}

@@ -3,11 +3,12 @@ import { AiAnalysisSchema, EvidenceReferenceSchema, RepositorySnapshotSchema, ty
 import type { InspectorReviewRecord } from "../inspector/review-adapter.js";
 import type { ChallengeDraft, ReviewEvidence } from "../inspector/service.js";
 import type { TrainerAttempt, TrainerChallenge, TrainerStatus } from "./repository.js";
+import type { TrainerAcademicContext } from "./schemas.js";
 
 export type TrainerReview = Pick<InspectorReviewRecord, "id" | "projectId" | "owner" | "repo" | "commitSha" | "analysis">;
 export interface TrainerDependencies {
   reviews: {
-    listCompleted(studentId?: string): Promise<Array<Pick<TrainerReview, "id" | "owner" | "repo" | "commitSha"> & { updatedAt: string }>>;
+    listCompleted(studentId?: string): Promise<Array<Pick<TrainerReview, "id" | "owner" | "repo" | "commitSha"> & { updatedAt: string; academicContext?: TrainerAcademicContext }>>;
     getEvidence(id: string): Promise<ReviewEvidence | null>;
   };
   provider: { createChallenge(input: { reviewId: string; commitSha: string; evidence: { source: "repository"; path: string; lines: [number, number]; digest: string }; findingReason: string; evidenceExcerpt: string }): Promise<ChallengeDraft> };

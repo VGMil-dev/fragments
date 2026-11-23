@@ -1,6 +1,8 @@
 import type { ApiResult } from "@fragments/contracts";
 
-export type TrainerReview = { id: string; owner: string; repo: string; commitSha: string; updatedAt: string };
+export type TrainerReview = { id: string; owner: string; repo: string; commitSha: string; updatedAt: string; academicContext?: {
+  missionTitle: string; missionVersion: number; mentorContextVersion: number; classroomTitle: string; requiredSkills?: string[];
+} };
 export type TrainerChallenge = {
   id: string; reviewId: string; projectId: string; commitSha: string; feature: string; task: string;
   expectedObservation: string; restoration: string; estimatedMinutes: number; sourcePath: string;
@@ -13,7 +15,16 @@ type Draw = { challenge: TrainerChallenge; category: "new" | "pending" | "review
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function isText(value: unknown): value is string { return typeof value === "string"; }
 function isNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
-function isReview(value: unknown): value is TrainerReview { return isRecord(value) && [value.id, value.owner, value.repo, value.commitSha, value.updatedAt].every(isText); }
+function isAcademicContext(value: unknown): value is NonNullable<TrainerReview["academicContext"]> {
+  return isRecord(value) && isText(value.missionTitle) && isNumber(value.missionVersion) && Number.isInteger(value.missionVersion) && value.missionVersion > 0
+    && isNumber(value.mentorContextVersion) && Number.isInteger(value.mentorContextVersion) && value.mentorContextVersion > 0
+    && isText(value.classroomTitle) && (value.requiredSkills === undefined || (Array.isArray(value.requiredSkills) && value.requiredSkills.length <= 20
+      && value.requiredSkills.every((skill) => isText(skill) && skill.trim().length > 0 && skill.length <= 100)));
+}
+function isReview(value: unknown): value is TrainerReview {
+  return isRecord(value) && [value.id, value.owner, value.repo, value.commitSha, value.updatedAt].every(isText)
+    && (value.academicContext === undefined || isAcademicContext(value.academicContext));
+}
 function isChallenge(value: unknown): value is TrainerChallenge {
   return isRecord(value) && [value.id, value.reviewId, value.projectId, value.commitSha, value.feature, value.task, value.expectedObservation, value.restoration, value.sourcePath, value.createdAt].every(isText)
     && isNumber(value.estimatedMinutes) && Array.isArray(value.sourceLines) && value.sourceLines.length === 2 && value.sourceLines.every(isNumber)
