@@ -346,3 +346,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Ego Lite comprobó Mentor, Dashboard y Trainer en las sesiones ya abiertas, sin guardados, evaluaciones IA ni escrituras académicas; sin overflow a 320/390/768/1024/1440 CSS px. Trainer no disponía de una Review en esa sesión, por lo que repo/SHA seleccionado y reto real siguen NO COMPROBADOS.
 - Capturas autenticadas quedan solo localmente porque incluyen identidad y datos académicos; no se añadieron a Git ni a Notion.
 - Notion F16, F17 y F10 actualizado con merge/release, QA observada y límites NO COMPROBADOS.
+
+## Release F22.15 `v0.5.51` — 2026-11-23
+
+- PR #213 se integró mediante merge normal como `c9576aad08dfd689a0852ec9a6b748d938fa2803`; CI `45274714433` SUCCESS. La tag anotada nueva apunta a ese SHA exacto de `origin/main`.
+- F14 run `45275604889` SUCCESS: validación de tag/SHA/main, PostgreSQL desechable, backup/restore, suite/typecheck/lint/build, metadata, imágenes ARM64, atestación Sigstore y publicación aprobada.
+- Ego Lite público: `/health` HTTP 200 `ok/database=ready`; el bundle `/assets/index-BDAa_SKe.js` contiene `v0.5.51`, el SHA exacto y `/admin/trainer-events`. GET del feed con sesión sin rol admin dio 403 seguro. El feed con rol admin y eventos Trainer reales quedan NO COMPROBADOS.
+- No se realizó despliegue manual, cambio de infraestructura, migración ni escritura en producción.
