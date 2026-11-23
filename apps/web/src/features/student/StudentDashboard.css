@@ -143,10 +143,143 @@
 
 .student-dashboard--pixel .student-dashboard__mission-snapshot dd {
   margin: 0;
-  color: var(--dashboard-text);
+  color: var(--dashboard-copy);
   font-size: .9rem;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.student-dashboard--pixel .student-dashboard__missions {
+  margin: 0 0 1rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--dashboard-edge);
+  border-radius: 1rem;
+  background: var(--dashboard-surface);
+}
+
+.student-dashboard--pixel .student-dashboard__missions-heading .student-screen__eyebrow {
+  margin: 0 0 .35rem;
+  color: var(--dashboard-lime);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.student-dashboard--pixel .student-dashboard__missions-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.student-dashboard--pixel .student-dashboard__missions-heading h2 svg {
+  color: var(--dashboard-lime);
+}
+
+.student-dashboard--pixel .student-dashboard__missions-heading > p:last-child {
+  margin: .4rem 0 1rem;
+  color: var(--dashboard-muted);
+}
+
+.student-dashboard--pixel .student-dashboard__mission-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid #344560;
+  border-radius: .75rem;
+  background: var(--dashboard-raised);
+}
+
+.student-dashboard--pixel .student-dashboard__mission-source {
+  margin: 0;
+  color: var(--dashboard-muted);
+  font-size: .82rem;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-card h3 {
+  margin: .35rem 0 .75rem;
+  font-size: 1rem;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-objective {
+  display: grid;
+  gap: .2rem;
+  margin: 0 0 .75rem;
+  color: var(--dashboard-muted);
+  line-height: 1.45;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-objective strong {
+  color: var(--dashboard-copy);
+  font-size: .78rem;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin: .35rem 0 .85rem;
+  padding: 0;
+  list-style: none;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skill-group {
+  margin-top: auto;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skill-group > p {
+  margin: 0;
+  color: var(--dashboard-copy);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-skills li {
+  padding: .2rem .45rem;
+  border: 1px solid #516380;
+  border-radius: 999px;
+  color: var(--dashboard-copy);
+  font-size: .75rem;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: .35rem;
+  padding: .45rem .65rem;
+  border: 1px solid var(--dashboard-lime);
+  border-radius: .45rem;
+  background: var(--dashboard-cobalt);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-action:hover {
+  background: #1c67e5;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-action:focus-visible,
+.student-dashboard--pixel .student-dashboard__all-missions:focus-visible {
+  outline: 3px solid var(--dashboard-lime);
+  outline-offset: 3px;
+}
+
+.student-dashboard--pixel .student-dashboard__all-missions {
+  margin-top: .5rem;
 }
 
 .student-dashboard--pixel .student-dashboard__project-action .button--primary {
