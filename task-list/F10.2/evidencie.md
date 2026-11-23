@@ -20,6 +20,7 @@ Estado: implementado y verificado localmente; pendiente de PR, CI, release F14 y
 ## Commits y límites pendientes
 
 - Código UI del agente: `fd89ac71f31762ad1a4138752cdd0e464c6865c3`; incorporado a esta rama por cherry-pick como `381c3f9`.
-- Wiring de rutas, prueba de integración y evidencia: se registrarán en el siguiente commit planner.
+- Wiring de rutas, prueba de integración y evidencia: commit `2a11424e539c0faf126ce1c40e7270cd5e2307bb`.
+- UI del flujo: commit integrado `381c3f9` (original del agente `fd89ac71f31762ad1a4138752cdd0e464c6865c3`).
 - Todavía no hay PR/CI ni release; producción y Ego Lite no se tocaron. Verificación visual/autenticada: **NO COMPROBADA**, pendiente del flujo normal F14.
 - No se probó el comportamiento del dashboard con una Review productiva real; los recorridos cubiertos por Vitest usan APIs/componente simulados.
