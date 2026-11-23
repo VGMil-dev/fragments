@@ -328,3 +328,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45153003708`: validación de tag/SHA/main, tests, typecheck, lint/build, metadata del bundle, PostgreSQL desechable y restore, imágenes ARM64, atestación Sigstore y publicación a la cola protegida terminaron SUCCESS.
 - Health público previo: HTTP 200 `ok/ready`. Durante la ventana de aplicación automática, una lectura pública devolvió HTTP 502; la siguiente observación volvió a HTTP 200 `ok/ready`, y el bundle `/assets/index-CCBddJ1x.js` confirmó `v0.5.36` y el SHA completo exacto.
 - Sin invocación manual, reinicio solicitado, pausa ni cambio de infraestructura. Se conservaron el entorno `fragments-production`, el workflow, el poller y todos los gates técnicos. Ledger del host e integridad/retención independiente del backup NO COMPROBADOS.
+
+## Release Pixel Night `v0.5.42` — 2026-11-23
+
+- PR #190 se integró por merge normal: `e184280f992f9b4a90603fbc4dd79c856ddf38a2`; CI PR run `45193340720` SUCCESS.
+- Se consultó `fragments-production`: solo regla `branch_policy`; no tenía revisores requeridos ni temporizador. La tag remota no existía. Tag anotada `v0.5.42`, objeto `5eed3047f8c91ee2c1ee4a913726996ea7fe260b`, apunta exactamente al merge de `main`.
+- Run F14 `45193941563` SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`. Verificó tag/SHA, PostgreSQL disposable, backup/restore, pruebas/typecheck/lint/build, metadata, imágenes ARM64, atestación Sigstore y publicación del paquete.
+- Aplicación observada mediante el pull agent y endpoints públicos: `/health` HTTP 200 `ok`, DB `ready`; bundle `/assets/index-yKTmZzCk.js` contiene `v0.5.42` y SHA `e184280f992f9b4a90603fbc4dd79c856ddf38a2`. No se ejecutó despliegue/aplicador manual.
+- Ego Lite comprobó Mentor, Dashboard y Trainer en las sesiones ya abiertas, sin guardados, evaluaciones IA ni escrituras académicas; sin overflow a 320/390/768/1024/1440 CSS px. Trainer no disponía de una Review en esa sesión, por lo que repo/SHA seleccionado y reto real siguen NO COMPROBADOS.
+- Capturas autenticadas quedan solo localmente porque incluyen identidad y datos académicos; no se añadieron a Git ni a Notion.
+- Notion F16, F17 y F10 actualizado con merge/release, QA observada y límites NO COMPROBADOS.
