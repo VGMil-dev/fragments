@@ -24,6 +24,11 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [drawing, setDrawing] = useState(false);
+  const [drawError, setDrawError] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [recordNeedsVerification, setRecordNeedsVerification] = useState(false);
+  const [checkingRecord, setCheckingRecord] = useState(false);
+  const [recordError, setRecordError] = useState("");
   const [message, setMessage] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
   const review = useMemo(() => reviews.find((item) => item.id === selectedReview), [reviews, selectedReview]);
@@ -80,22 +85,70 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
 
   async function draw() {
     if (!selectedReview || drawing) return;
-    setDrawing(true); setMessage(""); setShownHints(0);
-    const result = await api.draw(selectedReview);
-    if (result.ok) { setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); setRecordedChallengeId(null); }
-    else setMessage(result.error.message);
-    setDrawing(false);
+    setDrawing(true); setMessage(""); setDrawError("");
+    try {
+      const result = await api.draw(selectedReview);
+      if (result.ok) {
+        setChallenge(result.data.challenge); setCategory(result.data.category); setBankSize(result.data.bankSize); setRecordedChallengeId(null); setShownHints(0);
+      } else {
+        setDrawError("No pudimos sortear un reto. Tu reto actual y tu historial siguen disponibles; inténtalo de nuevo.");
+      }
+    } catch {
+      setDrawError("No pudimos sortear un reto. Tu reto actual y tu historial siguen disponibles; inténtalo de nuevo.");
+    } finally {
+      setDrawing(false);
+    }
   }
 
   async function record(status: TrainerStatus) {
-    if (!challenge) return;
-    const result = await api.record({ reviewId: challenge.reviewId, challengeId: challenge.id, status, hintsUsed: shownHints });
-    if (!result.ok) { setMessage(result.error.message); return; }
-    setHistory((current) => [result.data, ...current].slice(0, 200));
-    setHistoryState("ready");
-    setHistoryError("");
-    setRecordedChallengeId(challenge.id);
-    setMessage(`Progreso guardado: ${statusLabels[status].toLowerCase()}.`);
+    if (!challenge || recording || recordNeedsVerification || recordedChallengeId === challenge.id) return;
+    setRecording(true); setMessage(""); setRecordError("");
+    try {
+      const result = await api.record({ reviewId: challenge.reviewId, challengeId: challenge.id, status, hintsUsed: shownHints });
+      if (!result.ok) {
+        setRecordNeedsVerification(true);
+        setRecordError("No pudimos confirmar el registro. Comprueba el historial antes de volver a intentarlo.");
+        return;
+      }
+      setHistory((current) => [result.data, ...current].slice(0, 200));
+      setHistoryState("ready");
+      setHistoryError("");
+      setRecordedChallengeId(challenge.id);
+      setMessage(`Progreso guardado: ${statusLabels[status].toLowerCase()}.`);
+    } catch {
+      setRecordNeedsVerification(true);
+      setRecordError("No pudimos confirmar el registro. Comprueba el historial antes de volver a intentarlo.");
+    } finally {
+      setRecording(false);
+    }
+  }
+
+  async function verifyRecord() {
+    if (!challenge || !recordNeedsVerification || checkingRecord) return;
+    setCheckingRecord(true);
+    try {
+      const result = await api.history(challenge.reviewId);
+      if (!result.ok) {
+        setRecordError("No pudimos comprobar el historial. El intento no se volverá a enviar hasta verificarlo; inténtalo de nuevo.");
+        return;
+      }
+      setHistory(result.data);
+      setHistoryState("ready");
+      setHistoryError("");
+      const attemptIsSaved = result.data.some((item) => item.challengeId === challenge.id);
+      setRecordNeedsVerification(false);
+      setRecordError("");
+      if (attemptIsSaved) {
+        setRecordedChallengeId(challenge.id);
+        setMessage("El intento ya aparece en el historial; no se volvió a registrar.");
+      } else {
+        setMessage("El historial no muestra este intento. Puedes volver a registrar tu progreso.");
+      }
+    } catch {
+      setRecordError("No pudimos comprobar el historial. El intento no se volverá a enviar hasta verificarlo; inténtalo de nuevo.");
+    } finally {
+      setCheckingRecord(false);
+    }
   }
 
   return (
@@ -125,7 +178,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         <div className="trainer-section-kicker"><span>01</span><p>FUENTE DE PRÁCTICA</p></div>
         <label htmlFor="trainer-review">Elige el análisis que quieres practicar</label>
         <div className="trainer-controls__row">
-          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading}>
+          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setRecordNeedsVerification(false); setRecordError(""); setDrawError(""); setMessage(""); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading || drawing || recording || recordNeedsVerification || checkingRecord}>
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
         </div>
@@ -152,6 +205,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         </button>
       </section> : null}
 
+      {drawError ? <p className="trainer-message trainer-message--error" role="alert">{drawError}</p> : null}
       {message && !loadFailed ? <p className="trainer-message" role="status">{message}</p> : null}
 
       {challenge ? (
@@ -171,10 +225,12 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
             {shownHints < 3 ? <button className="trainer-secondary" type="button" onClick={() => setShownHints((count) => Math.min(3, count + 1))}>Mostrar pista {shownHints + 1}</button> : <p>Ya consultaste las tres pistas.</p>}
           </section>
           <div className="trainer-actions" aria-label="Registrar tu progreso">
-            <button type="button" onClick={() => void record("in_progress")}>En progreso</button>
-            <button type="button" onClick={() => void record("need_more")}>Necesito practicar más</button>
-            <button type="button" onClick={() => void record("completed")}>Completado por mí</button>
+            <button type="button" disabled={recording || recordNeedsVerification || checkingRecord || recordedChallengeId === challenge.id} onClick={() => void record("in_progress")}>En progreso</button>
+            <button type="button" disabled={recording || recordNeedsVerification || checkingRecord || recordedChallengeId === challenge.id} onClick={() => void record("need_more")}>Necesito practicar más</button>
+            <button type="button" disabled={recording || recordNeedsVerification || checkingRecord || recordedChallengeId === challenge.id} onClick={() => void record("completed")}>Completado por mí</button>
           </div>
+          {recording ? <p role="status">Registrando tu progreso…</p> : null}
+          {recordError ? <div className="trainer-message trainer-message--error"><p role="alert">{recordError}</p><button type="button" className="trainer-secondary" disabled={checkingRecord} onClick={() => void verifyRecord()}>{checkingRecord ? "Comprobando historial…" : "Comprobar historial"}</button></div> : null}
           <p className="trainer-verification-note">El progreso lo registras tú; no es una verificación automática ni una nota.</p>
           <p className="trainer-restoration"><strong>Al terminar:</strong> {challenge.restoration}</p>
         </article>

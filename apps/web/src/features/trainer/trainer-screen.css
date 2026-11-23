@@ -59,6 +59,7 @@
 .trainer-draw:disabled { cursor: wait; opacity: .6; }
 
 .trainer-message { padding: .75rem 1rem; border: 1px solid var(--trainer-border); border-left: 3px solid var(--trainer-lime); border-radius: 8px; background: var(--trainer-raised); color: var(--trainer-text); }
+.trainer-message--error { border-color: #7f3945; border-left-color: #7f3945; background: rgb(127 57 69 / 16%); }
 .trainer-challenge { margin-top: 1rem; padding: clamp(1rem, 3vw, 1.7rem); }
 .trainer-challenge__top, .trainer-history__heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .trainer-challenge__top > span:last-child, .trainer-history__heading > span { color: var(--trainer-muted); font-size: .85rem; }
