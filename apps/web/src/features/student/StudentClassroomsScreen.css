@@ -1,0 +1,252 @@
+.student-classrooms--pixel {
+  --classrooms-night: #030407;
+  --classrooms-cobalt: #1558c9;
+  --classrooms-lime: #d4ff24;
+  --classrooms-surface: #0b101d;
+  --classrooms-raised: #111a2c;
+  --classrooms-edge: #3d5272;
+  --classrooms-copy: #eef3fc;
+  --classrooms-muted: #bdc9dc;
+  box-sizing: border-box;
+  width: min(100% - 2rem, 1120px);
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2.5rem) 0 3rem;
+  color: var(--classrooms-copy);
+}
+
+.student-classrooms--pixel *,
+.student-classrooms--pixel *::before,
+.student-classrooms--pixel *::after { box-sizing: border-box; }
+
+.student-classrooms--pixel .student-classrooms__heading { margin-bottom: 1.75rem; }
+.student-classrooms--pixel .student-classrooms__heading .student-screen__eyebrow {
+  margin: 0;
+  color: var(--classrooms-lime);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.student-classrooms--pixel .student-classrooms__heading h1 {
+  margin: .45rem 0 .5rem;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+.student-classrooms--pixel .student-classrooms__heading > p:last-child {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--classrooms-muted);
+  line-height: 1.55;
+}
+
+.student-classrooms--pixel > section { margin-top: 2rem; }
+.student-classrooms--pixel > section > h2 {
+  margin: 0 0 .85rem;
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  letter-spacing: -.015em;
+}
+.student-classrooms--pixel > section > p,
+.student-classrooms--pixel > [role="alert"] > p,
+.student-classrooms--pixel > [role="status"] {
+  color: var(--classrooms-muted);
+  line-height: 1.55;
+}
+
+.student-classrooms--pixel .student-classrooms__list,
+.student-classrooms--pixel .student-classrooms__requests {
+  display: grid;
+  gap: .9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.student-classrooms--pixel .student-classrooms__card {
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--classrooms-edge);
+  border-radius: 1rem;
+  background: linear-gradient(125deg, rgb(21 88 201 / 13%), transparent 42%), var(--classrooms-surface);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 18%);
+}
+.student-classrooms--pixel .student-classrooms__card > div:first-child { min-width: 0; }
+.student-classrooms--pixel .student-classrooms__card > div:first-child > p {
+  margin: 0 0 .45rem;
+  color: var(--classrooms-muted);
+  font-size: .9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.student-classrooms--pixel .student-classrooms__card h3 {
+  margin: 0 0 .75rem;
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.student-classrooms--pixel .student-classrooms__status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: .25rem .55rem;
+  border: 1px solid rgb(212 255 36 / 52%);
+  border-radius: 999px;
+  background: rgb(212 255 36 / 9%);
+  color: var(--classrooms-lime);
+  font-size: .82rem;
+  font-weight: 700;
+}
+.student-classrooms--pixel .student-classrooms__skills { min-width: 0; }
+.student-classrooms--pixel .student-classrooms__skills h4 {
+  margin: 0 0 .6rem;
+  color: var(--classrooms-muted);
+  font-size: .9rem;
+  font-weight: 700;
+}
+.student-classrooms--pixel .student-classrooms__skills > p,
+.student-classrooms--pixel .student-classrooms__skills [role="alert"],
+.student-classrooms--pixel .student-classrooms__missions [role="status"],
+.student-classrooms--pixel .student-classrooms__missions [role="alert"] {
+  color: var(--classrooms-muted);
+  line-height: 1.5;
+}
+.student-classrooms--pixel .student-classrooms__skills ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.student-classrooms--pixel .student-classrooms__skills li {
+  max-width: 100%;
+  padding: .35rem .6rem;
+  border: 1px solid var(--classrooms-edge);
+  border-radius: .5rem;
+  background: var(--classrooms-raised);
+  color: var(--classrooms-copy);
+  overflow-wrap: anywhere;
+}
+.student-classrooms--pixel .student-classrooms__missions {
+  min-width: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--classrooms-edge);
+}
+.student-classrooms--pixel .student-classrooms__missions .student-assignments {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.student-classrooms--pixel .student-classrooms__missions .student-assignments h2 {
+  margin: 0 0 .65rem;
+  font-size: 1.1rem;
+}
+.student-classrooms--pixel .student-classrooms__missions .assignments-panel__empty { color: var(--classrooms-muted); }
+
+.student-classrooms--pixel .student-classrooms__join {
+  margin-top: 2rem;
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border: 1px solid var(--classrooms-edge);
+  border-radius: .9rem;
+  background: var(--classrooms-surface);
+}
+.student-classrooms--pixel .student-classrooms__join h2 {
+  margin: 0 0 .8rem;
+  font-size: 1.1rem;
+}
+.student-classrooms--pixel .student-classrooms__join label {
+  display: block;
+  margin-bottom: .4rem;
+  font-weight: 650;
+}
+.student-classrooms--pixel .student-classrooms__join > div {
+  display: flex;
+  gap: .65rem;
+}
+.student-classrooms--pixel .student-classrooms__join input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: .65rem .75rem;
+  border: 1px solid #61799e;
+  border-radius: .55rem;
+  background: #060a12;
+  color: var(--classrooms-copy);
+  font: inherit;
+}
+.student-classrooms--pixel .student-classrooms__join small {
+  display: block;
+  margin-top: .5rem;
+  color: var(--classrooms-muted);
+  line-height: 1.45;
+}
+.student-classrooms--pixel .student-classrooms__join .button--primary {
+  min-height: 46px;
+  padding-inline: 1rem;
+  border: 1px solid var(--classrooms-lime);
+  border-radius: .55rem;
+  background: var(--classrooms-lime);
+  color: var(--classrooms-night);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+.student-classrooms--pixel .student-classrooms__join .button--primary:disabled { cursor: wait; opacity: .7; }
+.student-classrooms--pixel .student-classrooms__notice {
+  padding: .8rem 1rem;
+  border-left: 3px solid var(--classrooms-lime);
+  background: var(--classrooms-surface);
+  color: var(--classrooms-copy);
+  line-height: 1.5;
+}
+.student-classrooms--pixel .student-classrooms__requests li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--classrooms-edge);
+}
+.student-classrooms--pixel .student-classrooms__requests strong { color: var(--classrooms-muted); text-align: right; }
+.student-classrooms--pixel .student-classrooms__requests strong[data-status="pending"] { color: var(--classrooms-lime); }
+.student-classrooms--pixel .student-classrooms__link {
+  min-height: 44px;
+  padding: .5rem .75rem;
+  border: 1px solid var(--classrooms-edge);
+  border-radius: .5rem;
+  background: var(--classrooms-raised);
+  color: var(--classrooms-copy);
+  font: inherit;
+  cursor: pointer;
+}
+.student-classrooms--pixel :is(button, input):focus-visible {
+  outline: 3px solid var(--classrooms-lime);
+  outline-offset: 3px;
+}
+
+@media (min-width: 700px) {
+  .student-classrooms--pixel .student-classrooms__card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(15rem, .9fr);
+    gap: 1.5rem 2rem;
+  }
+  .student-classrooms--pixel .student-classrooms__skills {
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--classrooms-edge);
+  }
+  .student-classrooms--pixel .student-classrooms__missions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 520px) {
+  .student-classrooms--pixel { width: min(100% - 1rem, 1120px); }
+  .student-classrooms--pixel .student-classrooms__join > div { flex-direction: column; }
+  .student-classrooms--pixel .student-classrooms__join .button--primary { width: 100%; }
+  .student-classrooms--pixel .student-classrooms__requests li { align-items: flex-start; flex-direction: column; gap: .35rem; }
+  .student-classrooms--pixel .student-classrooms__requests strong { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-classrooms--pixel *,
+  .student-classrooms--pixel *::before,
+  .student-classrooms--pixel *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

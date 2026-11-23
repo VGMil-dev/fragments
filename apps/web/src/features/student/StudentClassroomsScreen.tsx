@@ -3,6 +3,7 @@ import type { ClassroomSummary, SkillCatalogEntry, StudentAssignment, StudentCla
 import { studentApi } from "../../lib/api/student-api-instance";
 import { assignmentsApi } from "../assignments/assignments-api.js";
 import { StudentAssignmentsList } from "../assignments/AssignmentsPanel.js";
+import "./StudentClassroomsScreen.css";
 
 type Props = { classrooms: ClassroomSummary[]; requests: StudentClassroomRequest[]; loading: boolean; error: string | null; onRefresh: () => void; onStartProposal?: (assignment: StudentAssignment) => void };
 
@@ -73,7 +74,7 @@ export function StudentClassroomsScreen({ classrooms, requests, loading, error, 
     onRefresh();
   }
 
-  return <main className="student-classrooms" aria-labelledby="student-classrooms-title">
+  return <main className="student-classrooms student-classrooms--pixel" aria-labelledby="student-classrooms-title">
     <header className="student-classrooms__heading"><p className="student-screen__eyebrow">MI APRENDIZAJE</p><h1 id="student-classrooms-title">Mis aulas</h1><p>Consulta tus grupos y envía una solicitud con el código de tu docente.</p></header>
     <form className="student-classrooms__join" onSubmit={(event) => void submit(event)}>
       <h2>Incorporarte a un aula</h2><label htmlFor="classroom-join-code">Código de incorporación</label>
