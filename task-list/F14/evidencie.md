@@ -314,3 +314,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45134914694`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; paquete, manifiesto y atestación publicados como release `v0.5.34` a las 08:02:35 UTC.
 - Aplicación productiva comprobada públicamente después de la publicación: `/health` HTTP 200, `status=ok`, `database=ready`; bundle `/assets/index-CZSFpu9d.js` contiene `v0.5.34` y el SHA completo `5ab32afde23e7ed29724a757ce7a064c3b40704b`.
 - No se hizo deploy manual, reinicio ni se cambió el workflow/entorno. F14 gates y agente pull se conservaron. El hash/integridad/retención del backup y la inspección del ledger/host no se verificaron en esta comprobación.
+
+## Release y aplicación pública v0.5.35 — 2026-11-23
+
+- PR #172 se integró mediante merge normal como `befbc7c3116bf9df2a33f5d344bbb7040b806939`; CI run `45139615945` PASS. La tag anotada nueva `v0.5.35` apunta al SHA exacto de `origin/main`.
+- F14 run `45140042384`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; la validación confirmó tag anotada, SHA exacto y ascendencia en `main`. Release publicó `fragments-images.tar.gz`, `release-manifest.json` y `fragments-images.attestation.jsonl`.
+- Verificación pública posterior: `/health` HTTP 200 (`status=ok`, `database=ready`); bundle `/assets/index-B3UmVzeh.js` incluye `v0.5.35` y SHA `befbc7c3116bf9df2a33f5d344bbb7040b806939`.
+- Se conservaron entorno `fragments-production`, workflow, agente pull y controles técnicos. No hubo deploy manual, parada, reinicio, migración ni cambio de infraestructura. Integridad/retención del backup de esta release y estado interno del ledger quedan NO COMPROBADOS.
