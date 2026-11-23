@@ -155,7 +155,7 @@ describe("MentorScreen", () => {
     }));
   });
 
-  it("muestra la evaluación con navegación horizontal, resumen real y rueda derivada del borrador", async () => {
+  it("muestra un stepper horizontal en todas las etapas y un resumen real en evaluación", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
@@ -165,6 +165,7 @@ describe("MentorScreen", () => {
 
     expect(mountedContainer.querySelector("h1")?.textContent).toBe("Evalúa tu propuesta");
     expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
+    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Evaluación");
     expect(mountedContainer.querySelector("[aria-label='Preparación de la propuesta']")?.getAttribute("aria-valuenow")).toBe("100");
     const evaluationForm = mountedContainer.querySelector<HTMLFormElement>(".mentor-form--evaluation");
     expect(evaluationForm?.childElementCount).toBe(0);
@@ -179,6 +180,53 @@ describe("MentorScreen", () => {
     expect(mountedContainer.querySelector(".mentor-progress-card")).toBeNull();
     expect(mountedContainer.textContent).not.toContain("Descargar plantilla Word");
     expect(mountedContainer.textContent).not.toContain("Importar propuesta (.docx)");
+  });
+
+  it("guarda el borrador antes de avanzar y expone el estado actual de cada etapa", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
+
+    expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
+    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Idea");
+    expect(mountedContainer.querySelector(".mentor-stage-nav__state--current")?.textContent).toBe("Etapa actual");
+    const continueButton = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-form__actions button")).find((button) => button.textContent?.includes("Guardar y continuar"));
+    expect(continueButton).toBeDefined();
+
+    await act(async () => continueButton?.click());
+
+    expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ expectedVersion: proposal.version }));
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
+  });
+
+  it("no marca como anterior completada una etapa incompleta", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />));
+
+    const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => context?.click());
+
+    const idea = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Idea"));
+    expect(idea?.getAttribute("aria-label")).toBe("Idea: Pendiente");
+    expect(idea?.querySelector(".mentor-stage-nav__state")?.textContent).toBe("Pendiente");
+  });
+
+  it("mantiene la etapa cuando falla Guardar y continuar", async () => {
+    const onSave = vi.fn(async () => ({ ok: false as const, error: { code: "UNAVAILABLE", message: "Temporalmente no disponible." } }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} onSave={onSave} onBack={vi.fn()} />));
+
+    const continueButton = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-form__actions button")).find((button) => button.textContent?.includes("Guardar y continuar"));
+    await act(async () => continueButton?.click());
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
+    expect(mountedContainer.textContent).toContain("No pudimos guardar tu propuesta.");
   });
 
   it("no habilita evaluar con un borrador incompleto y mantiene la etapa pendiente", async () => {
@@ -375,7 +423,7 @@ describe("MentorScreen", () => {
     expect(mountedContainer.querySelector(".mentor-choices--context")?.closest(".mentor-stage-layout")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-form__footer > button")?.textContent).toContain("Anterior");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar borrador");
-    expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Continuar");
+    expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar y continuar");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).not.toContain("Anterior");
     expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).not.toContain("Guarda los cambios");
   });
