@@ -3,9 +3,9 @@ import { createServer, type Server } from "node:http";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { FragmentsAuthService } from "../../auth/better-auth.js";
 import { createMentorHttp } from "./http.js";
+import { safeOperationalEvent } from "./operational-events.js";
 import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./local-fakes.js";
 import { createMentorService, MentorEvaluationFailure, type MentorEvaluator } from "./service.js";
-import { safeOperationalEvent } from "./http.js";
 
 const proposal = {
   title: "Huerto de aula", problem: "El curso necesita registrar el crecimiento de las plantas.",
