@@ -54,6 +54,14 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - GIVEN una misión docente con versiones publicadas, WHEN el docente expande “Revisar versiones publicadas”, THEN cada versión disponible presenta su consigna y objetivos inmutables, las habilidades snapshot distinguidas como requeridas u optativas y el número de versión Mentor fijado.
 - El historial es un `<details>` accesible cerrado por defecto. La vista solo lee los objetos `versions` ya cargados y no ofrece controles de escritura sobre versiones publicadas.
 
+## Incremento — Dashboard como centro de la misión publicada
+
+- Si no hay borrador prioritario, ni error ni carga pendiente y existe una misión publicada, el Dashboard presenta la versión de misión y la versión de contexto Mentor del `StudentAssignment` que activa el CTA.
+- Presenta los nombres de `requiredSkills` de ese mismo snapshot; si la lista es válida y vacía, indica “Sin habilidades obligatorias”. No consulta el catálogo actual para reconstruir versiones ni requisitos.
+- Mientras se continúa un borrador, se cargan o fallan las propuestas/misiones, se oculta el resumen de misión igual que su CTA.
+- El CTA conserva y entrega el mismo objeto `StudentAssignment` sin copiarlo ni mutarlo.
+- Pruebas UI cubren versiones/habilidades reales del DTO fixture y la prioridad del borrador. Sin cambios de API, contratos, rutas, backend, migraciones o datos.
+
 ## Incremento F18.B — recuperar la carga de misiones docentes
 
 - Si falla `GET /api/teacher/classrooms/:classroomId/assignments`, el detalle no debe presentar el estado vacío como si no existieran misiones.
