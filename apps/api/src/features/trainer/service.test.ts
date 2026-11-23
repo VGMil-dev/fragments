@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { AiAnalysis, RepositorySnapshot } from "@fragments/contracts";
 import { digestSnapshot } from "../review/review.service.js";
-import type { TrainerAttempt, TrainerChallenge, TrainerStatus } from "./repository.js";
+import { TrainerAttemptIdempotencyConflict, type TrainerAttempt, type TrainerChallenge, type TrainerStatus } from "./repository.js";
 import { createTrainerService } from "./service.js";
 
 const sha = "a".repeat(40);
 class MemoryTrainerStore {
   private readonly banks = new Map<string, { challenges: TrainerChallenge[]; ready: boolean; owner: string | null }>();
   private readonly sessions = new Set<string>();
-  private readonly attempts: Array<TrainerAttempt & { sessionHash: string }> = [];
+  private readonly attempts: Array<TrainerAttempt & { sessionHash: string; idempotencyKey: string }> = [];
   private key(reviewId: string, commitSha: string) { return `${reviewId}:${commitSha}`; }
   ensureSession(sessionHash: string) { const existed = this.sessions.has(sessionHash); this.sessions.add(sessionHash); return existed; }
   getBank(reviewId: string, commitSha: string) { return this.banks.get(this.key(reviewId, commitSha))?.challenges ?? null; }
@@ -30,12 +30,17 @@ class MemoryTrainerStore {
     bank.challenges = [...merged.values()]; bank.ready = ready; bank.owner = null; this.banks.set(key, bank);
     return bank.challenges;
   }
-  recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string }) {
+  recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string; idempotencyKey: string }) {
+    const existing = this.attempts.find((attempt) => attempt.sessionHash === input.sessionHash && attempt.idempotencyKey === input.idempotencyKey);
+    if (existing) {
+      if (existing.reviewId !== input.reviewId || existing.challengeId !== input.challengeId || existing.status !== input.status || existing.hintsUsed !== input.hintsUsed) throw new TrainerAttemptIdempotencyConflict();
+      return existing;
+    }
     const attempt = { ...input, id: `attempt-${this.attempts.length + 1}` }; this.attempts.push(attempt); return attempt;
   }
   history(sessionHash: string, reviewId?: string) {
     return this.attempts.filter((attempt) => attempt.sessionHash === sessionHash && (!reviewId || attempt.reviewId === reviewId))
-      .sort((a, b) => b.attemptedAt.localeCompare(a.attemptedAt) || b.id.localeCompare(a.id)).map(({ sessionHash: _sessionHash, ...attempt }) => attempt);
+      .sort((a, b) => b.attemptedAt.localeCompare(a.attemptedAt) || b.id.localeCompare(a.id)).map(({ sessionHash: _sessionHash, idempotencyKey: _idempotencyKey, ...attempt }) => attempt);
   }
   practicedFeatures(reviewId: string) {
     return [...new Set(this.attempts.filter((attempt) => attempt.reviewId === reviewId).sort((a, b) => b.attemptedAt.localeCompare(a.attemptedAt)).map(({ feature }) => feature))];
@@ -124,7 +129,7 @@ describe("Trainer service", () => {
   it("allows a single compatible challenge to return as review after completion", async () => {
     const f = await fixture(true);
     const first = await f.service.draw("session-a", "review-1");
-      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: first.challenge.id, status: "completed", hintsUsed: 0 });
+      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: first.challenge.id, status: "completed", hintsUsed: 0, idempotencyKey: "3d8b4f65-50d1-4d8a-8be5-37e186c6b2aa" });
       const repeat = await f.service.draw("session-a", "review-1");
       expect(first.bankSize).toBe(1);
       expect(repeat.bankSize).toBe(1);
@@ -137,13 +142,27 @@ describe("Trainer service", () => {
     const f = await fixture();
     const drawn = await f.service.draw("session-a", "review-1");
       expect(drawn.category).toBe("new");
-      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: drawn.challenge.id, status: "need_more", hintsUsed: 1 });
+      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: drawn.challenge.id, status: "need_more", hintsUsed: 1, idempotencyKey: "b8a7f825-77d6-44f9-a84f-6b7b42d4a555" });
       expect((await f.service.draw("session-a", "review-1")).category).toBe("pending");
-      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: drawn.challenge.id, status: "completed", hintsUsed: 2 });
+      await f.service.record({ sessionHash: "session-a", reviewId: "review-1", challengeId: drawn.challenge.id, status: "completed", hintsUsed: 2, idempotencyKey: "1a2d9b8c-2d83-4be8-91f9-9f99447bd62a" });
       expect((await f.service.history("session-a", "review-1"))[0]).toMatchObject({ status: "completed", hintsUsed: 2 });
       expect(await f.store.practicedFeatures("review-1")).toEqual([drawn.challenge.feature]);
       expect(await f.service.history("session-b", "review-1")).toEqual([]);
       expect((await f.service.draw("session-a", "review-1")).category).toBe("review");
     expect(f.providerCalls).toBe(3);
+  });
+
+  it("returns the same progress attempt for a repeated idempotency key", async () => {
+    const f = await fixture();
+    const drawn = await f.service.draw("session-a", "review-1");
+    const input = { sessionHash: "session-a", reviewId: "review-1", challengeId: drawn.challenge.id, status: "completed" as const, hintsUsed: 2, idempotencyKey: "d152e951-73bf-4c66-9f21-f97dab7d8a26" };
+
+    const [first, retry] = await Promise.all([f.service.record(input), f.service.record(input)]);
+
+    expect(retry).toEqual(first);
+    expect(await f.service.history("session-a", "review-1")).toHaveLength(1);
+    await expect(f.service.record({ ...input, status: "need_more" })).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+    const otherSession = await f.service.record({ ...input, sessionHash: "session-b" });
+    expect(otherSession.id).not.toBe(first.id);
   });
 });

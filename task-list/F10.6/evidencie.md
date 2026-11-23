@@ -1,0 +1,7 @@
+# Evidencia F10.6
+
+Estado: implementación compartida en curso; no publicar aún. La UI está en la worktree aislada pixel-night-trainer-7551. El backend/planner añade clave UUID, deduplicación atómica por sesión y una migración aditiva que conserva intentos históricos con clave nula. La revisión independiente detectó que el API exige la clave antes de que el cliente la envíe; el cliente se está completando en esa worktree para integrar ambos lados en un único PR.
+
+Verificación local del backend: Prisma validate/generate PASS; typecheck PASS; 178 pruebas API PASS con 73 omitidas sin DATABASE_URL; pruebas focales Trainer con PostgreSQL desechable PASS (3/3), con `current_database() = fragments_test` confirmado antes de migrar y probar la deduplicación concurrente. La suite completa con esa base pasó 250/251; la única falla agregada fue `review/worker-http.test.ts` y la repetición aislada del archivo pasó 9/9. Esto queda como posible interferencia/orden de suite, no como suite completa verde. `git diff --check` PASS. No se han publicado ramas ni desplegado esta implementación.
+
+Criterio de cierre: integrar y probar backend + cliente en el mismo PR; pruebas focales, typecheck y diff-check frescos; CI requerido antes de integrar. F14 y Ego Lite corresponden a la release posterior, no a este cambio sin integrar. Revisión independiente: la persistencia por sesión + clave, el conflicto 409 y la exclusión de clave en respuestas/logs fueron aprobados; cliente pendiente era bloqueante y no se considera resuelto hasta integrar y probar la UI.

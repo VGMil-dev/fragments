@@ -267,18 +267,20 @@ model TrainerBank {
 }
 
 model TrainerAttempt {
-  id          String         @id
-  sessionHash String         @map("session_hash")
-  reviewId    String         @map("review_id")
-  challengeId String         @map("challenge_id")
-  feature     String
-  status      String
-  hintsUsed   Int            @map("hints_used")
-  attemptedAt DateTime       @map("attempted_at") @db.Timestamptz(3)
-  session     TrainerSession @relation(fields: [sessionHash], references: [sessionHash], onDelete: Cascade)
+  id             String         @id
+  sessionHash    String         @map("session_hash")
+  idempotencyKey String?        @map("idempotency_key")
+  reviewId       String         @map("review_id")
+  challengeId    String         @map("challenge_id")
+  feature        String
+  status         String
+  hintsUsed      Int            @map("hints_used")
+  attemptedAt    DateTime       @map("attempted_at") @db.Timestamptz(3)
+  session        TrainerSession @relation(fields: [sessionHash], references: [sessionHash], onDelete: Cascade)
 
   @@index([sessionHash, reviewId, attemptedAt], map: "trainer_attempt_history")
   @@index([sessionHash, challengeId, attemptedAt], map: "trainer_attempt_challenge")
+  @@unique([sessionHash, idempotencyKey], map: "trainer_attempt_idempotency")
   @@map("trainer_attempts")
 }
 

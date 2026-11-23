@@ -27,6 +27,13 @@ export type TrainerAttempt = {
   attemptedAt: string;
 };
 
+export class TrainerAttemptIdempotencyConflict extends Error {
+  constructor() {
+    super("El identificador de intento ya se usó con otros datos.");
+    this.name = "TrainerAttemptIdempotencyConflict";
+  }
+}
+
 export function createTrainerRepository(database: PrismaClient) {
   return {
     async ensureSession(sessionHash: string, now: Date): Promise<boolean> {
@@ -114,13 +121,24 @@ export function createTrainerRepository(database: PrismaClient) {
       return rows.map((row) => row.feature);
     },
 
-    async recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string }): Promise<TrainerAttempt> {
-      const id = randomUUID();
+    async recordAttempt(input: Omit<TrainerAttempt, "id"> & { sessionHash: string; idempotencyKey: string }): Promise<TrainerAttempt> {
       const attemptedAt = new Date(input.attemptedAt);
-      await database.trainerAttempt.create({
-        data: { id, sessionHash: input.sessionHash, reviewId: input.reviewId, challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt },
+      await database.trainerAttempt.createMany({
+        data: [{
+          id: randomUUID(), sessionHash: input.sessionHash, idempotencyKey: input.idempotencyKey, reviewId: input.reviewId,
+          challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt,
+        }],
+        skipDuplicates: true,
       });
-      return { id, reviewId: input.reviewId, challengeId: input.challengeId, feature: input.feature, status: input.status, hintsUsed: input.hintsUsed, attemptedAt: attemptedAt.toISOString() };
+      const row = await database.trainerAttempt.findUnique({
+        where: { sessionHash_idempotencyKey: { sessionHash: input.sessionHash, idempotencyKey: input.idempotencyKey } },
+        select: { id: true, reviewId: true, challengeId: true, feature: true, status: true, hintsUsed: true, attemptedAt: true },
+      });
+      if (!row) throw new Error("TRAINER_ATTEMPT_IDEMPOTENCY_LOOKUP_FAILED");
+      if (row.reviewId !== input.reviewId || row.challengeId !== input.challengeId || row.status !== input.status || row.hintsUsed !== input.hintsUsed) {
+        throw new TrainerAttemptIdempotencyConflict();
+      }
+      return { ...row, status: row.status as TrainerStatus, attemptedAt: row.attemptedAt.toISOString() };
     },
   };
 }
