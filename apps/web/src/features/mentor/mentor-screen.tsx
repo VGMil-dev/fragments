@@ -24,7 +24,7 @@ import "./mentor-screen.css";
 
 export interface MentorScreenProps {
   initialProposal?: ProposalDraftResponse | undefined;
-  requiredMissionSkills?: string[];
+  requiredMissionSkills?: Array<{ id: string; name: string }>;
   initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
   restoreEvaluation?: boolean;
   savedProposals: ProposalDraftResponse[];
@@ -236,7 +236,7 @@ export function MentorScreen({
   const [importError, setImportError] = useState<string | null>(null);
   const [coverCopyMessage, setCoverCopyMessage] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
-  const visibleRequiredMissionSkills = requiredMissionSkills.map((skill) => skill.trim()).filter(Boolean);
+  const visibleRequiredMissionSkills = requiredMissionSkills.filter((skill) => skill.id && skill.name.trim());
   const validText = (value: string, max: number) => value.trim().length > 0 && value.trim().length <= max;
   const goalRows = fields.goals.length ? fields.goals.split(/\r?\n/) : [];
   const goals = fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -276,9 +276,8 @@ export function MentorScreen({
   const activeSkillCatalogState = skillClassroomId ? skillCatalogs[skillClassroomId] : undefined;
   const showClassroomSelect = classrooms.length > 1 || (classrooms.length === 1 && !skillClassroomId) || Boolean(skillClassroomId && !classrooms.some((classroom) => classroom.id === skillClassroomId));
   const activeSkillCatalog = activeSkillCatalogState?.status === "success" ? activeSkillCatalogState.data : [];
-  const requiredSkillNames = new Set(visibleRequiredMissionSkills.map((skill) => skill.toLocaleLowerCase("es")));
-  const optionalSkillCatalog = activeSkillCatalog.filter((skill) => !requiredSkillNames.has(skill.name.trim().toLocaleLowerCase("es")));
-  const requiredSkillIds = new Set(activeSkillCatalog.filter((skill) => requiredSkillNames.has(skill.name.trim().toLocaleLowerCase("es"))).map((skill) => skill.id));
+  const requiredSkillIds = new Set(visibleRequiredMissionSkills.map((skill) => skill.id));
+  const optionalSkillCatalog = activeSkillCatalog.filter((skill) => !requiredSkillIds.has(skill.id));
   const selectedSkillIds = (skillClassroomId ? skillSelections[skillClassroomId] ?? [] : []).filter((id) => !requiredSkillIds.has(id));
   const normalizedSkillSearch = skillSearch.trim().toLocaleLowerCase("es");
   const matchingSkills = normalizedSkillSearch
@@ -681,7 +680,7 @@ export function MentorScreen({
                 : "Sin asignación"}</span>
             </div>
             {visibleRequiredMissionSkills.length ? <ul className="mentor-skills__required-list" aria-label="Habilidades fijadas por la misión">
-              {visibleRequiredMissionSkills.map((skill, index) => <li key={`${index}-${skill}`}>{skill}</li>)}
+              {visibleRequiredMissionSkills.map((skill) => <li key={skill.id}>{skill.name}</li>)}
             </ul> : null}
           </section>
 
