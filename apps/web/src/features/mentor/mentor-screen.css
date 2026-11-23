@@ -190,6 +190,14 @@
   font-size: var(--f16-type-meta, .875rem);
 }
 
+.mentor-saved-proposals__mission {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line, #314363);
+  border-radius: 999px;
+  color: var(--text, #F3F7FF);
+  font-size: var(--f16-type-meta, .875rem);
+}
+
 /* Mentor visual pass: keep the same stage flow, with the form as the main surface. */
 .mentor-screen.student-screen {
   box-sizing: border-box;
