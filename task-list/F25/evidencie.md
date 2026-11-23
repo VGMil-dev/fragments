@@ -134,6 +134,7 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - La ausencia de outputs persistidos se conserva como `BLOCKED` (`missing_persisted_output`) para A/B/C. `qualityComparison: NOT_PERFORMED`, `scoreComputed: false`, `semanticValidity: NOT_VALIDATED`.
 - Pruebas y typecheck: `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs` — exit 0, **19/19**; `pnpm typecheck` — exit 0, **5 tareas correctas**; `node evals/scripts/compare-review-behaviors.mjs` — exit 0, A/B/C `BLOCKED`; `git diff --check` — exit 0.
 - No hubo llamadas externas, secretos, proveedor ni ejecución de código estudiantil. Calidad real Mentor/Review sigue **NO COMPROBADA**.
+- Commit local de código, pruebas y alcance: `54fe628` (`test(F25): clasifica citas no listadas offline`).
 
 ## Comprobación offline final del corpus A/B/C — 2026-11-22
 
