@@ -290,3 +290,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Salud pública cache-bypass: `/health` respondió 200 con `status=ok`, `database=ready`. Bundle `/assets/index-BWzdK7A_.js` respondió 200 y contiene `v0.5.31` y el SHA completo exacto.
 - Entorno `fragments-production` y gates técnicos F14 conservados. Hash/retención del backup y labels host siguen NO COMPROBADOS.
 - Sin interrupción de producción. Se confirmó la aplicación del artefacto; esto no valida el recorrido académico completo ni la estabilidad para piloto.
+
+## Release y aplicación automática v0.5.32 — 2026-11-23
+
+- PR #160 se integró mediante merge normal en `42b0539e8ae010a9e24228bcdb74c10eb4983635`; la tag anotada `v0.5.32` apunta al SHA exacto de `main`.
+- F14 run `45123596403`: `verify-build`, `attest-package` y `publish-approved-release` terminaron SUCCESS. El release `v0.5.32` se publicó a las 06:26:33 UTC.
+- El timer normal sondeó a las 06:30:30 UTC; el aplicador automático reportó `release_deployed`, `Result=success`, `ExecMainStatus=0` y finalizó a las 06:32:24 UTC. Sin deploy manual, reinicio solicitado ni pausa de producción.
+- El ledger del agente registró `v0.5.32`, release `455059507`, SHA `42b0539e8ae010a9e24228bcdb74c10eb4983635`, estado `deployed`. El evento de apply informó imágenes API/web con ese SHA.
+- Verificación pública cache-bypass: `/health` respondió 200 (`status=ok`, `database=ready`); bundle `/assets/index-CXzLlLHM.js` respondió 200 y contiene `v0.5.32` y el SHA completo exacto.
+- Entorno `fragments-production` y controles técnicos F14 se conservaron. El apply registró un hash de backup; su integridad/retención y una restauración independiente no se comprobaron en esta verificación. Esto no valida el recorrido académico completo ni la estabilidad para piloto.
