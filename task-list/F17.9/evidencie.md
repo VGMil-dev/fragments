@@ -14,13 +14,26 @@
 - `git diff --check`: **PASS**.
 - Revisión reflexiva independiente de `9ec0905`: **PASS**, sin defectos concretos.
 
-## Pendiente
+## Límites pendientes tras PR #193
 
-- Repetir verificación desde HEAD integrado y CI.
-- Ego Lite posterior a release, comparación en viewports, foco/teclado y movimiento reducido.
 - Revisión visual propietaria; no se encontró mockup canónico verificado para esta candidata.
 - Zoom 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
-- PR #190, release F14 y estado productivo: **COMPLETADOS** según la sección de verificación posterior a release.
+- Guardado/recuperación y evaluación real de Mentor no se ejecutaron en la validación nocturna.
+
+## Continuidad Pixel Night v0.5.43 — 2026-11-23
+
+- Decisión vigente F16/F17: Mentor inicia en **Idea**, no Contexto. PR #193 ajustó el orden de etapas, contenido y acciones; el Dashboard selecciona el borrador con `updatedAt` más reciente sin mutar la lista.
+- PR #193 merge normal en `adfb658fffca57d9426f6fc35a27734154926603`; CI `45207476721` SUCCESS. F14 tag anotada `v0.5.43`; run `45208001374` SUCCESS. Producción health HTTP 200/ready y bundle con versión y SHA del merge comprobados.
+- Ego Lite autenticado reutilizó TaskSpace 46, sin cerrar pestañas existentes. Mentor, Trainer y Dashboard cargaron en producción; 320/390/768/1024/1440 CSS px sin overflow horizontal. Mentor presentó Idea como etapa actual y las seis etapas aprobadas; el guardado y la evaluación no se probaron.
+- Capturas Ego Lite auténticas retenidas fuera del repo por datos de sesión, rutas y SHA-256:
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-MENTOR-IDEA-1440.png` — `CA2745D30C277A8D993F84709A05CE41B22874981F11627394532B772C1B38D4`
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-TRAINER-1440.png` — `ABF36D11D5216D3DD58CCA48FE2E652D7C28648B204BE9E87E309EFE2EFBE467`
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-DASHBOARD-1440.png` — `5EECCB711B6A1CB55952DA2C687208B70482B15F6846E6BFC8767F41C4DFAD10`
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-MENTOR-IDEA-390-CLEAN.png` — `C4793BE671348ECBE202533FFC11E25CCAACC29583CECCB680E45ECEFA20B21A`
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-TRAINER-390-CLEAN.png` — `4277BF27E331489BAF91D0548565A214F24087DFCF3C33A38A8DA60790A48589`
+  - `C:\Users\vgmil\ego\pixel-night-v0543\CAP-DASHBOARD-390-CLEAN.png` — `59F724F0FEC116F9BEFCE5F6665E4C68E64660A87F7CD4D11E77089215F46EE8`
+- Las capturas móviles iniciales conservaron el foco del enlace de salto por la prueba de teclado; se repitieron con foco y scroll reiniciados. El estado de foco inicial no era un defecto de layout.
+- Capturas contienen identidad/datos QA y permanecen locales. Vistas siguen candidatas pendientes de revisión propietaria. Zoom 200 %, contraste formal y lector de pantalla **NO COMPROBADOS**.
 
 ## Release y Ego Lite — 2026-11-23
 

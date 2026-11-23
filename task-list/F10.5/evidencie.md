@@ -14,13 +14,19 @@
 - `git diff --check`: **PASS**.
 - Revisión reflexiva independiente de `9ec0905`: **PASS**, sin defectos concretos.
 
-## Pendiente
+## Límites pendientes tras PR #193
 
-- Repetir verificación desde HEAD integrado y CI.
-- Ego Lite posterior a release; Review con reto real vinculada: **NO COMPROBADO** si no hay recurso no destructivo disponible.
+- Review con reto real vinculada: **NO COMPROBADO**; no había Review disponible sin crear una operación adicional.
 - Revisión visual propietaria; no se encontró mockup canónico verificado para esta candidata.
 - Zoom 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
-- PR #190, release F14 y estado productivo: **COMPLETADOS** según la sección de verificación posterior a release.
+
+## Continuidad Trainer — v0.5.43 · 2026-11-23
+
+- PR #193 actualizó el paso inicial de Mentor/Dashboard; no modificó el contrato de Trainer. Merge normal `adfb658fffca57d9426f6fc35a27734154926603`; CI `45207476721` SUCCESS.
+- F14 release `v0.5.43`, run `45208001374` SUCCESS. Producción health HTTP 200/database ready y bundle con versión/SHA exactos comprobados.
+- Ego Lite autenticado cargó `/student/trainer` en producción y mostró el estado vacío real con CTA `Ir a Review`; el selector no tenía Reviews activas. Por ello, origen repo/SHA con Review real, reto, pistas e historial siguen **NO COMPROBADOS** en una sesión productiva.
+- En 320/390/768/1024/1440 CSS px no hubo overflow horizontal. Capturas auténticas locales están en `C:\Users\vgmil\ego\pixel-night-v0543`; se excluyen de Git/Notion porque muestran identidad/datos QA. La primera toma móvil conservaba foco del enlace de salto y se repitió con foco reiniciado.
+- Sin escritura, llamada IA, creación de Review ni ejecución de código estudiantil. Zoom 200 %, contraste formal y lector de pantalla **NO COMPROBADOS**; candidata visual pendiente de propietario.
 
 ## Release y Ego Lite — 2026-11-23
 

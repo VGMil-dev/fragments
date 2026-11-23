@@ -1,8 +1,8 @@
-# F17.9 — Mentor Pixel Night: contexto primero
+# F17.9 — Mentor Pixel Night: idea primero
 
 ## Intento
 
-Hacer que Mentor inicie por el contexto académico disponible, conserve la ruta de seis etapas y evite un encabezado secundario que duplique la navegación global.
+Hacer que Mentor inicie por Idea, conserve el orden aprobado de seis etapas y evite un encabezado secundario que duplique la navegación global.
 
 ## Criterio técnico aplicado
 
