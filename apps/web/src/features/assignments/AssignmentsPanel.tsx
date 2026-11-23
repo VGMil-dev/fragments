@@ -65,7 +65,13 @@ export function AssignmentsPanel({ assignments, skills, busy = false, loading = 
 function AssignmentSkillSnapshotList({ label, skills }: { label: string; skills: StudentAssignment["requiredSkills"] }) {
   return <section className="student-assignments__skill-group" aria-label={label}>
     <h4>{label}</h4>
-    <ul>{skills.map((skill) => <li key={skill.id}><strong>{skill.name}</strong>{skill.description ? <p>{skill.description}</p> : null}</li>)}</ul>
+    <ul>{skills.map((skill) => <li key={skill.id}>
+      <strong>{skill.name}</strong>
+      {skill.description ? <details className="student-assignments__skill-description">
+        <summary aria-label={`Ver descripción de ${skill.name}`}>Ver descripción</summary>
+        <p>{skill.description}</p>
+      </details> : null}
+    </li>)}</ul>
   </section>;
 }
 

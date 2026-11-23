@@ -146,4 +146,49 @@ describe("AssignmentsPanel", () => {
       container.remove();
     }
   });
+
+  it("keeps skill names visible and puts only existing descriptions behind individual disclosures", async () => {
+    const longDescription = "D".repeat(1000);
+    const studentAssignment = {
+      id: "fixture-version-long-skills", assignmentId: "fixture-assignment", version: 2, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
+      title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
+      requiredSkills: [
+        { id: "fixture-long", name: "Arquitectura", description: longDescription },
+        { id: "fixture-empty-description", name: "Lectura", description: null },
+      ], optionalSkills: [], status: "published",
+      mentorContextVersion: 4, mentorContext: { version: 4, publishedAt: "2026-11-23T00:00:00.000Z", config: {
+        subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
+        rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
+      } }, createdAt: "2026-11-23T00:00:00.000Z",
+    } as StudentAssignment;
+
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} />);
+    expect(html).toContain("Arquitectura");
+    expect(html).toContain("Lectura");
+    expect(html).toContain(longDescription);
+    expect(html).toContain('aria-label="Ver descripción de Arquitectura"');
+    expect(html).not.toContain('aria-label="Ver descripción de Lectura"');
+    expect(html).not.toContain("Habilidades optativas");
+    expect(html).not.toMatch(/<details[^>]*open/);
+
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} />));
+      const details = container.querySelector<HTMLDetailsElement>(".student-assignments__skill-description");
+      const summary = details?.querySelector("summary");
+      expect(details?.open).toBe(false);
+      expect(container.querySelector(".student-assignments__skill-group li > strong")?.textContent).toBe("Arquitectura");
+      expect(summary?.tabIndex).toBe(0);
+      summary?.focus();
+      expect(document.activeElement).toBe(summary);
+      await act(async () => summary?.click());
+      expect(details?.open).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
 });
