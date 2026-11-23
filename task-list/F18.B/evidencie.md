@@ -443,3 +443,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx` — 36/36 PASS; `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx` — 9/9 PASS; `pnpm --filter @fragments/web test` — 49 archivos, 237/237 PASS; typecheck, build y `git diff --check` PASS.
 - Revisión reflexiva independiente: PASS. Revisión UX/UI estática: PASS; selector accesible y estado sin coincidencia coherente.
 - PR, CI y release F14 pendientes; QA post-release con Ego Lite queda pendiente. No se modificó ni guardó información de producción.
+
+## Integración de preselección de aula Mentor — v0.5.48 · 2026-11-23
+
+- PR [#205](https://github.com/VGMil-dev/fragments/pull/205) se integró normalmente en `main` con SHA `e2794c93f04e3912698daffce6a237a4cc008495`; CI `45247297540` PASS. El paquete de release usa la tag anotada `v0.5.48` sobre ese SHA.
+- F14 run `45247762972` terminó SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`. No se usó deploy manual ni se cambiaron entorno, workflow o controles técnicos.
+- En una primera comprobación posterior al éxito F14, la app todavía sirvió `index-CCF9C_eS.js` de `v0.5.47`; no se atribuyó ese estado a `v0.5.48`.
+- El código fue validado antes del PR: Mentor 36/36, flujo estudiantil 9/9, suite web 237/237, typecheck, build y `git diff --check` PASS; revisiones reflexiva y UX/UI PASS. El detalle está en la sección anterior.
+- Reconciliación posterior: Ego Lite confirmó el bundle `/assets/index-BR26dvq9.js` con `v0.5.48` y SHA exacto `e2794c93f04e3912698daffce6a237a4cc008495`. La app aplicó la release automáticamente por F14.
+- QA funcional read-only PASS desde la sesión estudiante existente: Mis aulas mostró misión publicada/contexto Mentor v1 y habilidad autorizada; el CTA abrió Mentor > Habilidades con el aula de esa misión preseleccionada entre varias aulas y la habilidad requerida fijada/no editable. “Quiero reforzar” no ofrecía habilidades de otra aula. No se cambió selección, no se abrió/reemplazó el borrador persistido, no se guardó/evaluó ni se llamó IA. Las sesiones y pestañas estudiante/docente quedaron abiertas.
+- La selección de habilidades optativas queda COMPROBADA para el escenario productivo observado. Dashboard resumen continúa visualmente NO COMPROBADO por borrador prioritario; evaluación IA real, Review productiva enlazada en Trainer, Galería e identidad cruzada permanecen NO COMPROBADAS.
