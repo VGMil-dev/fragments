@@ -591,7 +591,11 @@ export function MentorScreen({
                       : " · contexto académico no disponible"}
                   </span>
                 ) : null}
-                <button type="button" onClick={() => onOpenProposal(saved)}>{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
+                <button
+                  type="button"
+                  aria-label={`${proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}: ${saved.proposal.title || "Borrador sin título"}`}
+                  onClick={() => onOpenProposal(saved)}
+                >{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
               </li>
             ))}
           </ul>

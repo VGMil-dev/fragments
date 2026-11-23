@@ -454,6 +454,16 @@ describe("MentorScreen", () => {
     expect(html).toContain("Abrir propuesta");
   });
 
+  it("identifies each saved proposal in its open button's accessible name", () => {
+    const untitledProposal = { ...proposal, id: "proposal-2", proposal: { ...proposal.proposal, title: "" } };
+    const html = renderToStaticMarkup(
+      <MentorScreen {...actions} savedProposals={[proposal, untitledProposal]} onBack={vi.fn()} />,
+    );
+
+    expect(html).toContain('aria-label="Abrir propuesta: Diario de plantas"');
+    expect(html).toContain('aria-label="Abrir propuesta: Borrador sin título"');
+  });
+
   it("shows the saved mission theme and pinned Mentor context version without private rubric details", () => {
     const html = renderToStaticMarkup(
       <MentorScreen {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />,
