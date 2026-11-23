@@ -1,5 +1,14 @@
 # Evidencia F18.C — Enlace voluntario Review → misión → docente
 
+## Corrección de ruta en producción — 2026-11-23
+
+- Tras desplegar PR #150 en `v0.5.28`, Ego Lite docente observó que `/teacher/review` cargaba pero `GET /api/teacher/classrooms/:id/reviews` respondía 404 `NOT_FOUND`. No hubo filas; no se pulsó Reintentar ni se modificaron datos.
+- Verificación read-only de host: contenedores API y web ambos llevan el label `org.opencontainers.image.revision=17f810503ed3c56759a1b6ad2015eb52bc07e11c`, el SHA exacto de PR #150. Por tanto, se descartó una mezcla de versiones de imagen.
+- Causa reproducida localmente: `classroomHandler` respondía su 404 catch-all antes de que el router compuesto invocara `reviewHandler`.
+- Se añadió una regresión en `apps/api/src/http/app-routing.test.ts`; antes del fix falló con HTTP 404. El fix despacha Review antes del catch-all de Classroom Studio. Luego `pnpm --filter @fragments/api exec vitest run src/http/app-routing.test.ts --maxWorkers=1` — 2/2 PASS; `pnpm --filter @fragments/api typecheck` — PASS; `git diff --check` — PASS.
+- Verificación fresca adicional tras el fix: `pnpm --filter @fragments/api test` — 45 archivos PASS/17 omitidos, 163 pruebas PASS/70 omitidas por requerir PostgreSQL o fixtures específicos. La prueba de orden de rutas forma parte de esta suite.
+- La corrección aún no está integrada ni desplegada; requiere PR/CI y un tag F14 normal. No usar Retry ni enviar Reviews en producción hasta que llegue la corrección y se vuelva a verificar.
+
 ## Implementación local
 
 - Añadidos contrato compartido para el vínculo académico y DTO docente seguro, resolución servidor desde Better Auth/propuesta/versiones/matrícula activa y propietario GitHub comprobado, con snapshot persistido en JSON existente del Job.

@@ -13,3 +13,8 @@ La autorización se deriva en el servidor desde Better Auth, propiedad de la pro
 - Ruta docente de solo lectura filtrada por aula activa y matrículas activas.
 - Recuperación de reintentos conserva el vínculo académico original.
 - Pruebas de aislamiento y UI locales; sin llamadas IA ni escrituras productivas.
+
+## Corrección de continuidad — despacho de ruta docente
+
+- Cerrar el defecto observado en producción donde el router de Classroom Studio interceptaba la ruta de Reviews del aula y devolvía 404 antes del handler funcional.
+- Probar el despacho mediante el router HTTP compuesto para evitar que una prueba aislada del handler pase mientras la aplicación real oculta la ruta.
