@@ -11,3 +11,10 @@
 ## Verificación pendiente
 
 La referencia es candidata y requiere revisión visual con Ego Lite independiente. Confirmar dimensiones 320/390/768/1024/1440, teclado, foco, contraste y zoom antes de marcarla final.
+
+## Incremento — siguiente práctica derivado del intento real
+
+- Después de que el API confirma el registro de la práctica, ofrecer volver a sortear desde la misma Review seleccionada.
+- Antes de guardar, el siguiente paso invita a registrar la práctica; no muestra progreso ni recompensas inventadas.
+- El siguiente sorteo no promete un reto distinto y depende del API existente. Mantener visibles fuente, commit, habilidades, reto, pista e historial reales.
+- La prueba focal cubre fuente, commit, habilidad, reto, pista, intento persistido y segundo sorteo.
