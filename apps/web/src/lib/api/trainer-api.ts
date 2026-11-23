@@ -57,6 +57,6 @@ export function createTrainerApi() {
     reviews: () => request("/api/trainer/reviews", (value) => list(value, isReview)),
     history: (reviewId?: string) => request(`/api/trainer/history${reviewId ? `?reviewId=${encodeURIComponent(reviewId)}` : ""}`, (value) => list(value, isHistoryItem)),
     draw: (reviewId: string) => request<Draw>("/api/trainer/draw", (value) => isRecord(value) && isChallenge(value.challenge) && ["new", "pending", "review"].includes(String(value.category)) && isNumber(value.bankSize) && value.bankSize >= 1 && value.bankSize <= 5 ? value as unknown as Draw : null, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reviewId }) }),
-    record: (input: { reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number }) => request("/api/trainer/attempts", (value) => validate(value, isHistoryItem), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }),
+    record: (input: { reviewId: string; challengeId: string; status: TrainerStatus; hintsUsed: number; idempotencyKey: string }) => request("/api/trainer/attempts", (value) => validate(value, isHistoryItem), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }),
   };
 }

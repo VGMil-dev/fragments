@@ -198,7 +198,9 @@ describe("TrainerScreen", () => {
       await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Mostrar pista 1")!.click());
       expect(container.textContent).toContain("Busca el estado del filtro.");
       await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
-      expect(record).toHaveBeenCalledExactlyOnceWith({ reviewId: review.id, challengeId: firstChallenge.id, status: "in_progress", hintsUsed: 1 });
+      expect(record).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledWith(expect.objectContaining({ reviewId: review.id, challengeId: firstChallenge.id, status: "in_progress", hintsUsed: 1 }));
+      expect(record.mock.calls[0]?.[0].idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(container.textContent).toContain("Filtro de tareas");
       expect(container.textContent).toContain("Historial de práctica");
       expect(container.textContent).toContain("En progreso");
@@ -244,7 +246,7 @@ describe("TrainerScreen", () => {
       expect(container.textContent).toContain("Filtro de tareas");
       expect(container.textContent).toContain("Busca el filtro.");
       expect(container.textContent).toContain("En progreso");
-      expect(record).toHaveBeenCalledWith({ reviewId: review.id, challengeId: challenge.id, status: "in_progress", hintsUsed: 1 });
+      expect(record).toHaveBeenCalledWith(expect.objectContaining({ reviewId: review.id, challengeId: challenge.id, status: "in_progress", hintsUsed: 1 }));
 
       const redraw = [...container.querySelectorAll("button")].find((button) => button.textContent === "Volver a sortear desde este análisis")!;
       await act(async () => redraw.click());
@@ -266,7 +268,7 @@ describe("TrainerScreen", () => {
     }
   });
 
-  it("verifies history before allowing a retry after an ambiguous rejected progress write", async () => {
+  it("retries an ambiguous progress write with the identical idempotency key and payload", async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z" };
     const challenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
@@ -274,11 +276,11 @@ describe("TrainerScreen", () => {
       sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24], hints: ["Busca el filtro.", "Sigue el estado.", "Compara el resultado."], createdAt: "2026-11-23T10:00:00Z" };
     const previousAttempt = { id: "attempt-old", reviewId: review.id, challengeId: "older-challenge", feature: "Inicio", status: "completed" as const, hintsUsed: 1, attemptedAt: "2026-11-22T10:00:00Z" };
     const persistedAttempt = { id: "attempt-new", reviewId: review.id, challengeId: challenge.id, feature: challenge.feature, status: "in_progress" as const, hintsUsed: 0, attemptedAt: "2026-11-23T10:05:00Z" };
-    const history = vi.fn()
-      .mockResolvedValueOnce({ ok: true, data: [previousAttempt] })
-      .mockResolvedValueOnce({ ok: true, data: [persistedAttempt, previousAttempt] });
+    const history = vi.fn().mockResolvedValue({ ok: true, data: [previousAttempt] });
     const draw = vi.fn().mockResolvedValue({ ok: true, data: { challenge, category: "new", bankSize: 2 } });
-    const record = vi.fn().mockRejectedValue(new Error("connection dropped"));
+    const record = vi.fn()
+      .mockRejectedValueOnce(new Error("connection dropped"))
+      .mockResolvedValueOnce({ ok: true, data: persistedAttempt });
     const api = { reviews: async () => ({ ok: true, data: [review] }), history, draw, record } as never;
     const container = document.createElement("div");
     const root = createRoot(container);
@@ -291,18 +293,27 @@ describe("TrainerScreen", () => {
       expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Filtro de tareas");
       expect(container.textContent).toContain("Inicio");
       expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos confirmar");
-      const verify = [...container.querySelectorAll("button")].find((button) => button.textContent === "Comprobar historial");
-      expect(verify).toBeTruthy();
+      const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar registro");
+      expect(retry).toBeTruthy();
       expect([...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")].every((button) => button.disabled)).toBe(true);
 
-      await act(async () => verify?.click());
-      expect(history).toHaveBeenCalledTimes(2);
-      expect(history).toHaveBeenLastCalledWith(review.id);
-      expect(record).toHaveBeenCalledOnce();
+      await act(async () => retry?.click());
+      expect(history).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(record.mock.calls[0]?.[0]).toBe(record.mock.calls[1]?.[0]);
+      expect(record.mock.calls[0]?.[0]).toMatchObject({
+        reviewId: review.id,
+        challengeId: challenge.id,
+        status: "in_progress",
+        hintsUsed: 0,
+      });
+      expect(record.mock.calls[0]?.[0].idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(container.textContent).toContain("Completado por ti");
       expect(container.textContent).toContain("En progreso");
       expect(container.querySelector('[role="alert"]')).toBeNull();
       expect([...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")].every((button) => button.disabled)).toBe(true);
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>(".trainer-actions button")][0]?.click());
+      expect(record).toHaveBeenCalledTimes(2);
     } finally {
       await act(async () => root.unmount());
       container.remove();
