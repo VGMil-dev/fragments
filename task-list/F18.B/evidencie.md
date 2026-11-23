@@ -329,7 +329,7 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Pruebas focales posteriores al fix: contratos `packages/contracts/src/index.test.ts` 30/30; API `mentor-context.test.ts` 5/5; UI `App.student-flow.test.tsx` + `mentor-screen.test.tsx` 34/34, incluida prueba donde el catálogo devuelve la misma ID con nombre actualizado. `pnpm typecheck`, `pnpm lint`, `pnpm build` y `git diff --check` PASS. La compilación muestra avisos Vite por chunk >500 kB y directivas `use client` de lucide-react.
 - Suite general `pnpm test`: PASS, 5 tareas Turbo; API 166 pruebas PASS y 71 omitidas, incluyendo el test PostgreSQL por la configuración offline predeterminada. Contratos 30 PASS; suites restantes PASS.
 - Integración PostgreSQL separada: contenedor efímero nuevo sin volumen, publicado solo en `127.0.0.1:55447`; se aplicaron las cinco migraciones vigentes y se confirmó `current_database() = fragments_test`. `academic-flow.integration.test.ts` 3/3 PASS; la recuperación v1 tras publicar v2 confirmó ID y nombre de la habilidad fijada. El contenedor se eliminó al terminar; no se tocó ningún contenedor preexistente.
-- Commits de implementación `5a697d1` y `d394bce` en `codex/f18b-structured-mission-skills`; documentación/evidencia `5115bd1`. Fusión reciente de `origin/main` preserva PR #159. CI/revisión/merge PR #160 y release F14 siguen pendientes; no está desplegado.
+- Commits de implementación `5a697d1` y `d394bce` en `codex/f18b-structured-mission-skills`; documentación/evidencia `5115bd1`. PR #160 terminó integrada normalmente y desplegada en F14 `v0.5.32`; el reintento docente de misiones PR #164 quedó integrado/desplegado en `v0.5.33` (detalle y límites en las entradas siguientes).
 
 ## Reintento del listado de misiones docentes · 2026-11-23
 
@@ -337,22 +337,21 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Cambio: `ClassroomStudio` separa la carga/error del recurso de misiones del resto del aula. `AssignmentsPanel` anuncia carga, presenta el error con `role="alert"`, oculta el estado vacío durante errores y ofrece “Reintentar carga de misiones”; durante el reintento el botón se reemplaza por el estado de carga.
 - Prueba focal `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx src/features/assignments/AssignmentsPanel.test.tsx`: 2 archivos, 10/10 PASS. La regresión produce fallo de red, confirma que no aparece un falso vacío, reintenta solo `listTeacher` (sin repetir solicitudes de matrículas ni habilidades), comprueba el anuncio de carga y termina en vacío solo tras respuesta válida vacía.
 - `pnpm --filter @fragments/contracts build` PASS; `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
-- Commit de implementación `69c74a00c07e6880b729e394965e73814963e845` en `codex/f18b-next-ui`. PR #164 abierta, mergeable y CI `45125019449` SUCCESS para el head de implementación `69c74a0`. Sin cambios de contrato, API, base de datos, producción, proveedor IA o sesiones Ego Lite. La actualización de esta evidencia es documental y queda pendiente el check del head final.
-# Misión asociada en Mis proyectos · 2026-11-23
+- Commit de implementación `69c74a00c07e6880b729e394965e73814963e845` en `codex/f18b-next-ui`. PR #164 merge normal `446d3c3`; CI final `45125972349` SUCCESS en el head actualizado `3344b3c0b7aa187141c6901255c70cb3637f67d9`. F14 `v0.5.33` aplicada. Sin cambios de contrato, API o base de datos; no se escribieron datos productivos ni se alteraron sesiones Ego Lite.
 
-- TDD: agregué una regresión con propuesta enlazada a `mission-v1`, contexto Mentor v7 y habilidad requerida. Antes de implementar falló porque `Mis proyectos` no renderizaba el disclosure. El test comprueba resumen accesible cerrado, abrir el disclosure con el summary, tema/versión, habilidades, ausencia de rúbrica/criterios y continuación con el mismo assignmentVersionId/contexto/ID de skill.
-- Implementación local: la lista muestra un `<details>` con tema snapshot y versión Mentor; las habilidades aparecen solo al abrir. Se reutiliza el guard de versión para no mostrar contexto o skills discrepantes. La navegación sigue pasando la propuesta completa a Mentor.
-- Caso corrupto/mismatch: el test de contexto enlazado a otra versión ahora exige el fallback “Misión vinculada · contexto no disponible” y que no se filtren sus habilidades.
-- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS; `pnpm --filter @fragments/web typecheck` y `git diff --check` PASS.
-- No se modifican contratos, API, backend, rutas, migraciones, DB ni servicios productivos. Sin navegador, IA ni producción.
-- Commit local `bf2513f` en `codex/f18b-next-ui`; sin push ni despliegue.
+## F18.B — reintento docente y release v0.5.33 · 2026-11-23
 
-## Bloqueo fail-closed al continuar con contexto de otra versión · 2026-11-23
+- PR #164 se integró por merge normal como `446d3c3d59180aa8e50bda54f29d8d78404a35f9`; CI del head actualizado `3344b3c0b7aa187141c6901255c70cb3637f67d9`, run `45125972349` SUCCESS. Prueba focal 10/10, contracts build/typecheck/diff-check PASS.
+- `ClassroomStudio` separa fallos del listado de misiones del estado vacío legítimo, anuncia carga, expone `role=alert` y permite reintentar solo ese recurso. El test confirma no volver a consultar matrícula/habilidades y mostrar vacío solo tras respuesta vacía válida.
+- F14 `v0.5.33` quedó aplicada al SHA `f256b6a02c54891040e1f4ba3591c2f85eea2c75`; health pública DB ready y bundle exacto incluyen el comportamiento nuevo. PR #160 snapshot de habilidades ya se había aplicado en `v0.5.32`.
+- El aula productiva observada carece de misión QA activa; el flujo visual con una misión, recuperación/evaluación real, identidad cruzada y calidad Mentor/Review real permanecen NO COMPROBADOS. No se escribieron recursos académicos ni se llamó a IA real; sesiones Ego Lite no se alteraron.
 
-- TDD rojo: la prueba de composición continuó una propuesta vinculada a `mission-v1` con `assignmentContext.assignmentVersionId = mission-v2`; Mentor mostraba contexto versión `8` en vez del estado `error` esperado (1 prueba fallida, 5 pasaron).
-- Fix: la selección de contexto en Mentor reutiliza `proposalMissionContext`. Si el contexto no valida, además se pasa a Mentor una proyección de la propuesta sin `assignmentContext`; las propuestas guardadas reciben el mismo saneamiento. La versión opaca de la misión y la identidad/borrador de la propuesta se conservan.
-- Regresión comprueba que el mismatch no entrega a Mentor el tema, rúbrica, habilidad requerida ni contexto de la propuesta activa/lista guardada; contexto queda en error y habilidades quedan vacías.
-- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS. `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
-- Commit local `20c011e4125b86550d54d97e8da9c1e0b8e28184` en `codex/f18b-next-ui`; sin push ni despliegue.
-- Estado final: sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA.
-- Sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA.
+## Misión asociada en Mis proyectos · 2026-11-23
+
+- TDD: regresión con propuesta enlazada a `mission-v1`, contexto Mentor v7 y habilidad requerida. Antes del cambio, `Mis proyectos` no mostraba el disclosure. El test comprueba tema/versión/habilidades, resumen accesible y que la rúbrica/criterios no se muestran.
+- La propuesta se puede continuar conservando `assignmentVersionId`, contexto y habilidad. Si el snapshot está desincronizado, la vista presenta “Misión vinculada · contexto no disponible”.
+- Revisión independiente detectó que el contexto desincronizado aún podía llegar a Mentor desde la acción Continuar. El fix reutiliza `proposalMissionContext` para validar el contexto en reentrada y elimina el `assignmentContext` inválido de la propuesta activa y de las guardadas.
+- Regresión demuestra que un mismatch `mission-v1`/`mission-v2` deja Mentor en error y no expone el tema, rúbrica ni habilidad stale. La revisión independiente del fix resultó PASS.
+- Verificación fresca `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1`: 2 archivos, **35/35 PASS**; web typecheck y `git diff --check` PASS.
+- Ego Lite visual: **NO COMPROBADO**. Las pestañas QA existentes muestran el aula docente y `/student/mentor`, no “Mis proyectos”; no se navegó, recargó, hizo clic ni escribió para preservar las sesiones. TaskSpaces 44 y 46 quedaron abiertos.
+- Commits funcionales `bf2513f642c07e51ebc94c5aa3628f9d40a6df8b` y `20c011e4125b86550d54d97e8da9c1e0b8e28184`; evidencia `2b5d247` y `7f73ebc` en `codex/f18b-next-ui`. Sin cambios de contratos/API/rutas/DB, producción o proveedores IA; PR nueva y despliegue pendientes.

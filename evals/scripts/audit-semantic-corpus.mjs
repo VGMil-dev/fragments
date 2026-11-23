@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -20,7 +21,157 @@ function hasCitationShape(evidence) {
     && typeof evidence.digest === "string" && sha256Pattern.test(evidence.digest);
 }
 
-function validateReviewOutput(item) {
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function hash(value, algorithm = "sha256") {
+  return createHash(algorithm).update(value).digest("hex");
+}
+
+function isLineRange(value) {
+  return Array.isArray(value) && value.length === 2
+    && Number.isInteger(value[0]) && Number.isInteger(value[1])
+    && value[0] >= 1 && value[1] >= value[0];
+}
+
+function lineCount(content) {
+  if (content.length === 0) return 0;
+  return content.split("\n").length - (content.endsWith("\n") ? 1 : 0);
+}
+
+function isSafeSnapshotPath(path) {
+  return isSafeRelativePath(path) && !/[\p{Cc}]/u.test(path);
+}
+
+/**
+ * Checks citation paths, inclusive line ranges, and snapshot digests against
+ * an already available API snapshot. This deliberately does not assess meaning.
+ */
+export function validateCitationsAgainstSnapshot(analysis, snapshot, expectedCommitSha) {
+  const blockers = [];
+  if (!snapshot || typeof snapshot !== "object" || !Array.isArray(snapshot.files)
+    || typeof snapshot.digest !== "string" || !sha256Pattern.test(snapshot.digest)) {
+    return { status: "BLOCKED", blockers: ["invalid_snapshot_shape"], citationsChecked: 0, citationValidation: "SNAPSHOT_CHECKED_NO_SEMANTICS" };
+  }
+  if (typeof expectedCommitSha !== "string" || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(expectedCommitSha)
+    || typeof snapshot.commitSha !== "string" || snapshot.commitSha.toLowerCase() !== expectedCommitSha.toLowerCase()) {
+    blockers.push("snapshot_commit_sha_mismatch");
+  }
+
+  const { digest, ...snapshotContent } = snapshot;
+  if (hash(canonicalJson(snapshotContent)) !== digest.toLowerCase()) blockers.push("snapshot_digest_mismatch");
+
+  const files = new Map();
+  for (const file of snapshot.files) {
+    if (!file || typeof file.path !== "string" || !isSafeSnapshotPath(file.path)
+      || typeof file.content !== "string" || typeof file.sha !== "string" || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(file.sha)) {
+      blockers.push("invalid_snapshot_file");
+      continue;
+    }
+    if (files.has(file.path)) blockers.push("duplicate_snapshot_path");
+    files.set(file.path, file);
+    const algorithm = file.sha.length === 64 ? "sha256" : "sha1";
+    const blob = Buffer.from(file.content, "utf8");
+    if (hash(Buffer.concat([Buffer.from(`blob ${blob.length}\0`), blob]), algorithm) !== file.sha.toLowerCase()) {
+      blockers.push("snapshot_file_sha_mismatch");
+    }
+  }
+
+  let citationsChecked = 0;
+  const findings = analysis && Array.isArray(analysis.findings) ? analysis.findings : [];
+  for (const finding of findings) {
+    for (const evidence of Array.isArray(finding?.evidence) ? finding.evidence : []) {
+      citationsChecked += 1;
+      if (evidence?.source !== "repository") {
+        blockers.push("unsupported_citation_source");
+        continue;
+      }
+      const file = files.get(evidence.path);
+      if (!file) {
+        blockers.push("citation_path_missing_from_snapshot");
+        continue;
+      }
+      if (!isLineRange(evidence.lines) || evidence.lines[1] > lineCount(file.content)) {
+        blockers.push("citation_lines_out_of_range");
+      }
+      if (typeof evidence.digest !== "string" || evidence.digest.toLowerCase() !== digest.toLowerCase()) {
+        blockers.push("citation_snapshot_digest_mismatch");
+      }
+      if ((finding?.file !== undefined && finding.file !== evidence.path)
+        || (finding?.lines !== undefined && (!isLineRange(finding.lines) || !isLineRange(evidence.lines)
+          || finding.lines[0] < evidence.lines[0] || finding.lines[1] > evidence.lines[1]))) {
+        blockers.push("finding_location_mismatch");
+      }
+    }
+  }
+
+  const uniqueBlockers = [...new Set(blockers)];
+  return {
+    status: uniqueBlockers.length === 0 && citationsChecked > 0 ? "SNAPSHOT_CITATIONS_MATCH" : "BLOCKED",
+    blockers: uniqueBlockers,
+    citationsChecked,
+    citationValidation: "SNAPSHOT_CHECKED_NO_SEMANTICS",
+  };
+}
+
+function classifyReviewOutput(item) {
+  const output = item?.reviewOutput;
+  if (!output || typeof output !== "object" || Array.isArray(output)) return "MISSING";
+
+  const modelId = output.analysis?.modelId;
+  const provider = output.provenance?.provider;
+  if ((typeof modelId === "string" && syntheticModelPattern.test(modelId))
+    || (typeof provider === "string" && syntheticModelPattern.test(provider))) {
+    return "SYNTHETIC_FIXTURE";
+  }
+  return "PRESENT_UNVERIFIED";
+}
+
+function inventoryCaseEvidence(item, { snapshot, exportManifest }) {
+  const output = item?.reviewOutput;
+  const analysis = output?.analysis;
+  const reviewOutput = classifyReviewOutput(item);
+  let localSnapshot = "MISSING";
+  if (snapshot) {
+    localSnapshot = typeof snapshot.commitSha === "string"
+      && snapshot.commitSha.toLowerCase() === String(item.commitSha ?? "").toLowerCase()
+      ? "PRESENT_FOR_CASE_UNVERIFIED"
+      : "COMMIT_MISMATCH";
+  }
+
+  return {
+    label: item.label ?? null,
+    fixtureMetadata: typeof item.commitSha === "string" && Array.isArray(item.evidence) ? "AVAILABLE" : "INCOMPLETE",
+    behaviorReference: item.behaviorReference && typeof item.behaviorReference === "object" ? "AVAILABLE" : "MISSING",
+    reviewOutput,
+    inputDigest: typeof analysis?.inputDigest === "string" && sha256Pattern.test(analysis.inputDigest)
+      ? "PRESENT_FORMAT_ONLY"
+      : "MISSING",
+    localSnapshot,
+    exportManifest,
+  };
+}
+
+function summarizeEvidenceInventory(items) {
+  return {
+    cases: items.length,
+    fixtureMetadataAvailable: items.filter((item) => item.fixtureMetadata === "AVAILABLE").length,
+    behaviorReferencesAvailable: items.filter((item) => item.behaviorReference === "AVAILABLE").length,
+    reviewOutputsMissing: items.filter((item) => item.reviewOutput === "MISSING").length,
+    syntheticOutputs: items.filter((item) => item.reviewOutput === "SYNTHETIC_FIXTURE").length,
+    nonSyntheticOutputsUnverified: items.filter((item) => item.reviewOutput === "PRESENT_UNVERIFIED").length,
+    inputDigestsMissingOrInvalid: items.filter((item) => item.inputDigest !== "PRESENT_FORMAT_ONLY").length,
+    localSnapshotsMissing: items.filter((item) => item.localSnapshot === "MISSING").length,
+    localSnapshotCommitMismatches: items.filter((item) => item.localSnapshot === "COMMIT_MISMATCH").length,
+  };
+}
+
+function validateReviewOutput(item, snapshot) {
   const response = item.reviewOutput;
   if (!response || typeof response !== "object" || Array.isArray(response)) {
     return {
@@ -77,23 +228,34 @@ function validateReviewOutput(item) {
     blockers.push("invalid_citation_shape");
   }
 
+  const citationCheck = snapshot && analysisObject
+    ? validateCitationsAgainstSnapshot(analysisObject, snapshot, item.commitSha)
+    : null;
+  if (citationCheck?.status === "BLOCKED") blockers.push(...citationCheck.blockers);
+
   return {
     responseFields,
     missingResponseFields,
     blockers: [...new Set(blockers)],
     candidateForManualComparison: blockers.length === 0,
-    citationValidation: "SHAPE_ONLY",
+    citationValidation: citationCheck?.citationValidation ?? "SHAPE_ONLY",
+    citationCheck: citationCheck ? { status: citationCheck.status, blockers: citationCheck.blockers, citationsChecked: citationCheck.citationsChecked } : null,
   };
 }
 
-export function auditSemanticCorpus(corpus) {
+export function auditSemanticCorpus(corpus, { snapshotsByCommit = {}, exportManifest = null } = {}) {
   const cases = Array.isArray(corpus.cases) ? corpus.cases : [];
+  const manifestStatus = exportManifest ? "PRESENT_UNVERIFIED" : "MISSING";
+  const evidenceInventoryCases = cases.map((item) => inventoryCaseEvidence(item, {
+    snapshot: snapshotsByCommit[item.commitSha] ?? snapshotsByCommit[String(item.commitSha).toLowerCase()],
+    exportManifest: manifestStatus,
+  }));
   const auditedCases = cases.map((item) => {
     return {
       label: item.label ?? null,
       commitSha: item.commitSha ?? null,
       fixtureFields: Object.keys(item),
-      ...validateReviewOutput(item),
+      ...validateReviewOutput(item, snapshotsByCommit[item.commitSha] ?? snapshotsByCommit[String(item.commitSha).toLowerCase()]),
     };
   });
   const blockedCases = auditedCases.filter((item) => !item.candidateForManualComparison);
@@ -106,6 +268,13 @@ export function auditSemanticCorpus(corpus) {
     citationValidation: "SHAPE_ONLY",
     providerProvenance: "NOT_AUTHENTICATED",
     source: "evals/fixtures/fragments-test-commits.json",
+    evidenceInventory: {
+      source: "LOCAL_FIXTURE_METADATA_ONLY",
+      exportManifest: manifestStatus,
+      cases: evidenceInventoryCases,
+      totals: summarizeEvidenceInventory(evidenceInventoryCases),
+      interpretation: "Availability labels do not validate provider authenticity, export authorization, repository semantics, or evaluation quality.",
+    },
     expectedPersistedResponseFields: ["status", "commitSha", ...requiredAnalysisFields],
     cases: auditedCases,
     blockedLabels: blockedCases.map((item) => item.label),
