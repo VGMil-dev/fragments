@@ -119,6 +119,58 @@ export function validateCitationsAgainstSnapshot(analysis, snapshot, expectedCom
   };
 }
 
+function classifyReviewOutput(item) {
+  const output = item?.reviewOutput;
+  if (!output || typeof output !== "object" || Array.isArray(output)) return "MISSING";
+
+  const modelId = output.analysis?.modelId;
+  const provider = output.provenance?.provider;
+  if ((typeof modelId === "string" && syntheticModelPattern.test(modelId))
+    || (typeof provider === "string" && syntheticModelPattern.test(provider))) {
+    return "SYNTHETIC_FIXTURE";
+  }
+  return "PRESENT_UNVERIFIED";
+}
+
+function inventoryCaseEvidence(item, { snapshot, exportManifest }) {
+  const output = item?.reviewOutput;
+  const analysis = output?.analysis;
+  const reviewOutput = classifyReviewOutput(item);
+  let localSnapshot = "MISSING";
+  if (snapshot) {
+    localSnapshot = typeof snapshot.commitSha === "string"
+      && snapshot.commitSha.toLowerCase() === String(item.commitSha ?? "").toLowerCase()
+      ? "PRESENT_FOR_CASE_UNVERIFIED"
+      : "COMMIT_MISMATCH";
+  }
+
+  return {
+    label: item.label ?? null,
+    fixtureMetadata: typeof item.commitSha === "string" && Array.isArray(item.evidence) ? "AVAILABLE" : "INCOMPLETE",
+    behaviorReference: item.behaviorReference && typeof item.behaviorReference === "object" ? "AVAILABLE" : "MISSING",
+    reviewOutput,
+    inputDigest: typeof analysis?.inputDigest === "string" && sha256Pattern.test(analysis.inputDigest)
+      ? "PRESENT_FORMAT_ONLY"
+      : "MISSING",
+    localSnapshot,
+    exportManifest,
+  };
+}
+
+function summarizeEvidenceInventory(items) {
+  return {
+    cases: items.length,
+    fixtureMetadataAvailable: items.filter((item) => item.fixtureMetadata === "AVAILABLE").length,
+    behaviorReferencesAvailable: items.filter((item) => item.behaviorReference === "AVAILABLE").length,
+    reviewOutputsMissing: items.filter((item) => item.reviewOutput === "MISSING").length,
+    syntheticOutputs: items.filter((item) => item.reviewOutput === "SYNTHETIC_FIXTURE").length,
+    nonSyntheticOutputsUnverified: items.filter((item) => item.reviewOutput === "PRESENT_UNVERIFIED").length,
+    inputDigestsMissingOrInvalid: items.filter((item) => item.inputDigest !== "PRESENT_FORMAT_ONLY").length,
+    localSnapshotsMissing: items.filter((item) => item.localSnapshot === "MISSING").length,
+    localSnapshotCommitMismatches: items.filter((item) => item.localSnapshot === "COMMIT_MISMATCH").length,
+  };
+}
+
 function validateReviewOutput(item, snapshot) {
   const response = item.reviewOutput;
   if (!response || typeof response !== "object" || Array.isArray(response)) {
@@ -191,8 +243,13 @@ function validateReviewOutput(item, snapshot) {
   };
 }
 
-export function auditSemanticCorpus(corpus, { snapshotsByCommit = {} } = {}) {
+export function auditSemanticCorpus(corpus, { snapshotsByCommit = {}, exportManifest = null } = {}) {
   const cases = Array.isArray(corpus.cases) ? corpus.cases : [];
+  const manifestStatus = exportManifest ? "PRESENT_UNVERIFIED" : "MISSING";
+  const evidenceInventoryCases = cases.map((item) => inventoryCaseEvidence(item, {
+    snapshot: snapshotsByCommit[item.commitSha] ?? snapshotsByCommit[String(item.commitSha).toLowerCase()],
+    exportManifest: manifestStatus,
+  }));
   const auditedCases = cases.map((item) => {
     return {
       label: item.label ?? null,
@@ -211,6 +268,13 @@ export function auditSemanticCorpus(corpus, { snapshotsByCommit = {} } = {}) {
     citationValidation: "SHAPE_ONLY",
     providerProvenance: "NOT_AUTHENTICATED",
     source: "evals/fixtures/fragments-test-commits.json",
+    evidenceInventory: {
+      source: "LOCAL_FIXTURE_METADATA_ONLY",
+      exportManifest: manifestStatus,
+      cases: evidenceInventoryCases,
+      totals: summarizeEvidenceInventory(evidenceInventoryCases),
+      interpretation: "Availability labels do not validate provider authenticity, export authorization, repository semantics, or evaluation quality.",
+    },
     expectedPersistedResponseFields: ["status", "commitSha", ...requiredAnalysisFields],
     cases: auditedCases,
     blockedLabels: blockedCases.map((item) => item.label),

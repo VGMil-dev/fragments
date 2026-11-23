@@ -65,6 +65,35 @@ test("el corpus histórico A/B/C bloquea la comparación semántica por falta de
   assert.equal("qualityScore" in report, false);
 });
 
+test("el inventario local distingue metadata disponible de outputs, snapshots y manifest faltantes", () => {
+  const report = auditSemanticCorpus(fixture);
+  const inventory = report.evidenceInventory;
+
+  assert.equal(inventory.source, "LOCAL_FIXTURE_METADATA_ONLY");
+  assert.deepEqual(inventory.cases.map((item) => item.label), ["A", "B", "C"]);
+  for (const item of inventory.cases) {
+    assert.equal(item.fixtureMetadata, "AVAILABLE");
+    assert.equal(item.behaviorReference, "AVAILABLE");
+    assert.equal(item.reviewOutput, "MISSING");
+    assert.equal(item.inputDigest, "MISSING");
+    assert.equal(item.localSnapshot, "MISSING");
+  }
+  assert.equal(inventory.exportManifest, "MISSING");
+  assert.deepEqual(inventory.totals, {
+    cases: 3,
+    fixtureMetadataAvailable: 3,
+    behaviorReferencesAvailable: 3,
+    reviewOutputsMissing: 3,
+    syntheticOutputs: 0,
+    nonSyntheticOutputsUnverified: 0,
+    inputDigestsMissingOrInvalid: 3,
+    localSnapshotsMissing: 3,
+    localSnapshotCommitMismatches: 0,
+  });
+  assert.equal(report.qualityComparison, "NOT_PERFORMED");
+  assert.equal(report.scoreComputed, false);
+});
+
 test("el harness Review existente solo fija una respuesta sintética", () => {
   const provider = readFileSync(new URL("../providers/fake-review-provider.mjs", import.meta.url), "utf8");
   assert.match(provider, /modelId: "fake:review-fixture-v1"/);
@@ -197,4 +226,29 @@ test("el reporte aplica la comprobación de snapshot solo cuando se entrega evid
   assert.ok(report.cases[0].blockers.includes("citation_snapshot_digest_mismatch"));
   assert.ok(report.cases[0].blockers.includes("synthetic_model"));
   assert.equal(report.qualityComparison, "NOT_PERFORMED");
+});
+
+test("el inventario etiqueta una salida fake y un snapshot emparejado sin tratarlos como prueba real", async () => {
+  const item = fixture.cases[0];
+  const fakeResult = await new FakeLocalReviewProvider().callApi("", {
+    vars: { fixture: "grounded", digest: "a".repeat(64), inputDigest: "b".repeat(64) },
+  });
+  const reviewOutput = {
+    status: "completed",
+    commitSha: item.commitSha,
+    analysis: JSON.parse(fakeResult.output),
+  };
+  const snapshot = snapshotFixture({ commitSha: item.commitSha });
+  const report = auditSemanticCorpus({
+    ...fixture,
+    cases: [{ ...item, reviewOutput }],
+  }, { snapshotsByCommit: { [item.commitSha]: snapshot } });
+  const inventory = report.evidenceInventory.cases[0];
+
+  assert.equal(inventory.reviewOutput, "SYNTHETIC_FIXTURE");
+  assert.equal(inventory.inputDigest, "PRESENT_FORMAT_ONLY");
+  assert.equal(inventory.localSnapshot, "PRESENT_FOR_CASE_UNVERIFIED");
+  assert.equal(inventory.exportManifest, "MISSING");
+  assert.equal(report.qualityComparison, "NOT_PERFORMED");
+  assert.equal(report.scoreComputed, false);
 });
