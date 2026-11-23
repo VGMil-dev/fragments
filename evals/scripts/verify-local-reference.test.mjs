@@ -4,7 +4,51 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { verifyLocalReferenceCorpus } from "./verify-local-reference.mjs";
+import { auditReferenceProgression, verifyLocalReferenceCorpus } from "./verify-local-reference.mjs";
+
+function verifiedCase(label, behaviors) {
+  return {
+    label,
+    commitSha: `${label.toLowerCase().charCodeAt(0).toString(16)}`.repeat(40),
+    status: "REFERENCE_MARKERS_MATCH",
+    checks: Object.entries(behaviors).map(([behaviorId, detectedPresent]) => ({
+      behaviorId,
+      expectedPresent: detectedPresent,
+      detectedPresent,
+      status: "MATCH",
+    })),
+  };
+}
+
+test("audita progresión A/B/C sin confundirla con validez semántica", () => {
+  const result = auditReferenceProgression([
+    verifiedCase("A", { required_validation: false, name_search: false, recovered_status: false }),
+    verifiedCase("B", { required_validation: true, name_search: false, recovered_status: false }),
+    verifiedCase("C", { required_validation: true, name_search: true, recovered_status: true }),
+  ]);
+
+  assert.equal(result.status, "REFERENCE_PROGRESSION_MATCH");
+  assert.deepEqual(result.caseOrder, ["A", "B", "C"]);
+  assert.deepEqual(result.behaviors.map(({ behaviorId, detectedPresent }) => ({ behaviorId, detectedPresent })), [
+    { behaviorId: "name_search", detectedPresent: [false, false, true] },
+    { behaviorId: "recovered_status", detectedPresent: [false, false, true] },
+    { behaviorId: "required_validation", detectedPresent: [false, true, true] },
+  ]);
+  assert.equal(result.basis, "STATIC_SOURCE_MARKERS_ONLY");
+  assert.equal(result.semanticValidity, "NOT_VALIDATED");
+});
+
+test("identifica regresión de marcador entre referencias verificadas", () => {
+  const result = auditReferenceProgression([
+    verifiedCase("A", { required_validation: false }),
+    verifiedCase("B", { required_validation: true }),
+    verifiedCase("C", { required_validation: false }),
+  ]);
+
+  assert.equal(result.status, "REFERENCE_PROGRESSION_MISMATCH");
+  assert.deepEqual(result.regressions, [{ behaviorId: "required_validation", from: "B", to: "C" }]);
+  assert.equal(result.semanticValidity, "NOT_VALIDATED");
+});
 
 function fixtureRepo() {
   const root = mkdtempSync(join(tmpdir(), "fragments-reference-audit-"));
@@ -63,6 +107,7 @@ test("separa discrepancia y referencia ausente de una coincidencia", () => {
     assert.equal(result.status, "BLOCKED");
     assert.equal(result.cases[0].checks[0].status, "MISMATCH");
     assert.deepEqual(result.cases[1].blockers, ["missing_behavior_reference"]);
+    assert.equal(result.referenceProgression.status, "BLOCKED");
     assert.equal(result.semanticValidity, "NOT_VALIDATED");
   } finally {
     rmSync(repo.root, { recursive: true, force: true });
