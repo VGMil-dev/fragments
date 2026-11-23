@@ -24,6 +24,7 @@ import "./mentor-screen.css";
 
 export interface MentorScreenProps {
   initialProposal?: ProposalDraftResponse | undefined;
+  missionClassroomId?: string | null | undefined;
   requiredMissionSkills?: Array<{ id: string; name: string }>;
   initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
   restoreEvaluation?: boolean;
@@ -181,6 +182,7 @@ function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
 
 export function MentorScreen({
   initialProposal,
+  missionClassroomId,
   requiredMissionSkills = [],
   initialEvaluation,
   restoreEvaluation = false,
@@ -331,9 +333,14 @@ export function MentorScreen({
   }, [restoreEvaluation, initialProposal, initialEvaluation, onRecoverEvaluation]);
 
   useEffect(() => {
-    if (proposal?.proposal.mentorSkills !== undefined || skillsChanged || skillClassroomId || classrooms.length !== 1) return;
-    setSkillClassroomId(classrooms[0]!.id);
-  }, [proposal?.proposal.mentorSkills, skillsChanged, skillClassroomId, classrooms]);
+    if (proposal?.proposal.mentorSkills !== undefined || skillsChanged || skillClassroomId) return;
+    if (missionClassroomId && !initialProposal) {
+      if (classroomsLoading || !classrooms.some((classroom) => classroom.id === missionClassroomId && classroom.status === "active")) return;
+      setSkillClassroomId(missionClassroomId);
+      return;
+    }
+    if (!missionClassroomId && !classroomsLoading && classrooms.length === 1) setSkillClassroomId(classrooms[0]!.id);
+  }, [proposal?.proposal.mentorSkills, skillsChanged, skillClassroomId, classrooms, classroomsLoading, missionClassroomId, initialProposal]);
 
   useEffect(() => {
     if (activeStage !== 2 || !skillClassroomId || !onLoadClassroomSkills) return;

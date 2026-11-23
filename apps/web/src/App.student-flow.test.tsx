@@ -25,12 +25,13 @@ vi.mock("./lib/api/trainer-api", () => ({ createTrainerApi: vi.fn(() => ({})) })
 vi.mock("./lib/api/student-api-instance", () => ({ studentApi: mocks.studentApi }));
 vi.mock("./features/assignments/assignments-api.js", () => ({ assignmentsApi: mocks.assignmentsApi }));
 vi.mock("./features/mentor", () => ({
-  MentorScreen: ({ contextState, initialProposal, savedProposals = [], restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number; config?: { theme?: string } } }; initialProposal?: { id: string; proposal: { title: string }; assignmentVersionId?: string; assignmentContext?: ProposalContextProbe }; savedProposals?: Array<{ assignmentContext?: ProposalContextProbe }>; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
+  MentorScreen: ({ contextState, initialProposal, savedProposals = [], restoreEvaluation, missionClassroomId, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number; config?: { theme?: string } } }; initialProposal?: { id: string; proposal: { title: string }; assignmentVersionId?: string; assignmentContext?: ProposalContextProbe }; savedProposals?: Array<{ assignmentContext?: ProposalContextProbe }>; restoreEvaluation?: boolean; missionClassroomId?: string; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
     <section>
       <p data-testid="mentor-context">{contextState.status === "success" ? contextState.data?.version : contextState.status}</p>
       <p data-testid="mentor-context-theme">{contextState.status === "success" ? contextState.data?.config?.theme ?? "" : ""}</p>
       <p data-testid="mentor-required-skills">{requiredMissionSkills.map((skill) => skill.name).join("|")}</p>
       <p data-testid="mentor-required-skill-ids">{requiredMissionSkills.map((skill) => skill.id).join("|")}</p>
+      <p data-testid="mentor-mission-classroom">{missionClassroomId ?? ""}</p>
       <p data-testid="mentor-proposal-assignment-version">{initialProposal?.assignmentVersionId ?? ""}</p>
       <p data-testid="mentor-proposal-context-assignment-version">{initialProposal?.assignmentContext?.assignmentVersionId ?? ""}</p>
       <p data-testid="mentor-proposal-context-theme">{initialProposal?.assignmentContext?.mentorContext.config.theme ?? ""}</p>
@@ -53,6 +54,7 @@ vi.mock("./features/trainer", () => ({
 import { App } from "./App";
 
 const classroom = { id: "class-1", title: "Programación Móvil", subject: "Desarrollo", groupLabel: "Tercero", period: "2026–2027", status: "active", createdAt: "2026-11-22T00:00:00.000Z", updatedAt: "2026-11-22T00:00:00.000Z" };
+const otherClassroom = { ...classroom, id: "class-2", title: "Otra aula" };
 const mission = {
   id: "mission-v1", assignmentId: "mission", version: 1, classroomId: classroom.id, classroomTitle: classroom.title, subject: classroom.subject,
   title: "Aplicación móvil", instructions: "Define una pantalla inicial.", objectives: ["Explicar la navegación"], requiredSkills: [{ id: "required-navigation", name: "Navegación", description: null }], optionalSkills: [{ id: "optional-accessibility", name: "Accesibilidad", description: null }], status: "published",
@@ -95,6 +97,7 @@ afterEach(() => {
 describe("student mission to Mentor flow", () => {
   it("starts the newest published classroom mission directly from the Dashboard with its pinned context and skills", async () => {
     window.history.replaceState({}, "", "/student/dashboard");
+    mocks.studentApi.getMyClassrooms.mockResolvedValue({ ok: true, data: [otherClassroom, classroom] });
     await act(async () => root?.render(<App />));
 
     const start = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent?.includes("Iniciar misión en Mentor"));
@@ -106,6 +109,7 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación");
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
     expect(container?.querySelector("[data-testid=mentor-required-skill-ids]")?.textContent).toBe("required-navigation");
+    expect(container?.querySelector("[data-testid=mentor-mission-classroom]")?.textContent).toBe(classroom.id);
   });
 
   it("does not offer a generic proposal when classrooms cannot be checked and retries the classroom query", async () => {

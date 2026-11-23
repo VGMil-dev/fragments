@@ -132,15 +132,18 @@ describe("MentorScreen", () => {
   it("shows mission-required skills read-only without merging them into the optional classroom selection", async () => {
     const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación renombrada" };
     const optionalSkill = { ...skillFixture(2), id: "optional-1", name: "Accesibilidad" };
+    const otherClassroom = { ...classroom, id: "class-b", title: "Otra aula" };
     const loadSkills = vi.fn(async () => ({ ok: true as const, data: [requiredSkill, optionalSkill] }));
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
-    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} requiredMissionSkills={[{ id: "required-1", name: "Navegación fijada" }]} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} missionClassroomId={classroom.id} requiredMissionSkills={[{ id: "required-1", name: "Navegación fijada" }]} classrooms={[otherClassroom, classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
 
     const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
     await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
 
+    expect(mountedContainer.querySelector<HTMLSelectElement>(".mentor-skills__classroom select")?.value).toBe(classroom.id);
+    expect(loadSkills).toHaveBeenCalledWith(classroom.id);
     const required = mountedContainer.querySelector(".mentor-skills__required");
     expect(required?.textContent).toContain("Navegación fijada");
     expect(required?.textContent).not.toContain("Sin asignación");
@@ -371,6 +374,39 @@ describe("MentorScreen", () => {
       proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["skill-1"] } }),
     }));
     expect(loadSkills).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a recovered proposal's classroom instead of applying the mission default", async () => {
+    const otherClassroom = { ...classroom, id: "class-b", title: "Otra aula" };
+    const recoveredProposal = { ...proposal, proposal: { ...proposal.proposal, mentorSkills: { classroomId: otherClassroom.id, selectedSkillIds: ["skill-1"] } } };
+    const loadSkills = vi.fn(async () => ({ ok: true as const, data: [skillFixture(1)] }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} initialProposal={recoveredProposal} missionClassroomId={classroom.id} classrooms={[classroom, otherClassroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    expect(mountedContainer.querySelector<HTMLSelectElement>(".mentor-skills__classroom select")?.value).toBe(otherClassroom.id);
+    expect(loadSkills).toHaveBeenCalledWith(otherClassroom.id);
+    expect(loadSkills).not.toHaveBeenCalledWith(classroom.id);
+  });
+
+  it("does not substitute another classroom when the mission classroom is not active", async () => {
+    const otherClassroom = { ...classroom, id: "class-b", title: "Otra aula" };
+    const loadSkills = vi.fn(async () => ({ ok: true as const, data: [skillFixture(1)] }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} missionClassroomId="inactive-mission-class" classrooms={[classroom, otherClassroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    expect(mountedContainer.querySelector<HTMLSelectElement>(".mentor-skills__classroom select")?.value).toBe("");
+    expect(mountedContainer.textContent).toContain("Elige un aula para consultar las habilidades autorizadas");
+    expect(loadSkills).not.toHaveBeenCalled();
   });
 
   it("shows a recoverable catalog error and retries the same classroom", async () => {

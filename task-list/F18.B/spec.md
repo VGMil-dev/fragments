@@ -62,6 +62,14 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - El CTA conserva y entrega el mismo objeto `StudentAssignment` sin copiarlo ni mutarlo.
 - Pruebas UI cubren versiones/habilidades reales del DTO fixture y la prioridad del borrador. Sin cambios de API, contratos, rutas, backend, migraciones o datos.
 
+## Incremento — aula de habilidades desde misión
+
+- Al iniciar una propuesta nueva desde una misión, si `missionClassroomId` coincide con un aula activa cargada de la sesión, Mentor preselecciona esa aula para el catálogo optativo cuando haya más de una.
+- El catálogo sigue solicitándose solo al abrir Habilidades; el ID procede del `StudentAssignment` seleccionado y el servidor conserva su autorización existente.
+- Propuestas recuperadas conservan el `classroomId` guardado y sus selecciones; el aula de misión no los sobrescribe.
+- Si el aula de misión no está disponible en la lista autenticada, no se elige otra aula por inferencia; se conserva el selector actual.
+- Pruebas UI cubren aula de misión entre varias aulas y aula guardada de propuesta recuperada. Sin cambios de contrato, API, persistencia o evaluación.
+
 ## Incremento F18.B — recuperar la carga de misiones docentes
 
 - Si falla `GET /api/teacher/classrooms/:classroomId/assignments`, el detalle no debe presentar el estado vacío como si no existieran misiones.

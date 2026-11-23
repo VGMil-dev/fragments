@@ -435,3 +435,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - La sesión Ego Lite estudiante existente confirmó `/` 200 y asset `/assets/index-CCF9C_eS.js` 200 con `v0.5.47` y SHA exacto. Responsive Dashboard a 320, 390, 768, 1024 y 1440 px: sin overflow; viewport restaurado a 1908×944.
 - El Dashboard productivo conserva prioridad a un borrador real existente; por eso el resumen de misión/contexto/habilidades no aparece y su render visual concreto queda **NO COMPROBADO**. No se reemplazó el borrador, no se guardó ni evaluó, y las sesiones/pestañas Ego Lite permanecen abiertas.
 - F18.B sigue abierta: no se validaron calidad semántica de evaluaciones Mentor/Review, Review productiva en Trainer, Galería ni identidad cruzada.
+
+## Mentor — aula de habilidades desde misión · 2026-11-23
+
+- Commit funcional `c4a1586ab66200584f49a40d5e74b9f52e4e126b`: al iniciar una misión nueva, Mentor preselecciona el aula de la misión para el catálogo optativo solo cuando coincide con un aula activa cargada. Propuestas recuperadas conservan su aula guardada; ante una matrícula ausente no infiere otra y exige selección explícita. Se solicita el catálogo únicamente al entrar en Habilidades, usando el endpoint/autorización existente. Sin cambios API, contrato, persistencia, permisos ni evaluación.
+- TDD: la nueva regresión falló primero porque el selector permanecía vacío con varias aulas; después de implementarlo quedó verde. Casos adicionales cubren propuesta recuperada con otra aula y misión sin aula activa coincidente.
+- Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx` — 36/36 PASS; `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx` — 9/9 PASS; `pnpm --filter @fragments/web test` — 49 archivos, 237/237 PASS; typecheck, build y `git diff --check` PASS.
+- Revisión reflexiva independiente: PASS. Revisión UX/UI estática: PASS; selector accesible y estado sin coincidencia coherente.
+- PR, CI y release F14 pendientes; QA post-release con Ego Lite queda pendiente. No se modificó ni guardó información de producción.
