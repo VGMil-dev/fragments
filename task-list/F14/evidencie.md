@@ -329,6 +329,14 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Health público previo: HTTP 200 `ok/ready`. Durante la ventana de aplicación automática, una lectura pública devolvió HTTP 502; la siguiente observación volvió a HTTP 200 `ok/ready`, y el bundle `/assets/index-CCBddJ1x.js` confirmó `v0.5.36` y el SHA completo exacto.
 - Sin invocación manual, reinicio solicitado, pausa ni cambio de infraestructura. Se conservaron el entorno `fragments-production`, el workflow, el poller y todos los gates técnicos. Ledger del host e integridad/retención independiente del backup NO COMPROBADOS.
 
+## Release automática v0.5.46 · 2026-11-23
+
+- PR [#200](https://github.com/VGMil-dev/fragments/pull/200) merge normal en `main`, SHA exacto `f5c4e0d6750e327599b80a06d19ac4e42d67e219`; CI PR `45233169921` PASS. Tag anotada `v0.5.46` apunta a ese merge.
+- F14 run [`45233695756`](https://github.com/VGMil-dev/fragments/actions/runs/45233695756): `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Incluye validación tag/SHA/main, tests, typecheck/lint/build, bundle metadata, PostgreSQL disposable con round-trip backup/restore, imágenes ARM64 y atestación Sigstore.
+- El poller/aplicador automático aplicó la release sin deploy o reinicio manual ni cambios de `fragments-production` o sus gates. Health público HTTP 200 (`ok`, `database=ready`); bundle `/assets/index-Dt-RQvqU.js` contiene `v0.5.46` y SHA exacto.
+- Ego Lite 320/390/768/1024/1440 confirma Dashboard sin overflow, sin escrituras. La CTA de misión quedó oculta por un borrador prioritario y esa ruta productiva permanece NO COMPROBADA.
+- Hash/retención/integridad independiente del backup del host, ledger y labels de imágenes del host siguen NO COMPROBADOS.
+
 ## Release Pixel Night `v0.5.42` — 2026-11-23
 
 - PR #190 se integró por merge normal: `e184280f992f9b4a90603fbc4dd79c856ddf38a2`; CI PR run `45193340720` SUCCESS.
