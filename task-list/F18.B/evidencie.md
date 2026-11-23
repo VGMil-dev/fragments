@@ -257,3 +257,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Prueba actualizada: 27/27 PASS, typecheck PASS, CI `45089888475` SUCCESS y revisión independiente PASS. Merge normal `073819c31881fd1ae3513bf72a7afe322e5051e6`.
 - Release anotada `v0.5.24` en ese SHA; F14 run `45090388470` SUCCESS. Aplicador normal terminó SUCCESS a 00:54 UTC; API/web healthy en imagen `sha-073819c31881fd1ae3513bf72a7afe322e5051e6`. Salud pública `/health`: `ok`, database `ready`; bundle `/assets/index-C_-XL4FG.js` contiene `v0.5.24` y SHA exacto.
 - NO COMPROBADO: visualización del indicador con una misión productiva activa y evaluación IA real. Ego Lite muestra aula matriculada sin misión/habilidades activas; no se escribieron datos.
+
+## Accesibilidad de acciones en propuestas guardadas · 2026-11-23
+
+- PR #143 corrige nombres accesibles idénticos en acciones «Abrir propuesta». El lector de pantalla identifica la acción y el título, usando «Borrador sin título» cuando corresponde; no cambia el callback ni la identidad usada para recuperar.
+- Regresión TDD fallaba antes del cambio; prueba focal 28/28, typecheck y diff-check PASS. CI `45092564145` SUCCESS, revisión independiente PASS; merge normal `52917ec6fcba790f487a7d2f9807c3c52927400d`.
+- Release anotada `v0.5.25` sobre el SHA exacto; F14 run `45092884337` SUCCESS en los tres jobs. Aplicación automática verificada: API/web healthy en SHA exacto, `/health` público `ok/ready`, bundle `/assets/index-Iviv3wW8.js` confirma versión y SHA.
+- Ego Lite conserva sesiones abiertas en v0.5.23; propuesta visible no está ligada a misión/contexto. Render con datos enlazados sigue NO COMPROBADO; no hubo escrituras académicas.

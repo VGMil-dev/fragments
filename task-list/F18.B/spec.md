@@ -77,3 +77,7 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Cuando una propuesta recuperada conserva una misión publicada, el listado identifica la misión y el número de versión del contexto Mentor asociado.
 - La interacción de «Abrir propuesta» debe recuperar la evaluación persistida de la misma propuesta; no recalcula ni expone rúbrica en esta superficie.
 - Prueba UI usa el objeto completo capturado por la acción de apertura y valida que recuperación recibe su identificador.
+
+## Accesibilidad de propuestas recuperables
+
+- Cada acción de apertura anuncia el estado de la acción y el título de la propuesta. Si no hay título, anuncia Borrador sin título. El texto visible y el callback existente se conservan.
