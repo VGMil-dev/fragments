@@ -22,6 +22,7 @@ export interface ReviewScreenProps {
   onGenerateSubmission: (request: CreateReviewSubmissionRequest) => Promise<ApiResult<ReviewSubmissionResponse>>;
   onPdf: (submissionId: string) => Promise<ApiResult<Blob>>;
   onBack: () => void;
+  onOpenTrainer?: () => void;
   mode?: DataMode;
   linkedProposals?: ProposalDraftResponse[];
 }
@@ -34,7 +35,7 @@ function evidenceLabel(evidence: EvidenceReference): string {
     : `Campo: ${evidence.field}`;
 }
 
-export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, mode = "real", linkedProposals = [] }: ReviewScreenProps) {
+export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, onOpenTrainer, mode = "real", linkedProposals = [] }: ReviewScreenProps) {
   const initialData = initialReview?.status === "success" ? initialReview.data : undefined;
   const [fields, setFields] = useState<ReviewFields>(() => initialData
     ? { owner: initialData.owner, repo: initialData.repo, commitSha: initialData.commitSha }
@@ -219,6 +220,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
             <button className="button button--primary" type="button" disabled={submission?.status === "loading"} onClick={() => void generateSubmission(currentReview.id)}>
               {submission?.status === "loading" ? "Preparando entrega…" : "Generar entrega"}
             </button>
+            <a className="button button--light" href="/student/trainer" onClick={onOpenTrainer ? (event) => { event.preventDefault(); onOpenTrainer(); } : undefined}>Practicar en Trainer</a>
           </div>
         ) : null}
       </section>

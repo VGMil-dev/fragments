@@ -7,7 +7,7 @@ type Api = ReturnType<typeof createTrainerApi>;
 const statusLabels: Record<TrainerStatus, string> = { pending: "Pendiente", in_progress: "En progreso", completed: "Completado por ti", need_more: "Necesito practicar más" };
 const categoryLabels = { new: "Nuevo", pending: "Pendiente", review: "Repaso" } as const;
 
-export function TrainerScreen({ api }: { api: Api }) {
+export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?: () => void }) {
   const [reviews, setReviews] = useState<TrainerReview[]>([]);
   const [selectedReview, setSelectedReview] = useState("");
   const [history, setHistory] = useState<TrainerHistoryItem[]>([]);
@@ -16,20 +16,34 @@ export function TrainerScreen({ api }: { api: Api }) {
   const [bankSize, setBankSize] = useState<number | null>(null);
   const [shownHints, setShownHints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [drawing, setDrawing] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
   const review = useMemo(() => reviews.find((item) => item.id === selectedReview), [reviews, selectedReview]);
 
   useEffect(() => {
     let active = true;
-    void api.reviews().then((result) => {
-      if (!active) return;
-      if (result.ok) { setReviews(result.data); setSelectedReview((current) => current || result.data[0]?.id || ""); }
-      else setMessage(result.error.message);
-      setLoading(false);
-    });
+    void loadReviews();
     return () => { active = false; };
-  }, [api]);
+    async function loadReviews() {
+      setLoading(true);
+      setLoadFailed(false);
+      setMessage("");
+      try {
+        const result = await api.reviews();
+        if (!active) return;
+        if (result.ok) { setReviews(result.data); setSelectedReview((current) => current || result.data[0]?.id || ""); }
+        else { setMessage(result.error.message); setLoadFailed(true); }
+      } catch {
+        if (!active) return;
+        setMessage("No pudimos cargar Trainer. Inténtalo de nuevo.");
+        setLoadFailed(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+  }, [api, loadAttempt]);
 
   useEffect(() => {
     if (!selectedReview) { setHistory([]); return; }
@@ -74,11 +88,11 @@ export function TrainerScreen({ api }: { api: Api }) {
           </button>
         </div>
         {loading ? <p role="status">Buscando análisis completados…</p> : null}
-        {!loading && !reviews.length ? <p className="trainer-empty">Primero analiza un repositorio en Review. Aquí aparecerá cuando el análisis esté listo.</p> : null}
+        {!loading && !loadFailed && !reviews.length ? <div className="trainer-empty"><p>Primero analiza un repositorio en Review. Aquí aparecerá cuando el análisis esté listo.</p><a href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review</a></div> : null}
         {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
       </section>
 
-      {message ? <p className="trainer-message" role="status">{message}</p> : null}
+      {message ? <div className="trainer-message" role={loadFailed ? "alert" : "status"}><p>{message}</p>{loadFailed ? <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reintentar</button> : null}</div> : null}
 
       {challenge ? (
         <article className="trainer-challenge" aria-labelledby="trainer-challenge-title">

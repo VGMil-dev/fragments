@@ -65,6 +65,14 @@ describe("ReviewScreen", () => {
     expect(html).toContain("84/100");
     expect(html).toContain("El punto de entrada conecta los módulos principales.");
     expect(html).toContain("src/main.ts:3–9");
+    expect(html).toContain('href="/student/trainer"');
+    expect(html).toContain("Practicar en Trainer");
+  });
+
+  it.each(["queued", "running", "failed"] as const)("does not offer Trainer while a review is %s", (status) => {
+    const review = { ...completed, status } as never;
+    const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: review }} onBack={vi.fn()} onOpenTrainer={vi.fn()} />);
+    expect(html).not.toContain('href="/student/trainer"');
   });
 
   it("announces queue status returned by the API", () => {
