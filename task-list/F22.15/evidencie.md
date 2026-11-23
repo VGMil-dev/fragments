@@ -15,3 +15,9 @@ Estado: desplegada en v0.5.51. Commit de código: `10dbdb1e9c52d1970c8a6f995f2d0
 - Release aplicada y verificada por F14/Ego Lite; PR integrado.
 - Observación posterior v0.5.52, SSH read-only: web/API `healthy` en imágenes SHA `7da17eca74f1c5df7efb1e909e3a73abcd14794b`; asset `index-GzHAFdj-.js` incluye versión/SHA. Proyección remota de nombres allowlisted Mentor/Review/Trainer sobre `docker logs --since 24h fragments-api-1` devolvió 0 coincidencias; solo se emitieron conteos, no líneas crudas. Esto no mide filas de `admin_operational_events` ni prueba sesión admin/feed autenticado.
 - Producción sin escritura: no se generó intento Trainer ni evaluación de prueba. Eventos Trainer reales, lectura autenticada y retención productiva siguen NO COMPROBADOS.
+
+## Ego Lite — control de permisos post-release · 2026-11-23
+
+- En página nueva del TaskSpace docente preservado, `/admin/trainer-events` cargó `v0.5.52 · 7da17ec`, terminó su carga y mostró el estado seguro 403 «Esta cuenta no tiene permisos de administración para consultar los eventos de Trainer»; la tabla tenía 0 filas.
+- Esto confirma que la sesión docente existente no dispone de rol admin; no prueba el feed bajo una sesión administradora ni la existencia de filas/eventos productivos. No se elevó el rol, no hubo escrituras y el feed autenticado como admin continúa **NO COMPROBADO**.
+- La pestaña docente original `/teacher/review` quedó abierta e intacta. Una observación de estado al final agotó el tiempo; no se reintentó ni recargó esa página. Captura del 403 no generada; se conserva evidencia textual auténtica.
