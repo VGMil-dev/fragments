@@ -11,6 +11,12 @@ describe("AdminAuditLogApi", () => {
     expect(result).toEqual({ ok: true, data: { events: [event] } });
   });
 
+  it("accepts the audited read of Mentor operational events", async () => {
+    const mentorRead = { ...event, event: "admin.mentor_events.read" };
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { events: [mentorRead] } }), { status: 200 }));
+    expect(await createAdminAuditLogApi(fetcher).read()).toEqual({ ok: true, data: { events: [mentorRead] } });
+  });
+
   it("rejects extra private fields, unknown event names, and oversized pages", async () => {
     const extra = createAdminAuditLogApi(vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { events: [{ ...event, adminActorId: "private-user-id" }] } }), { status: 200 })));
     expect((await extra.read()).ok).toBe(false);
