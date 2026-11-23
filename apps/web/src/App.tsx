@@ -367,10 +367,11 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
             linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
+            onOpenTrainer={() => navigate("/student/trainer")}
             onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
-        {path === "/student/trainer" ? <TrainerScreen api={trainerApi} /> : null}
+        {path === "/student/trainer" ? <TrainerScreen api={trainerApi} onStartReview={() => navigate("/student/review")} /> : null}
       </div>
       <footer className="student-workspace__footer"><BuildVersion /></footer>
     </div>
