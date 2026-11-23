@@ -163,3 +163,11 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Suite offline focal: 18/18 PASS. No calculó puntuaciones ni hizo llamadas externas.
 - Bloqueo concreto sin cambio: faltan outputs Review completos por SHA A/B/C (hallazgos, citas e `inputDigest`) y un manifest/export de QA autorizado. Los fixtures fake no permiten valorar semántica.
 - Calidad Mentor/Review, proveedor/modelo y presupuesto siguen NO COMPROBADOS; no se ejecutó IA pagada ni se alteraron prompts/rúbricas.
+
+## Validador estructural de citas contra snapshot local — 2026-11-23
+
+- Se agregó `validateCitationsAgainstSnapshot` al auditor offline F25. Si se entrega un `RepositorySnapshot` ya disponible localmente, verifica el digest SHA-256 canónico del snapshot, los SHA Git de blobs, rutas exactas, rangos de líneas inclusivos, digest citado y consistencia opcional de `finding.file/lines`.
+- El reporte no incluye contenido de archivos y etiqueta el resultado `SNAPSHOT_CHECKED_NO_SEMANTICS`; una ruta/rango/digest coincidente no demuestra que las líneas justifiquen el hallazgo. Sin snapshot, la validación continúa como `SHAPE_ONLY`.
+- A/B/C siguen sin outputs Review completos y sus snapshots no se agregaron ni descargaron. Puntuación y calidad semántica siguen **NO COMPROBADAS**; falsos positivos/omisiones y citas reales siguen sin corpus elegible.
+- Pruebas: `node --test evals/scripts/audit-semantic-corpus.test.mjs` — 6/6 PASS; suite F25 offline `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs evals/scripts/verify-local-reference.test.mjs` — 23/23 PASS. Cubre ruta presente/ausente, líneas dentro/fuera de rango, digest coincidente/distinto, alteración del snapshot/blob y bloqueo de comparación fake. No hubo llamadas externas ni ejecución de código evaluado.
+- Skill aplicada: `verification-before-completion`; se aplicó evidencia fresca y de alcance acotado. No se usó navegador, por tratarse de verificación de script offline.
