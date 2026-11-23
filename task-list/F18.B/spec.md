@@ -83,10 +83,10 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 
 ## Incremento F18.B — habilidades requeridas estructuradas en propuestas recuperadas
 
-- `assignmentContext` de una propuesta vinculada incluye `requiredSkills: string[]` desde `ClassroomAssignmentVersion.snapshotJson.requiredSkills`; la lista conserva nombres del snapshot de esa versión y puede estar vacía.
+- `assignmentContext` de una propuesta vinculada incluye `requiredSkills: { id, name }[]` desde `ClassroomAssignmentVersion.snapshotJson.requiredSkills`; la lista conserva las identidades/nombres del snapshot de esa versión y puede estar vacía.
 - La respuesta expone la propiedad mediante el contrato compartido. No cambia la solicitud de evaluación, su texto, el modelo, la rúbrica ni la persistencia.
-- Mentor muestra `requiredSkills` solo cuando `assignmentContext.assignmentVersionId` coincide con `proposal.assignmentVersionId`; conserva el filtro que evita ofrecer la misma habilidad como selección optativa.
-- Las pruebas de contrato rechazan contexto vinculado sin la propiedad estructurada; integración PostgreSQL verifica nombres en creación y recuperación después de publicar v2; UI verifica recuperación desde el arreglo tipado y rechazo de contexto de otra versión.
+- Mentor muestra `requiredSkills` solo cuando `assignmentContext.assignmentVersionId` coincide con `proposal.assignmentVersionId`; excluye del selector optativo por ID, aunque el docente haya renombrado esa habilidad desde la publicación.
+- Las pruebas de contrato rechazan contexto vinculado sin la propiedad estructurada; integración PostgreSQL verifica IDs/nombres en creación y recuperación después de publicar v2; UI verifica recuperación desde el arreglo tipado, rechazo de contexto de otra versión y exclusión por ID después de un cambio de nombre.
 - Sin migración ni llamadas a proveedores. Snapshots sin arreglo válido se proyectan como lista vacía, sin inferir identidades del texto de la rúbrica.
 
 ## Propuestas guardadas — contexto vinculado

@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { MentorEvaluationContextSchema } from "@fragments/contracts";
-import { assignmentSkillNames, buildAssignmentMentorConfig } from "./mentor-context.js";
+import { assignmentSkillSnapshots, buildAssignmentMentorConfig } from "./mentor-context.js";
 
 export async function loadProposalAssignmentContext(database: PrismaClient, assignmentVersionId: string | null | undefined) {
   if (!assignmentVersionId) return null;
@@ -10,7 +10,7 @@ export async function loadProposalAssignmentContext(database: PrismaClient, assi
   if (!control) return null;
   return {
     assignmentVersionId: version.id,
-    requiredSkills: assignmentSkillNames(version.snapshotJson, "requiredSkills"),
+    requiredSkills: assignmentSkillSnapshots(version.snapshotJson, "requiredSkills"),
     mentorContext: MentorEvaluationContextSchema.parse({ version: control.version, publishedAt: control.publishedAt.toISOString(),
       config: buildAssignmentMentorConfig(control.configJson, version.snapshotJson, version.assignment.classroom.subject) }),
   };

@@ -42,7 +42,7 @@ const linkedProposal = {
   assignmentVersionId: "assignment-version-1",
   assignmentContext: {
     assignmentVersionId: "assignment-version-1",
-    requiredSkills: ["Navegación con Expo"],
+    requiredSkills: [{ id: "required-navigation", name: "Navegación con Expo" }],
     mentorContext: {
       version: 4,
       publishedAt: "2026-11-03T12:00:00.000Z",
@@ -125,13 +125,13 @@ afterEach(() => {
 
 describe("MentorScreen", () => {
   it("shows mission-required skills read-only without merging them into the optional classroom selection", async () => {
-    const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación fijada" };
+    const requiredSkill = { ...skillFixture(1), id: "required-1", name: "Navegación renombrada" };
     const optionalSkill = { ...skillFixture(2), id: "optional-1", name: "Accesibilidad" };
     const loadSkills = vi.fn(async () => ({ ok: true as const, data: [requiredSkill, optionalSkill] }));
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
-    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} requiredMissionSkills={["Navegación fijada"]} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} requiredMissionSkills={[{ id: "required-1", name: "Navegación fijada" }]} classrooms={[classroom]} onLoadClassroomSkills={loadSkills} onBack={vi.fn()} />); });
 
     const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
     await act(async () => { skillsStage?.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });

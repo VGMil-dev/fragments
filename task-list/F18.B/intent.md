@@ -38,7 +38,7 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 ## Incremento — transportar habilidades obligatorias como contexto estructurado
 
 - Problema: al recuperar una propuesta, el cliente identifica habilidades obligatorias buscando un prefijo de texto dentro de los requisitos de Mentor. Una etiqueta traducida o reformulada podría ocultar una obligación aunque el snapshot publicado siga íntegro.
-- Objetivo: exponer en `assignmentContext` los nombres de habilidades requeridas que proceden del snapshot inmutable y usar esa propiedad tipada al recuperar Mentor.
+- Objetivo: exponer en `assignmentContext` las identidades y nombres de habilidades requeridas que proceden del snapshot inmutable y usarlos al recuperar Mentor.
 - No objetivos: cambiar la evaluación, rúbricas, asignaciones, persistencia o autorización; introducir migraciones; alterar el texto enviado a Mentor.
 - Owner: PLANNER como arquitecto de contrato compartido y API; pruebas UI/API se mantienen en sus superficies respectivas.
 

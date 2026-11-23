@@ -403,7 +403,7 @@ describe("shared API contracts", () => {
     expect(CreateProposalDraftRequestSchema.safeParse({ proposal: partial }).success).toBe(true);
     expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now }).success).toBe(true);
     expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now,
-      assignmentContext: { assignmentVersionId: "assignment-version-1", requiredSkills: ["Navegación"], mentorContext: { version: 1, publishedAt: now,
+      assignmentContext: { assignmentVersionId: "assignment-version-1", requiredSkills: [{ id: "skill-1", name: "Navegación" }], mentorContext: { version: 1, publishedAt: now,
         config: { subject: "Programación", theme: "Misión", assignment: "Consigna", requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`),
           expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] } } } }).success).toBe(true);
     expect(ProposalDraftResponseSchema.safeParse({ id: "proposal-1", version: 1, proposal: partial, updatedAt: now,

@@ -39,7 +39,7 @@ import "./styles/teacher-workspace.css";
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const trainerApi = createTrainerApi();
 
-function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): string[] {
+function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): Array<{ id: string; name: string }> {
   const context = proposal.assignmentContext;
   if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return [];
   return context.requiredSkills;
@@ -65,7 +65,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
   const requiredMissionSkills = selectedProposal
     ? requiredSkillsFromProposalContext(selectedProposal)
-    : selectedAssignment?.requiredSkills.map((skill) => skill.name) ?? [];
+    : selectedAssignment?.requiredSkills ?? [];
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);

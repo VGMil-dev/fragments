@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { assignmentSkillNames, buildAssignmentMentorConfig } from "./mentor-context.js";
+import { assignmentSkillSnapshots, buildAssignmentMentorConfig } from "./mentor-context.js";
 
 const base = { subject: "Base", theme: "Tema base", assignment: "Consigna base", requirements: ["Restricción F11"], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11", criteria: [{ id: "criterion-a", title: "Evidencia", description: "Señales comprobables", weight: 100 }] };
 
 describe("assignment mentor context", () => {
-  it("projects only bounded non-empty names from the selected snapshot skill list", () => {
-    expect(assignmentSkillNames({ requiredSkills: [
-      { id: "required", name: " Navegación " }, null, { id: "blank", name: "   " }, { id: "bad", name: 3 },
-    ] }, "requiredSkills")).toEqual(["Navegación"]);
-    expect(assignmentSkillNames({ requiredSkills: Array.from({ length: 21 }, (_, index) => ({ name: `Habilidad ${index + 1}` })) }, "requiredSkills"))
+  it("projects only bounded valid identities and names from the selected snapshot skill list", () => {
+    expect(assignmentSkillSnapshots({ requiredSkills: [
+      { id: "required", name: " Navegación " }, null, { id: "blank", name: "   " }, { id: 3, name: "Inválida" },
+    ] }, "requiredSkills")).toEqual([{ id: "required", name: "Navegación" }]);
+    expect(assignmentSkillSnapshots({ requiredSkills: Array.from({ length: 21 }, (_, index) => ({ id: `skill-${index + 1}`, name: `Habilidad ${index + 1}` })) }, "requiredSkills"))
       .toHaveLength(20);
-    expect(assignmentSkillNames(null, "requiredSkills")).toEqual([]);
+    expect(assignmentSkillSnapshots(null, "requiredSkills")).toEqual([]);
   });
 
   it("combines the immutable mission snapshot with the exact published F11 rubric", () => {

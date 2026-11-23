@@ -19,10 +19,10 @@ vi.mock("./lib/api/trainer-api", () => ({ createTrainerApi: vi.fn(() => ({})) })
 vi.mock("./lib/api/student-api-instance", () => ({ studentApi: mocks.studentApi }));
 vi.mock("./features/assignments/assignments-api.js", () => ({ assignmentsApi: mocks.assignmentsApi }));
 vi.mock("./features/mentor", () => ({
-  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number } }; initialProposal?: { id: string; proposal: { title: string } }; restoreEvaluation?: boolean; requiredMissionSkills?: string[]; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
+  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number } }; initialProposal?: { id: string; proposal: { title: string } }; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
     <section>
       <p data-testid="mentor-context">{contextState.status === "success" ? contextState.data?.version : contextState.status}</p>
-      <p data-testid="mentor-required-skills">{requiredMissionSkills.join("|")}</p>
+      <p data-testid="mentor-required-skills">{requiredMissionSkills.map((skill) => skill.name).join("|")}</p>
       {initialProposal ? <p data-testid="mentor-proposal">{initialProposal.id}:{initialProposal.proposal.title}</p> : null}
       <p data-testid="mentor-restore-evaluation">{String(Boolean(restoreEvaluation))}</p>
       <button type="button" onClick={() => void onSave({ proposal: { title: "Borrador de misión" } })}>Guardar borrador</button>
@@ -81,9 +81,9 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/review");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "linked-proposal", version: 1, proposal: { title: "Navegación con Expo" }, assignmentVersionId: mission.id,
-        assignmentContext: { assignmentVersionId: mission.id, requiredSkills: ["Navegación"], mentorContext: { version: 7, config: { theme: "Navegación" } } } },
+        assignmentContext: { assignmentVersionId: mission.id, requiredSkills: [{ id: "required-navigation", name: "Navegación" }], mentorContext: { version: 7, config: { theme: "Navegación" } } } },
       { id: "stale-proposal", version: 1, proposal: { title: "Sin contexto" }, assignmentVersionId: "old-mission",
-        assignmentContext: { assignmentVersionId: "other-mission", requiredSkills: ["Otra"], mentorContext: { version: 1, config: { theme: "Otro" } } } },
+        assignmentContext: { assignmentVersionId: "other-mission", requiredSkills: [{ id: "other", name: "Otra" }], mentorContext: { version: 1, config: { theme: "Otro" } } } },
     ] });
 
     await act(async () => root?.render(<App />));
@@ -96,7 +96,7 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "linked-proposal", version: 2, proposal: { title: "Navegación accesible" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
-        assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: ["Navegación"], mentorContext: { version: 7, config: { requirements: ["Habilidad optativa: Accesibilidad", "Restricción de aula"] } } } },
+        assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [{ id: "required-navigation", name: "Navegación" }], mentorContext: { version: 7, config: { requirements: ["Habilidad optativa: Accesibilidad", "Restricción de aula"] } } } },
     ] });
 
     await act(async () => root?.render(<App />));
@@ -110,7 +110,7 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "stale-context-proposal", version: 2, proposal: { title: "Contexto desactualizado" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
-        assignmentContext: { assignmentVersionId: "mission-v2", requiredSkills: ["No debe mostrarse"], mentorContext: { version: 8, config: { requirements: [] } } } },
+        assignmentContext: { assignmentVersionId: "mission-v2", requiredSkills: [{ id: "stale", name: "No debe mostrarse" }], mentorContext: { version: 8, config: { requirements: [] } } } },
     ] });
 
     await act(async () => root?.render(<App />));

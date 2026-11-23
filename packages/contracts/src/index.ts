@@ -351,7 +351,8 @@ export const ClassroomSkillsResponseSchema = z.array(SkillCatalogEntrySchema.ext
 export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifier, skillId: identifier, enabled: z.boolean(), updatedAt: z.iso.datetime() }).strict();
 // F18.B missions: draft edits are mutable; each published version is an immutable snapshot.
 export const AssignmentStatusSchema = z.enum(["draft", "published", "archived"]);
-export const AssignmentSkillSnapshotSchema = z.object({ id: identifier, name: classroomText(100), description: z.string().trim().max(1000).nullable() }).strict();
+export const AssignmentRequiredSkillSchema = z.object({ id: identifier, name: classroomText(100) }).strict();
+export const AssignmentSkillSnapshotSchema = AssignmentRequiredSkillSchema.extend({ description: z.string().trim().max(1000).nullable() }).strict();
 const AssignmentDraftFieldsSchema = z.object({
   title: classroomText(160),
   instructions: classroomText(5000),
@@ -464,7 +465,7 @@ export const ProposalDraftResponseSchema = z.object({
   version: z.number().int().min(1),
   proposal: ProposalDraftFieldsSchema,
   assignmentVersionId: identifier.nullable().optional(),
-  assignmentContext: z.object({ assignmentVersionId: identifier, requiredSkills: z.array(classroomText(100)).max(20), mentorContext: MentorEvaluationContextSchema }).strict().nullable().optional(),
+  assignmentContext: z.object({ assignmentVersionId: identifier, requiredSkills: z.array(AssignmentRequiredSkillSchema).max(20), mentorContext: MentorEvaluationContextSchema }).strict().nullable().optional(),
   updatedAt: z.iso.datetime(),
 }).strict();
 export const OwnedProposalsResponseSchema = z.array(ProposalDraftResponseSchema).max(200);
