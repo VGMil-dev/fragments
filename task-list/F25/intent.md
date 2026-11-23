@@ -6,4 +6,6 @@ No contactar AI Gateway, proveedores reales, producción ni servicios externos; 
 
 El harness offline también clasifica la falta de outputs y las citas/finding IDs que no coinciden con metadatos locales, sin presentar esa comparación como validación de código fuente o de calidad semántica.
 
+El informe reproducible de inventario debe separar metadatos del fixture, outputs ausentes o sintéticos, inputDigest, snapshots locales y presencia de manifest. La presencia o coincidencia estructural nunca autoriza una conclusión sobre autenticidad del proveedor o calidad semántica.
+
 El verificador estructural puede contrastar referencias con un `RepositorySnapshot` ya disponible localmente: existencia de archivo, rango inclusivo de líneas, SHA Git de cada archivo y digest canónico del snapshot. Esta comprobación no requiere descargar el corpus A/B/C y no juzga si la cita respalda el hallazgo.
