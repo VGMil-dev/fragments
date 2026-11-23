@@ -20,3 +20,10 @@ No añadir DTO, API, dependencias o estado persistido. No derivar progreso inven
 - DADO cualquier estado de carga/error/vacío CUANDO se renderiza ENTONCES el texto refleja ese estado y las rutas de recuperación siguen disponibles.
 - DADO un viewport móvil CUANDO refluye el layout ENTONCES no se requiere scroll horizontal del contenido y el CTA cabe a ancho disponible.
 - DADO movimiento reducido o navegación por teclado CUANDO se usa la vista ENTONCES los estilos respetan el medio y el foco permanece visible.
+
+## Incremento — mostrar aulas autorizadas
+
+- Cuando hay aulas activas, mostrar el nombre, materia y grupo recibidos por `StudentDashboardProps` dentro de «En tus aulas».
+- Conservar resumen, estados, navegación y callbacks existentes; no crear KPIs ni consultas adicionales.
+- Si no hay aulas, mantener el estado vacío existente.
+- Prueba focal confirma que el render incluye título, materia y grupo.

@@ -40,6 +40,8 @@ describe("StudentDashboard", () => {
   it("summarizes authorized classes and pending enrollment truthfully", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} classrooms={[{ id: "fixture-room", title: "Aula de prueba", subject: "Ciencias", groupLabel: "7A", period: null, status: "active", createdAt: "2026-11-19T12:00:00.000Z", updatedAt: "2026-11-19T12:00:00.000Z" }]} classroomRequests={[{ id: "fixture-request", status: "pending", source: "join_code", requestedAt: "2026-11-19T12:00:00.000Z", decidedAt: null }]} />);
     expect(html).toContain("Tienes 1 aula activa y solicitudes pendientes de aprobación");
+    expect(html).toContain("Aula de prueba");
+    expect(html).toContain("Ciencias · 7A");
   });
 
   it("offers one create action when no proposal exists and shows a real latest submission", () => {
