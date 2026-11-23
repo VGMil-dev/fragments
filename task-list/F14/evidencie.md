@@ -353,3 +353,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45275604889` SUCCESS: validación de tag/SHA/main, PostgreSQL desechable, backup/restore, suite/typecheck/lint/build, metadata, imágenes ARM64, atestación Sigstore y publicación aprobada.
 - Ego Lite público: `/health` HTTP 200 `ok/database=ready`; el bundle `/assets/index-BDAa_SKe.js` contiene `v0.5.51`, el SHA exacto y `/admin/trainer-events`. GET del feed con sesión sin rol admin dio 403 seguro. El feed con rol admin y eventos Trainer reales quedan NO COMPROBADOS.
 - No se realizó despliegue manual, cambio de infraestructura, migración ni escritura en producción.
+
+## Release Pixel Night `v0.5.52` — 2026-11-23
+
+- Tag anotada `v0.5.52` apunta al merge de `main` `7da17eca74f1c5df7efb1e909e3a73abcd14794b`; se validó que `v0.5.51` era tag anotada y ancestro de `main`. No se modificaron tags existentes.
+- F14 run `45282721019` SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`. Pasaron la verificación tag/SHA/main, PostgreSQL desechable, backup/restore, state machine, suite/typecheck/lint/build, metadata, imágenes ARM64, firma Sigstore y publicación del paquete.
+- Revisión read-only de `fragments-production`: solo regla `branch_policy`; no aparece `Required reviewers`. No se cambió configuración de entorno.
+- El TaskSpace 44 de Ego Lite devolvió un hard stop indicando que la sesión ya había terminado. Por ello, estado real del pull agent, `/health`, bundle público con `v0.5.52`/SHA y pantallas en producción: **NO COMPROBADO**. No se intentó reclamar otra sesión ni se usó un navegador alternativo.
+- No se ejecutaron migraciones ni escrituras académicas en producción. Cierre de F14 queda pendiente de verificación read-only con Ego Lite tras autorización explícita para continuar en la sesión terminada.
