@@ -35,9 +35,8 @@ describe("TrainerScreen", () => {
       expect(container.querySelector(".trainer-empty-state")).not.toBeNull();
       expect(container.querySelector(".trainer-controls")).toBeNull();
       expect(container.querySelector(".trainer-history")).toBeNull();
-      const artwork = container.querySelector<HTMLImageElement>(".trainer-empty-state__art img");
-      expect(artwork?.getAttribute("src")).toBe("/f16/Typing_Girl_and_Sleeping_Cat.webp");
-      expect(artwork?.getAttribute("alt")).toBe("");
+      expect(container.querySelector(".trainer-empty-state__art")).toBeNull();
+      expect(container.querySelector(".trainer-empty-state img")).toBeNull();
       expect(container.textContent).toContain("LABORATORIO SIN REVISIÓN ACTIVA");
       expect(container.textContent).not.toMatch(/\b(?:XP|puntos|racha|nivel 1)\b/i);
       expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
@@ -87,6 +86,8 @@ describe("TrainerScreen", () => {
       expect(container.textContent).toContain("Sortear reto");
       expect(container.textContent).toContain("Historial de práctica");
       expect(container.textContent).toContain("FUENTE DE PRÁCTICA");
+      expect(container.querySelector(".trainer-academic-context")).toBeNull();
+      expect(container.textContent).not.toContain("Misión vinculada");
       expect(container.textContent).toContain("El reto aparecerá después del sorteo");
       expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
       expect(container.querySelector(".trainer-empty-state")).toBeNull();
