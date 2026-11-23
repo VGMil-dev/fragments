@@ -249,3 +249,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El timer normal sondeó a 00:52 UTC; `fragments-release-apply.service` terminó `Result=success` a 00:54 UTC. SSH read-only confirmó API/web healthy en `sha-073819c`; `/health` del origen dio `status=ok`, `database=ready`.
 - Verificación pública cache-bypass: `/health` devuelve `ok/ready`; bundle `/assets/index-C_-XL4FG.js` contiene `v0.5.24` y el SHA completo exacto.
 - No se ejecutó deploy manual ni reinicio; entorno `fragments-production` y controles técnicos F14 permanecieron intactos. El ledger/hash del backup previo y etiquetas de host no se releen ni exponen en esta actualización; continúan NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.25 — 2026-11-23
+
+- PR #143 integrada normalmente como `52917ec6fcba790f487a7d2f9807c3c52927400d`; tag anotada `v0.5.25` apunta al SHA exacto de main. Preflight confirmó tag nueva y `fragments-production` conserva solo su branch policy, sin reviewers.
+- F14 run `45092884337`: verify-build, pruebas, typecheck, lint, build metadata, ARM64, atestación Sigstore y publicación del paquete al pull queue terminaron SUCCESS.
+- Timer normal ejecutó el pull y el aplicador F14 terminó success; SSH read-only confirma web/API healthy en `sha-52917ec`. Verificación pública cache-bypass: `/health` `ok`, DB `ready`; bundle `/assets/index-Iviv3wW8.js` contiene `v0.5.25` y SHA completo exacto.
+- Sin despliegue manual, reinicio manual ni cambio de gates. `Required reviewers` sigue OFF. Hash del backup previo y labels de imágenes del host siguen NO COMPROBADOS.
