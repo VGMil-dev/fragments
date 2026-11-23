@@ -14,6 +14,7 @@ import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordR
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { StudentDashboard } from "./features/student/StudentDashboard";
 import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
+import { assignmentsApi } from "./features/assignments/assignments-api.js";
 import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherWorkspaceShell } from "./features/teacher/TeacherWorkspaceShell";
@@ -87,6 +88,10 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [classroomsLoading, setClassroomsLoading] = useState(false);
   const [classroomsError, setClassroomsError] = useState<string | null>(null);
   const [classroomsReload, setClassroomsReload] = useState(0);
+  const [dashboardMissions, setDashboardMissions] = useState<StudentAssignment[]>([]);
+  const [dashboardMissionsLoading, setDashboardMissionsLoading] = useState(false);
+  const [dashboardMissionsError, setDashboardMissionsError] = useState(false);
+  const [dashboardMissionsReload, setDashboardMissionsReload] = useState(0);
 
   async function downloadSubmission(id: string, kind: "mentor" | "review") {
     setSubmissionDownloadError(null);
@@ -133,6 +138,41 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     }).catch(() => { if (active) { setClassroomsError("No pudimos cargar tus aulas y solicitudes."); setClassroomsLoading(false); } });
     return () => { active = false; };
   }, [path, student, classroomsReload, navigate]);
+
+  useEffect(() => {
+    if (path !== "/student/dashboard" || !student) return;
+    if (classroomsLoading || classroomsError) {
+      setDashboardMissions([]);
+      setDashboardMissionsLoading(false);
+      setDashboardMissionsError(Boolean(classroomsError));
+      return;
+    }
+    let active = true;
+    const activeClassrooms = myClassrooms.filter((room) => room.status === "active");
+    setDashboardMissionsLoading(activeClassrooms.length > 0);
+    setDashboardMissionsError(false);
+    if (!activeClassrooms.length) {
+      setDashboardMissions([]);
+      return;
+    }
+    void Promise.all(activeClassrooms.map((room) => assignmentsApi.listStudent(room.id))).then((results) => {
+      if (!active) return;
+      if (results.some((result) => !result.ok)) {
+        setDashboardMissionsError(true);
+        setDashboardMissions([]);
+      } else {
+        setDashboardMissions(results.flatMap((result) => result.ok ? result.data : []));
+      }
+      setDashboardMissionsLoading(false);
+    }).catch(() => {
+      if (active) {
+        setDashboardMissionsError(true);
+        setDashboardMissions([]);
+        setDashboardMissionsLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, [path, student, myClassrooms, classroomsLoading, classroomsError, dashboardMissionsReload]);
 
   useEffect(() => {
     if (path !== "/student/gallery" || !student) return;
@@ -268,9 +308,14 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           proposalsLoading={proposalsLoading}
           proposalsError={proposalsError}
           onRetryProposals={() => setProposalsReload((value) => value + 1)}
+          missions={dashboardMissions}
+          missionsLoading={dashboardMissionsLoading}
+          missionsError={dashboardMissionsError}
+          onRetryMissions={() => classroomsError ? setClassroomsReload((value) => value + 1) : setDashboardMissionsReload((value) => value + 1)}
           submissions={submissions}
           onRetrySubmissions={() => setSubmissionsReload((value) => value + 1)}
           onContinueProposal={(proposal) => { setSelectedAssignment(undefined); setSelectedProposal(proposal); navigate("/student/mentor"); }}
+          onStartMission={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
           onCreateProposal={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           onNavigate={navigate}
         /> : null}

@@ -93,6 +93,35 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("starts the newest published classroom mission directly from the Dashboard with its pinned context and skills", async () => {
+    window.history.replaceState({}, "", "/student/dashboard");
+    await act(async () => root?.render(<App />));
+
+    const start = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent?.includes("Iniciar misión en Mentor"));
+    expect(start).toBeDefined();
+    await act(async () => start?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("7");
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación");
+    expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
+    expect(container?.querySelector("[data-testid=mentor-required-skill-ids]")?.textContent).toBe("required-navigation");
+  });
+
+  it("does not offer a generic proposal when classrooms cannot be checked and retries the classroom query", async () => {
+    window.history.replaceState({}, "", "/student/dashboard");
+    mocks.studentApi.getMyClassrooms.mockResolvedValueOnce({ ok: false, error: { code: "UNAVAILABLE", message: "No disponible" } });
+    await act(async () => root?.render(<App />));
+
+    expect(container?.textContent).toContain("No pudimos consultar tus misiones");
+    expect(container?.textContent).not.toContain("Crear mi primer proyecto");
+    const retry = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Reintentar misiones");
+    await act(async () => retry?.click());
+
+    expect(mocks.studentApi.getMyClassrooms).toHaveBeenCalledTimes(2);
+    expect(container?.textContent).toContain("Iniciar misión en Mentor");
+  });
+
   it("navigates between Review and Trainer through their integrated continuation links", async () => {
     window.history.replaceState({}, "", "/student/trainer");
     await act(async () => root?.render(<App />));

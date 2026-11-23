@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { StudentMe } from "@fragments/contracts";
+import type { StudentAssignment, StudentMe } from "@fragments/contracts";
 import { StudentDashboard } from "./StudentDashboard";
 
 const student: StudentMe = { authenticated: true, id: "fixture-student", githubLogin: "fixture-student", avatarUrl: null, profileUrl: "https://github.com/fixture-student", registeredAt: "2026-11-19T12:00:00.000Z" };
 const proposal = { id: "fixture-proposal", version: 2, proposal: { title: "Bitácora de jardín" }, updatedAt: "2026-11-19T12:00:00.000Z" };
-const defaultProps = { student, classrooms: [], classroomRequests: [], classroomsLoading: false, classroomsError: null, onRetryClassrooms: vi.fn(), proposals: [], proposalsLoading: false, proposalsError: false, onRetryProposals: vi.fn(), submissions: { status: "empty" as const }, onRetrySubmissions: vi.fn(), onContinueProposal: vi.fn(), onCreateProposal: vi.fn(), onNavigate: vi.fn() };
+const defaultProps = { student, classrooms: [], classroomRequests: [], classroomsLoading: false, classroomsError: null, onRetryClassrooms: vi.fn(), proposals: [], proposalsLoading: false, proposalsError: false, onRetryProposals: vi.fn(), missions: [], missionsLoading: false, missionsError: false, onRetryMissions: vi.fn(), submissions: { status: "empty" as const }, onRetrySubmissions: vi.fn(), onContinueProposal: vi.fn(), onStartMission: vi.fn(), onCreateProposal: vi.fn(), onNavigate: vi.fn() };
 
 describe("StudentDashboard", () => {
   it("uses the student's saved proposal and renders truthful classroom and empty states", () => {
@@ -35,6 +35,17 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Propuesta más reciente");
     expect(html).toContain("Siguiente paso · borrador v3");
     expect(html).not.toContain("Borrador anterior");
+  });
+
+  it("surfaces the published classroom mission as the next step when no proposal exists", () => {
+    const mission = { id: "mission-v4", createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"] } as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[mission]} />);
+
+    expect(html).toContain("Misión publicada · Programación Móvil");
+    expect(html).toContain("Navegación con Expo");
+    expect(html).toContain("Implementa una navegación observable");
+    expect(html).toContain("Iniciar misión en Mentor");
+    expect(html).not.toContain("Crear mi primer proyecto");
   });
 
   it("summarizes authorized classes and pending enrollment truthfully", () => {
