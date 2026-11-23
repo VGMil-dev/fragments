@@ -14,3 +14,4 @@
 - Pruebas web con respuestas fake: allowlist del cliente, redacción de errores HTTP, estados, refresh y timestamp.
 - Suite API y web, typecheck/build y `git diff --check`.
 - Acceso admin/Ego Lite productivo y eventos reales se registran aparte como NO COMPROBADOS si no existe esa sesión.
+- Prueba de integración con worker/evaluador fake: completar un Review, registrar el evento en el mismo buffer que consulta el endpoint admin y comprobar el allowlist y la auditoría antes de leer. La base de test exige hostname loopback y `fragments_test`, valida `current_database()` antes de escribir y limpia solo IDs creados por el fixture.

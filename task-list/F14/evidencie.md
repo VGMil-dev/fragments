@@ -241,3 +241,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - `Required reviewers` sigue OFF según decisión F14; no se alteró configuración del entorno. Ledger/archivo y hash de backup/labels del host NO COMPROBADOS.
 - Commit de reconciliación de evidencias: `303f2c824670d2bc1100f305a08bde4507b5f876`; integrado en PR documental #129 como `f324469c5959c368c920e9c0c24bf12fca60f6a7`, CI `45075978694` SUCCESS.
 - Estado de integración registrado en `beedba8acaf86e62ccd9fd2d8c9326dc327544c2`.
+
+## Release y aplicación automática v0.5.24 — 2026-11-23
+
+- La tag anotada `v0.5.24` apunta al merge exacto de PR #141: SHA `073819c31881fd1ae3513bf72a7afe322e5051e6`. No se etiquetó el PR #140 posterior porque contiene solo pruebas/helper sin lógica runtime.
+- F14 run `45090388470` terminó SUCCESS en `verify-build`, construcción ARM64, `attest-package` y `publish-approved-release`; firmó y publicó el paquete para el pull queue.
+- El timer normal sondeó a 00:52 UTC; `fragments-release-apply.service` terminó `Result=success` a 00:54 UTC. SSH read-only confirmó API/web healthy en `sha-073819c`; `/health` del origen dio `status=ok`, `database=ready`.
+- Verificación pública cache-bypass: `/health` devuelve `ok/ready`; bundle `/assets/index-C_-XL4FG.js` contiene `v0.5.24` y el SHA completo exacto.
+- No se ejecutó deploy manual ni reinicio; entorno `fragments-production` y controles técnicos F14 permanecieron intactos. El ledger/hash del backup previo y etiquetas de host no se releen ni exponen en esta actualización; continúan NO COMPROBADOS.

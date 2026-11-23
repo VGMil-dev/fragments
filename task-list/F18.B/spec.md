@@ -71,3 +71,9 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - GIVEN el estudiante vuelve al catálogo desde Mentor y luego abre Mentor desde la navegación, WHEN crea y guarda una propuesta nueva, THEN no se adjunta el `assignmentVersionId` anterior y se consulta el contexto Mentor general.
 - Ambos accesos de navegación a Mentor limpian la misión seleccionada; el botón de volver desde Mentor también limpia esa selección.
 - Verificación mediante prueba de composición UI con APIs y proveedor controlados por fakes. No demuestra guardado remoto, datos de producción ni calidad del proveedor IA.
+
+## Propuestas guardadas — contexto vinculado
+
+- Cuando una propuesta recuperada conserva una misión publicada, el listado identifica la misión y el número de versión del contexto Mentor asociado.
+- La interacción de «Abrir propuesta» debe recuperar la evaluación persistida de la misma propuesta; no recalcula ni expone rúbrica en esta superficie.
+- Prueba UI usa el objeto completo capturado por la acción de apertura y valida que recuperación recibe su identificador.
