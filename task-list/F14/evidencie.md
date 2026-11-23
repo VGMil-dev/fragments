@@ -256,3 +256,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - F14 run `45092884337`: verify-build, pruebas, typecheck, lint, build metadata, ARM64, atestación Sigstore y publicación del paquete al pull queue terminaron SUCCESS.
 - Timer normal ejecutó el pull y el aplicador F14 terminó success; SSH read-only confirma web/API healthy en `sha-52917ec`. Verificación pública cache-bypass: `/health` `ok`, DB `ready`; bundle `/assets/index-Iviv3wW8.js` contiene `v0.5.25` y SHA completo exacto.
 - Sin despliegue manual, reinicio manual ni cambio de gates. `Required reviewers` sigue OFF. Hash del backup previo y labels de imágenes del host siguen NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.26 — 2026-11-23
+
+- PR #146 integrada normalmente en `1aa0690fa2573d18cd2fa46c2a5780833e523bb5`; tag SemVer anotada `v0.5.26` apunta a ese SHA exacto de `main`.
+- Run F14 `45095642953`: `verify-build`, PostgreSQL desechable y backup/restore, suites/typecheck/lint/build, bundle, ARM64, Sigstore y `publish-approved-release` terminaron SUCCESS.
+- El servicio aplicador normal terminó `Result=success`, `ExecMainStatus=0`; no se ejecutó despliegue manual ni reinicio.
+- Verificación pública cache-bypass: `/health` `ok`, database `ready`; `/assets/index-CyC9Ismb.js` contiene `v0.5.26` y SHA exacto `1aa0690fa2573d18cd2fa46c2a5780833e523bb5`.
+- `Required reviewers` OFF; entorno `fragments-production` y gates técnicos F14 intactos. Hash backup previo y labels de imágenes del host siguen NO COMPROBADOS.
