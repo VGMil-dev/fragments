@@ -18,4 +18,5 @@ Pruebas locales con fixtures sintéticos; no se usó Ego Lite ni sesión real. N
 Se consultó la skill `vercel-react-best-practices`; se aplicaron únicamente recomendaciones pertinentes al cambio localizado. Contratos, rutas, tokens globales y tooling no fueron modificados.
 
 ## Commit
-Pendiente de registrar después de inspeccionar el estado y confirmar el commit local.
+Implementación: `8a05fe875ad87ec4fba794938201739100255ad3`.
+El registro final de esta evidencia se añade en el commit de documentación consecutivo; ambos commits permanecen en `codex/f16-dashboard-next`.
