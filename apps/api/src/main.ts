@@ -15,6 +15,7 @@ import { createLocalMentorEvaluator, createMinimalPdfRenderer } from "./features
 import { createMentorService } from "./features/mentor/service.js";
 import { createReviewService } from "./features/review/review.service.js";
 import { createPrismaReviewStore } from "./features/review/prisma-store.js";
+import { createReviewAcademicLinkResolver } from "./features/review/academic-link.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
 import { createReviewOperationalLog } from "./features/review/operational-log.js";
@@ -103,11 +104,14 @@ const betterAuth = config.authEnabled && process.env.BETTER_AUTH_SECRET
   ? createFragmentsAuth(database, { secret: process.env.BETTER_AUTH_SECRET, baseURL: config.betterAuthUrl, publicAppURL: config.publicAppUrl })
   : undefined;
 const auth = betterAuth ? createFragmentsAuthService(betterAuth, database) : undefined;
+const resolveReviewAcademicLink = createReviewAcademicLinkResolver(database);
 
 const review = {
   store: reviewStore,
   service: reviewService,
   resolveStudentId: async (request: Parameters<NonNullable<typeof auth>['student']>[0]) => (await auth?.student(request))?.id ?? null,
+  resolveTeacherId: async (request: Parameters<NonNullable<typeof auth>['teacherId']>[0]) => (await auth?.teacherId(request)) ?? null,
+  resolveAcademicLink: resolveReviewAcademicLink,
   resolveContext: async (request: Parameters<NonNullable<typeof auth>['student']>[0], input: { owner: string; repo: string }) => {
     const student = await auth?.student(request);
     return student ? {
@@ -115,6 +119,7 @@ const review = {
       rubricVersion: "review-v1",
       evaluatorVersion: "gateway-structured-v2",
       studentId: student.id,
+      ...(student.githubLogin ? { githubLogin: student.githubLogin } : {}),
     } : null;
   },
 };

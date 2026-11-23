@@ -3,12 +3,14 @@ import {
   ReviewRequestSchema,
   ReviewResponseSchema,
   RepositorySnapshotSchema,
+  ReviewAcademicLinkSchema,
   SubmissionResponseSchema,
   VerifySubmissionResponseSchema,
   type AiAnalysis,
   type FeedbackFinding,
   type RepositorySnapshot,
   type ReviewRequest,
+  type ReviewAcademicLink,
   type ReviewResponse,
   type SubmissionSnapshot,
 } from "@fragments/contracts";
@@ -19,6 +21,8 @@ export type ReviewContext = {
   rubricVersion: string;
   evaluatorVersion: string;
   studentId?: string;
+  githubLogin?: string;
+  academicLink?: ReviewAcademicLink;
 };
 export type ReviewAiBudget = {
   maxInputBytes: number;
@@ -86,7 +90,8 @@ export function digestSnapshot(snapshot: Omit<RepositorySnapshot, "digest">): Pr
 }
 
 async function keyFor(request: ReviewRequest, context: ReviewContext): Promise<string> {
-  return sha256(canonicalJson({ projectId: context.projectId, studentId: context.studentId ?? null, commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
+  return sha256(canonicalJson({ projectId: context.projectId, studentId: context.studentId ?? null, academicLink: context.academicLink ?? null,
+    commitSha: request.commitSha.toLowerCase(), rubricVersion: context.rubricVersion, evaluatorVersion: context.evaluatorVersion }));
 }
 
 export function reviewIdempotencyKey(request: ReviewRequest, context: ReviewContext): Promise<string> {
@@ -114,7 +119,11 @@ function parseReviewContext(value: unknown): ReviewContext {
   if (typeof evaluatorVersion !== "string" || !evaluatorVersion.trim() || evaluatorVersion.length > 64) throw new Error("Falta la versión interna del evaluador.");
   const studentId = context.studentId;
   if (studentId !== undefined && (typeof studentId !== "string" || !studentId.trim() || studentId.length > 128)) throw new Error("La identidad propietaria de Review es inválida.");
-  return { projectId: projectId.trim(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim(), ...(typeof studentId === "string" ? { studentId: studentId.trim() } : {}) };
+  const githubLogin = context.githubLogin;
+  if (githubLogin !== undefined && (typeof githubLogin !== "string" || !/^[A-Za-z0-9-]{1,39}$/.test(githubLogin))) throw new Error("La identidad GitHub vinculada a Review es inválida.");
+  const academicLink = context.academicLink === undefined ? undefined : ReviewAcademicLinkSchema.parse(context.academicLink);
+  return { projectId: projectId.trim(), rubricVersion: rubricVersion.trim(), evaluatorVersion: evaluatorVersion.trim(),
+    ...(typeof studentId === "string" ? { studentId: studentId.trim() } : {}), ...(typeof githubLogin === "string" ? { githubLogin } : {}), ...(academicLink ? { academicLink } : {}) };
 }
 
 function toPublicReviewResponse(record: ReviewRecord): ReviewResponse {

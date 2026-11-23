@@ -11,7 +11,7 @@ import type { createMentorService } from "../features/mentor/service.js";
 import { createInspectorHttp } from "../features/inspector/http.js";
 import type { createInspectorService } from "../features/inspector/service.js";
 import { createReviewHttp } from "../features/review/http.js";
-import type { ReviewContextResolver } from "../features/review/http.js";
+import type { ReviewAcademicLinkResolver, ReviewContextResolver, ReviewTeacherIdResolver } from "../features/review/http.js";
 import type { createReviewService } from "../features/review/review.service.js";
 import type { createPrismaReviewStore } from "../features/review/prisma-store.js";
 import { createTrainerHttp } from "../features/trainer/http.js";
@@ -46,7 +46,8 @@ type HttpOptions = {
   mentor?: ReturnType<typeof createMentorService>;
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
-  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null> };
+  review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver;
+    resolveStudentId?: (request: IncomingMessage) => Promise<string | null>; resolveTeacherId?: ReviewTeacherIdResolver; resolveAcademicLink?: ReviewAcademicLinkResolver };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
@@ -165,4 +166,4 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
   };
 }
 
-export function createApiServer(database: PrismaClient, options: Omit<HttpOptions, "review"> & { review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver } } = {}) { return createServer(createHttpHandler(database, options)); }
+export function createApiServer(database: PrismaClient, options: HttpOptions = {}) { return createServer(createHttpHandler(database, options)); }
