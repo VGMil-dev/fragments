@@ -1,5 +1,5 @@
 import { ArrowRight, ClipboardCheck, GraduationCap, Image, Layers3 } from "lucide-react";
-import type { ClassroomSummary, ProposalDraftResponse, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
+import type { ClassroomSummary, ProposalDraftResponse, StudentAssignment, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse } from "@fragments/contracts";
 import type { AsyncState } from "../../hooks/async-state";
 import "./StudentDashboard.css";
 
@@ -14,18 +14,24 @@ type StudentDashboardProps = {
   proposalsLoading: boolean;
   proposalsError: boolean;
   onRetryProposals: () => void;
+  missions: StudentAssignment[];
+  missionsLoading: boolean;
+  missionsError: boolean;
+  onRetryMissions: () => void;
   submissions: AsyncState<StudentSubmissionsResponse>;
   onRetrySubmissions: () => void;
   onContinueProposal: (proposal: ProposalDraftResponse) => void;
+  onStartMission: (assignment: StudentAssignment) => void;
   onCreateProposal: () => void;
   onNavigate: (path: string) => void;
 };
 
-export function StudentDashboard({ student, classrooms, classroomRequests, classroomsLoading, classroomsError, onRetryClassrooms, proposals, proposalsLoading, proposalsError, onRetryProposals, submissions, onRetrySubmissions, onContinueProposal, onCreateProposal, onNavigate }: StudentDashboardProps) {
+export function StudentDashboard({ student, classrooms, classroomRequests, classroomsLoading, classroomsError, onRetryClassrooms, proposals, proposalsLoading, proposalsError, onRetryProposals, missions, missionsLoading, missionsError, onRetryMissions, submissions, onRetrySubmissions, onContinueProposal, onStartMission, onCreateProposal, onNavigate }: StudentDashboardProps) {
   const latestSubmission = submissions.status === "success"
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
   const continueProposal = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+  const nextMission = [...missions].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
   const githubIdentity = student.githubLogin
     ? student.profileUrl
       ? <a className="student-dashboard__identity-link" href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a>
@@ -44,10 +50,10 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
       <section className="student-dashboard__project" aria-label="Siguiente paso de tu proyecto">
         <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
         <div className="student-dashboard__project-copy">
-          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : <><span className="student-dashboard__status">Siguiente paso</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
+          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : nextMission ? <><span className="student-dashboard__status">Misión publicada · {nextMission.classroomTitle}</span><h2>{nextMission.title}</h2><p>{nextMission.objectives[0] ?? "Continúa tu aprendizaje con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Siguiente paso</span><h2>Tu primer proyecto</h2><p>Define una idea y guarda un borrador para continuar después.</p></>}
         </div>
         <div className="student-dashboard__project-action">
-          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear mi primer proyecto <ArrowRight size={17} aria-hidden="true" /></button>}
+          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : nextMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(nextMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear mi primer proyecto <ArrowRight size={17} aria-hidden="true" /></button>}
         </div>
       </section>
 
