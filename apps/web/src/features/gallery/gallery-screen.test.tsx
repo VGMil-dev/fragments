@@ -41,10 +41,15 @@ describe("GalleryScreen", () => {
     expect(html).toContain('class="gallery-entry__action"');
     expect(html).toContain('/covers/project-generic.webp');
     expect(html).toContain('width="1200" height="675"');
-    expect(html).toContain("se publica automáticamente");
-    expect(html).toContain("etiquetas y temas");
-    expect(html).toContain("no tiene opt-out");
-    expect(html).toContain("registro de auditoría");
+    expect(html).toContain('class="gallery-publication-note"');
+    expect(html).toContain("se publican automáticamente");
+    expect(html).toContain("El estudiante no puede retirar una ficha desde el portal");
+    expect(html).toContain("Ver alcance y privacidad");
+    expect(html).not.toContain("<details open=");
+    expect(html).toContain("metas, habilidades, etiquetas y temas, alcance, restricciones");
+    expect(html).toContain("no muestra puntaje ni comentarios privados");
+    expect(html).toContain("El estudiante no tiene opt-out");
+    expect(html).toContain("Un docente puede retirar una publicación con registro de auditoría.");
     expect(html).not.toContain("nota");
   });
 
@@ -63,5 +68,33 @@ describe("GalleryScreen", () => {
     );
 
     expect(html).toContain("Datos de ejemplo (fake)");
+  });
+
+  it("keeps the loading state visible while the gallery request is pending", () => {
+    const html = renderToStaticMarkup(<GalleryScreen state={{ status: "loading" }} onChoose={vi.fn()} />);
+
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain("Cargando información");
+  });
+
+  it("preserves retry in the error state", () => {
+    const retry = vi.fn();
+    const html = renderToStaticMarkup(<GalleryScreen state={{ status: "error", retry, message: "Sin conexión" }} onChoose={vi.fn()} />);
+
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Sin conexión");
+    expect(html).toContain("Intentar de nuevo");
+  });
+
+  it("renders the selected project details and its primary inspiration action", () => {
+    const onUseProject = vi.fn();
+    const html = renderToStaticMarkup(
+      <GalleryScreen state={{ status: "success", data: [entry] }} selected={{ project: entry, history: [entry] }} onChoose={vi.fn()} onUseProject={onUseProject} />,
+    );
+
+    expect(html).toContain('aria-labelledby="gallery-detail-title"');
+    expect(html).toContain("Diario de plantas");
+    expect(html).toContain("Tomar como inspiración");
+    expect(html).toContain("no muestra puntaje ni comentarios privados");
   });
 });
