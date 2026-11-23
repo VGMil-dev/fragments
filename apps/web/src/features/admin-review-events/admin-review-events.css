@@ -7,6 +7,11 @@
 .admin-review-events button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .admin-review-events button:disabled { cursor: wait; opacity: .65; }
 .admin-review-events__retention { color: var(--f16-text-secondary); font-size: .9rem; line-height: 1.5; }
+.admin-review-events__filters { display: flex; flex-wrap: wrap; align-items: end; gap: .85rem 1rem; margin: 1rem 0; }
+.admin-review-events__filters label { display: grid; gap: .35rem; font-size: .85rem; font-weight: 700; }
+.admin-review-events__filters select { min-height: 44px; min-width: 12rem; padding: .5rem .75rem; border: 1px solid var(--f16-border); border-radius: .65rem; color: var(--f16-text-primary); background: var(--f16-surface); font: inherit; }
+.admin-review-events__filters select:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.admin-review-events__filters span { color: var(--f16-text-secondary); font-size: .9rem; }
 .admin-review-events__table-wrap { overflow-x: auto; border: 1px solid var(--f16-border); border-radius: .85rem; background: var(--f16-surface); }
 .admin-review-events__table-wrap:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .admin-review-events table { width: 100%; border-collapse: collapse; font-size: .9rem; }

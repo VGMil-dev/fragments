@@ -13,7 +13,11 @@ function safeReason(code: string): Extract<State, { status: "error" }>["reason"]
 export function AdminMentorEventsScreen({ api }: { api: AdminMentorEventsApi }) {
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<State>({ status: "loading" });
+  const [stageFilter, setStageFilter] = useState<MentorOperationalEvent["stage"] | "all">("all");
+  const [resultFilter, setResultFilter] = useState<MentorOperationalEvent["result"] | "all">("all");
   const busy = state.status === "loading";
+  const filteredEvents = state.status === "ready" ? state.events.filter((event) =>
+    (stageFilter === "all" || event.stage === stageFilter) && (resultFilter === "all" || event.result === resultFilter)) : [];
 
   useEffect(() => {
     let active = true;
@@ -33,14 +37,27 @@ export function AdminMentorEventsScreen({ api }: { api: AdminMentorEventsApi }) 
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
     </header>
     <p className="admin-mentor-events__retention">La API conserva hasta 100 eventos desde el inicio del proceso; esta vista devuelve como máximo 50. El buffer se pierde al reiniciar la API.</p>
+    {state.status === "ready" && state.events.length > 0 ? <div className="admin-mentor-events__filters" aria-label="Filtros de eventos de Mentor">
+      <label htmlFor="mentor-stage-filter">Etapa
+        <select id="mentor-stage-filter" value={stageFilter} onChange={(event) => setStageFilter(event.target.value as MentorOperationalEvent["stage"] | "all")}>
+          <option value="all">Todas</option><option value="configuration">Configuración</option><option value="input_validation">Validar entrada</option><option value="budget_reservation">Reservar presupuesto</option><option value="budget_settlement">Liquidar presupuesto</option><option value="provider_request">Solicitud al proveedor</option><option value="provider_response">Respuesta del proveedor</option><option value="response_validation">Validar respuesta</option><option value="evaluation">Evaluación</option>
+        </select>
+      </label>
+      <label htmlFor="mentor-result-filter">Resultado
+        <select id="mentor-result-filter" value={resultFilter} onChange={(event) => setResultFilter(event.target.value as MentorOperationalEvent["result"] | "all")}>
+          <option value="all">Todos</option><option value="success">Completada</option><option value="failure">Fallida</option>
+        </select>
+      </label>
+      <span role="status" aria-live="polite">{filteredEvents.length === 0 ? "No hay eventos para esta combinación de filtros en la muestra actual." : `Mostrando ${filteredEvents.length} de ${state.events.length} eventos`}</span>
+    </div> : null}
     {busy ? <p role="status" aria-live="polite">Cargando eventos de Mentor…</p> : null}
     {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" && state.events.length === 0 ? <p role="status">Todavía no hay evaluaciones de Mentor en este proceso de API.</p> : null}
-    {state.status === "ready" && state.events.length > 0 ? <div className="admin-mentor-events__table-wrap" role="region" aria-label="Eventos recientes de Mentor" tabIndex={0}>
+    {state.status === "ready" && filteredEvents.length > 0 ? <div className="admin-mentor-events__table-wrap" role="region" aria-label="Eventos recientes de Mentor" tabIndex={0}>
       <table>
         <caption>Eventos redactados · hora UTC · máximo 50</caption>
         <thead><tr><th scope="col">Fecha y hora (UTC)</th><th scope="col">Etapa</th><th scope="col">Resultado</th><th scope="col">Duración</th></tr></thead>
-        <tbody>{state.events.map((event, index) => <tr key={`${event.occurred_at}-${event.event}-${index}`}>
+        <tbody>{filteredEvents.map((event, index) => <tr key={`${event.occurred_at}-${event.event}-${index}`}>
           <td><time dateTime={event.occurred_at}>{formatUtc(event.occurred_at)}</time></td>
           <td>{stageLabel(event.stage)}</td>
           <td>{event.result === "success" ? "Completada" : "Fallida"}{event.error_code !== "none" ? <small>{event.error_code}</small> : null}</td>

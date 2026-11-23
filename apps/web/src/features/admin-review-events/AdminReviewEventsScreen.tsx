@@ -13,7 +13,11 @@ function safeReason(code: string): Extract<State, { status: "error" }>['reason']
 export function AdminReviewEventsScreen({ api }: { api: AdminReviewEventsApi }) {
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<State>({ status: "loading" });
+  const [stageFilter, setStageFilter] = useState<ReviewOperationalEvent["stage"] | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ReviewOperationalEvent["finalStatus"] | "all">("all");
   const busy = state.status === "loading";
+  const filteredEvents = state.status === "ready" ? state.events.filter((event) =>
+    (stageFilter === "all" || event.stage === stageFilter) && (statusFilter === "all" || event.finalStatus === statusFilter)) : [];
 
   useEffect(() => {
     let active = true;
@@ -33,14 +37,27 @@ export function AdminReviewEventsScreen({ api }: { api: AdminReviewEventsApi }) 
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
     </header>
     <p className="admin-review-events__retention">El buffer guarda como máximo 100 eventos desde el último inicio de API; la vista devuelve hasta 50 y se pierde al reiniciar el proceso.</p>
+    {state.status === "ready" && state.events.length > 0 ? <div className="admin-review-events__filters" aria-label="Filtros de eventos de Review">
+      <label htmlFor="review-stage-filter">Etapa
+        <select id="review-stage-filter" value={stageFilter} onChange={(event) => setStageFilter(event.target.value as ReviewOperationalEvent["stage"] | "all")}>
+          <option value="all">Todas</option><option value="repository">Repositorio</option><option value="snapshot_validation">Validar snapshot</option><option value="packing">Preparar archivos</option><option value="ai_dispatch">Evaluación IA</option><option value="analysis_validation">Validar respuesta</option><option value="result_persistence">Guardar resultado</option><option value="queue_claim">Tomar trabajo</option><option value="queue_completion">Cerrar trabajo</option><option value="lease_heartbeat">Renovar reserva</option><option value="queue_poll">Consultar cola</option>
+        </select>
+      </label>
+      <label htmlFor="review-result-filter">Resultado
+        <select id="review-result-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ReviewOperationalEvent["finalStatus"] | "all")}>
+          <option value="all">Todos</option><option value="completed">Completado</option><option value="failed">Fallido</option><option value="retry_wait">Esperando reintento</option><option value="lease_lost">Reserva vencida</option><option value="degraded">Degradado</option>
+        </select>
+      </label>
+      <span role="status" aria-live="polite">{filteredEvents.length === 0 ? "No hay eventos para esta combinación de filtros en la muestra actual." : `Mostrando ${filteredEvents.length} de ${state.events.length} eventos`}</span>
+    </div> : null}
     {busy ? <p role="status" aria-live="polite">Cargando eventos de Review…</p> : null}
     {state.status === "error" ? <p role="alert">{errorMessage(state.reason)}</p> : null}
     {state.status === "ready" && state.events.length === 0 ? <p role="status">Todavía no hay eventos de Review en este proceso de API.</p> : null}
-    {state.status === "ready" && state.events.length > 0 ? <div className="admin-review-events__table-wrap" role="region" aria-label="Eventos recientes de Review" tabIndex={0}>
+    {state.status === "ready" && filteredEvents.length > 0 ? <div className="admin-review-events__table-wrap" role="region" aria-label="Eventos recientes de Review" tabIndex={0}>
       <table>
         <caption>Eventos redactados · hora UTC · máximo 50</caption>
         <thead><tr><th scope="col">Fecha y hora (UTC)</th><th scope="col">Etapa</th><th scope="col">Resultado</th><th scope="col">Intento y duración</th><th scope="col">Diagnóstico de proveedor</th><th scope="col">Correlación</th></tr></thead>
-        <tbody>{state.events.map((event, index) => <tr key={`${event.jobId ?? event.reviewId ?? "poll"}-${event.event}-${index}`}>
+        <tbody>{filteredEvents.map((event, index) => <tr key={`${event.jobId ?? event.reviewId ?? "poll"}-${event.event}-${index}`}>
           <td><time dateTime={eventTime(event)}>{formatUtc(eventTime(event))}</time></td>
           <td>{stageLabel(event.stage)}</td>
           <td>{statusLabel(event.finalStatus)}{event.errorCode ? <small>{event.errorCode}</small> : null}</td>
