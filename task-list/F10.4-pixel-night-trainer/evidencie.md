@@ -1,6 +1,6 @@
 # Evidencia — F10.4 Trainer Pixel Night
 
-Estado: implementación local lista para revisión; **candidata visual, no aprobada ni validada en Ego Lite**. Sin commit/PR/deploy en esta entrega.
+Estado: commit `87dfb87ae90a7c874e1b81bc0a4357f7c4dce787` en `codex/pixel-night-trainer`; pendiente PR e integración. **Candidata visual, no aprobada ni validada en Ego Lite**.
 
 ## Archivos
 
@@ -22,6 +22,7 @@ Estado: implementación local lista para revisión; **candidata visual, no aprob
 - `pnpm exec vitest run src/features/trainer/TrainerScreen.test.tsx`: **6/6 PASS**; incluye carga, error de API y rechazo de red, reintentos y vacío tras éxito.
 - `pnpm exec turbo test --filter=@fragments/web`: **49 archivos, 220 tests PASS**.
 - `pnpm exec turbo typecheck --filter=@fragments/web`: **2 tareas (contracts build + web typecheck) PASS**.
+- `pnpm exec turbo build --filter=@fragments/web`: **2 tareas (contracts build + web build) PASS**; advertencia de bundle >500 kB y directivas `use client` de Lucide.
 - `git diff --check`: **PASS**.
 - Una invocación inicial de `pnpm --filter @fragments/web test -- TrainerScreen.test.tsx` pasó por la suite completa y detectó el paquete compartido sin compilar; no se considera prueba de fallo funcional. Pipeline correcto ejecutado luego con Turbo.
 
@@ -30,3 +31,4 @@ Estado: implementación local lista para revisión; **candidata visual, no aprob
 - Sin Ego Lite visual ni E2E: QA independiente pendiente.
 - Sin pruebas de viewport, teclado, zoom o contraste en navegador.
 - No hubo acceso a producción ni llamadas a proveedores externos.
+- Revisión reflexiva confirmó corregidos los estados de carga/error/vacío del historial; no ejecutó tests.
