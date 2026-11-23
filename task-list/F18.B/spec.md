@@ -126,3 +126,10 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 ## Accesibilidad de propuestas recuperables
 
 - Cada acción de apertura anuncia el estado de la acción y el título de la propuesta. Si no hay título, anuncia Borrador sin título. El texto visible y el callback existente se conservan.
+
+## Integración PostgreSQL — misión, Review fake y Trainer
+
+- GIVEN una matrícula activa y una propuesta propia ligada a una versión publicada de misión, WHEN la Review se crea por HTTP y se procesa con repositorio, packer y evaluador fake etiquetados, THEN Trainer lista esa Review con título de misión/aula, versiones y habilidades del snapshot publicado.
+- La prueba limita el worker al ID del job que creó y omite reconciliar leases globales; no puede reclamar ni cambiar jobs de otros tests.
+- El DTO continúa ocultando IDs internos, rúbrica, puntuación y hallazgos privados. No se ejecuta código del repositorio ni se invoca un proveedor real.
+- La prueba corre únicamente en localhost con `current_database() = fragments_test`; no constituye prueba de Review productiva ni valida calidad semántica IA.
