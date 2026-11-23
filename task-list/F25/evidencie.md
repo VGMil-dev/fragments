@@ -172,3 +172,10 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - Pruebas: `node --test evals/scripts/audit-semantic-corpus.test.mjs` — 6/6 PASS; suite F25 offline `node --test evals/scripts/compare-review-behaviors.test.mjs evals/scripts/audit-semantic-corpus.test.mjs evals/scripts/fake-review-provider.test.mjs evals/scripts/verify-local-reference.test.mjs` — 23/23 PASS. Cubre ruta presente/ausente, líneas dentro/fuera de rango, digest coincidente/distinto, alteración del snapshot/blob y bloqueo de comparación fake. No hubo llamadas externas ni ejecución de código evaluado.
 - Skill aplicada: `verification-before-completion`; se aplicó evidencia fresca y de alcance acotado. No se usó navegador, por tratarse de verificación de script offline.
 - Commit de implementación: `3412069569c78758bd8d0c050b69e51ac2f70378` (`feat(F25): valida citas contra snapshot local`).
+
+### Revisión independiente y correcciones del validador
+
+- Revisión del primer head identificó tres aceptaciones incorrectas: snapshot asociado a commit distinto, línea fantasma por LF final y `finding.lines` incompleto. Se añadieron primero regresiones que fallaron (2 fallos reproducibles) y luego las correcciones.
+- La comprobación ahora exige que `snapshot.commitSha` corresponda al SHA del caso; el conteo excluye la línea vacía inexistente tras LF final; `finding.lines` requiere exactamente dos enteros positivos y un rango válido antes de compararse con evidencia.
+- Verificación final local: `node --test evals/scripts/audit-semantic-corpus.test.mjs` 8/8 PASS; suite offline F25 (cuatro scripts) 25/25 PASS; `git diff --check` PASS. No se hicieron llamadas externas ni se leyó contenido de repositorios remotos.
+- La validación sigue siendo estructural: `SNAPSHOT_CHECKED_NO_SEMANTICS`. Falsos positivos/omisiones semánticos y outputs completos A/B/C permanecen NO COMPROBADOS.

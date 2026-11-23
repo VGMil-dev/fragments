@@ -33,6 +33,17 @@ function hash(value, algorithm = "sha256") {
   return createHash(algorithm).update(value).digest("hex");
 }
 
+function isLineRange(value) {
+  return Array.isArray(value) && value.length === 2
+    && Number.isInteger(value[0]) && Number.isInteger(value[1])
+    && value[0] >= 1 && value[1] >= value[0];
+}
+
+function lineCount(content) {
+  if (content.length === 0) return 0;
+  return content.split("\n").length - (content.endsWith("\n") ? 1 : 0);
+}
+
 function isSafeSnapshotPath(path) {
   return isSafeRelativePath(path) && !/[\p{Cc}]/u.test(path);
 }
@@ -41,11 +52,15 @@ function isSafeSnapshotPath(path) {
  * Checks citation paths, inclusive line ranges, and snapshot digests against
  * an already available API snapshot. This deliberately does not assess meaning.
  */
-export function validateCitationsAgainstSnapshot(analysis, snapshot) {
+export function validateCitationsAgainstSnapshot(analysis, snapshot, expectedCommitSha) {
   const blockers = [];
   if (!snapshot || typeof snapshot !== "object" || !Array.isArray(snapshot.files)
     || typeof snapshot.digest !== "string" || !sha256Pattern.test(snapshot.digest)) {
     return { status: "BLOCKED", blockers: ["invalid_snapshot_shape"], citationsChecked: 0, citationValidation: "SNAPSHOT_CHECKED_NO_SEMANTICS" };
+  }
+  if (typeof expectedCommitSha !== "string" || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(expectedCommitSha)
+    || typeof snapshot.commitSha !== "string" || snapshot.commitSha.toLowerCase() !== expectedCommitSha.toLowerCase()) {
+    blockers.push("snapshot_commit_sha_mismatch");
   }
 
   const { digest, ...snapshotContent } = snapshot;
@@ -81,18 +96,15 @@ export function validateCitationsAgainstSnapshot(analysis, snapshot) {
         blockers.push("citation_path_missing_from_snapshot");
         continue;
       }
-      if (!Array.isArray(evidence.lines) || evidence.lines.length !== 2
-        || !Number.isInteger(evidence.lines[0]) || !Number.isInteger(evidence.lines[1])
-        || evidence.lines[0] < 1 || evidence.lines[1] < evidence.lines[0]
-        || evidence.lines[1] > (file.content.length === 0 ? 0 : file.content.split("\n").length)) {
+      if (!isLineRange(evidence.lines) || evidence.lines[1] > lineCount(file.content)) {
         blockers.push("citation_lines_out_of_range");
       }
       if (typeof evidence.digest !== "string" || evidence.digest.toLowerCase() !== digest.toLowerCase()) {
         blockers.push("citation_snapshot_digest_mismatch");
       }
       if ((finding?.file !== undefined && finding.file !== evidence.path)
-        || (finding?.lines !== undefined && (!Array.isArray(finding.lines)
-          || finding.lines[0] < evidence.lines?.[0] || finding.lines[1] > evidence.lines?.[1]))) {
+        || (finding?.lines !== undefined && (!isLineRange(finding.lines) || !isLineRange(evidence.lines)
+          || finding.lines[0] < evidence.lines[0] || finding.lines[1] > evidence.lines[1]))) {
         blockers.push("finding_location_mismatch");
       }
     }
@@ -165,7 +177,7 @@ function validateReviewOutput(item, snapshot) {
   }
 
   const citationCheck = snapshot && analysisObject
-    ? validateCitationsAgainstSnapshot(analysisObject, snapshot)
+    ? validateCitationsAgainstSnapshot(analysisObject, snapshot, item.commitSha)
     : null;
   if (citationCheck?.status === "BLOCKED") blockers.push(...citationCheck.blockers);
 
