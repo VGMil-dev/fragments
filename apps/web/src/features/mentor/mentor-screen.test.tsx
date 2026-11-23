@@ -194,7 +194,7 @@ describe("MentorScreen", () => {
     await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={proposal} onBack={vi.fn()} />));
 
     expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
-    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Contexto");
+    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Idea");
     expect(mountedContainer.querySelector(".mentor-stage-nav__state--current")?.textContent).toBe("Etapa actual");
     const continueButton = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-form__actions button")).find((button) => button.textContent?.includes("Guardar y continuar"));
     expect(continueButton).toBeDefined();
@@ -202,7 +202,7 @@ describe("MentorScreen", () => {
     await act(async () => continueButton?.click());
 
     expect(actions.onUpdate).toHaveBeenCalledWith(proposal.id, expect.objectContaining({ expectedVersion: proposal.version }));
-    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
   });
 
   it("no marca como anterior completada una etapa incompleta", async () => {
@@ -230,7 +230,7 @@ describe("MentorScreen", () => {
     await act(async () => continueButton?.click());
 
     expect(onSave).toHaveBeenCalledOnce();
-    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu proyecto en contexto");
+    expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
     expect(mountedContainer.textContent).toContain("No pudimos guardar tu propuesta.");
   });
 
@@ -377,15 +377,13 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
-    expect(mountedContainer.querySelector(".mentor-field input")).toBeNull();
-    expect(mountedContainer.textContent).toContain("Modo personal");
+    expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
+    expect(mountedContainer.textContent).not.toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-stage-nav")).not.toBeNull();
     expect(mountedContainer.textContent).toContain("Borrador completado: 0 %");
     const context = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
-    expect(context?.getAttribute("aria-current")).toBe("step");
-    await openIdeaStage();
-    expect(mountedContainer.querySelector(".mentor-field input")).not.toBeNull();
-    expect(mountedContainer.querySelector(".mentor-context--personal")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Idea");
+    expect(context?.getAttribute("aria-current")).toBeNull();
     await act(async () => context?.click());
     expect(mountedContainer.textContent).toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
@@ -411,8 +409,10 @@ describe("MentorScreen", () => {
         },
       } }} />);
     });
+    const contextStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => contextStage?.click());
     expect(mountedContainer.querySelector("#mentor-title")?.textContent).toBe("Tu proyecto en contexto");
-    expect(mountedContainer.querySelector(".student-screen__lead")?.textContent).toBe("Revisa primero la materia, la consigna y las condiciones de tu aula.");
+    expect(mountedContainer.querySelector(".student-screen__lead")?.textContent).toBe("Relaciona tu idea con la materia, la consigna y las condiciones de tu aula.");
     expect(mountedContainer.textContent).toContain("Contexto académico disponible");
     expect(mountedContainer.textContent).toContain("Proyectos de aula");
     expect(mountedContainer.textContent).toContain("Investigación escolar");
@@ -432,11 +432,11 @@ describe("MentorScreen", () => {
     expect(contextForm?.querySelector(".mentor-form__footer")).not.toBeNull();
     expect(contextForm?.closest(".mentor-stage-layout")?.querySelector(".mentor-choices--context")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-choices--context")?.closest(".mentor-stage-layout")).toBeNull();
-    expect(mountedContainer.querySelector(".mentor-form__footer > button")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-form__footer > button")?.textContent).toContain("Anterior");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar borrador");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).toContain("Guardar y continuar");
     expect(mountedContainer.querySelector(".mentor-form__actions")?.textContent).not.toContain("Anterior");
-    expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).toContain("Guarda los cambios con «Guardar borrador»");
+    expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).toContain("Anterior");
   });
 
   it("keeps context loading and failures distinct from personal mode", async () => {
@@ -444,6 +444,8 @@ describe("MentorScreen", () => {
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} contextState={{ status: "loading" }} />); });
+    const contextStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => contextStage?.click());
     expect(mountedContainer.querySelector('[role="status"]')?.textContent).toContain("Cargando el contexto académico");
     expect(mountedContainer.textContent).not.toContain("Modo personal");
     expect(mountedContainer.textContent).not.toContain("Contexto académico disponible");
@@ -488,9 +490,13 @@ describe("MentorScreen", () => {
       <MentorScreen {...actions} onBack={vi.fn()} />,
     );
 
-    expect(html).toContain("Tu proyecto en contexto");
+    expect(html).toContain("Tu idea toma forma");
+    expect(html.indexOf(">Idea</span>")).toBeLessThan(html.indexOf(">Contexto</span>"));
     expect(html).toContain("Guardar borrador");
-    expect(html).toContain("Modo personal");
+    expect(html).toContain("Descargar plantilla Word");
+    expect(html).toContain("/templates/fragments-mentor-propuesta.docx");
+    expect(html).toContain("Importar propuesta (.docx)");
+    expect(html).toContain("Crear propuesta directamente");
     expect(html).not.toContain("Tu propuesta</h2>");
     expect(html).not.toContain("72/100");
     expect(html).not.toContain("scope necesita");

@@ -64,7 +64,7 @@ const EMPTY_DRAFT: ProposalDraftFields = {
   constraints: "",
 };
 
-const MENTOR_STAGES = ["Contexto", "Idea", "Habilidades", "Objetivos y alcance", "Evaluación", "Portada"] as const;
+const MENTOR_STAGES = ["Idea", "Contexto", "Habilidades", "Objetivos y alcance", "Evaluación", "Portada"] as const;
 const EMPTY_MENTOR_CONTEXT: AsyncState<MentorPublishedConfig> = { status: "empty" };
 type SkillCatalogState = { status: "loading" } | { status: "success"; data: SkillCatalogEntry[] } | { status: "error" };
 
@@ -263,13 +263,13 @@ export function MentorScreen({
   const coverReady = evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version;
   const coverPrompt = `Ilustración geométrica para “${fields.title.trim()}”, con formas simples que representen ${fields.problem.trim().slice(0, 180)}. Paleta Fragments azul cobalto, lima y azul noche. Sin texto, formato horizontal.`;
   const activeStageLabel = MENTOR_STAGES[activeStage];
-  const stageHeadings = ["Tu proyecto en contexto", "Tu idea toma forma", "Habilidades para practicar", "Objetivos y alcance", "Evalúa tu propuesta", "Presenta tu proyecto"];
+  const stageHeadings = ["Tu idea toma forma", "Tu proyecto en contexto", "Habilidades para practicar", "Objetivos y alcance", "Evalúa tu propuesta", "Presenta tu proyecto"];
   const stageDescription = activeStage === 4
     ? "Revisa y solicita la evaluación de tu propuesta antes de publicarla en Galería."
     : activeStage === 0
-    ? "Revisa primero la materia, la consigna y las condiciones de tu aula."
+    ? "Define el núcleo de tu propuesta: el problema, la solución y su propósito."
     : activeStage === 1
-      ? "Define el núcleo de tu propuesta: el problema, la solución y su propósito."
+      ? "Relaciona tu idea con la materia, la consigna y las condiciones de tu aula."
       : activeStage === 2
         ? "Revisa las habilidades de tu actividad y elige en cuáles quieres enfocarte."
       : `Etapa ${activeStage + 1} de ${MENTOR_STAGES.length} · ${activeStageLabel}`;
@@ -295,8 +295,8 @@ export function MentorScreen({
   const savedSkillsUnavailable = selectedSkillIds.filter((id) => !optionalSkillCatalog.some((skill) => skill.id === id));
   const completedStage = (index: number) => {
     switch (index) {
-      case 0: return contextState.status === "success" || contextState.status === "empty";
-      case 1: return [fields.title, fields.problem, fields.solution, fields.description, fields.purpose].every((value) => validText(value, 3000));
+      case 0: return [fields.title, fields.problem, fields.solution, fields.description, fields.purpose].every((value) => validText(value, 3000));
+      case 1: return contextState.status === "success" || contextState.status === "empty";
       case 2: return Boolean(proposal && !isDirty && !skillsChanged);
       case 3: return validText(fields.scope, 3000) && Boolean(goals.length) && !validateTechnologyList(fields.technologies);
       case 4: return Boolean(evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version && savedCurrentVersion);
@@ -561,7 +561,7 @@ export function MentorScreen({
       </nav>
       <div className="mentor-stage-content">
 
-      {activeStage === 1 ? <section className="mentor-choices" aria-label="Cómo empezar tu propuesta">
+      {activeStage === 0 ? <section className="mentor-choices" aria-label="Cómo empezar tu propuesta">
         <div className="mentor-choices__template">
           <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">
             Descargar plantilla Word
@@ -585,7 +585,7 @@ export function MentorScreen({
         {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
       </section> : null}
 
-      {activeStage === 1 ? <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
+      {activeStage === 0 ? <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
         <h2 id="mentor-saved-title">Mis propuestas guardadas</h2>
         {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : proposalsError ? (
           <div role="alert"><p>No pudimos cargar tus propuestas guardadas.</p><button type="button" onClick={onRetryProposals}>Volver a intentar</button></div>
@@ -613,9 +613,9 @@ export function MentorScreen({
         ) : <p>Aún no tienes propuestas guardadas.</p>}
       </section> : null}
 
-      <form id="mentor-proposal-form" className={`mentor-form${activeStage === 0 ? " mentor-form--context" : ""}${activeStage === 4 ? " mentor-form--evaluation" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
-        {activeStage === 0 ? <MentorContextStage state={contextState} /> : null}
-        {activeStage === 1 ? <><label className="mentor-field mentor-field--wide">
+      <form id="mentor-proposal-form" className={`mentor-form${activeStage === 1 ? " mentor-form--context" : ""}${activeStage === 4 ? " mentor-form--evaluation" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
+        {activeStage === 1 ? <MentorContextStage state={contextState} /> : null}
+        {activeStage === 0 ? <><label className="mentor-field mentor-field--wide">
           <span>Título de la propuesta <b aria-hidden="true">*</b></span>
           <input ref={titleInput} value={fields.title} placeholder="Ej. Huerto escolar inteligente" maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />
           {fieldErrors.title ? <small id="mentor-title-error" role="alert">{fieldErrors.title}</small> : null}
@@ -633,12 +633,12 @@ export function MentorScreen({
           {fieldErrors.solution ? <small id="mentor-solution-error" role="alert">{fieldErrors.solution}</small> : null}
         </label></> : null}
 
-        {activeStage === 1 ? <label className="mentor-field mentor-field--wide">
+        {activeStage === 0 ? <label className="mentor-field mentor-field--wide">
           <span>Descripción <b aria-hidden="true">*</b></span>
           <textarea rows={3} value={fields.description} placeholder="Amplía tu propuesta: cómo funciona, qué la hace innovadora y qué la diferencia de otras ideas." maxLength={3000} disabled={formBusy} onChange={(event) => updateField("description", event.target.value)} />
         </label> : null}
 
-        {activeStage === 1 ? <label className="mentor-field mentor-field--wide">
+        {activeStage === 0 ? <label className="mentor-field mentor-field--wide">
           <span>Propósito <b aria-hidden="true">*</b></span>
           <textarea rows={3} value={fields.purpose} placeholder="Indica el objetivo principal de tu propuesta y el impacto que esperas lograr." maxLength={1000} disabled={formBusy} onChange={(event) => updateField("purpose", event.target.value)} />
         </label> : null}
@@ -792,8 +792,8 @@ export function MentorScreen({
         <section className="mentor-review-summary" aria-label="Resumen de tu propuesta">
           <h2>Resumen de tu propuesta</h2>
           <h3>{proposal?.proposal.title ?? (fields.title.trim() || "Tu idea")}</h3>
-          <article className="mentor-summary-row"><div><span aria-hidden="true">◉</span><div><h4>Idea y propósito</h4><p>{proposal?.proposal.description || fields.description.trim() || "Aún no has completado la descripción."}</p><small>{proposal?.proposal.purpose || fields.purpose.trim() || "Propósito aún sin completar."}</small></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(1)}>Editar</button></article>
-          <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Contexto de clase</h4><p>{contextState.status === "success" ? [proposalClassroom?.title, contextState.data.config.subject].filter(Boolean).join(" · ") : contextState.status === "empty" ? "Modo personal; no hay contexto de aula asociado." : contextState.status === "loading" ? "Cargando el contexto de clase." : "No pudimos cargar el contexto de clase."}</p>{contextState.status === "success" ? <small>{contextState.data.config.assignment}</small> : null}</div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(0)}>Ver contexto</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">◉</span><div><h4>Idea y propósito</h4><p>{proposal?.proposal.description || fields.description.trim() || "Aún no has completado la descripción."}</p><small>{proposal?.proposal.purpose || fields.purpose.trim() || "Propósito aún sin completar."}</small></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(0)}>Editar</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Contexto de clase</h4><p>{contextState.status === "success" ? [proposalClassroom?.title, contextState.data.config.subject].filter(Boolean).join(" · ") : contextState.status === "empty" ? "Modo personal; no hay contexto de aula asociado." : contextState.status === "loading" ? "Cargando el contexto de clase." : "No pudimos cargar el contexto de clase."}</p>{contextState.status === "success" ? <small>{contextState.data.config.assignment}</small> : null}</div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(1)}>Ver contexto</button></article>
           <article className="mentor-summary-row"><div><span aria-hidden="true">⌘</span><div><h4>Habilidades y tecnologías</h4><p>{proposal?.proposal.skills?.length ? proposal.proposal.skills.join(" · ") : "No hay habilidades guardadas."}</p><div className="mentor-summary-tags">{(proposal?.proposal.technologies ?? []).map((item) => <span key={item}>{item}</span>)}</div></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(2)}>Editar</button></article>
           <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Objetivos y alcance</h4><ul>{proposal?.proposal.goals?.length ? proposal.proposal.goals.map((goal) => <li key={goal}>{goal}</li>) : <li>Aún no has definido objetivos.</li>}</ul><p><strong>Alcance MVP:</strong> {proposal?.proposal.scope || "Aún sin completar."}</p></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(3)}>Editar</button></article>
         </section>
@@ -844,7 +844,7 @@ export function MentorScreen({
         <AsyncStateView state={submission} render={() => null} />
       ) : null}
       </div></div>
-      {activeStage === 0 ? <section className="mentor-choices mentor-choices--context" aria-label="Acciones de Word">
+      {activeStage === 1 ? <section className="mentor-choices mentor-choices--context" aria-label="Acciones de Word">
         <div className="mentor-choices__template">
           <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">Descargar plantilla Word</a>
           <label className="button button--light mentor-choices__upload">
