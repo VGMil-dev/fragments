@@ -39,3 +39,10 @@
 - El aislamiento verifica URL loopback y `/fragments_test` antes de conectar, confirma `current_database()` con el mismo cliente antes de escribir y limita la limpieza a los IDs sintéticos creados por la prueba. URL remota se rechaza sin conectar ni ejecutar borrados.
 - Verificación local informada por el agente: PostgreSQL efímero 16/16; helper 3/3; API typecheck y diff-check PASS. Repetí helper 3/3 y API typecheck tras actualizar rama con `main`. CI del HEAD post-sync `988a6a51ab5958a3c78e567bf7f980c040518b6d`, run `45090692759`, SUCCESS. Revisión independiente PASS en el cambio de prueba/helper; merge normal PR #140 como `931cd0073ce63501a9ba4218555e4d6b9db5335f`.
 - Solo se modifican pruebas y helper de test; no cambia runtime ni se necesita release. Evaluador, repositorio, identidad admin y auditoría son fakes. Logs/eventos Review reales de producción, sesión Better Auth admin y retención stdout siguen NO COMPROBADOS.
+
+## Lectura productiva de stdout Review — solo lectura · 2026-11-23
+
+- En `fragments-api-1`, `docker inspect` devolvió configuración de logging activa `json-file`, `max-size=10m`, `max-file=5` (retención máxima nominal de 50 MiB por contenedor). Esto confirma configuración, no una rotación empírica ni cobertura histórica completa.
+- Se consultó `docker logs --since 24h` por SSH read-only y el filtro se ejecutó en el host: solo aceptó nombres `review.attempt.finished`, `review.queue.poll_failed`, `review.lease.recovered` y proyectó `event`, timestamp, IDs, stage, errorCode, duration, attempt y finalStatus. El resultado fue `count=0`; no se imprimieron líneas crudas ni payloads.
+- GET anónimo público a `/api/admin/review-events?limit=1` devolvió HTTP 401 con `Cache-Control: no-store`; se omitió el cuerpo.
+- Conclusión acotada: no aparecen eventos allowlisted en el stdout retenido consultado; no se observó ninguna evaluación Review productiva en esa ventana. Eventos históricos anteriores al límite de rotación, lectura con sesión Better Auth admin y pantalla admin autenticada siguen NO COMPROBADOS. No se generaron evaluaciones, no se escribió en DB y no se reinició ni detuvo producción.
