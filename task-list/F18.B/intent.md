@@ -112,4 +112,10 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Solo mostrar contexto cuya `assignmentContext.assignmentVersionId` coincida con `assignmentVersionId`; si no coincide o falta, indicar que el contexto no está disponible y no revelar sus skills.
 - No objetivos: añadir versión/DTO nuevos, cambiar endpoints, contratos, evaluación, rúbrica ni persistencia.
 
+## Cierre fail-closed del contexto al continuar propuestas vinculadas
+
+- Al continuar una propuesta enlazada, Mentor solo puede recibir el `assignmentContext` cuyo `assignmentVersionId` coincide exactamente con el vínculo de la propuesta.
+- Si el contexto falta o apunta a otra versión, Mentor presenta el estado de error y no recibe contexto, rúbrica ni habilidades de esa versión obsoleta, ni desde la propuesta activa ni desde la lista de propuestas guardadas.
+- No objetivos: cambiar la persistencia, contratos, API o el comportamiento de propuestas válidas y no vinculadas.
+
 - Dar a cada botón de recuperación de propuesta un nombre accesible que identifique su acción y título, con fallback para borradores sin título.

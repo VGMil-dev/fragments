@@ -102,6 +102,7 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - La UI no convierte el `assignmentVersionId` opaco en un número de versión de misión: la respuesta de propuesta no entrega ese número; el vínculo exacto se conserva, y se presenta el número de versión de contexto Mentor que sí entrega.
 - Un `assignmentContext` ausente o con versión distinta no se presenta como contexto de esa propuesta ni muestra sus habilidades; se anuncia “contexto no disponible”. Una propuesta sin `assignmentVersionId` no muestra marcador de misión.
 - “Continuar” conserva el objeto de propuesta recibido del backend: ID y versión de misión, contexto Mentor y habilidades fijadas. El tema, versión Mentor y nombres/IDs de skills se validan al entrar a Mentor.
+- Al entrar a Mentor, el mismo helper valida que `assignmentContext.assignmentVersionId === assignmentVersionId`. El mismatch o contexto ausente bloquea el contexto fijado con estado de error; el contexto discrepante se elimina de `initialProposal` y de `savedProposals` que consume Mentor. Las habilidades requeridas quedan vacías y no se exponen rúbrica/tema/habilidades obsoletos.
 - La UI no muestra criterios, pesos ni rúbrica. No se agregan contratos, campos de versión numérica de misión ni llamadas de evaluación.
 
 ## Propuestas guardadas — contexto vinculado

@@ -4,6 +4,12 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StudentAssignment } from "@fragments/contracts";
 
+type ProposalContextProbe = {
+  assignmentVersionId?: string;
+  mentorContext: { config: { theme?: string; rubricTitle?: string } };
+  requiredSkills: Array<{ name: string }>;
+};
+
 const mocks = vi.hoisted(() => {
   const studentApi = {
     getMe: vi.fn(), getMyClassrooms: vi.fn(), getMyClassroomRequests: vi.fn(),
@@ -19,7 +25,7 @@ vi.mock("./lib/api/trainer-api", () => ({ createTrainerApi: vi.fn(() => ({})) })
 vi.mock("./lib/api/student-api-instance", () => ({ studentApi: mocks.studentApi }));
 vi.mock("./features/assignments/assignments-api.js", () => ({ assignmentsApi: mocks.assignmentsApi }));
 vi.mock("./features/mentor", () => ({
-  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number; config?: { theme?: string } } }; initialProposal?: { id: string; proposal: { title: string }; assignmentVersionId?: string; assignmentContext?: { assignmentVersionId: string; requiredSkills: Array<{ id: string; name: string }>; mentorContext: { version: number; config: { theme?: string } } } }; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
+  MentorScreen: ({ contextState, initialProposal, savedProposals = [], restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number; config?: { theme?: string } } }; initialProposal?: { id: string; proposal: { title: string }; assignmentVersionId?: string; assignmentContext?: ProposalContextProbe }; savedProposals?: Array<{ assignmentContext?: ProposalContextProbe }>; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
     <section>
       <p data-testid="mentor-context">{contextState.status === "success" ? contextState.data?.version : contextState.status}</p>
       <p data-testid="mentor-context-theme">{contextState.status === "success" ? contextState.data?.config?.theme ?? "" : ""}</p>
@@ -27,6 +33,9 @@ vi.mock("./features/mentor", () => ({
       <p data-testid="mentor-required-skill-ids">{requiredMissionSkills.map((skill) => skill.id).join("|")}</p>
       <p data-testid="mentor-proposal-assignment-version">{initialProposal?.assignmentVersionId ?? ""}</p>
       <p data-testid="mentor-proposal-context-assignment-version">{initialProposal?.assignmentContext?.assignmentVersionId ?? ""}</p>
+      <p data-testid="mentor-proposal-context-theme">{initialProposal?.assignmentContext?.mentorContext.config.theme ?? ""}</p>
+      <p data-testid="mentor-proposal-context-rubric">{initialProposal?.assignmentContext?.mentorContext.config.rubricTitle ?? ""}</p>
+      <p data-testid="mentor-saved-proposal-contexts">{savedProposals.map((item) => `${item.assignmentContext?.mentorContext.config.theme ?? ""}:${item.assignmentContext?.mentorContext.config.rubricTitle ?? ""}:${item.assignmentContext?.requiredSkills.map((skill) => skill.name).join(",") ?? ""}`).join("|")}</p>
       {initialProposal ? <p data-testid="mentor-proposal">{initialProposal.id}:{initialProposal.proposal.title}</p> : null}
       <p data-testid="mentor-restore-evaluation">{String(Boolean(restoreEvaluation))}</p>
       <button type="button" onClick={() => void onSave({ proposal: { title: "Borrador de misión" } })}>Guardar borrador</button>
@@ -146,7 +155,7 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "stale-context-proposal", version: 2, proposal: { title: "Contexto desactualizado" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
-        assignmentContext: { assignmentVersionId: "mission-v2", requiredSkills: [{ id: "stale", name: "No debe mostrarse" }], mentorContext: { version: 8, config: { requirements: [] } } } },
+        assignmentContext: { assignmentVersionId: "mission-v2", requiredSkills: [{ id: "stale", name: "No debe mostrarse" }], mentorContext: { version: 8, config: { theme: "Tema obsoleto", rubricTitle: "Rúbrica obsoleta", requirements: [] } } } },
     ] });
 
     await act(async () => root?.render(<App />));
@@ -155,7 +164,14 @@ describe("student mission to Mentor flow", () => {
     const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Contexto desactualizado"]');
     await act(async () => continueProposal?.click());
 
+    expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("error");
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("");
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("");
+    expect(container?.querySelector("[data-testid=mentor-proposal-context-assignment-version]")?.textContent).toBe("");
+    expect(container?.querySelector("[data-testid=mentor-proposal-context-theme]")?.textContent).toBe("");
+    expect(container?.querySelector("[data-testid=mentor-proposal-context-rubric]")?.textContent).toBe("");
+    expect(container?.querySelector("[data-testid=mentor-saved-proposal-contexts]")?.textContent).not.toContain("Tema obsoleto");
+    expect(container?.querySelector("[data-testid=mentor-saved-proposal-contexts]")?.textContent).not.toContain("No debe mostrarse");
   });
 
   it("identifies each saved proposal in the Mis proyectos continuation action", async () => {

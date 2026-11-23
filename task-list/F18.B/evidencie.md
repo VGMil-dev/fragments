@@ -346,3 +346,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS; `pnpm --filter @fragments/web typecheck` y `git diff --check` PASS.
 - No se modifican contratos, API, backend, rutas, migraciones, DB ni servicios productivos. Sin navegador, IA ni producción.
 - Commit local `bf2513f` en `codex/f18b-next-ui`; sin push ni despliegue.
+
+## Bloqueo fail-closed al continuar con contexto de otra versión · 2026-11-23
+
+- TDD rojo: la prueba de composición continuó una propuesta vinculada a `mission-v1` con `assignmentContext.assignmentVersionId = mission-v2`; Mentor mostraba contexto versión `8` en vez del estado `error` esperado (1 prueba fallida, 5 pasaron).
+- Fix: la selección de contexto en Mentor reutiliza `proposalMissionContext`. Si el contexto no valida, además se pasa a Mentor una proyección de la propuesta sin `assignmentContext`; las propuestas guardadas reciben el mismo saneamiento. La versión opaca de la misión y la identidad/borrador de la propuesta se conservan.
+- Regresión comprueba que el mismatch no entrega a Mentor el tema, rúbrica, habilidad requerida ni contexto de la propuesta activa/lista guardada; contexto queda en error y habilidades quedan vacías.
+- Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS. `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
+- Estado final: sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA. Commit local pendiente de registrar.
+- Sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA.

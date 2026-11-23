@@ -45,6 +45,13 @@ function proposalMissionContext(proposal: ProposalDraftResponse): NonNullable<Pr
   return context;
 }
 
+function proposalForMentor(proposal: ProposalDraftResponse): ProposalDraftResponse {
+  if (proposal.assignmentContext && !proposalMissionContext(proposal)) {
+    return { ...proposal, assignmentContext: undefined };
+  }
+  return proposal;
+}
+
 function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): Array<{ id: string; name: string }> {
   return proposalMissionContext(proposal)?.requiredSkills ?? [];
 }
@@ -191,8 +198,9 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
       return () => { active = false; controller.abort(); };
     }
     if (selectedProposal?.assignmentVersionId) {
-      setMentorContext(selectedProposal.assignmentContext
-        ? { status: "success", data: selectedProposal.assignmentContext.mentorContext }
+      const pinnedContext = proposalMissionContext(selectedProposal);
+      setMentorContext(pinnedContext
+        ? { status: "success", data: pinnedContext.mentorContext }
         : { status: "error", message: "No pudimos recuperar el contexto de la misión fijada a esta propuesta.", retry: () => navigate("/student/projects"), retryLabel: "Volver a mis proyectos" });
       return () => { active = false; controller.abort(); };
     }
@@ -314,11 +322,11 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
             <MentorScreen
               key={selectedProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
-              initialProposal={selectedProposal}
+              initialProposal={selectedProposal ? proposalForMentor(selectedProposal) : undefined}
               requiredMissionSkills={requiredMissionSkills}
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
-            savedProposals={ownedProposals}
+            savedProposals={ownedProposals.map(proposalForMentor)}
               proposalsLoading={proposalsLoading}
               proposalsError={proposalsError}
               onRetryProposals={() => setProposalsReload((value) => value + 1)}
