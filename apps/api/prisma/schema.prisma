@@ -125,6 +125,18 @@ model ReviewAttempt {
   @@map("review_attempts")
 }
 
+model OperationalEvent {
+  id         String   @id
+  source     String
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(3)
+  recordedAt DateTime @default(now()) @map("recorded_at") @db.Timestamptz(3)
+  eventJson  Json     @map("event_json")
+
+  @@index([source, recordedAt(sort: Desc)], map: "operational_events_source_recorded")
+  @@index([recordedAt(sort: Desc)], map: "operational_events_recorded")
+  @@map("admin_operational_events")
+}
+
 model Proposal {
   id           String                           @id
   version      Int

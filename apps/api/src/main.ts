@@ -18,8 +18,7 @@ import { createPrismaReviewStore } from "./features/review/prisma-store.js";
 import { createReviewAcademicLinkResolver } from "./features/review/academic-link.js";
 import { createReviewWorker } from "./features/review/worker.js";
 import { projectReviewOperationalEvent, writeReviewOperationalEvent } from "./features/review/review-errors.js";
-import { createReviewOperationalLog } from "./features/review/operational-log.js";
-import { createMentorOperationalLog } from "./features/mentor/operational-log.js";
+import { createPrismaReviewOperationalLog, createPrismaMentorOperationalLog } from "./features/admin-operational-events/prisma-store.js";
 import { createTrainerRepository } from "./features/trainer/repository.js";
 import { createTrainerService } from "./features/trainer/service.js";
 import { openDatabase } from "./db/open.js";
@@ -45,8 +44,13 @@ const mentor = createMentorService({
 });
 
 const reviewStore = createPrismaReviewStore(database);
-const reviewOperationalLog = createReviewOperationalLog();
-const mentorOperationalLog = createMentorOperationalLog();
+const reviewOperationalLog = createPrismaReviewOperationalLog(database);
+const mentorOperationalLog = createPrismaMentorOperationalLog(database);
+const operationalEventsRetentionTimer = setInterval(() => {
+  void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune()]);
+}, 60 * 60 * 1000);
+operationalEventsRetentionTimer.unref?.();
+void Promise.all([reviewOperationalLog.prune(), mentorOperationalLog.prune()]);
 function writeReviewEvent(event: Parameters<typeof writeReviewOperationalEvent>[0]) {
   const safeEvent = projectReviewOperationalEvent(event);
   if (!safeEvent) return;
@@ -148,6 +152,7 @@ workerTimer.unref?.();
 
 function shutdown() {
   clearInterval(workerTimer);
+  clearInterval(operationalEventsRetentionTimer);
   server.close(() => { void database.$disconnect().then(() => process.exit(0)); });
 }
 process.once("SIGINT", shutdown);
