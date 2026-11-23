@@ -105,6 +105,18 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Al entrar a Mentor, el mismo helper valida que `assignmentContext.assignmentVersionId === assignmentVersionId`. El mismatch o contexto ausente bloquea el contexto fijado con estado de error; el contexto discrepante se elimina de `initialProposal` y de `savedProposals` que consume Mentor. Las habilidades requeridas quedan vacías y no se exponen rúbrica/tema/habilidades obsoletos.
 - La UI no muestra criterios, pesos ni rúbrica. No se agregan contratos, campos de versión numérica de misión ni llamadas de evaluación.
 
+## Incremento — contexto de misión en Trainer desde Review
+
+- `ReviewAcademicLinkSchema` conserva opcionalmente hasta 20 nombres de habilidades requeridas del snapshot publicado; la propiedad ausente sigue válida para trabajos históricos.
+- Al resolver `linkedProposalId`, la API toma solo las habilidades requeridas del snapshot de la versión publicada y las incluye en el payload académico inmutable del job Review.
+- `GET /api/trainer/reviews` incluye `academicContext` solo para Reviews completados pertenecientes al estudiante autenticado y con `linkedProposalId === academicLink.proposalId`.
+- El DTO público de Trainer contiene únicamente `missionTitle`, `missionVersion`, `mentorContextVersion`, `classroomTitle` y, cuando fue preservado, `requiredSkills[]`; no incluye IDs internos, score, rúbrica, título del proyecto ni contenido privado.
+- Trainer muestra el resumen para la Review seleccionada. Una lista presente y vacía comunica que no hay habilidades obligatorias; la propiedad ausente comunica que el snapshot antiguo no las conserva.
+- GIVEN Review sin vínculo académico, WHEN aparece en Trainer, THEN conserva la tarjeta y controles actuales y no muestra contexto inventado.
+- GIVEN vínculo válido del estudiante actual, WHEN selecciona la Review, THEN observa misión, versiones y habilidades obligatorias del snapshot asociado.
+- GIVEN vínculo cuyo propietario o propuesta no coincide, WHEN se construye el DTO, THEN se omite `academicContext` sin filtrar IDs.
+- Sin rutas nuevas, migraciones, cambios de prompt/modelo/rúbrica, generación de retos o escrituras productivas.
+
 ## Propuestas guardadas — contexto vinculado
 
 - Cuando una propuesta recuperada conserva una misión publicada, el listado identifica la misión y el número de versión del contexto Mentor asociado.
