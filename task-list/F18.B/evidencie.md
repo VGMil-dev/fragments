@@ -264,3 +264,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Regresión TDD fallaba antes del cambio; prueba focal 28/28, typecheck y diff-check PASS. CI `45092564145` SUCCESS, revisión independiente PASS; merge normal `52917ec6fcba790f487a7d2f9807c3c52927400d`.
 - Release anotada `v0.5.25` sobre el SHA exacto; F14 run `45092884337` SUCCESS en los tres jobs. Aplicación automática verificada: API/web healthy en SHA exacto, `/health` público `ok/ready`, bundle `/assets/index-Iviv3wW8.js` confirma versión y SHA.
 - Ego Lite conserva sesiones abiertas en v0.5.23; propuesta visible no está ligada a misión/contexto. Render con datos enlazados sigue NO COMPROBADO; no hubo escrituras académicas.
+
+## Recuperación accesible desde Mis proyectos · v0.5.26 · 2026-11-23
+
+- La observación de Ego Lite identificó que en «Mis proyectos» el botón «Continuar» no distinguía las propuestas. PR #146 añade el título o el fallback «Borrador sin título» al nombre accesible sin alterar la propuesta seleccionada ni su callback.
+- La regresión de composición renderiza la App real en `/student/projects`, verifica nombre/fallback, pulsa «Continuar» y comprueba navegación a Mentor con la misma propuesta y `restoreEvaluation=true`. MentorScreen se simula solo como límite de props; su recuperación interna sigue cubierta por pruebas propias.
+- Prueba focal 2/2 PASS; `pnpm --filter @fragments/web typecheck` y `git diff --check` PASS; CI `45095304380` SUCCESS y revisión independiente PASS sobre head `437bdc30398e09da9921960af0dc4e9ec8b2c29f`. PR integrada mediante merge normal en `1aa0690fa2573d18cd2fa46c2a5780833e523bb5`.
+- F14 tag anotada `v0.5.26` en el SHA exacto; run `45095642953` completó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. El sondeo/aplicador normal terminó con `Result=success`; verificación pública: `/health` `ok/ready`, bundle `/assets/index-CyC9Ismb.js` incluye `v0.5.26` y SHA completo exacto.
+- Ego Lite posterior al despliegue confirmó `v0.5.26`: el botón único anuncia «Continuar propuesta:» con el título y navega a Mentor mostrando la misma propuesta. La pestaña nueva y las sesiones existentes quedaron abiertas; no hubo escrituras.
+- Al continuar, Mentor intentó GET `/api/proposals/:proposalId/review` y recibió 404 porque no existe evaluación persistida para la propuesta. Esto confirma el intento de restauración, no la recuperación de un resultado.
+- **NO COMPROBADO:** recuperación de evaluación persistida, handoff con una misión vinculada, identidad cruzada y calidad de puntuación IA. El test de App comprueba `restoreEvaluation=true` en el límite de Mentor simulado; no sustituye una recuperación evaluativa end-to-end en Ego Lite.
