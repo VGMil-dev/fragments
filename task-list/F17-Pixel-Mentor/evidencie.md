@@ -1,7 +1,7 @@
 # F17 Pixel Night Mentor — Evidencia
 
 ## Estado
-Implementación en rama `codex/pixel-night-mentor`; commit de código `906c7a2d7b4524c5138609190787425531a10556`. Pendiente PR, integración, QA Ego Lite y despliegue. El planner registra esta tarea en `task-list/TASKS.md`.
+PR #181 se integró por merge normal como `b6e5125b41eee5ea18d8dec10b9e05afbefe8463`; CI `45169677809` SUCCESS. Commit de código `906c7a2d7b4524c5138609190787425531a10556` en `codex/pixel-night-mentor`. QA Ego Lite y despliegue pendientes. El planner registra esta tarea en `task-list/TASKS.md`.
 
 ## Archivos
 - `apps/web/src/features/mentor/mentor-screen.tsx`
@@ -18,5 +18,5 @@ Implementación en rama `codex/pixel-night-mentor`; commit de código `906c7a2d7
 - Revisión reflexiva independiente: estados accesibles actuales/completados/pendientes y avance condicionado al éxito del guardado, sin defecto nuevo.
 
 ## Pendiente
-QA visual/E2E con Ego Lite a 320, 390, 768, 1024 y 1440 px, teclado/foco, zoom y movimiento reducido. No se tocaron sesiones de navegador ni producción.
+QA visual/E2E con Ego Lite a 320, 390, 768, 1024 y 1440 px, teclado/foco, zoom y movimiento reducido. No se tocaron sesiones de navegador ni producción. Referencia sigue candidata, sin aprobación visual individual.
 
