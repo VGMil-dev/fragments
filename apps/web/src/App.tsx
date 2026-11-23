@@ -39,10 +39,14 @@ import "./styles/teacher-workspace.css";
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const trainerApi = createTrainerApi();
 
-function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): Array<{ id: string; name: string }> {
+function proposalMissionContext(proposal: ProposalDraftResponse): NonNullable<ProposalDraftResponse["assignmentContext"]> | null {
   const context = proposal.assignmentContext;
-  if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return [];
-  return context.requiredSkills;
+  if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return null;
+  return context;
+}
+
+function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): Array<{ id: string; name: string }> {
+  return proposalMissionContext(proposal)?.requiredSkills ?? [];
 }
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
@@ -264,7 +268,25 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
         /> : null}
         {path === "/student/classrooms" ? <StudentClassroomsScreen classrooms={myClassrooms} requests={myClassroomRequests} loading={classroomsLoading} error={classroomsError} onRefresh={() => setClassroomsReload((value) => value + 1)} onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }} /> : null}
         {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
-          {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => <li key={item.id}><span className="student-project-list__cover" aria-hidden="true">✳</span><span><strong>{item.proposal.title || "Borrador sin título"}</strong><small>Borrador guardado · versión {item.version}</small></span><button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button></li>)}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
+          {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => {
+            const missionContext = proposalMissionContext(item);
+            return <li key={item.id}>
+              <span className="student-project-list__cover" aria-hidden="true">✳</span>
+              <div className="student-project-list__content">
+                <strong>{item.proposal.title || "Borrador sin título"}</strong>
+                <small>Borrador guardado · versión {item.version}</small>
+                {item.assignmentVersionId ? <details className="student-project-list__mission">
+                  <summary>{missionContext
+                    ? `Misión vinculada · ${missionContext.mentorContext.config.theme} · Contexto Mentor v${missionContext.mentorContext.version}`
+                    : "Misión vinculada · contexto no disponible"}</summary>
+                  {missionContext?.requiredSkills.length ? <ul aria-label="Habilidades requeridas fijadas en la misión">
+                    {missionContext.requiredSkills.map((skill) => <li key={skill.id}>{skill.name}</li>)}
+                  </ul> : missionContext ? <p>Esta misión no fijó habilidades requeridas.</p> : <p>El contexto fijado para esta misión no está disponible.</p>}
+                </details> : null}
+              </div>
+              <button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button>
+            </li>;
+          })}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
           <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Crear una propuesta</button>
         </main> : null}
         {path === "/student/submissions" ? <main className="student-portal" aria-labelledby="submissions-title"><p className="student-screen__eyebrow">RESULTADOS</p><h1 id="submissions-title">Mis entregas</h1>

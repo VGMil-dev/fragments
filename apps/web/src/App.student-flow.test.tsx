@@ -19,10 +19,14 @@ vi.mock("./lib/api/trainer-api", () => ({ createTrainerApi: vi.fn(() => ({})) })
 vi.mock("./lib/api/student-api-instance", () => ({ studentApi: mocks.studentApi }));
 vi.mock("./features/assignments/assignments-api.js", () => ({ assignmentsApi: mocks.assignmentsApi }));
 vi.mock("./features/mentor", () => ({
-  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number } }; initialProposal?: { id: string; proposal: { title: string } }; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
+  MentorScreen: ({ contextState, initialProposal, restoreEvaluation, requiredMissionSkills = [], onSave, onBack }: { contextState: { status: string; data?: { version: number; config?: { theme?: string } } }; initialProposal?: { id: string; proposal: { title: string }; assignmentVersionId?: string; assignmentContext?: { assignmentVersionId: string; requiredSkills: Array<{ id: string; name: string }>; mentorContext: { version: number; config: { theme?: string } } } }; restoreEvaluation?: boolean; requiredMissionSkills?: Array<{ id: string; name: string }>; onSave: (draft: object) => Promise<unknown>; onBack: () => void }) => (
     <section>
       <p data-testid="mentor-context">{contextState.status === "success" ? contextState.data?.version : contextState.status}</p>
+      <p data-testid="mentor-context-theme">{contextState.status === "success" ? contextState.data?.config?.theme ?? "" : ""}</p>
       <p data-testid="mentor-required-skills">{requiredMissionSkills.map((skill) => skill.name).join("|")}</p>
+      <p data-testid="mentor-required-skill-ids">{requiredMissionSkills.map((skill) => skill.id).join("|")}</p>
+      <p data-testid="mentor-proposal-assignment-version">{initialProposal?.assignmentVersionId ?? ""}</p>
+      <p data-testid="mentor-proposal-context-assignment-version">{initialProposal?.assignmentContext?.assignmentVersionId ?? ""}</p>
       {initialProposal ? <p data-testid="mentor-proposal">{initialProposal.id}:{initialProposal.proposal.title}</p> : null}
       <p data-testid="mentor-restore-evaluation">{String(Boolean(restoreEvaluation))}</p>
       <button type="button" onClick={() => void onSave({ proposal: { title: "Borrador de misión" } })}>Guardar borrador</button>
@@ -106,6 +110,38 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
   });
 
+  it("shows the linked mission context in Mis proyectos and continues with the same version and required skills", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "linked-project", version: 3, proposal: { title: "Navegación accesible" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-23T00:00:00.000Z",
+        assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [{ id: "required-navigation", name: "Navegación" }], mentorContext: { version: 7, config: { theme: "Navegación para la aplicación", rubricTitle: "No mostrar rúbrica", criteria: [{ id: "private", title: "Criterio privado", weight: 100 }] } } } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    const missionDisclosure = container?.querySelector<HTMLDetailsElement>(".student-project-list__mission");
+    expect(missionDisclosure?.open).toBe(false);
+    expect(missionDisclosure?.querySelector("summary")?.textContent).toContain("Misión vinculada");
+    expect(missionDisclosure?.querySelector("summary")?.textContent).toContain("Navegación para la aplicación");
+    expect(missionDisclosure?.querySelector("summary")?.textContent).toContain("Contexto Mentor v7");
+    await act(async () => missionDisclosure?.querySelector("summary")?.click());
+    expect(missionDisclosure?.open).toBe(true);
+    expect(missionDisclosure?.textContent).toContain("Navegación");
+    expect(container?.querySelector(".student-project-list")?.textContent).not.toContain("No mostrar rúbrica");
+    expect(container?.querySelector(".student-project-list")?.textContent).not.toContain("Criterio privado");
+
+    const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Navegación accesible"]');
+    await act(async () => continueProposal?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-proposal-assignment-version]")?.textContent).toBe("mission-v1");
+    expect(container?.querySelector("[data-testid=mentor-proposal-context-assignment-version]")?.textContent).toBe("mission-v1");
+    expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("7");
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación para la aplicación");
+    expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
+    expect(container?.querySelector("[data-testid=mentor-required-skill-ids]")?.textContent).toBe("required-navigation");
+  });
+
   it("does not restore required skills from a context pinned to a different assignment version", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
@@ -114,6 +150,8 @@ describe("student mission to Mentor flow", () => {
     ] });
 
     await act(async () => root?.render(<App />));
+    expect(container?.querySelector(".student-project-list__mission summary")?.textContent).toBe("Misión vinculada · contexto no disponible");
+    expect(container?.querySelector(".student-project-list__mission")?.textContent).not.toContain("No debe mostrarse");
     const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Contexto desactualizado"]');
     await act(async () => continueProposal?.click());
 

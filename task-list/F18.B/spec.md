@@ -96,6 +96,14 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Las pruebas de contrato rechazan contexto vinculado sin la propiedad estructurada; integración PostgreSQL verifica IDs/nombres en creación y recuperación después de publicar v2; UI verifica recuperación desde el arreglo tipado, rechazo de contexto de otra versión y exclusión por ID después de un cambio de nombre.
 - Sin migración ni llamadas a proveedores. Snapshots sin arreglo válido se proyectan como lista vacía, sin inferir identidades del texto de la rúbrica.
 
+## Incremento UI estudiantil — misión vinculada en Mis proyectos
+
+- Para una propuesta con `assignmentVersionId`, “Mis proyectos” ofrece un `<details>` accesible cerrado por defecto. Su resumen identifica la misión con el tema snapshot y `Contexto Mentor vN`; al abrir, muestra solo nombres de habilidades requeridas del `assignmentContext` coincidente.
+- La UI no convierte el `assignmentVersionId` opaco en un número de versión de misión: la respuesta de propuesta no entrega ese número; el vínculo exacto se conserva, y se presenta el número de versión de contexto Mentor que sí entrega.
+- Un `assignmentContext` ausente o con versión distinta no se presenta como contexto de esa propuesta ni muestra sus habilidades; se anuncia “contexto no disponible”. Una propuesta sin `assignmentVersionId` no muestra marcador de misión.
+- “Continuar” conserva el objeto de propuesta recibido del backend: ID y versión de misión, contexto Mentor y habilidades fijadas. El tema, versión Mentor y nombres/IDs de skills se validan al entrar a Mentor.
+- La UI no muestra criterios, pesos ni rúbrica. No se agregan contratos, campos de versión numérica de misión ni llamadas de evaluación.
+
 ## Propuestas guardadas — contexto vinculado
 
 - Cuando una propuesta recuperada conserva una misión publicada, el listado identifica la misión y el número de versión del contexto Mentor asociado.
