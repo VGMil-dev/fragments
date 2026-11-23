@@ -38,6 +38,15 @@ import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const trainerApi = createTrainerApi();
+const REQUIRED_SKILL_REQUIREMENT_PREFIX = "Habilidad requerida: ";
+
+function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): string[] {
+  const context = proposal.assignmentContext;
+  if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return [];
+  return context.mentorContext.config.requirements.flatMap((requirement) => requirement.startsWith(REQUIRED_SKILL_REQUIREMENT_PREFIX)
+    ? [requirement.slice(REQUIRED_SKILL_REQUIREMENT_PREFIX.length).trim()]
+    : []);
+}
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<AcademicGalleryEntry[]>>({ status: "loading" });
@@ -57,6 +66,9 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const requiredMissionSkills = selectedProposal
+    ? requiredSkillsFromProposalContext(selectedProposal)
+    : selectedAssignment?.requiredSkills.map((skill) => skill.name) ?? [];
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -284,6 +296,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             <MentorScreen
               key={selectedProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
               initialProposal={selectedProposal}
+              requiredMissionSkills={requiredMissionSkills}
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
             savedProposals={ownedProposals}

@@ -292,3 +292,12 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Ego Lite QA local sintética en TaskSpaces preservados 44 (docente) y 46 (estudiante): docente creó y publicó misión v1 con habilidad requerida; estudiante vio «Misión publicada v1 · Contexto Mentor v1», abrió Mentor, guardó una propuesta ficticia y tras recargar la recuperó. GET local verificó `assignmentVersionId`, contexto v1, tema y habilidad requerida. No se cerraron pestañas existentes.
 - Sin evaluación IA ni llamadas pagadas, sin escrituras productivas. Prueba unitaria/regresión 9/9, integración HTTP/PostgreSQL efímera `fragments_test` 3/3, API typecheck y `git diff --check` PASS.
 - Los snapshots publicados antes del fix no conservan asunto histórico; usan el fallback al asunto actual y no se puede reconstruir el pasado sin una fuente confiable. Evaluación IA real, datos de misión en producción e identidad cruzada siguen NO COMPROBADOS.
+# Habilidades requeridas del snapshot en Mentor · 2026-11-23
+
+- TDD: añadí primero pruebas para inicio de misión, recuperación con contexto fijado, fallback de Mentor general y separación de selección opcional. Las pruebas de composición/UI fallaron inicialmente porque la lista requerida no llegaba a Mentor.
+- Implementación: `App` pasa los nombres de `selectedAssignment.requiredSkills`; al recuperar, deriva solo los requisitos con prefijo exacto `Habilidad requerida: ` cuando `assignmentContext.assignmentVersionId` coincide con el de la propuesta. `MentorScreen` los presenta como lista de referencia, separada de la selección editable del catálogo.
+- Prueba focal: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 33 pruebas PASS.
+- `pnpm --filter @fragments/web typecheck` — PASS. `git diff --check` — PASS.
+- Sin API/contratos, backend, evaluación, rutas o datos productivos; sin navegador. Las sesiones Ego Lite permanecen intactas.
+- Límite: el contexto recuperado expone requisitos como texto, no como un campo estructurado de habilidades. La extracción requiere el prefijo exacto y la coincidencia de versión; no se valida IA ni recorrido remoto.
+- Commit local pendiente al completar esta evidencia.

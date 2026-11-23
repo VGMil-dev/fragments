@@ -24,6 +24,7 @@ import "./mentor-screen.css";
 
 export interface MentorScreenProps {
   initialProposal?: ProposalDraftResponse | undefined;
+  requiredMissionSkills?: string[];
   initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
   restoreEvaluation?: boolean;
   savedProposals: ProposalDraftResponse[];
@@ -180,6 +181,7 @@ function draftPayload(fields: ProposalDraftFields): CreateProposalDraftRequest {
 
 export function MentorScreen({
   initialProposal,
+  requiredMissionSkills = [],
   initialEvaluation,
   restoreEvaluation = false,
   savedProposals,
@@ -234,6 +236,7 @@ export function MentorScreen({
   const [importError, setImportError] = useState<string | null>(null);
   const [coverCopyMessage, setCoverCopyMessage] = useState<string | null>(null);
   const formBusy = saving || evaluation?.status === "loading" || submission?.status === "loading";
+  const visibleRequiredMissionSkills = requiredMissionSkills.map((skill) => skill.trim()).filter(Boolean);
   const validText = (value: string, max: number) => value.trim().length > 0 && value.trim().length <= max;
   const goalRows = fields.goals.length ? fields.goals.split(/\r?\n/) : [];
   const goals = fields.goals.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -667,9 +670,16 @@ export function MentorScreen({
           <section className="mentor-skills__required" aria-labelledby="mentor-skills-required-title">
             <div className="mentor-skills__section-heading">
               <span className="mentor-skills__section-icon" aria-hidden="true">▱</span>
-              <div><h2 id="mentor-skills-required-title">Habilidades requeridas</h2><p>No hay habilidades marcadas como obligatorias por una fuente académica para esta actividad.</p></div>
-              <span className="mentor-skills__count">Sin asignación</span>
+              <div><h2 id="mentor-skills-required-title">Habilidades requeridas</h2><p>{visibleRequiredMissionSkills.length
+                ? "Fijadas por la misión publicada; se muestran como referencia y no se editan aquí."
+                : "No hay habilidades marcadas como obligatorias por una fuente académica para esta actividad."}</p></div>
+              <span className="mentor-skills__count">{visibleRequiredMissionSkills.length
+                ? `${visibleRequiredMissionSkills.length} ${visibleRequiredMissionSkills.length === 1 ? "requerida" : "requeridas"}`
+                : "Sin asignación"}</span>
             </div>
+            {visibleRequiredMissionSkills.length ? <ul className="mentor-skills__required-list" aria-label="Habilidades fijadas por la misión">
+              {visibleRequiredMissionSkills.map((skill, index) => <li key={`${index}-${skill}`}>{skill}</li>)}
+            </ul> : null}
           </section>
 
           <section className="mentor-skills__reinforce" aria-labelledby="mentor-skills-reinforce-title" aria-busy={Boolean(skillClassroomId && activeSkillCatalogState?.status === "loading")}>
