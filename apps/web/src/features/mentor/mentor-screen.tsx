@@ -302,7 +302,7 @@ export function MentorScreen({
           && validText(fields.solution, 3000)
           && validText(fields.description, 3000)
           && validText(fields.purpose, 1000);
-      case 1: return contextState.status === "success" || contextState.status === "empty";
+      case 1: return contextState.status === "success";
       case 2: return Boolean(proposal && !isDirty && !skillsChanged);
       case 3: return validText(fields.scope, 3000) && Boolean(goals.length) && !validateTechnologyList(fields.technologies);
       case 4: return Boolean(evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version && savedCurrentVersion);
@@ -310,11 +310,25 @@ export function MentorScreen({
       default: return false;
     }
   };
-  const stageStatus = (index: number) => index === activeStage
-    ? "Etapa actual"
-    : completedStage(index)
-      ? "Completada"
-      : "Pendiente";
+  const contextStageStatus = () => {
+    switch (contextState.status) {
+      case "success": return "Contexto disponible";
+      case "empty": return "Modo personal";
+      case "loading": return "Consultando contexto";
+      case "error": return "Contexto no disponible";
+    }
+  };
+  const stageStatus = (index: number) => {
+    if (index === 1) {
+      const status = contextStageStatus();
+      return index === activeStage ? `Etapa actual · ${status}` : status;
+    }
+    return index === activeStage
+      ? "Etapa actual"
+      : completedStage(index)
+        ? "Completada"
+        : "Pendiente";
+  };
 
   async function copyCoverPrompt() {
     try {
