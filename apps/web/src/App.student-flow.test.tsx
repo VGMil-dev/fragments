@@ -81,9 +81,9 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/review");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "linked-proposal", version: 1, proposal: { title: "Navegación con Expo" }, assignmentVersionId: mission.id,
-        assignmentContext: { assignmentVersionId: mission.id, mentorContext: { version: 7, config: { theme: "Navegación" } } } },
+        assignmentContext: { assignmentVersionId: mission.id, requiredSkills: ["Navegación"], mentorContext: { version: 7, config: { theme: "Navegación" } } } },
       { id: "stale-proposal", version: 1, proposal: { title: "Sin contexto" }, assignmentVersionId: "old-mission",
-        assignmentContext: { assignmentVersionId: "other-mission", mentorContext: { version: 1, config: { theme: "Otro" } } } },
+        assignmentContext: { assignmentVersionId: "other-mission", requiredSkills: ["Otra"], mentorContext: { version: 1, config: { theme: "Otro" } } } },
     ] });
 
     await act(async () => root?.render(<App />));
@@ -92,11 +92,11 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=review-linked-proposals]")?.textContent).toBe("linked-proposal:Navegación con Expo");
   });
 
-  it("recovers required skills from the proposal's pinned context without treating optional requirements as required", async () => {
+  it("recovers structured required skills from the proposal's pinned context", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "linked-proposal", version: 2, proposal: { title: "Navegación accesible" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
-        assignmentContext: { assignmentVersionId: "mission-v1", mentorContext: { version: 7, config: { requirements: ["Habilidad requerida: Navegación", "Habilidad optativa: Accesibilidad", "Restricción de aula"] } } } },
+        assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: ["Navegación"], mentorContext: { version: 7, config: { requirements: ["Habilidad optativa: Accesibilidad", "Restricción de aula"] } } } },
     ] });
 
     await act(async () => root?.render(<App />));
@@ -110,7 +110,7 @@ describe("student mission to Mentor flow", () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
       { id: "stale-context-proposal", version: 2, proposal: { title: "Contexto desactualizado" }, assignmentVersionId: "mission-v1", updatedAt: "2026-11-22T00:00:00.000Z",
-        assignmentContext: { assignmentVersionId: "mission-v2", mentorContext: { version: 8, config: { requirements: ["Habilidad requerida: No debe mostrarse"] } } } },
+        assignmentContext: { assignmentVersionId: "mission-v2", requiredSkills: ["No debe mostrarse"], mentorContext: { version: 8, config: { requirements: [] } } } },
     ] });
 
     await act(async () => root?.render(<App />));

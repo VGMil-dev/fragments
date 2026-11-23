@@ -42,6 +42,7 @@ const linkedProposal = {
   assignmentVersionId: "assignment-version-1",
   assignmentContext: {
     assignmentVersionId: "assignment-version-1",
+    requiredSkills: ["Navegación con Expo"],
     mentorContext: {
       version: 4,
       publishedAt: "2026-11-03T12:00:00.000Z",

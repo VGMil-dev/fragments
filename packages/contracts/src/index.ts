@@ -464,7 +464,7 @@ export const ProposalDraftResponseSchema = z.object({
   version: z.number().int().min(1),
   proposal: ProposalDraftFieldsSchema,
   assignmentVersionId: identifier.nullable().optional(),
-  assignmentContext: z.object({ assignmentVersionId: identifier, mentorContext: MentorEvaluationContextSchema }).strict().nullable().optional(),
+  assignmentContext: z.object({ assignmentVersionId: identifier, requiredSkills: z.array(classroomText(100)).max(20), mentorContext: MentorEvaluationContextSchema }).strict().nullable().optional(),
   updatedAt: z.iso.datetime(),
 }).strict();
 export const OwnedProposalsResponseSchema = z.array(ProposalDraftResponseSchema).max(200);

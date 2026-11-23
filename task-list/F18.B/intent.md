@@ -35,6 +35,13 @@ Contrato, pruebas unitarias/integración con fakes, typecheck/lint/build, aislam
 
 El contexto de Mentor debe conservar el snapshot académico completo de la versión publicada: objetivos, habilidades obligatorias y optativas, además de todos los requisitos de F11. Ningún criterio puede truncarse silenciosamente. La configuración editable F11 conserva su límite original; el límite ampliado se aplica únicamente al contexto efectivo de evaluación.
 
+## Incremento — transportar habilidades obligatorias como contexto estructurado
+
+- Problema: al recuperar una propuesta, el cliente identifica habilidades obligatorias buscando un prefijo de texto dentro de los requisitos de Mentor. Una etiqueta traducida o reformulada podría ocultar una obligación aunque el snapshot publicado siga íntegro.
+- Objetivo: exponer en `assignmentContext` los nombres de habilidades requeridas que proceden del snapshot inmutable y usar esa propiedad tipada al recuperar Mentor.
+- No objetivos: cambiar la evaluación, rúbricas, asignaciones, persistencia o autorización; introducir migraciones; alterar el texto enviado a Mentor.
+- Owner: PLANNER como arquitecto de contrato compartido y API; pruebas UI/API se mantienen en sus superficies respectivas.
+
 ## Incremento de continuidad — recorrido misión → Mentor
 
 - Añadir una regresión PostgreSQL aislada que publique una misión v1, inicie y recupere una propuesta ligada a esa versión, publique v2 y compruebe que el borrador/evaluación fake conserva la misión y contexto originales.

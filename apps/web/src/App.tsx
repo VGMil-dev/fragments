@@ -38,14 +38,11 @@ import "./styles/teacher-workspace.css";
 
 const studentApi = createStudentApi(createApiClient(), createApiClient({ timeoutMs: 40_000 }));
 const trainerApi = createTrainerApi();
-const REQUIRED_SKILL_REQUIREMENT_PREFIX = "Habilidad requerida: ";
 
 function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): string[] {
   const context = proposal.assignmentContext;
   if (!proposal.assignmentVersionId || context?.assignmentVersionId !== proposal.assignmentVersionId) return [];
-  return context.mentorContext.config.requirements.flatMap((requirement) => requirement.startsWith(REQUIRED_SKILL_REQUIREMENT_PREFIX)
-    ? [requirement.slice(REQUIRED_SKILL_REQUIREMENT_PREFIX.length).trim()]
-    : []);
+  return context.requiredSkills;
 }
 
 function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {

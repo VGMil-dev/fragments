@@ -138,7 +138,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(deniedDraft).toMatchObject({ status: 404, body: { error: { code: "ASSIGNMENT_UNAVAILABLE" } } });
       const createdDraft = await request("/api/me/proposals/drafts", "student", "POST", { proposal, assignmentVersionId: version.id });
       expect(createdDraft.status).toBe(201);
-      expect(createdDraft.body.data).toMatchObject({ assignmentVersionId: version.id, assignmentContext: { assignmentVersionId: version.id, mentorContext: { config: { theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) } } } });
+      expect(createdDraft.body.data).toMatchObject({ assignmentVersionId: version.id, assignmentContext: { assignmentVersionId: version.id, requiredSkills: ["Navegación"], mentorContext: { config: { theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) } } } });
       const pinnedContextVersion = createdDraft.body.data!.assignmentContext.mentorContext.version;
 
       const edit = await request(`${basePath}/${created.body.data!.id}/draft`, "teacher", "PATCH", {
@@ -150,7 +150,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       await db.classroom.update({ where: { id: classroomId }, data: { subject: "Diseño de interfaces" } });
       const owned = await request("/api/me/proposals", "student");
       expect(owned.status).toBe(200);
-      expect(owned.body.data).toMatchObject([{ id: createdDraft.body.data!.id, assignmentVersionId: version.id, assignmentContext: { mentorContext: { config: { subject: "Programación móvil", theme: "Misión HTTP v1" } } } }]);
+      expect(owned.body.data).toMatchObject([{ id: createdDraft.body.data!.id, assignmentVersionId: version.id, assignmentContext: { requiredSkills: ["Navegación"], mentorContext: { config: { subject: "Programación móvil", theme: "Misión HTTP v1" } } } }]);
 
       const evaluation = await request(`/api/proposals/${createdDraft.body.data!.id}/review`, "student", "POST");
       expect(evaluation.status).toBe(200);
@@ -215,6 +215,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect(recovered?.assignmentContext?.mentorContext.config).toMatchObject({
       subject: "Programación móvil", theme: "Misión v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]),
     });
+    expect(recovered?.assignmentContext?.requiredSkills).toEqual(["Navegación"]);
     expect(recovered?.assignmentContext?.mentorContext.config.requirements).not.toContain("Habilidad optativa: Accesibilidad");
 
     const fake = createLocalMentorEvaluator();
