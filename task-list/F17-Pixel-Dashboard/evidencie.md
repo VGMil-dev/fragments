@@ -26,3 +26,10 @@ Release F14 `v0.5.39`, aplicada con imagen/SHA `e202ec6302b9f35727673e2c6f34a74b
 - Zoom al 200 %, lector de pantalla y contraste formal: **NO COMPROBADOS**.
 - Validez de datos no se reconsultó por API; la evidencia cubre el render y la navegación observados.
 - Referencia visual candidata, pendiente de revisión del propietario. Sesión preservada; no hubo escrituras.
+
+## Incremento — aulas reales en el Dashboard · 2026-11-23
+
+- Renderiza nombre, materia y grupo de las aulas que ya entrega el DTO, dentro de la tarjeta «En tus aulas». No añade endpoint, estado, escritura ni métrica.
+- Commit de implementación `fd5050aca6c976cc06d946397e57ba854ae48661` (`feat(F17): muestra aulas reales en dashboard`), sobre `d5d25527b67e9c4a3ed799154f76c187e351ece5`.
+- Prueba focal `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx`: **5/5 PASS**. Typecheck y `git diff --check`: PASS; worktree limpio tras el commit.
+- PR, CI, Ego Lite y release F14: pendientes. No declarar validación visual ni despliegue.
