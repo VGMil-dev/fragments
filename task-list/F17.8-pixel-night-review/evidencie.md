@@ -16,7 +16,14 @@
 
 ## Estado de integración y QA
 
-- PR, CI, release F14, producción y Ego Lite post-release: **PENDIENTES**.
+- PR [#188](https://github.com/VGMil-dev/fragments/pull/188) integrada por merge normal como `82e36a1c0950414b00b73f3048d5b8d943b4e83c`; CI run `45183480021` **PASS**.
+- Tag anotada `v0.5.41`, objeto `67bdd10db132b9271ffb6211459ba34a86fdd6d5`, apunta al merge exacto.
+- F14 run `45184019050` **SUCCESS** (`verify-build`, `attest-package`, `publish-approved-release`).
+- Producción verificada: `/health` HTTP 200, `ok`, `database=ready`; bundle `/assets/index-DLIIdatJ.js` contiene `v0.5.41` y `82e36a1`.
+- Ego Lite autenticado, `/student/review`: viewport emulados 320/390/768/1024/1440 sin overflow horizontal; pantalla de formulario vacía cargó con estado final, sin someter formulario ni ejecutar evaluación. Teclado: foco visible sólido de 3 px, token lima `#D4FF24`; `prefers-reduced-motion: reduce` activo.
+- Capturas Ego Lite PNG auténticas locales: `C:\Users\vgmil\ego\pixel-night-review-v041-1440.png` SHA-256 `63CBBEA02DC096D34237B090E0CFB6199401495DC9ED88FBC45ED1C34F662E55`; `C:\Users\vgmil\ego\pixel-night-review-v041-390.png` SHA-256 `AF784287E0BC112117724F776FD5D0C711C8E32E3BC6F0827A67DB64A030CE08`. Se conservan localmente por ser capturas autenticadas.
+- El exit code final de `fragments-release-apply.service` queda **NO COMPROBADO** por la limitación de lectura del socket Docker. La aplicación del release sí queda verificada por la versión pública exacta y la pantalla autenticada.
+- PR, CI, F14, producción pública y QA Ego Lite post-release: **COMPLETADOS**.
 - UX-12 carece de maqueta canónica verificable; el candidato visual requiere revisión propietaria.
-- Responsive, teclado/foco, zoom, contraste, lector de pantalla y movimiento reducido en Ego Lite: **NO COMPROBADOS en esta rama**.
+- Zoom real al 200 %, contraste formal y lector de pantalla: **NO COMPROBADOS**.
 - No se iniciaron evaluaciones IA ni se realizaron escrituras académicas.
