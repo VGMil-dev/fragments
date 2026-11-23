@@ -353,5 +353,6 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Fix: la selección de contexto en Mentor reutiliza `proposalMissionContext`. Si el contexto no valida, además se pasa a Mentor una proyección de la propuesta sin `assignmentContext`; las propuestas guardadas reciben el mismo saneamiento. La versión opaca de la misión y la identidad/borrador de la propuesta se conservan.
 - Regresión comprueba que el mismatch no entrega a Mentor el tema, rúbrica, habilidad requerida ni contexto de la propuesta activa/lista guardada; contexto queda en error y habilidades quedan vacías.
 - Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 35/35 PASS. `pnpm --filter @fragments/web typecheck` PASS; `git diff --check` PASS.
-- Estado final: sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA. Commit local pendiente de registrar.
+- Commit local `20c011e4125b86550d54d97e8da9c1e0b8e28184` en `codex/f18b-next-ui`; sin push ni despliegue.
+- Estado final: sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA.
 - Sin cambios de contratos/API/rutas/DB; sin producción ni proveedores IA.
