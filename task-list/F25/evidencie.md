@@ -170,6 +170,7 @@ Este oráculo mejora los criterios estáticos contra los commits exactos, pero n
 - `auditSemanticCorpus` y su CLI ahora exponen `evidenceInventory` por caso: metadata/reference disponibles; output Review ausente, sintético o presente no verificado; `inputDigest` solo por formato; snapshot disponible para el commit o mismatched; manifest ausente/presente no verificado. El resumen entrega conteos, no contenido de outputs o archivos. No llama modelos ni servicios.
 - `node evals/scripts/audit-semantic-corpus.mjs`: estado `BLOCKED`; A/B/C tienen metadata/reference 3/3, outputs ausentes 3/3, inputDigest ausente 3/3, snapshots locales ausentes 3/3 y manifest `MISSING`. `qualityComparison=NOT_PERFORMED`, `scoreComputed=false`.
 - TDD: primero fallaron los dos tests nuevos por `evidenceInventory` inexistente; tras la implementación suite focal `audit-semantic-corpus.test.mjs` 10/10 PASS. Suite offline F25 (compare, audit, fake provider, referencias locales) 27/27 PASS; `git diff --check` PASS.
+- Commit de implementación: `3c3212b54fcd8643cba4be92e01d1611525028b9` (`feat(F25): inventaría evidencia local`).
 - Los estados indican disponibilidad/formato, no autenticidad del proveedor, autorización criptográfica del export, validez semántica de citas ni calidad de puntuación. Calidad Mentor/Review permanece **NO COMPROBADA**; faltan outputs completos por SHA A/B/C, snapshots/manifest autorizados y presupuesto/proveedor verificables.
 
 ## Validador estructural de citas contra snapshot local — 2026-11-23
