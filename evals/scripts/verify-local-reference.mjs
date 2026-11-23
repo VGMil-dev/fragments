@@ -116,7 +116,7 @@ export function auditReferenceProgression(cases) {
   if (items.length < 2) blockers.push("insufficient_cases");
 
   const firstChecks = Array.isArray(items[0]?.checks) ? items[0].checks : [];
-  const behaviorIds = firstChecks.map((check) => check.behaviorId).sort();
+  const behaviorIds = firstChecks.map((check) => check?.behaviorId).sort();
   if (behaviorIds.length === 0 || behaviorIds.some((id) => typeof id !== "string" || !id.trim())
     || new Set(behaviorIds).size !== behaviorIds.length) {
     blockers.push("invalid_behavior_ids");
@@ -198,8 +198,13 @@ export function verifyLocalReferenceCorpus({ repoPath, cases }) {
   const auditedCases = inputCases.map((item) => verifyCase(repoPath, item));
   const referenceProgression = auditReferenceProgression(auditedCases);
   const blockedCases = auditedCases.filter((item) => item.status === "BLOCKED" || item.status === "REFERENCE_MISMATCH");
+  const status = blockedCases.length > 0 || referenceProgression.status === "BLOCKED"
+    ? "BLOCKED"
+    : referenceProgression.status === "REFERENCE_PROGRESSION_MISMATCH"
+      ? "REFERENCE_PROGRESSION_MISMATCH"
+      : auditedCases.length > 0 ? "REFERENCE_MARKERS_MATCH" : "BLOCKED";
   return {
-    status: auditedCases.length > 0 && blockedCases.length === 0 ? "REFERENCE_MARKERS_MATCH" : "BLOCKED",
+    status,
     referenceSource: "LOCAL_GIT_COMMIT_OBJECTS",
     referenceInterpretation: "FIXTURE_METADATA_CHECKED_AGAINST_STATIC_SOURCE_MARKERS",
     semanticValidity: "NOT_VALIDATED",

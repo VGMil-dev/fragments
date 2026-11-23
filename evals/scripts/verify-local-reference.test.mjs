@@ -50,6 +50,35 @@ test("identifica regresión de marcador entre referencias verificadas", () => {
   assert.equal(result.semanticValidity, "NOT_VALIDATED");
 });
 
+test("bloquea el estado global si los IDs de referencia cambian entre casos", () => {
+  const repo = fixtureRepo();
+  try {
+    const result = verifyLocalReferenceCorpus({
+      repoPath: repo.root,
+      cases: [
+        { label: "A", commitSha: repo.sha, behaviorReference: { required_validation: true } },
+        { label: "B", commitSha: repo.sha, behaviorReference: { name_search: true } },
+      ],
+    });
+
+    assert.deepEqual(result.cases.map((item) => item.status), ["REFERENCE_MARKERS_MATCH", "REFERENCE_MARKERS_MATCH"]);
+    assert.equal(result.referenceProgression.status, "BLOCKED");
+    assert.equal(result.status, "BLOCKED");
+  } finally {
+    rmSync(repo.root, { recursive: true, force: true });
+  }
+});
+
+test("bloquea checks nulos sin lanzar una excepción", () => {
+  const result = auditReferenceProgression([
+    { label: "A", status: "REFERENCE_MARKERS_MATCH", checks: [null] },
+    { label: "B", status: "REFERENCE_MARKERS_MATCH", checks: [null] },
+  ]);
+
+  assert.equal(result.status, "BLOCKED");
+  assert.ok(result.blockers.includes("invalid_behavior_ids"));
+});
+
 function fixtureRepo() {
   const root = mkdtempSync(join(tmpdir(), "fragments-reference-audit-"));
   execFileSync("git", ["init", "--quiet", root]);
@@ -79,15 +108,16 @@ test("verifica marcadores de referencia en el objeto Git local sin ejecutar fuen
   try {
     const result = verifyLocalReferenceCorpus({
       repoPath: repo.root,
-      cases: [{
-        label: "fixture-machinery-only",
+      cases: ["A", "B"].map((label) => ({
+        label,
         commitSha: repo.sha,
         behaviorReference: { required_validation: true, name_search: true, recovered_status: true },
-      }],
+      })),
     });
 
     assert.equal(result.status, "REFERENCE_MARKERS_MATCH");
     assert.deepEqual(result.cases[0].checks.map((check) => check.status), ["MATCH", "MATCH", "MATCH"]);
+    assert.equal(result.referenceProgression.status, "REFERENCE_PROGRESSION_MATCH");
     assert.equal(result.semanticValidity, "NOT_VALIDATED");
     assert.equal(result.execution, "SOURCE_NOT_EXECUTED");
   } finally {
