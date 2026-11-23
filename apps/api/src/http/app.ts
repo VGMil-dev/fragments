@@ -134,6 +134,8 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;
     if (await assignmentHandler(request, response) === "handled") return;
+    // Review has a teacher classroom route; dispatch it before Classroom Studio's prefix catch-all.
+    if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     if (classroomHandler && await classroomHandler(request, response) === "handled") return;
     if (await technologyCatalogHandler(request, response) === "handled") return;
     response.setHeader("content-type", "application/json; charset=utf-8");
@@ -153,7 +155,6 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (mentorControlHandler && await mentorControlHandler(request, response) === "handled") return;
     if (inspectorHandler && await inspectorHandler(request, response) === "handled") return;
     if (trainerHandler && await trainerHandler(request, response) === "handled") return;
-    if (reviewHandler && await reviewHandler(request, response) === "handled") return;
     if (await adminClassroomRequestsHandler(request, response) === "handled") return;
     if (await adminQueueSummaryHandler(request, response) === "handled") return;
     if (await adminAuditLogHandler(request, response) === "handled") return;

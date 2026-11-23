@@ -19,3 +19,4 @@
 - El almacenamiento preserva el snapshot académico y el reintento preserva el mismo vínculo.
 - El formulario omite vínculo por defecto y solo envía `linkedProposalId` al seleccionar la opción.
 - La vista docente distingue estado/score, aula vacía y errores sin exponer campos internos.
+- En el router HTTP compuesto, `GET /api/teacher/classrooms/:classroomId/reviews` se despacha al handler de Review antes del catch-all de Classroom Studio; el test usa el handler montado y no solo la ruta aislada.
