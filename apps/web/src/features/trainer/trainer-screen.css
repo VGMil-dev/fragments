@@ -1,8 +1,16 @@
 .trainer-screen { width: min(100%, 920px); margin: 0 auto 4rem; color: var(--navy); }
-.trainer-heading { padding: clamp(1rem, 3vw, 2rem) 0 1.25rem; }
+.trainer-heading { padding: clamp(.75rem, 2vw, 1.2rem) 0 1rem; }
 .trainer-eyebrow { margin: 0 0 .4rem; color: var(--f16-lime); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
-.trainer-heading h1 { margin: 0; font-size: var(--f16-type-page); letter-spacing: -.045em; line-height: 1.12; }
-.trainer-heading > p:last-child { margin: .35rem 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
+.trainer-heading h1 { margin: 0; font-size: clamp(1.65rem, 3.2vw, var(--f16-type-page)); letter-spacing: -.045em; line-height: 1.12; }
+.trainer-heading > p:last-child { margin: .25rem 0 0; color: var(--muted); font-size: var(--f16-type-body); line-height: 1.5; }
+.trainer-empty-state { max-width: 760px; margin: clamp(.75rem, 2vw, 1.25rem) 0 2rem; padding: clamp(1.25rem, 4vw, 2rem); border: 1px solid var(--f16-border-strong); border-left: 4px solid var(--f16-lime); border-radius: 14px; background: var(--f16-surface, #0D1321); }
+.trainer-empty-state__eyebrow { margin: 0 0 .5rem; color: var(--f16-lime); font-size: .7rem; font-weight: 800; letter-spacing: .13em; }
+.trainer-empty-state h2 { max-width: 26ch; margin: 0; color: var(--f16-text-primary, var(--navy)); font-size: clamp(1.35rem, 2.6vw, var(--f16-type-section)); letter-spacing: -.025em; line-height: 1.2; }
+.trainer-empty-state > p:not(.trainer-empty-state__eyebrow) { max-width: 54ch; margin: .65rem 0 1.2rem; color: var(--muted); font-size: var(--f16-type-body); line-height: 1.55; }
+.trainer-empty-state__action { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: .65rem 1rem; border: 1px solid var(--f16-cobalt); border-radius: 8px; background: var(--f16-cobalt); color: #fff; font-weight: 800; text-decoration: none; }
+.trainer-empty-state__action:hover { filter: brightness(1.12); }
+.trainer-empty-state__action:focus-visible { outline: 3px solid var(--f16-lime); outline-offset: 3px; }
+.trainer-load-state { width: fit-content; margin: .5rem 0 1.5rem; color: var(--muted); }
 .trainer-controls, .trainer-challenge, .trainer-history { border: 1px solid var(--border-soft); border-radius: 18px; background: var(--paper-white, #121C32); box-shadow: 0 10px 28px rgb(21 88 201 / 5%); }
 .trainer-controls { padding: 1.2rem; }
 .trainer-controls label { display: block; margin-bottom: .55rem; font-weight: 750; }

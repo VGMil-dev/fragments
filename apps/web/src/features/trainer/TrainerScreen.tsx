@@ -72,27 +72,38 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
   return (
     <main className="trainer-screen" aria-labelledby="trainer-title">
       <header className="trainer-heading">
-        <p className="trainer-eyebrow">PRACTICA CON TU PROYECTO</p>
-        <h1 id="trainer-title">Trainer</h1>
-        <p>No memorices el reto. Domina tu código.</p>
+        <p className="trainer-eyebrow">LABORATORIO DE PRÁCTICA</p>
+        <h1 id="trainer-title">Entrenamiento</h1>
+        <p>Retos breves basados en las revisiones de tu proyecto.</p>
       </header>
 
-      <section className="trainer-controls" aria-label="Elegir análisis de Review">
-        <label htmlFor="trainer-review">Repositorio analizado</label>
+      {loading ? <p className="trainer-load-state" role="status">Buscando análisis completados…</p> : null}
+
+      {!loading && loadFailed ? <div className="trainer-message" role="alert"><p>{message}</p><button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reintentar</button></div> : null}
+
+      {!loading && !loadFailed && !reviews.length ? (
+        <section className="trainer-empty-state" aria-labelledby="trainer-empty-title">
+          <p className="trainer-empty-state__eyebrow">PRIMER PASO</p>
+          <h2 id="trainer-empty-title">Tu entrenamiento empieza con una revisión</h2>
+          <p>Analiza un commit para practicar con retos basados en evidencia de tu proyecto.</p>
+          <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review</a>
+        </section>
+      ) : null}
+
+      {reviews.length ? <section className="trainer-controls" aria-label="Elegir análisis de Review">
+        <label htmlFor="trainer-review">Revisión activa</label>
         <div className="trainer-controls__row">
-          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); }} disabled={loading || !reviews.length}>
+          <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); }} disabled={loading}>
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
           <button className="trainer-draw" type="button" onClick={() => void draw()} disabled={!selectedReview || drawing}>
             {drawing ? "Preparando reto…" : "🎲 Sortear reto"}
           </button>
         </div>
-        {loading ? <p role="status">Buscando análisis completados…</p> : null}
-        {!loading && !loadFailed && !reviews.length ? <div className="trainer-empty"><p>Primero analiza un repositorio en Review. Aquí aparecerá cuando el análisis esté listo.</p><a href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review</a></div> : null}
         {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
-      </section>
+      </section> : null}
 
-      {message ? <div className="trainer-message" role={loadFailed ? "alert" : "status"}><p>{message}</p>{loadFailed ? <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reintentar</button> : null}</div> : null}
+      {message && !loadFailed ? <p className="trainer-message" role="status">{message}</p> : null}
 
       {challenge ? (
         <article className="trainer-challenge" aria-labelledby="trainer-challenge-title">
@@ -119,10 +130,10 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         </article>
       ) : null}
 
-      <section className="trainer-history" aria-labelledby="trainer-history-title">
+      {reviews.length ? <section className="trainer-history" aria-labelledby="trainer-history-title">
         <div className="trainer-history__heading"><div><p className="trainer-eyebrow">TU RECORRIDO</p><h2 id="trainer-history-title">Historial de práctica</h2></div><span>{history.length} {history.length === 1 ? "intento" : "intentos"}</span></div>
         {history.length ? <ol className="trainer-history__list">{history.map((item) => <li key={item.id}><span><strong>{item.feature}</strong><small>{new Date(item.attemptedAt).toLocaleString("es-CO")} · {item.hintsUsed} pistas consultadas</small></span><span className="trainer-history__status">{statusLabels[item.status]}</span></li>)}</ol> : <p className="trainer-empty">Tus prácticas quedarán guardadas aquí en este navegador.</p>}
-      </section>
+      </section> : null}
     </main>
   );
 }
