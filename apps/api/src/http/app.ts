@@ -31,7 +31,9 @@ import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/adm
 import { createAdminReviewEventsHttp } from "../features/admin-review-events/http.js";
 import type { ReviewOperationalEvent, StoredReviewOperationalEvent } from "../features/review/review-errors.js";
 import { createAdminMentorEventsHttp } from "../features/admin-mentor-events/http.js";
+import { createAdminTrainerEventsHttp } from "../features/admin-trainer-events/http.js";
 import type { MentorOperationalEvent } from "../features/mentor/operational-events.js";
+import type { TrainerOperationalEvent } from "../features/trainer/operational-events.js";
 import { createAdminTeachersHttp } from "../features/admin-teachers/http.js";
 import { createAdminTeachersRepository } from "../features/admin-teachers/repository.js";
 import { createAdminTeachersService } from "../features/admin-teachers/service.js";
@@ -43,6 +45,7 @@ type AdminQueueAuditWrite = (event: AdminQueueAuditEvent) => void | Promise<void
 type MaybePromise<T> = T | Promise<T>;
 type ReviewOperationalLog = { record(event: ReviewOperationalEvent): void; list(limit?: number): MaybePromise<StoredReviewOperationalEvent[]> };
 type MentorOperationalLog = { record(event: MentorOperationalEvent): void; list(limit?: number): MaybePromise<MentorOperationalEvent[]> };
+type TrainerOperationalLog = { record(event: TrainerOperationalEvent): void; list(limit?: number): MaybePromise<TrainerOperationalEvent[]> };
 type HttpOptions = {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
@@ -56,6 +59,7 @@ type HttpOptions = {
   adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
   reviewOperationalLog?: ReviewOperationalLog;
   mentorOperationalLog?: MentorOperationalLog;
+  trainerOperationalLog?: TrainerOperationalLog;
 };
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
@@ -94,6 +98,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
     write: (event) => adminAuditLog.write(event),
   }) : undefined;
+  const adminTrainerEventsHandler = options.trainerOperationalLog ? createAdminTrainerEventsHttp(options.trainerOperationalLog, async (request) => options.auth ? options.auth.adminCheck(request) : null, { getActorId: async (request) => options.auth ? options.auth.userId(request) : null, write: (event) => adminAuditLog.write(event) }) : undefined;
   const adminTeachersHandler = createAdminTeachersHttp(
     createAdminTeachersService(createAdminTeachersRepository(database)),
     async (request) => options.auth ? options.auth.adminCheck(request) : null,
@@ -118,7 +123,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
   const mentorControlHandler = options.mentor ? createMentorControlHttp(database, options.auth) : undefined;
   const inspectorHandler = options.inspector ? createInspectorHttp(options.inspector, options.auth) : undefined;
   const reviewHandler = options.review ? createReviewHttp(options.review) : undefined;
-  const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession, async (request) => (await options.auth?.student(request))?.id ?? null) : undefined;
+  const trainerHandler = options.trainer ? createTrainerHttp(options.trainer.service, options.trainer.store.ensureSession, async (request) => (await options.auth?.student(request))?.id ?? null, options.trainerOperationalLog ? (event) => options.trainerOperationalLog?.record(event) : undefined) : undefined;
   return async (request: IncomingMessage, response: ServerResponse) => {
     requestDiagnostics.observe(request, response);
     const pathname = new URL(request.url ?? "/", "http://fragments.local").pathname;
@@ -162,6 +167,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (await adminAuditLogHandler(request, response) === "handled") return;
     if (adminReviewEventsHandler && await adminReviewEventsHandler(request, response) === "handled") return;
     if (adminMentorEventsHandler && await adminMentorEventsHandler(request, response) === "handled") return;
+    if (adminTrainerEventsHandler && await adminTrainerEventsHandler(request, response) === "handled") return;
     if (await adminTeachersHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });

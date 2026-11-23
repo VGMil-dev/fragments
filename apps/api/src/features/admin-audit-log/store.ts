@@ -3,7 +3,7 @@ export const ADMIN_AUDIT_LOG_MAX_PAGE_SIZE = 50;
 
 export type AdminAuditSourceEvent = {
   requestId: string;
-  event: "admin.classroom_requests.read" | "admin.queue_summary.read" | "admin.audit_log.read" | "admin.teachers.list" | "admin.review_events.read" | "admin.mentor_events.read";
+  event: "admin.classroom_requests.read" | "admin.queue_summary.read" | "admin.audit_log.read" | "admin.teachers.list" | "admin.review_events.read" | "admin.mentor_events.read" | "admin.trainer_events.read";
   occurredAt: string;
   adminActorId: string;
 };
@@ -25,6 +25,7 @@ const allowedEvents = new Set<AdminAuditSourceEvent["event"]>([
   "admin.teachers.list",
   "admin.review_events.read",
   "admin.mentor_events.read",
+  "admin.trainer_events.read",
 ]);
 
 /**

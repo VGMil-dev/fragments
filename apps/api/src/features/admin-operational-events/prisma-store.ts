@@ -3,15 +3,16 @@ import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import type { MentorOperationalEvent } from "../mentor/operational-events.js";
 import { safeOperationalEvent } from "../mentor/operational-events.js";
 import { projectReviewOperationalEvent, type ReviewOperationalEvent, type StoredReviewOperationalEvent } from "../review/review-errors.js";
+import { projectTrainerOperationalEvent, type TrainerOperationalEvent } from "../trainer/operational-events.js";
 
 export const ADMIN_OPERATIONAL_EVENT_RETENTION_DAYS = 30;
 export const ADMIN_OPERATIONAL_EVENT_MAX_ROWS = 10_000;
 const PAGE_MAX = 50;
 const retentionQueues = new WeakMap<object, Promise<void>>();
 
-type Source = "mentor" | "review";
+type Source = "mentor" | "review" | "trainer";
 type Database = Pick<PrismaClient, "operationalEvent">;
-type StoredEvent = MentorOperationalEvent | StoredReviewOperationalEvent;
+type StoredEvent = MentorOperationalEvent | StoredReviewOperationalEvent | TrainerOperationalEvent;
 type Projector<T extends StoredEvent> = (input: unknown) => T | null;
 
 /** Persists only domain-projected events; write failures never escape into academic work. */
@@ -101,6 +102,15 @@ export function createPrismaReviewOperationalLog(database: Database, options: { 
     project: (input) => input && typeof input === "object"
       ? projectReviewOperationalEvent(input as ReviewOperationalEvent)
       : null,
+    ...options,
+  });
+}
+
+export function createPrismaTrainerOperationalLog(database: Database, options: { now?: () => Date; id?: () => string } = {}) {
+  return createPrismaAdminOperationalLog<TrainerOperationalEvent>({
+    database,
+    source: "trainer",
+    project: projectTrainerOperationalEvent,
     ...options,
   });
 }

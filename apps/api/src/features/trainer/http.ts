@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import { TrainerError, type createTrainerService } from "./service.js";
 import { TrainerAttemptRequestSchema, TrainerChallengeSchema, TrainerHistorySchema, TrainerReviewSchema } from "./schemas.js";
+import { writeTrainerOperationalEvent, type TrainerOperationalEvent } from "./operational-events.js";
 
 type TrainerService = ReturnType<typeof createTrainerService>;
 type RouteResult = "handled" | "unhandled";
@@ -42,7 +43,7 @@ async function session(request: IncomingMessage, response: ServerResponse, ensur
   return hash;
 }
 
-export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => Promise<boolean>, resolveStudentId?: (request: IncomingMessage) => Promise<string | null>) {
+export function createTrainerHttp(service: TrainerService, ensureSession: (hash: string, now: Date) => Promise<boolean>, resolveStudentId?: (request: IncomingMessage) => Promise<string | null>, logEvent: (event: TrainerOperationalEvent) => void = writeTrainerOperationalEvent) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<RouteResult> => {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     if (!url.pathname.startsWith("/api/trainer/")) return "unhandled";
@@ -52,6 +53,7 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
     const sessionHash = studentId ? createHash("sha256").update(browserSessionHash).update("\0").update(studentId).digest("hex") : browserSessionHash;
     if (studentId) await ensureSession(sessionHash, new Date());
     const ownsReview = async (reviewId: string) => !resolveStudentId || Boolean(studentId && (await service.listReviews(studentId)).some((review) => review.id === reviewId));
+    let attemptStartedAt: number | undefined;
     try {
       if (request.method === "GET" && url.pathname === "/api/trainer/reviews") {
         const reviews = z.array(TrainerReviewSchema).max(100).parse(await service.listReviews(studentId ?? undefined));
@@ -70,9 +72,11 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
         json(response, 200, { ok: true, data }); return "handled";
       }
       if (request.method === "POST" && url.pathname === "/api/trainer/attempts") {
+        attemptStartedAt = Date.now();
         const input = TrainerAttemptRequestSchema.parse(await body(request));
         if (!await ownsReview(input.reviewId)) { error(response, 404, "REVIEW_NOT_FOUND", "No se encontró el análisis solicitado."); return "handled"; }
         const result = await service.record({ ...input, sessionHash });
+        try { logEvent({ event: "trainer.attempt.finished", stage: "attempt_record", result: "success", error_code: "none", duration_ms: Date.now() - attemptStartedAt, occurredAt: new Date().toISOString() }); } catch { /* Logs do not affect practice. */ }
         json(response, 201, { ok: true, data: TrainerHistorySchema.element.parse(result) }); return "handled";
       }
       error(response, 404, "NOT_FOUND", "No se encontró la ruta."); return "handled";
@@ -82,6 +86,9 @@ export function createTrainerHttp(service: TrainerService, ensureSession: (hash:
         return "handled";
       }
       const status = statusCode(cause);
+      if (request.method === "POST" && url.pathname === "/api/trainer/attempts" && !(cause instanceof z.ZodError)) {
+        try { logEvent({ event: "trainer.attempt.failed", stage: "attempt_record", result: "failure", error_code: "attempt_failed", duration_ms: attemptStartedAt === undefined ? 0 : Date.now() - attemptStartedAt, occurredAt: new Date().toISOString() }); } catch { /* Logs do not affect practice. */ }
+      }
       error(response, status, cause instanceof TrainerError ? cause.code : "TRAINER_UNAVAILABLE", cause instanceof TrainerError ? cause.message : "No se pudo completar la solicitud de práctica.");
       return "handled";
     }

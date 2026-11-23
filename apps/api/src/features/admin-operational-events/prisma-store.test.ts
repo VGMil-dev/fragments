@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPrismaMentorOperationalLog, createPrismaReviewOperationalLog } from "./prisma-store.js";
+import { createPrismaMentorOperationalLog, createPrismaReviewOperationalLog, createPrismaTrainerOperationalLog } from "./prisma-store.js";
 
 const mentorEvent = {
   event: "mentor_evaluation_completed", stage: "evaluation", result: "success", error_code: "none", duration_ms: 321,
@@ -10,6 +10,10 @@ const reviewEvent = {
   stage: "ai_dispatch", errorCode: "AI_GATEWAY_RATE_LIMITED", durationMs: 54, attempt: 1, finalStatus: "retry_wait",
   occurredAt: "2026-11-23T08:00:00.000Z",
 };
+const trainerEvent = {
+  event: "trainer.attempt.finished", stage: "attempt_record", result: "success", error_code: "none", duration_ms: 87,
+  occurredAt: "2026-11-23T08:00:00.000Z",
+} as const;
 
 function fakeDatabase() {
   const rows: Array<{ id: string; source: string; occurredAt: Date; eventJson: unknown; recordedAt: Date }> = [];
@@ -59,6 +63,17 @@ describe("Prisma admin operational logs", () => {
       { ...reviewEvent, reviewId: null, jobId: null },
     ]);
     expect(events[0]).not.toHaveProperty("privatePrompt");
+  });
+
+  it("persists and retrieves only the redacted Trainer attempt outcome", async () => {
+    const { database, operationalEvent } = fakeDatabase();
+    const log = createPrismaTrainerOperationalLog(database, { now: () => new Date("2026-11-23T08:00:01.000Z"), id: () => "event-trainer-1" });
+    log.record({ ...trainerEvent, studentId: "private-student", sessionHash: "secret", challengeTitle: "private challenge" });
+    await vi.waitFor(() => expect(operationalEvent.create).toHaveBeenCalledOnce());
+
+    expect(operationalEvent.create.mock.calls[0]![0].data.source).toBe("trainer");
+    expect(operationalEvent.create.mock.calls[0]![0].data.eventJson).toEqual(trainerEvent);
+    await expect(log.list()).resolves.toEqual([trainerEvent]);
   });
 
   it("applies bounded page size and removes expired rows without throwing on sink errors", async () => {
