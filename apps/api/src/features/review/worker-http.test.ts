@@ -7,6 +7,8 @@ import { createReviewHttp } from "./http.js";
 import { createReviewService, digestSnapshot, sha256 } from "./review.service.js";
 import { createPrismaReviewStore } from "./prisma-store.js";
 import { createReviewWorker } from "./worker.js";
+import { createReviewOperationalLog } from "./operational-log.js";
+import { createAdminReviewEventsHttp } from "../admin-review-events/http.js";
 
 const commitSha = "a".repeat(40);
 const fileSha = "b".repeat(40);
@@ -20,6 +22,11 @@ const databases: PrismaClient[] = [];
 beforeEach(async () => {
   if (!databaseUrl) return;
   const database = openDatabase(databaseUrl); await database.$connect();
+  const [current] = await database.$queryRaw<Array<{ databaseName: string }>>`SELECT current_database() AS "databaseName"`;
+  if (current?.databaseName !== "fragments_test") {
+    await database.$disconnect();
+    throw new Error("Review worker integration tests require current_database() = fragments_test.");
+  }
   await database.submission.deleteMany({ where: { kind: "review" } });
   await database.job.deleteMany({ where: { type: "review" } });
   await database.$disconnect();
@@ -92,6 +99,59 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
     expect(await worker.runOnce()).toBe(true);
     expect(await f.store.getJob(job.id)).toMatchObject({ id: job.id, status: "completed", record: { id: job.id, analysis: { modelId: "fake:offline-v1" } } });
     expect(await worker.runOnce()).toBe(false);
+  });
+
+  it("connects a completed fake worker review to the audited admin operational events endpoint", async () => {
+    const f = await fixture();
+    const job = await f.store.enqueue({ request: f.request, context: f.context });
+    const operationalLog = createReviewOperationalLog();
+    const worker = createReviewWorker({
+      store: f.store,
+      service: f.service,
+      workerId: "worker-operational-events-test",
+      logEvent: (event) => operationalLog.record(event),
+    });
+    expect(await worker.runOnce()).toBe(true);
+    expect(await f.store.getJob(job.id)).toMatchObject({ status: "completed" });
+
+    const auditEvents: Array<Record<string, unknown>> = [];
+    const order: string[] = [];
+    const list = operationalLog.list;
+    vi.spyOn(operationalLog, "list").mockImplementation((limit) => {
+      order.push("read");
+      return list(limit);
+    });
+    const handler = createAdminReviewEventsHttp(operationalLog, async (incoming) => incoming.headers["x-admin-role"] === "admin", {
+      getActorId: async (incoming) => incoming.headers["x-admin-role"] === "admin" ? "admin-test-actor" : null,
+      write: async (event) => { order.push("audit"); auditEvents.push(event); },
+    });
+
+    await serve(async (incoming, response) => {
+      if (await handler(incoming, response) === "unhandled") response.writeHead(404).end();
+    }, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/review-events`, { headers: { "x-admin-role": "admin" } });
+      expect(response.status).toBe(200);
+      const payload = await response.json() as { ok: boolean; data: { events: Array<Record<string, unknown>> } };
+      expect(payload.ok).toBe(true);
+      expect(payload.data.events).toHaveLength(1);
+      expect(payload.data.events[0]).toMatchObject({
+        event: "review.attempt.finished",
+        reviewId: job.id,
+        jobId: job.id,
+        stage: "result_persistence",
+        errorCode: null,
+        attempt: 1,
+        finalStatus: "completed",
+      });
+      expect(Object.keys(payload.data.events[0]!).sort()).toEqual([
+        "attempt", "durationMs", "errorCode", "event", "finalStatus", "jobId", "occurredAt", "reviewId", "stage",
+      ]);
+      expect(JSON.stringify(payload)).not.toMatch(/student|repository|score|prompt|token|email|provider-secret/i);
+    });
+
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]).toMatchObject({ event: "admin.review_events.read", adminActorId: "admin-test-actor" });
+    expect(order).toEqual(["audit", "read"]);
   });
 
   it("accepts one explicit retry for a transient failure and reuses the same idempotent job", async () => {
