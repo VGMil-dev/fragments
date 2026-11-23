@@ -304,6 +304,11 @@ export function MentorScreen({
       default: return false;
     }
   };
+  const stageStatus = (index: number) => index === activeStage
+    ? "Etapa actual"
+    : completedStage(index)
+      ? "Completada"
+      : "Pendiente";
 
   async function copyCoverPrompt() {
     try {
@@ -414,6 +419,8 @@ export function MentorScreen({
 
   async function saveProposal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const saveAndContinue = (event.nativeEvent as SubmitEvent).submitter instanceof HTMLButtonElement
+      && (event.nativeEvent as SubmitEvent).submitter?.dataset.continue === "true";
     setSaveMessage(null);
     setSaveError(null);
     setVersionConflict(false);
@@ -453,6 +460,7 @@ export function MentorScreen({
       setEvaluation(null);
       setSubmission(null);
       setSaveMessage("Borrador guardado. La evaluación está disponible cuando completes los campos requeridos.");
+      if (saveAndContinue && activeStage < 4) setActiveStage((stage) => Math.min(4, stage + 1));
     } catch {
       setVersionConflict(false);
       setSaveError("No pudimos guardar tu propuesta. Revisa la conexión e inténtalo de nuevo.");
@@ -541,17 +549,16 @@ export function MentorScreen({
       </header>
 
       <div className={`mentor-stage-layout${activeStage === 4 ? " mentor-stage-layout--evaluation" : ""}`}>
-      <nav className={`mentor-stage-nav${activeStage === 4 ? " mentor-stage-nav--horizontal" : ""}`} aria-label="Etapas de tu propuesta">
+      <nav className="mentor-stage-nav mentor-stage-nav--horizontal" aria-label="Etapas de tu propuesta">
         <h2><span aria-hidden="true">▱</span> Tu propuesta</h2>
         <ol>
           {MENTOR_STAGES.map((label, index) => <li key={label}>
-            <button className={completedStage(index) ? "is-complete" : ""} type="button" aria-current={index === activeStage ? "step" : undefined} onClick={() => setActiveStage(index)}>
-              <span className="mentor-stage-nav__number" aria-hidden="true">{completedStage(index) ? "✓" : index + 1}</span><span>{label}</span>
+            <button className={completedStage(index) ? "is-complete" : ""} type="button" aria-current={index === activeStage ? "step" : undefined} aria-label={`${label}: ${stageStatus(index)}`} onClick={() => setActiveStage(index)}>
+              <span className="mentor-stage-nav__number" aria-hidden="true">{completedStage(index) ? "✓" : index + 1}</span><span>{label}</span><span className={`mentor-stage-nav__state mentor-stage-nav__state--${index === activeStage ? "current" : completedStage(index) ? "complete" : "pending"}`}>{stageStatus(index)}</span>
             </button>
           </li>)}
         </ol>
-        <label className="mentor-stage-nav__mobile"><span>Etapa</span><select aria-label="Seleccionar etapa de la propuesta" value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}</select></label>
-        <div className="mentor-stage-nav__mobile mentor-stage-nav__controls"><button type="button" disabled={activeStage === 0} onClick={() => setActiveStage((value) => Math.max(0, value - 1))}>Anterior</button><button type="button" disabled={activeStage === MENTOR_STAGES.length - 1} onClick={() => setActiveStage((value) => Math.min(MENTOR_STAGES.length - 1, value + 1))}>Siguiente</button></div>
+        <label className="mentor-stage-nav__mobile"><span>Etapa {activeStage + 1} de {MENTOR_STAGES.length}</span><select aria-label="Seleccionar etapa de la propuesta" value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}</select></label>
       </nav>
       <div className="mentor-stage-content">
 
@@ -767,15 +774,14 @@ export function MentorScreen({
 
 
         {activeStage !== 4 ? <div className="mentor-form__footer">
-          {activeStage === 1
-            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage(0)}><span aria-hidden="true">←</span> Anterior</button>
-
-            : <p>{activeStage === 4 ? "La orientación es formativa; no equivale a aprobación docente." : activeStage === 0 || activeStage === 3 ? "* Campo necesario para evaluar. Guarda los cambios con «Guardar borrador»." : "Guarda los cambios con «Guardar borrador»."}</p>}
+          {activeStage > 0
+            ? <button className="button button--secondary" type="button" onClick={() => setActiveStage((stage) => Math.max(0, stage - 1))}><span aria-hidden="true">←</span> Anterior</button>
+            : <p>{activeStage === 0 || activeStage === 3 ? "* Campo necesario para evaluar. Guarda los cambios con «Guardar borrador»." : "Guarda los cambios con «Guardar borrador»."}</p>}
           <div className="mentor-form__actions">
             <button className="button button--secondary" type="submit" disabled={formBusy}>
               {saving ? "Guardando…" : "Guardar borrador"}
             </button>
-            {activeStage < MENTOR_STAGES.length - 1 ? <button className="button button--primary" type="button" onClick={() => setActiveStage((value) => Math.min(MENTOR_STAGES.length - 1, value + 1))}>Continuar <span aria-hidden="true">→</span></button> : null}
+            {activeStage < 4 ? <button className="button button--primary" type="submit" data-continue="true" disabled={formBusy}>{saving ? "Guardando…" : <>Guardar y continuar <span aria-hidden="true">→</span></>}</button> : null}
           </div>
         </div> : null}
       </form>
