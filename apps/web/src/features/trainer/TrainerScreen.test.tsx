@@ -156,4 +156,66 @@ describe("TrainerScreen", () => {
       container.remove();
     }
   });
+
+  it("continues from a recorded source-grounded challenge to the next real challenge", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const review = { id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-23T10:00:00Z",
+      academicContext: { missionTitle: "Programación Móvil", missionVersion: 2, mentorContextVersion: 3, classroomTitle: "Programación Móvil Terceros", requiredSkills: ["Navegación"] } };
+    const firstChallenge = { id: "challenge-a", reviewId: review.id, projectId: "project-1", commitSha: review.commitSha,
+      feature: "Filtro de tareas", task: "Sigue el flujo del filtro y conserva la lista original.", expectedObservation: "La lista visible cambia y la fuente permanece intacta.",
+      restoration: "Restaura el estado inicial del filtro.", estimatedMinutes: 12, sourcePath: "src/tasks/filter.ts", sourceLines: [12, 24],
+      hints: ["Busca el estado del filtro.", "Revisa dónde se copia la lista.", "Compara el origen y el resultado."], createdAt: "2026-11-23T10:00:00Z" };
+    const nextChallenge = { ...firstChallenge, id: "challenge-b", feature: "Paginación", task: "Sigue la actualización de página sin perder el filtro.", sourcePath: "src/tasks/pagination.ts", sourceLines: [30, 42] };
+    const historyItem = { id: "attempt-1", reviewId: review.id, challengeId: firstChallenge.id, feature: firstChallenge.feature,
+      status: "in_progress" as const, hintsUsed: 1, attemptedAt: "2026-11-23T10:05:00Z" };
+    const draw = vi.fn()
+      .mockResolvedValueOnce({ ok: true, data: { challenge: firstChallenge, category: "new", bankSize: 2 } })
+      .mockResolvedValueOnce({ ok: true, data: { challenge: nextChallenge, category: "pending", bankSize: 2 } });
+    const record = vi.fn().mockResolvedValue({ ok: true, data: historyItem });
+    const api = {
+      reviews: async () => ({ ok: true, data: [review] }),
+      history: async () => ({ ok: true, data: [] }),
+      draw,
+      record,
+    } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      expect(container.textContent).toContain("demo");
+      expect(container.textContent).toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+      expect(container.textContent).toContain("Navegación");
+      expect(container.querySelector('[aria-label="Siguiente paso"]')).toBeNull();
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      expect(draw).toHaveBeenCalledExactlyOnceWith(review.id);
+      expect(container.textContent).toContain(firstChallenge.feature);
+      expect(container.textContent).toContain(firstChallenge.expectedObservation);
+      expect(container.textContent).toContain(`${firstChallenge.sourcePath}:12–24`);
+      expect(container.textContent).toContain(`commit ${review.commitSha.slice(0, 7)}`);
+      expect(container.textContent).not.toContain("Siguiente reto");
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Mostrar pista 1")!.click());
+      expect(container.textContent).toContain("Busca el estado del filtro.");
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "En progreso")!.click());
+      expect(record).toHaveBeenCalledExactlyOnceWith({ reviewId: review.id, challengeId: firstChallenge.id, status: "in_progress", hintsUsed: 1 });
+      expect(container.textContent).toContain("Filtro de tareas");
+      expect(container.textContent).toContain("Historial de práctica");
+      expect(container.textContent).toContain("En progreso");
+      const nextStep = container.querySelector<HTMLElement>('[aria-label="Siguiente paso"]');
+      expect(nextStep?.textContent).toContain("Intento guardado");
+      const nextButton = [...(nextStep?.querySelectorAll("button") ?? [])].find((button) => button.textContent === "Volver a sortear desde este análisis");
+      expect(nextButton).toBeTruthy();
+
+      await act(async () => nextButton?.click());
+      expect(draw).toHaveBeenCalledTimes(2);
+      expect(draw).toHaveBeenNthCalledWith(2, review.id);
+      expect(container.textContent).toContain("Paginación");
+      expect(container.textContent).toContain("src/tasks/pagination.ts:30–42");
+      expect(container.querySelector('[aria-label="Siguiente paso"]')?.textContent).toContain("Registra cómo te fue");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
 });
