@@ -412,3 +412,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - PR [#195](https://github.com/VGMil-dev/fragments/pull/195) merge normal `d5d25527b67e9c4a3ed799154f76c187e351ece5`; CI `45217140767` PASS. F14 run `45217812854` SUCCESS para verify-build, attest-package y publish-approved-release; tag anotada `v0.5.44` sobre el SHA exacto.
 - Producción comprobada sin escritura; Ego Lite abrió Mis aulas, pero no había misiones ni descripciones de habilidades visibles (missionCount 0 y skill disclosure count 0). La representación visual concreta del disclosure queda **NO COMPROBADA**.
 - No se ejecutó Mentor/Review IA real ni se verificó Review productiva vinculada en Trainer. F18.B sigue abierta.
+
+## Ego Lite producción — misión y habilidad visibles · v0.5.46 · 2026-11-23
+
+- Desde la sesión existente Fragments-Estudiante se abrió `/student/classrooms` en modo solo lectura. Al menos una matrícula activa mostró una misión QA publicada v1, contexto Mentor v1 y una habilidad requerida autorizada.
+- El disclosure «Ver descripción» de la habilidad estaba cerrado (`details.open=false`). En otra aula activa visible no se mostraron habilidades autorizadas ni misiones publicadas.
+- La observación confirma presentación productiva de snapshot, versión y habilidad en Mis aulas. No se inició ni guardó una propuesta, no se pulsó «Evaluar propuesta», no se realizaron llamadas IA y no se escribieron datos.
+- No valida el paso de esa misión hasta el formulario Mentor ni la salida/puntuación semántica. Calidad Mentor/Review, Review productiva enlazada en Trainer, Galería e identidad cruzada siguen **NO COMPROBADAS**. Las pestañas y sesiones existentes se conservaron.
