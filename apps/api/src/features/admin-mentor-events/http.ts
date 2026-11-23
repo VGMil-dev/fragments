@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdminAuditSourceEvent } from "../admin-audit-log/store.js";
 import type { MentorOperationalEvent } from "../mentor/operational-events.js";
 
-type Store = { list(limit?: number): MentorOperationalEvent[] };
+type Store = { list(limit?: number): MentorOperationalEvent[] | Promise<MentorOperationalEvent[]> };
 type AdminCheck = (request: IncomingMessage) => Promise<boolean | null>;
 type Audit = {
   getActorId(request: IncomingMessage): Promise<string | null>;
@@ -44,7 +44,7 @@ export function createAdminMentorEventsHttp(store: Store, isAdmin: AdminCheck, a
       return "handled";
     }
 
-    try { sendSuccess(response, { events: store.list(Number(rawLimit)) }); }
+    try { sendSuccess(response, { events: await store.list(Number(rawLimit)) }); }
     catch { send(response, 503, "EVENTS_UNAVAILABLE", "No se pudieron consultar los eventos de Mentor."); }
     return "handled";
   };

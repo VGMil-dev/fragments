@@ -18,7 +18,7 @@ describe("admin Mentor events endpoint", () => {
     isAdmin?: () => Promise<boolean | null>;
     getActorId?: () => Promise<string | null>;
     write?: (event: unknown) => Promise<void>;
-    list?: (limit?: number) => MentorOperationalEvent[];
+    list?: (limit?: number) => MentorOperationalEvent[] | Promise<MentorOperationalEvent[]>;
   } = {}, path = "/api/admin/mentor-events?limit=2") {
     const server = createServer(createAdminMentorEventsHttp(
       { list: options.list ?? (() => [mentorEvent]) },
@@ -79,5 +79,11 @@ describe("admin Mentor events endpoint", () => {
     expect(invalid.response.status).toBe(400);
     expect(write).not.toHaveBeenCalled();
     expect(list).not.toHaveBeenCalled();
+  });
+
+  it("awaits a persistent store and returns a safe error when it is unavailable", async () => {
+    const { response, body } = await request({ list: async () => { throw new Error("private database details"); } });
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ ok: false, error: { code: "EVENTS_UNAVAILABLE", message: "No se pudieron consultar los eventos de Mentor." } });
   });
 });
