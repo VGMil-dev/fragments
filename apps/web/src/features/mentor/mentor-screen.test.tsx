@@ -519,24 +519,30 @@ describe("MentorScreen", () => {
 
   it("shows the saved context and recovers its persisted evaluation when reopening a linked proposal", async () => {
     const recover = vi.fn(async () => ({ ok: true as const, data: evaluation }));
+    const onOpenProposal = vi.fn();
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
     mountedRoot = createRoot(mountedContainer);
     await act(async () => {
-      mountedRoot?.render(<MentorScreen key="new-proposal" {...actions} savedProposals={[linkedProposal]} onBack={vi.fn()} />);
+      mountedRoot?.render(<MentorScreen key="new-proposal" {...actions} savedProposals={[linkedProposal]} onOpenProposal={onOpenProposal} onBack={vi.fn()} />);
     });
 
     expect(mountedContainer.textContent).toContain("Navegación con Expo Router");
     expect(mountedContainer.textContent).toContain("Contexto Mentor v4");
     const open = Array.from(mountedContainer.querySelectorAll("button")).find((button) => button.textContent === "Abrir propuesta");
     await act(async () => open?.click());
+    expect(onOpenProposal).toHaveBeenCalledOnce();
+    expect(onOpenProposal).toHaveBeenCalledWith(linkedProposal);
+    const reopenedProposal = onOpenProposal.mock.calls[0]?.[0];
+    expect(reopenedProposal).toBeDefined();
+    if (!reopenedProposal) throw new Error("Abrir propuesta no entregó la propuesta seleccionada.");
     await act(async () => {
       mountedRoot?.render(
-        <MentorScreen key={linkedProposal.id} {...actions} initialProposal={linkedProposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
+        <MentorScreen key={reopenedProposal.id} {...actions} initialProposal={reopenedProposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />,
       );
     });
 
-    expect(recover).toHaveBeenCalledWith(linkedProposal.id);
+    expect(recover).toHaveBeenCalledWith(reopenedProposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
   });
 
