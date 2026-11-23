@@ -171,4 +171,41 @@ describe("ClassroomStudio", () => {
     expect(availability.textContent).toContain("Archivada; se conservan sus referencias.");
     expect(availability.querySelector('a[href="/teacher/skills"]')?.textContent).toContain("Ir al catálogo de habilidades");
   });
+
+  it("distinguishes a failed teacher mission load from an empty aula and retries only missions", async () => {
+    const classroom = {
+      id: "fixture-classroom-mission-retry", title: "Aula de prueba", subject: "Programación", groupLabel: "G1",
+      period: null, context: null, status: "active" as const,
+      createdAt: "2026-11-20T00:00:00.000Z", updatedAt: "2026-11-20T00:00:00.000Z",
+    };
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [classroom], nextOffset: null } });
+    classroomApi.get.mockResolvedValue({ ok: true, data: classroom });
+    classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    let resolveRetry!: (value: unknown) => void;
+    assignmentsApi.listTeacher.mockRejectedValueOnce(new Error("network")).mockImplementationOnce(() => new Promise((resolve) => { resolveRetry = resolve; }));
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path={`/teacher/classrooms/${classroom.id}`} navigate={vi.fn()} />));
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar las misiones del aula.");
+    expect(container.textContent).not.toContain("Aún no hay misiones en esta aula.");
+    const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar carga de misiones");
+    expect(retry).toBeTruthy();
+
+    await act(async () => retry?.click());
+
+    expect(container.querySelector('[role="status"]')?.textContent).toContain("Cargando misiones del aula");
+    expect([...container.querySelectorAll("button")].some((button) => button.textContent === "Reintentar carga de misiones")).toBe(false);
+    await act(async () => resolveRetry({ ok: true, data: [] }));
+
+    expect(assignmentsApi.listTeacher).toHaveBeenCalledTimes(2);
+    expect(classroomApi.enrollments).toHaveBeenCalledOnce();
+    expect(classroomApi.classroomSkills).toHaveBeenCalledOnce();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.textContent).toContain("Aún no hay misiones en esta aula.");
+  });
 });

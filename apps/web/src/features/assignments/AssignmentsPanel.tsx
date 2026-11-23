@@ -6,6 +6,9 @@ type Props = {
   assignments: ClassroomAssignment[];
   skills: Array<SkillCatalogEntry & { enabled?: boolean }>;
   busy?: boolean;
+  loading?: boolean;
+  loadError?: string | null;
+  onRetryLoad?: () => void;
   onCreate: (draft: AssignmentDraft) => Promise<void>;
   onUpdate: (id: string, expectedVersion: number, draft: AssignmentDraft) => Promise<void>;
   onPublish: (id: string, expectedVersion: number) => Promise<void>;
@@ -13,7 +16,7 @@ type Props = {
 
 const blankDraft = (skillId: string): AssignmentDraft => ({ title: "", instructions: "", objectives: [""], requiredSkillIds: skillId ? [skillId] : [], optionalSkillIds: [] });
 
-export function AssignmentsPanel({ assignments, skills, busy = false, onCreate, onUpdate, onPublish }: Props) {
+export function AssignmentsPanel({ assignments, skills, busy = false, loading = false, loadError = null, onRetryLoad, onCreate, onUpdate, onPublish }: Props) {
   const [editing, setEditing] = useState<ClassroomAssignment | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -43,6 +46,7 @@ export function AssignmentsPanel({ assignments, skills, busy = false, onCreate, 
   return <section className="assignments-panel" aria-labelledby="assignments-panel-title">
     <div className="assignments-panel__heading"><div><p className="assignments-panel__eyebrow">TRABAJO DEL AULA</p><h2 id="assignments-panel-title">Misiones</h2><p>Crea una consigna y define qué habilidades son obligatorias o optativas.</p></div><button type="button" onClick={startNew} disabled={busy || !availableSkills.length}>Crear misión</button></div>
     {message ? <p role="status" className="assignments-panel__message">{message}</p> : null}
+    {loadError ? <div className="assignments-panel__message" role="alert"><p>{loadError}</p>{onRetryLoad ? <button type="button" className="assignments-panel__secondary" disabled={busy} onClick={onRetryLoad}>Reintentar carga de misiones</button> : null}</div> : null}
     {!availableSkills.length ? <p className="assignments-panel__empty">Activa al menos una habilidad para crear misiones.</p> : null}
     {isCreating || editing ? <form className="assignments-panel__form" onSubmit={submit}>
       <label>Título<input required maxLength={160} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
@@ -52,9 +56,9 @@ export function AssignmentsPanel({ assignments, skills, busy = false, onCreate, 
       <div className="assignments-panel__form-actions"><button type="submit" disabled={busy || draft.requiredSkillIds.length === 0}>{busy ? "Guardando…" : "Guardar borrador"}</button><button type="button" className="assignments-panel__secondary" aria-expanded={showPreview} onClick={() => setShowPreview((visible) => !visible)}>{showPreview ? "Ocultar vista previa" : "Vista previa estudiantil"}</button><button type="button" className="assignments-panel__secondary" onClick={() => { setEditing(null); setIsCreating(false); setShowPreview(false); }}>Cancelar</button></div>
     </form> : null}
     {showPreview && (isCreating || editing) ? <section className="assignments-panel__preview" aria-label="Vista previa para estudiantes"><p className="assignments-panel__eyebrow">VISTA DEL ESTUDIANTE</p><article><h3>{draft.title.trim() || "Título de la misión"}</h3><p>{draft.instructions.trim() || "Aquí aparecerá la consigna."}</p><h4>Objetivos</h4>{draft.objectives.some((objective) => objective.trim()) ? <ul>{draft.objectives.filter((objective) => objective.trim()).map((objective, index) => <li key={`${index}-${objective}`}>{objective.trim()}</li>)}</ul> : <p>Aún no hay objetivos.</p>}<h4>Habilidades requeridas</h4><p>{draft.requiredSkillIds.map((id) => skills.find((skill) => skill.id === id)?.name).filter(Boolean).join(", ") || "Sin habilidades requeridas"}</p>{draft.optionalSkillIds.length ? <><h4>Habilidades optativas</h4><p>{draft.optionalSkillIds.map((id) => skills.find((skill) => skill.id === id)?.name).filter(Boolean).join(", ") || "Sin habilidades optativas"}</p></> : null}</article></section> : null}
-    {assignments.length ? <ul className="assignments-panel__list">{assignments.map((assignment) => <li key={assignment.id}><article><div><h3>{assignment.draft?.title ?? assignment.versions.at(-1)?.title ?? "Misión sin título"}</h3><p>{assignment.publishedVersion ? `Versión publicada ${assignment.publishedVersion}` : "Borrador sin publicar"}{assignment.publishedVersion && assignment.publishedVersion < assignment.draftVersion ? " · Hay cambios sin publicar" : ""}</p></div><div className="assignments-panel__actions"><button type="button" className="assignments-panel__secondary" onClick={() => startEdit(assignment)} disabled={busy || !assignment.draft}>Editar borrador</button><button type="button" onClick={() => void publish(assignment)} disabled={busy || !assignment.draft || assignment.draft.requiredSkillIds.length === 0}>Publicar</button></div>
+    {loading ? <p role="status">Cargando misiones del aula…</p> : assignments.length ? <ul className="assignments-panel__list">{assignments.map((assignment) => <li key={assignment.id}><article><div><h3>{assignment.draft?.title ?? assignment.versions.at(-1)?.title ?? "Misión sin título"}</h3><p>{assignment.publishedVersion ? `Versión publicada ${assignment.publishedVersion}` : "Borrador sin publicar"}{assignment.publishedVersion && assignment.publishedVersion < assignment.draftVersion ? " · Hay cambios sin publicar" : ""}</p></div><div className="assignments-panel__actions"><button type="button" className="assignments-panel__secondary" onClick={() => startEdit(assignment)} disabled={busy || !assignment.draft}>Editar borrador</button><button type="button" onClick={() => void publish(assignment)} disabled={busy || !assignment.draft || assignment.draft.requiredSkillIds.length === 0}>Publicar</button></div>
       {assignment.versions.length ? <details className="assignments-panel__published-versions"><summary>Revisar versiones publicadas</summary><ul>{assignment.versions.map((version) => <li key={version.id}><section aria-label={`Versión publicada ${version.version}`}><p className="assignments-panel__eyebrow">Versión publicada {version.version} · Contexto Mentor v{version.mentorContextVersion}</p><h4>{version.title}</h4><p>{version.instructions}</p><h5>Objetivos</h5><ul>{version.objectives.map((objective, index) => <li key={`${index}-${objective}`}>{objective}</li>)}</ul><h5>Habilidades requeridas</h5><ul>{version.requiredSkills.map((snapshotSkill) => <li key={snapshotSkill.id}><strong>{snapshotSkill.name}</strong>{snapshotSkill.description ? ` — ${snapshotSkill.description}` : ""}</li>)}</ul>{version.optionalSkills.length ? <><h5>Habilidades optativas</h5><ul>{version.optionalSkills.map((snapshotSkill) => <li key={snapshotSkill.id}><strong>{snapshotSkill.name}</strong>{snapshotSkill.description ? ` — ${snapshotSkill.description}` : ""}</li>)}</ul></> : null}</section></li>)}</ul></details> : null}
-    </article></li>)}</ul> : !isCreating ? <p className="assignments-panel__empty">Aún no hay misiones en esta aula.</p> : null}
+    </article></li>)}</ul> : !loadError && !isCreating ? <p className="assignments-panel__empty">Aún no hay misiones en esta aula.</p> : null}
   </section>;
 }
 

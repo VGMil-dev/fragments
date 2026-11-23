@@ -16,6 +16,8 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [members, setMembers] = useState<ClassEnrollment[]>([]);
   const [assignments, setAssignments] = useState<ClassroomAssignment[]>([]);
+  const [assignmentLoadError, setAssignmentLoadError] = useState<string | null>(null);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [skills, setSkills] = useState<Array<SkillCatalogEntry & { enabled?: boolean }>>([]);
   const [students, setStudents] = useState<TeacherStudentEntry[]>([]);
   const [allSkills, setAllSkills] = useState<SkillCatalogEntry[]>([]);
@@ -31,13 +33,27 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
   const [editingSkillDescription, setEditingSkillDescription] = useState("");
   const [studentId, setStudentId] = useState("");
 
+  async function loadAssignments(classroomId: string, { announce = false } = {}) {
+    if (announce) setAssignmentLoading(true);
+    setAssignmentLoadError(null);
+    try {
+      const result = await assignmentsApi.listTeacher(classroomId);
+      if (result.ok) setAssignments(result.data);
+      else setAssignmentLoadError("No pudimos cargar las misiones del aula.");
+    } catch {
+      setAssignmentLoadError("No pudimos cargar las misiones del aula.");
+    } finally {
+      if (announce) setAssignmentLoading(false);
+    }
+  }
+
   const matchedDetailId = path.match(/^\/teacher\/classrooms\/([A-Za-z0-9_-]+)$/)?.[1] ?? null;
   const detailId = matchedDetailId === "new" ? null : matchedDetailId;
   const isNew = path === "/teacher/classrooms/new";
   const isSkills = path === "/teacher/skills";
 
   async function load() {
-    setMessage(""); setContentLoading(true);
+    setMessage(""); setAssignmentLoadError(null); setContentLoading(true);
     const list = await classroomApi.list();
     if (!list.ok) {
       setAccess(list.error.code === "AUTH_REQUIRED" ? "signed-out" : list.error.code === "FORBIDDEN" ? "forbidden" : "error");
@@ -53,15 +69,15 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
       setContentLoading(false);
     }
     if (detailId) {
-      const [detail, enrollmentResult, skillResult, studentResult, assignmentResult] = await Promise.all([
-        classroomApi.get(detailId), classroomApi.enrollments(detailId), classroomApi.classroomSkills(detailId), classroomApi.students(), assignmentsApi.listTeacher(detailId),
+      const [detail, enrollmentResult, skillResult, studentResult] = await Promise.all([
+        classroomApi.get(detailId), classroomApi.enrollments(detailId), classroomApi.classroomSkills(detailId), classroomApi.students(),
       ]);
       if (!detail.ok) { setMessage(detail.error.message); setClassroom(null); setContentLoading(false); return; }
       setClassroom(detail.data);
       if (enrollmentResult.ok) setMembers(enrollmentResult.data); else setMessage(enrollmentResult.error.message);
       if (skillResult.ok) setSkills(skillResult.data); else setMessage(skillResult.error.message);
       if (studentResult.ok) setStudents(studentResult.data.items); else setMessage(studentResult.error.message);
-      if (assignmentResult.ok) setAssignments(assignmentResult.data); else setMessage(assignmentResult.error.message);
+      await loadAssignments(detailId);
       setContentLoading(false);
     }
     if (!isSkills && !detailId) setContentLoading(false);
@@ -147,6 +163,10 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
     setAssignments((current) => current.map((assignment) => assignment.id === id ? result.data : assignment));
   }
 
+  function retryAssignments() {
+    if (detailId) void loadAssignments(detailId, { announce: true });
+  }
+
   const visibleSkills = allSkills.filter((skill) => `${skill.name} ${skill.description ?? ""}`.toLocaleLowerCase("es").includes(skillQuery.trim().toLocaleLowerCase("es")));
 
   if (access === "checking") return <main className="classroom-studio"><p role="status">Comprobando permisos docentes…</p></main>;
@@ -196,7 +216,7 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
             {skills.every((skill) => skill.archived) ? <><p className="cs-empty-inline">Crea habilidades en el catálogo para habilitarlas aquí.</p><a className="cs-button cs-button--primary" href="/teacher/skills" onClick={(event) => { event.preventDefault(); navigate("/teacher/skills"); }}>Ir al catálogo de habilidades</a></> : null}
           </section>
         </div>
-        <div className="cs-panel cs-assignments"><AssignmentsPanel assignments={assignments} skills={skills} busy={busy || contentLoading || classroom.status !== "active"} onCreate={createAssignment} onUpdate={updateAssignment} onPublish={publishAssignment} /></div>
+        <div className="cs-panel cs-assignments"><AssignmentsPanel assignments={assignments} skills={skills} busy={busy || contentLoading || assignmentLoading || classroom.status !== "active"} loading={contentLoading || assignmentLoading} loadError={assignmentLoadError} onRetryLoad={retryAssignments} onCreate={createAssignment} onUpdate={updateAssignment} onPublish={publishAssignment} /></div>
       </> : null}
       {!isNew && !isSkills && !detailId ? <section className="cs-list" aria-label="Mis aulas">{contentLoading ? <p role="status">Cargando tus aulas…</p> : classrooms.length ? classrooms.map((item) => <a className="cs-panel cs-classroom-card" key={item.id} href={`/teacher/classrooms/${item.id}`} onClick={(event) => { event.preventDefault(); navigate(`/teacher/classrooms/${item.id}`); }}><span className="cs-card-mark" aria-hidden="true"><BookOpen /></span><span><small>{item.subject}{item.period ? ` · ${item.period}` : " · Aula compartida"}</small><strong>{item.title}</strong></span><span className="cs-status">Ver aula</span></a>) : <div className="cs-empty"><BookOpen aria-hidden="true" /><h2>Empieza con un aula</h2><p>Crea un espacio temático que puedan compartir estudiantes autorizados de distintos paralelos.</p><button className="cs-button cs-button--primary" type="button" onClick={() => navigate("/teacher/classrooms/new")}><Plus size={18} aria-hidden="true" />Crear primera aula</button></div>}</section> : null}
     </div>
