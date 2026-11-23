@@ -105,4 +105,17 @@ El contexto de Mentor debe conservar el snapshot académico completo de la versi
 - Las habilidades optativas del catálogo activo siguen siendo una selección independiente y editable; Mentor general conserva su estado vacío.
 - No objetivos: alterar evaluación, API, contratos, rutas, backend, migraciones o selección optativa.
 
+## Incremento UI estudiantil — misión vinculada en Mis proyectos
+
+- Problema: el backend ya devuelve el vínculo a la versión de misión (`assignmentVersionId`), su contexto Mentor y habilidades requeridas, pero la tarjeta de “Mis proyectos” solo identifica el borrador.
+- Objetivo: permitir que el estudiante inspeccione el contexto fijado antes de continuar y que Mentor recupere la misma propuesta/version/contexto sin reconstruirlo.
+- Solo mostrar contexto cuya `assignmentContext.assignmentVersionId` coincida con `assignmentVersionId`; si no coincide o falta, indicar que el contexto no está disponible y no revelar sus skills.
+- No objetivos: añadir versión/DTO nuevos, cambiar endpoints, contratos, evaluación, rúbrica ni persistencia.
+
+## Cierre fail-closed del contexto al continuar propuestas vinculadas
+
+- Al continuar una propuesta enlazada, Mentor solo puede recibir el `assignmentContext` cuyo `assignmentVersionId` coincide exactamente con el vínculo de la propuesta.
+- Si el contexto falta o apunta a otra versión, Mentor presenta el estado de error y no recibe contexto, rúbrica ni habilidades de esa versión obsoleta, ni desde la propuesta activa ni desde la lista de propuestas guardadas.
+- No objetivos: cambiar la persistencia, contratos, API o el comportamiento de propuestas válidas y no vinculadas.
+
 - Dar a cada botón de recuperación de propuesta un nombre accesible que identifique su acción y título, con fallback para borradores sin título.

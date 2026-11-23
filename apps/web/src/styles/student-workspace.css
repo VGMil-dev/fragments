@@ -53,9 +53,16 @@
 .student-dashboard__gallery p { margin: 0; color: var(--f16-text-secondary); }
 .student-portal li { padding: .75rem 0; border-bottom: 1px solid var(--f16-border); }
 .student-project-list { display: grid; gap: .8rem; margin: 1.25rem 0; padding: 0; list-style: none; }
-.student-project-list li { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: .9rem; padding: .75rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); }
+.student-project-list > li { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: .9rem; padding: .75rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); }
 .student-project-list__cover { display: grid; place-items: center; min-height: 60px; border-radius: 8px; background: radial-gradient(circle at 28% 35%, var(--f16-lime) 0 8%, transparent 9%), linear-gradient(135deg, var(--f16-cobalt), var(--f16-night)); color: var(--f16-lime); font-size: 1.5rem; }
+.student-project-list__content { min-width: 0; }
 .student-project-list small { display: block; margin-top: .3rem; color: var(--f16-text-secondary); }
+.student-project-list__mission { margin-top: .4rem; color: var(--f16-text-secondary); font-size: .9rem; }
+.student-project-list__mission summary { color: var(--f16-cyan, #63D8FF); cursor: pointer; }
+.student-project-list__mission summary:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.student-project-list__mission ul { margin: .35rem 0 0; padding-left: 1.1rem; }
+.student-project-list__mission li { padding: .25rem 0; border: 0; }
+.student-project-list__mission p { margin: .35rem 0 0; font-size: inherit; }
 .student-submission-list { display: grid; gap: .75rem; margin: 1.25rem 0; padding: 0; list-style: none; }
 .student-submission-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .35rem 1rem; padding: 1rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); background: var(--f16-surface-raised); }
 .student-submission-list li > small { grid-column: 1 / -1; color: var(--f16-text-secondary); }

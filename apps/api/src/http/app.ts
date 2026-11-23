@@ -29,10 +29,9 @@ import { createAdminQueueSummaryRepository } from "../features/admin-queue/repos
 import { createAdminAuditLogHttp } from "../features/admin-audit-log/http.js";
 import { createAdminAuditLog, type AdminAuditSourceEvent } from "../features/admin-audit-log/store.js";
 import { createAdminReviewEventsHttp } from "../features/admin-review-events/http.js";
-import type { createReviewOperationalLog } from "../features/review/operational-log.js";
+import type { ReviewOperationalEvent, StoredReviewOperationalEvent } from "../features/review/review-errors.js";
 import { createAdminMentorEventsHttp } from "../features/admin-mentor-events/http.js";
 import type { MentorOperationalEvent } from "../features/mentor/operational-events.js";
-import type { createMentorOperationalLog } from "../features/mentor/operational-log.js";
 import { createAdminTeachersHttp } from "../features/admin-teachers/http.js";
 import { createAdminTeachersRepository } from "../features/admin-teachers/repository.js";
 import { createAdminTeachersService } from "../features/admin-teachers/service.js";
@@ -41,6 +40,9 @@ const healthSchema = ApiResultSchema(z.object({ status: z.literal("ok"), databas
 const errorSchema = ApiResultSchema(z.unknown());
 type AdminAuditWrite = (event: AdminClassroomRequestsAuditEvent) => void | Promise<void>;
 type AdminQueueAuditWrite = (event: AdminQueueAuditEvent) => void | Promise<void>;
+type MaybePromise<T> = T | Promise<T>;
+type ReviewOperationalLog = { record(event: ReviewOperationalEvent): void; list(limit?: number): MaybePromise<StoredReviewOperationalEvent[]> };
+type MentorOperationalLog = { record(event: MentorOperationalEvent): void; list(limit?: number): MaybePromise<MentorOperationalEvent[]> };
 type HttpOptions = {
   auth?: FragmentsAuthService;
   mentor?: ReturnType<typeof createMentorService>;
@@ -52,8 +54,8 @@ type HttpOptions = {
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
   adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
-  reviewOperationalLog?: ReturnType<typeof createReviewOperationalLog>;
-  mentorOperationalLog?: ReturnType<typeof createMentorOperationalLog>;
+  reviewOperationalLog?: ReviewOperationalLog;
+  mentorOperationalLog?: MentorOperationalLog;
 };
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {

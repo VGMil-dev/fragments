@@ -345,3 +345,13 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `ClassroomStudio` separa fallos del listado de misiones del estado vacío legítimo, anuncia carga, expone `role=alert` y permite reintentar solo ese recurso. El test confirma no volver a consultar matrícula/habilidades y mostrar vacío solo tras respuesta vacía válida.
 - F14 `v0.5.33` quedó aplicada al SHA `f256b6a02c54891040e1f4ba3591c2f85eea2c75`; health pública DB ready y bundle exacto incluyen el comportamiento nuevo. PR #160 snapshot de habilidades ya se había aplicado en `v0.5.32`.
 - El aula productiva observada carece de misión QA activa; el flujo visual con una misión, recuperación/evaluación real, identidad cruzada y calidad Mentor/Review real permanecen NO COMPROBADOS. No se escribieron recursos académicos ni se llamó a IA real; sesiones Ego Lite no se alteraron.
+
+## Misión asociada en Mis proyectos · 2026-11-23
+
+- TDD: regresión con propuesta enlazada a `mission-v1`, contexto Mentor v7 y habilidad requerida. Antes del cambio, `Mis proyectos` no mostraba el disclosure. El test comprueba tema/versión/habilidades, resumen accesible y que la rúbrica/criterios no se muestran.
+- La propuesta se puede continuar conservando `assignmentVersionId`, contexto y habilidad. Si el snapshot está desincronizado, la vista presenta “Misión vinculada · contexto no disponible”.
+- Revisión independiente detectó que el contexto desincronizado aún podía llegar a Mentor desde la acción Continuar. El fix reutiliza `proposalMissionContext` para validar el contexto en reentrada y elimina el `assignmentContext` inválido de la propuesta activa y de las guardadas.
+- Regresión demuestra que un mismatch `mission-v1`/`mission-v2` deja Mentor en error y no expone el tema, rúbrica ni habilidad stale. La revisión independiente del fix resultó PASS.
+- Verificación fresca `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1`: 2 archivos, **35/35 PASS**; web typecheck y `git diff --check` PASS.
+- Ego Lite visual: **NO COMPROBADO**. Las pestañas QA existentes muestran el aula docente y `/student/mentor`, no “Mis proyectos”; no se navegó, recargó, hizo clic ni escribió para preservar las sesiones. TaskSpaces 44 y 46 quedaron abiertos.
+- Commits funcionales `bf2513f642c07e51ebc94c5aa3628f9d40a6df8b` y `20c011e4125b86550d54d97e8da9c1e0b8e28184`; evidencia `2b5d247` y `7f73ebc`. Merge actualizado desde main `b375922`. PR #169 abierta; CI `45134334848` en curso para el head `b37592287d7e3adb3d659e55ab8ffe8f24e5ac70`. Sin cambios de contratos/API/rutas/DB, producción o proveedores IA; despliegue pendiente.
