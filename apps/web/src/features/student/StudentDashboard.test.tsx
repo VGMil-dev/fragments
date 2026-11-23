@@ -27,6 +27,16 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("racha");
   });
 
+  it("continues the most recently updated proposal even when the API list is out of order", () => {
+    const olderProposal = { ...proposal, id: "older-proposal", version: 1, proposal: { title: "Borrador anterior" }, updatedAt: "2026-11-18T12:00:00.000Z" };
+    const newestProposal = { ...proposal, id: "newest-proposal", version: 3, proposal: { title: "Propuesta más reciente" }, updatedAt: "2026-11-20T12:00:00.000Z" };
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[olderProposal, newestProposal]} />);
+
+    expect(html).toContain("Propuesta más reciente");
+    expect(html).toContain("Siguiente paso · borrador v3");
+    expect(html).not.toContain("Borrador anterior");
+  });
+
   it("summarizes authorized classes and pending enrollment truthfully", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} classrooms={[{ id: "fixture-room", title: "Aula de prueba", subject: "Ciencias", groupLabel: "7A", period: null, status: "active", createdAt: "2026-11-19T12:00:00.000Z", updatedAt: "2026-11-19T12:00:00.000Z" }]} classroomRequests={[{ id: "fixture-request", status: "pending", source: "join_code", requestedAt: "2026-11-19T12:00:00.000Z", decidedAt: null }]} />);
     expect(html).toContain("Tienes 1 aula activa y solicitudes pendientes de aprobación");

@@ -25,7 +25,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
   const latestSubmission = submissions.status === "success"
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
-  const continueProposal = proposals[0];
+  const continueProposal = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
   const githubIdentity = student.githubLogin
     ? student.profileUrl
       ? <a className="student-dashboard__identity-link" href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a>
