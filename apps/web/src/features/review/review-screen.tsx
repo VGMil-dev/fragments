@@ -213,7 +213,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
               <ul className="review-findings">
                 {currentReview.analysis.findings.map((finding, index) => (
                   <li key={`${finding.criterionId}-${index}`}>
-                    <p className="review-finding__status">{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p>
+                    <p className="review-finding__status" data-status={finding.status}>{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p>
                     <p>{finding.reason}</p>
                     <ul>{finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}>{evidenceLabel(item)}</li>)}</ul>
                   </li>
