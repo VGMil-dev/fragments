@@ -9,18 +9,16 @@
 
 ## Verificación ejecutada
 
-- `pnpm --filter @fragments/contracts build` — PASS.
-- `pnpm --filter @fragments/contracts test` — PASS, 30/30.
-- `pnpm --filter @fragments/api typecheck` y `pnpm --filter @fragments/web typecheck` — PASS.
-- `pnpm --filter @fragments/api exec vitest run src/features/review/academic-link.test.ts src/features/review/worker-http.test.ts --maxWorkers=1` — 2 PASS; 9 omitidas porque la suite worker no usa la base en esta ejecución.
-- Web: `TeacherReviewWorkspace.test.tsx`, `review-screen.test.tsx`, `TeacherWorkspaceShell.test.tsx`, `App.student-flow.test.tsx` — 14/14 PASS.
-- PostgreSQL efímero local `fragments_test` en `127.0.0.1:55478`: `prisma migrate deploy` y `academic-flow.integration.test.ts` — 3/3 PASS, incluidos propiedad de propuesta/repositorio, matrícula/aula, opt-in, exclusión de Review sin vínculo, aislamiento ante 101 jobs antiguos de estudiantes inactivos y retry ligado. Contenedor retirado al terminar; no se modificó producción.
+- `pnpm run test` — PASS: contracts 30/30; web 200/200; API 162 PASS, 70 omitidas por pruebas que requieren `DATABASE_URL` y fixtures específicos. Turbo: 5/5 tareas.
+- `pnpm run typecheck` y `pnpm run build` — PASS, 5/5 y 4/4 tareas Turbo respectivamente.
+- PostgreSQL efímero local `fragments_test` en `127.0.0.1:55478`: `prisma migrate deploy` y `academic-flow.integration.test.ts` — 3/3 PASS, incluidos propiedad de propuesta/repositorio, matrícula/aula, opt-in, exclusión de Review sin vínculo, aislamiento ante 101 jobs antiguos de estudiantes inactivos y retry ligado tras cambio de login. Contenedor retirado al terminar; no se modificó producción.
 - `git diff --check` — PASS.
-- Revisión reflexiva encontró dos brechas iniciales (atribución de repositorio y orden del filtro de matrícula respecto del límite) y un borde de retry tras cambio de nombre GitHub; los tres se corrigieron y cubrieron antes de esta ejecución final.
+- Revisión reflexiva independiente PASS: autorizaciones, privacidad, orden de filtros y retry revisados sin defectos remanentes.
+- Commit de implementación: `c25de8e2922fdc76a258bad604bea0e8fbd747f2` en `codex/f18-review-linking`.
 
 ## Límites / estado
 
-- Desarrollo local en curso. Aún sin commit, PR, confirmación de revisión final, CI de GitHub, merge, tag F14 ni despliegue.
+- Código probado y comprometido; push/PR, CI GitHub, merge, tag F14 y despliegue pendientes.
 - QA Ego Lite de esta nueva vista NO COMPROBADO: el aula productiva observada no tiene habilidad/misión activa y no se navegó ni cerró ninguna sesión docente/estudiantil.
 - Evaluaciones IA reales/calidad semántica NO COMPROBADAS; no se hicieron llamadas a proveedores.
-- SHA de commit: pendiente.
+- QA y release: pendientes hasta PR, CI y QA autorizada.
