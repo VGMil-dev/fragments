@@ -133,3 +133,10 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - La prueba limita el worker al ID del job que creó y omite reconciliar leases globales; no puede reclamar ni cambiar jobs de otros tests.
 - El DTO continúa ocultando IDs internos, rúbrica, puntuación y hallazgos privados. No se ejecuta código del repositorio ni se invoca un proveedor real.
 - La prueba corre únicamente en localhost con `current_database() = fragments_test`; no constituye prueba de Review productiva ni valida calidad semántica IA.
+
+## Incremento UI estudiantil — descripciones de habilidades de misión
+
+- En Mis aulas, mantener visibles los nombres de habilidades requeridas y optativas del snapshot publicado.
+- Si una habilidad trae descripción, mostrar un disclosure `<details>` independiente, accesible y cerrado por defecto; si la descripción falta, no añadir un control vacío. La categoría optativa no aparece cuando no contiene habilidades.
+- Las descripciones largas deben envolver dentro del layout; no cambiar snapshots, contexto de Mentor, rutas, API ni persistencia.
+- La prueba UI verifica nombres, texto largo, descripción ausente, categoría optativa vacía, foco del resumen, disclosure cerrado y apertura.
