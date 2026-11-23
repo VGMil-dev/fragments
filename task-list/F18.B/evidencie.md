@@ -380,3 +380,9 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - El build mantiene avisos de bundle Vite >500 KB y directivas `use client` de `lucide-react`; no son nuevos cambios del incremento. No se usó proveedor ni se ejecutó una evaluación IA.
 - PostgreSQL end-to-end del nuevo resumen y QA visual Ego Lite con una Review vinculada: **NO COMPROBADOS**. La integración académica PostgreSQL se omitió por falta de `DATABASE_URL`; no había una Review QA vinculada autorizada para mostrar en la UI. Calidad real Mentor/Review continúa **NO COMPROBADA**.
 - Commit de código: `b7e3a6109726a8a55aa6c036e47a60e9f6db1dfa` (`feat(F18.B): enlaza misión académica con Trainer`), branch `codex/f18-trainer-academic-context`. CI, PR y release F14 están pendientes.
+
+## PR #178 — estado de integración · 2026-11-23
+
+- PR #178 abierta contra `main`: https://github.com/VGMil-dev/fragments/pull/178. Run CI `45159579982` sigue `IN_PROGRESS`; no se ha fusionado ni creado tag.
+- La revisión reflexiva independiente recomendó integrar y su único P2 (validar habilidad vacía o >100 caracteres en el cliente) quedó corregido; `trainer-api.test.ts` cubre ambos casos, 2/2 PASS.
+- Próximo paso: esperar CI y protecciones normales. Si merge y gates pasan, la siguiente release legítima será `v0.5.37` por F14; no existe deploy manual ni salto de gates.
