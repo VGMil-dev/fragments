@@ -12,6 +12,8 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} />);
 
     expect(html).toContain("@fixture-student");
+    expect(html).toContain('href="https://github.com/fixture-student"');
+    expect(html).toContain('target="_blank" rel="noreferrer"');
     expect(html).toContain("CENTRO DE MISIONES");
     expect(html).toContain("Siguiente paso");
     expect(html).toContain("Bitácora de jardín");

@@ -40,8 +40,9 @@
 .trainer-controls__row { display: flex; gap: .75rem; }
 .trainer-controls select { width: 100%; min-width: 0; padding: .8rem .9rem; border: 1px solid var(--trainer-border); border-radius: 8px; background: var(--trainer-raised); color: var(--trainer-text); font: inherit; }
 .trainer-controls p { margin: .8rem 0 0; color: var(--trainer-muted); font-size: .9rem; }
-.trainer-commit { display: grid; gap: .35rem; padding-top: .75rem; border-top: 1px solid var(--trainer-border); color: var(--trainer-muted); font-size: .84rem; }
-.trainer-commit code, .trainer-source code, .trainer-controls code { overflow-wrap: anywhere; color: var(--trainer-text); }
+.trainer-review-source { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .65rem 1rem; margin-top: .8rem; padding-top: .75rem; border-top: 1px solid var(--trainer-border); }
+.trainer-review-source p { display: grid; gap: .3rem; min-width: 0; margin: 0; color: var(--trainer-muted); font-size: .78rem; }
+.trainer-review-source code, .trainer-source code, .trainer-controls code { overflow-wrap: anywhere; color: var(--trainer-text); }
 .trainer-academic-context { margin-top: 1rem; padding: .95rem 1rem; border: 1px solid var(--trainer-border); border-left: 3px solid var(--trainer-lime); border-radius: 9px; background: var(--trainer-raised); }
 .trainer-academic-context__eyebrow { margin: 0 0 .35rem !important; color: var(--trainer-lime) !important; font-size: .68rem !important; font-weight: 800; letter-spacing: .11em; }
 .trainer-academic-context h2 { margin: 0; font-size: 1.05rem; }

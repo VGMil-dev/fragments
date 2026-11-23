@@ -26,12 +26,17 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
   const continueProposal = proposals[0];
+  const githubIdentity = student.githubLogin
+    ? student.profileUrl
+      ? <a className="student-dashboard__identity-link" href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a>
+      : `@${student.githubLogin}`
+    : "estudiante";
 
   return (
     <main className="student-dashboard student-dashboard--pixel" aria-labelledby="student-dashboard-title">
       <header className="student-dashboard__heading">
         <p className="student-screen__eyebrow">CENTRO DE MISIONES</p>
-        <h1 id="student-dashboard-title">Hola, {student.githubLogin ? `@${student.githubLogin}` : "estudiante"}</h1>
+        <h1 id="student-dashboard-title">Hola, {githubIdentity}</h1>
         <p>Tu siguiente paso de aprendizaje, con tus propuestas y actividad en un solo lugar.</p>
         {student.avatarUrl ? <img className="student-dashboard__avatar" src={student.avatarUrl} alt="" width="56" height="56" /> : null}
       </header>

@@ -127,7 +127,10 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
         </div>
-        {review ? <p className="trainer-commit"><span>Commit usado</span><code>{review.commitSha}</code></p> : null}
+        {review ? <div className="trainer-review-source" aria-label="Origen de la práctica">
+          <p><span>Repositorio</span><code>{review.owner}/{review.repo}</code></p>
+          <p><span>Commit analizado</span><code>{review.commitSha}</code></p>
+        </div> : null}
         {review?.academicContext ? <section className="trainer-academic-context" aria-label="Contexto académico de la revisión">
           <p className="trainer-academic-context__eyebrow">Misión vinculada</p>
           <h2>{review.academicContext.missionTitle} · v{review.academicContext.missionVersion}</h2>
