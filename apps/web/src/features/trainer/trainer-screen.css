@@ -21,6 +21,12 @@
 .trainer-controls p { margin: .8rem 0 0; color: var(--muted); font-size: var(--f16-type-body); }
 .trainer-commit { margin: .8rem 0 0; color: var(--muted); font-size: var(--f16-type-meta); }
 .trainer-commit { display: grid; gap: .25rem; padding-top: .75rem; border-top: 1px solid var(--border-soft); }
+.trainer-academic-context { margin-top: 1rem; padding: .9rem 1rem; border: 1px solid var(--f16-border-strong); border-left: 3px solid var(--f16-lime); border-radius: 10px; background: var(--f16-surface); }
+.trainer-academic-context__eyebrow { margin: 0 0 .35rem; color: var(--f16-lime); font-size: .7rem; font-weight: 800; letter-spacing: .1em; }
+.trainer-academic-context h2 { margin: 0; font-size: var(--f16-type-card); }
+.trainer-academic-context p { color: var(--muted); line-height: 1.5; }
+.trainer-academic-context ul { display: flex; flex-wrap: wrap; gap: .4rem; padding: 0; list-style: none; }
+.trainer-academic-context li { padding: .3rem .6rem; border: 1px solid var(--f16-border-strong); border-radius: 999px; color: var(--f16-text-primary); font-size: var(--f16-type-meta); }
 .trainer-controls code, .trainer-source code { overflow-wrap: anywhere; }
 .trainer-empty { margin: .85rem 0 0; color: var(--muted); }
 .trainer-message { padding: .75rem 1rem; border-left: 3px solid var(--blue); background: var(--powder); }

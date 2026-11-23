@@ -1,10 +1,16 @@
 import { z } from "zod";
 
 export const TrainerStatusSchema = z.enum(["pending", "in_progress", "completed", "need_more"]);
+export const TrainerAcademicContextSchema = z.object({
+  missionTitle: z.string().min(1).max(160), missionVersion: z.number().int().positive(), mentorContextVersion: z.number().int().positive(),
+  classroomTitle: z.string().min(1).max(160), requiredSkills: z.array(z.string().min(1).max(100)).max(20).optional(),
+}).strict();
 export const TrainerReviewSchema = z.object({
   id: z.string().min(1).max(100), owner: z.string().min(1).max(39), repo: z.string().min(1).max(100),
   commitSha: z.string().regex(/^(?:[a-f\d]{40}|[a-f\d]{64})$/i), updatedAt: z.iso.datetime(),
+  academicContext: TrainerAcademicContextSchema.optional(),
 }).strict();
+export type TrainerAcademicContext = z.infer<typeof TrainerAcademicContextSchema>;
 export const TrainerChallengeSchema = z.object({
   id: z.string().min(1).max(100), reviewId: z.string().min(1).max(100), projectId: z.string().min(1).max(128),
   commitSha: z.string().regex(/^(?:[a-f\d]{40}|[a-f\d]{64})$/i), feature: z.string().min(1).max(1000),
