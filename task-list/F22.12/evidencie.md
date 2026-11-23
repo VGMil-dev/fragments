@@ -44,4 +44,10 @@ Fecha: 2026-11-23.
 - `pnpm --filter @fragments/api exec vitest run src/features/mentor/operational-events.test.ts src/features/mentor/operational-log.test.ts src/features/admin-mentor-events/http.test.ts --maxWorkers=1` — PASS, 3 archivos, 12/12 pruebas.
 - `pnpm --filter @fragments/contracts build` — PASS; se regeneraron tipos de trabajo ignorados desde el source actual. `pnpm --filter @fragments/api typecheck` — PASS. La primera ejecución previa al build detectó `dist` de contratos desactualizado; no hubo cambios a los contratos fuente.
 - `git diff --check` — PASS. No se usó PostgreSQL, Better Auth productivo, Gateway, ni se efectuaron escrituras de datos académicos. La respuesta administrativa usa un verificador/actor fake; la sesión admin real sigue NO COMPROBADA.
+
+## Integración normal de la prueba compuesta · 2026-11-23
+
+- PR #153 se integró mediante merge normal en `0f12e7fc1e6ff6fdf1663a85e30787667c28f9b9`; CI run `45112711742` SUCCESS. La prueba conecta evaluación Mentor fake → buffer operativo → endpoint admin auditado.
+- Revalidación focal: 3 archivos API, 12/12 pruebas PASS; API typecheck y `git diff --check` PASS. No hubo cambio runtime ni release por este PR de prueba.
+- Better Auth real, sesión administrativa y eventos de evaluaciones productivas siguen NO COMPROBADOS; no se usó Gateway ni hubo escrituras académicas.
 - Commit de implementación y prueba: `4ab1bd4185d8f8f139a64b081bd75e6535a17f88` en `codex/f22-admin-events-e2e`; aún sin PR ni release.

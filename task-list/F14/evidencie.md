@@ -272,3 +272,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El timer normal sondeó a las 02:28:08 UTC; `fragments-release-apply.service` terminó a las 02:30:10 UTC con `Result=success`, `ExecMainStatus=0`. No se realizó deploy manual ni reinicio.
 - SSH solo lectura verificó `fragments-api-1` y `fragments-web-1` `running/healthy`, ambos en imagen `sha-6a7740d948b3a07c63396097e9400494cdfba0fb`. Verificación pública cache-bypass: `/health` `status=ok`, `database=ready`; bundle `/assets/index-32veZvDP.js` contiene `v0.5.27`, SHA exacto y `/admin/mentor-events`.
 - `fragments-production` conservó el flujo F14 y no requirió aprobación manual. No se alteraron sus controles técnicos. Eventos Mentor reales, acceso admin autenticado, rotación y hash del backup siguen NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.30 — 2026-11-23
+
+- PR #154 se integró mediante merge normal en `863dd4fde725a038fd2a181f985d504bc0a8ad83`; la tag anotada nueva `v0.5.30` apunta a ese SHA exacto de `main`. La versión previa era `v0.5.29` y la tag no existía.
+- F14 run `45114325986`: `verify-build`, pruebas/typecheck/lint/build, build ARM64, atestación Sigstore y `publish-approved-release` terminaron SUCCESS. El release publicado contiene `release-manifest.json`, `fragments-images.tar.gz` y `fragments-images.attestation.jsonl`.
+- El timer normal se ejecutó a las 05:01:08 UTC; `fragments-release-apply.service` quedó `Result=success`, `ExecMainStatus=0`. No se invocó un deploy manual ni se detuvo producción.
+- Verificación pública cache-bypass: `/health` devolvió `ok` y `database=ready`; el bundle `/assets/index-DGKk1qQh.js` contiene `v0.5.30` y el SHA completo exacto `863dd4fde725a038fd2a181f985d504bc0a8ad83`.
+- No se modificó el entorno ni los gates técnicos F14. Hash del backup previo y labels de imágenes del host continúan NO COMPROBADOS.

@@ -285,3 +285,10 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - `git diff --check` — PASS. Sin producción, proveedores pagados ni sesiones Ego Lite.
 - Límite legacy: snapshots publicados antes de este cambio no contienen el asunto histórico y mantienen el fallback al asunto actual; no existe evidencia suficiente para reconstruir su valor original sin una fuente histórica o una migración/backfill con datos confiables.
 - Commit de implementación local `49e1a7ad41b5b38e96a7e3ff3bc58ff4a465752c` en `codex/f18b-proposal-recovery-evidence`; sin push.
+
+## Merge y validación funcional local · v0.5.30 · 2026-11-23
+
+- PR #154 `fix(F18.B): conserva la asignatura en el snapshot de misión` se integró mediante merge normal en `863dd4fde725a038fd2a181f985d504bc0a8ad83`; CI run `45113979791` SUCCESS. F14 publicó y aplicó `v0.5.30` sobre el SHA exacto; ver `task-list/F14/evidencie.md`.
+- Ego Lite QA local sintética en TaskSpaces preservados 44 (docente) y 46 (estudiante): docente creó y publicó misión v1 con habilidad requerida; estudiante vio «Misión publicada v1 · Contexto Mentor v1», abrió Mentor, guardó una propuesta ficticia y tras recargar la recuperó. GET local verificó `assignmentVersionId`, contexto v1, tema y habilidad requerida. No se cerraron pestañas existentes.
+- Sin evaluación IA ni llamadas pagadas, sin escrituras productivas. Prueba unitaria/regresión 9/9, integración HTTP/PostgreSQL efímera `fragments_test` 3/3, API typecheck y `git diff --check` PASS.
+- Los snapshots publicados antes del fix no conservan asunto histórico; usan el fallback al asunto actual y no se puede reconstruir el pasado sin una fuente confiable. Evaluación IA real, datos de misión en producción e identidad cruzada siguen NO COMPROBADOS.
