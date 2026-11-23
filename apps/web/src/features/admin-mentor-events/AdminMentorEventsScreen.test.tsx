@@ -7,7 +7,9 @@ import type { AdminMentorEventsApi } from "./admin-mentor-events-api.js";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const events = [{ event: "mentor_evaluation_failed" as const, stage: "response_validation" as const, result: "failure" as const,
-  error_code: "response_validation_failed" as const, duration_ms: 850, occurred_at: "2026-11-22T20:00:00.000Z" }];
+  error_code: "response_validation_failed" as const, duration_ms: 850, occurred_at: "2026-11-22T20:00:00.000Z" },
+{ event: "mentor_evaluation_completed" as const, stage: "evaluation" as const, result: "success" as const,
+  error_code: "none" as const, duration_ms: 420, occurred_at: "2026-11-22T19:00:00.000Z" }];
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
 afterEach(() => { if (root) act(() => root?.unmount()); root = undefined; container?.remove(); container = undefined; });
@@ -40,5 +42,24 @@ describe("AdminMentorEventsScreen", () => {
     expect(view.querySelector('[role="alert"]')?.textContent).toContain("no tiene permisos de administración");
     expect(view.textContent).not.toContain("PRIVATE_BACKEND_DETAIL");
     expect(view.querySelector("button")?.textContent).toBe("Reintentar");
+  });
+
+  it("filters the loaded sample by stage and result without another request", async () => {
+    const read = vi.fn().mockResolvedValue({ ok: true, data: { events } });
+    const view = await render({ read });
+    const selects = view.querySelectorAll("select");
+    expect(selects).toHaveLength(2);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(selects[0], "evaluation");
+      selects[0]?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(view.textContent).toContain("Completada");
+    expect(view.textContent).not.toContain("response_validation_failed");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(selects[1], "failure");
+      selects[1]?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(view.querySelector('[role="status"]')?.textContent).toContain("No hay eventos para esta combinación");
+    expect(read).toHaveBeenCalledTimes(1);
   });
 });
