@@ -314,3 +314,4 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - TDD: amplié la prueba de Mentor con el catálogo que incluye “Navegación fijada” (requerida) y “Accesibilidad” (optativa). Antes del ajuste, fallaba mostrando ambas como botones; después, solo permite seleccionar “Accesibilidad” y el payload contiene únicamente su ID.
 - El filtro usa el nombre normalizado del snapshot para no ocultar otras opciones autorizadas; la misma prop se usa en inicio y recuperación. Se conserva la regresión de contexto con `assignmentVersionId` discrepante.
 - Suite focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx src/features/mentor/mentor-screen.test.tsx --maxWorkers=1` — 2 archivos, 34/34 PASS; typecheck y `git diff --check` PASS.
+- Commit de corrección local: `37b518d12dae9c26ad13137e89ee8add83e31d75` en `codex/f18b-required-mission-skills`.
