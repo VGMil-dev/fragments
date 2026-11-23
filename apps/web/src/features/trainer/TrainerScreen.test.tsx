@@ -7,12 +7,12 @@ import { createTrainerApi } from "../../lib/api/trainer-api";
 import { TrainerScreen } from "./TrainerScreen";
 
 describe("TrainerScreen", () => {
-  it("shows the student practice entry point without inventing a Review or a challenge", () => {
+  it("shows the compact lab heading during load without inventing a Review or a challenge", () => {
     const html = renderToStaticMarkup(<TrainerScreen api={createTrainerApi()} />);
-    expect(html).toContain("No memorices el reto. Domina tu código.");
-    expect(html).toContain("Sortear reto");
-    expect(html).toContain("Historial de práctica");
+    expect(html).toContain("Entrenamiento");
     expect(html).toContain("Buscando análisis completados");
+    expect(html).not.toContain("Tu entrenamiento empieza con una revisión");
+    expect(html).not.toContain("Sortear reto");
     expect(html).not.toContain("teacherHint");
   });
 
@@ -30,6 +30,13 @@ describe("TrainerScreen", () => {
       await act(async () => finish({ ok: true, data: [] }));
       const link = container.querySelector<HTMLAnchorElement>('a[href="/student/review"]');
       expect(link?.textContent).toContain("Ir a Review");
+      expect(container.querySelector("h1")?.textContent).toBe("Entrenamiento");
+      expect(container.textContent).toContain("Tu entrenamiento empieza con una revisión");
+      expect(container.querySelector(".trainer-empty-state")).not.toBeNull();
+      expect(container.querySelector(".trainer-controls")).toBeNull();
+      expect(container.querySelector(".trainer-history")).toBeNull();
+      expect(container.querySelector(".trainer-empty-state img")).toBeNull();
+      expect(container.querySelector(".trainer-empty-state svg")).toBeNull();
       await act(async () => link!.click());
       expect(onStartReview).toHaveBeenCalledOnce();
     } finally {
@@ -54,6 +61,27 @@ describe("TrainerScreen", () => {
       await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Reintentar")!.click());
       expect(reviews).toHaveBeenCalledTimes(2);
       expect(container.querySelector('a[href="/student/review"]')).not.toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("keeps the real Review controls and practice history when a review exists", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const api = {
+      reviews: async () => ({ ok: true, data: [{ id: "review-1", owner: "student", repo: "demo", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z" }] }),
+      history: async () => ({ ok: true, data: [] }),
+    } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} onStartReview={vi.fn()} />));
+      expect(container.querySelector(".trainer-controls select")?.textContent).toContain("student/demo");
+      expect(container.textContent).toContain("Sortear reto");
+      expect(container.textContent).toContain("Historial de práctica");
+      expect(container.querySelector(".trainer-empty-state")).toBeNull();
+      expect(container.querySelector(".trainer-challenge")).toBeNull();
     } finally {
       await act(async () => root.unmount());
       container.remove();
