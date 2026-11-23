@@ -1,6 +1,6 @@
 # Evidencia — F10.4 Trainer Pixel Night
 
-Estado: commit `87dfb87ae90a7c874e1b81bc0a4357f7c4dce787` en `codex/pixel-night-trainer`; pendiente PR e integración. **Candidata visual, no aprobada ni validada en Ego Lite**.
+PR #183 se integró por merge normal como `c6e8a77f274481c7199b207c0bd75c4f1605ff45`; CI `45170608407` SUCCESS. Commit de código `87dfb87ae90a7c874e1b81bc0a4357f7c4dce787` en `codex/pixel-night-trainer`. **Candidata visual, no aprobada ni validada en Ego Lite**.
 
 ## Archivos
 

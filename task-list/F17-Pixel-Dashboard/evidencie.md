@@ -5,7 +5,7 @@
 - `apps/web/src/features/student/StudentDashboard.css`: estilos Pixel Night aislados al Dashboard, responsive, foco visible y reduced-motion; no se tocó la hoja compartida.
 - `apps/web/src/features/student/StudentDashboard.test.tsx`: cubre jerarquía, identidad, CTA único y ausencia de KPI ficticio.
 
-Commit de código: `66b29aada6630943e423cb817d88ff007653646c` en `codex/pixel-night-dashboard`; pendiente PR e integración. Referencia candidata, no validada en Ego Lite.
+PR #182 se integró por merge normal como `75e548314b81df35bf960c245fac3594ea830c35`; CI `45170211839` SUCCESS. Commit de código `66b29aada6630943e423cb817d88ff007653646c` en `codex/pixel-night-dashboard`. Referencia candidata, no validada en Ego Lite.
 
 ## Verificación
 - `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx` — PASS, 4 pruebas.
@@ -18,4 +18,4 @@ Commit de código: `66b29aada6630943e423cb817d88ff007653646c` en `codex/pixel-ni
 - La prueba inicial de typecheck antes de generar los tipos de `@fragments/contracts` falló por ausencia de `packages/contracts/dist`; después de compilar contratos pasó.
 - Referencia visual aún candidata. No hubo validación en Ego Lite ni vista final a 320/390/768/1024/1440 px; QA independiente debe cubrirla con las sesiones existentes.
 - Revisión reflexiva independiente: sin defecto funcional encontrado; cobertura visual, teclado, foco y viewports sigue pendiente.
-- Sin PR/despliegue: el arquitecto coordina integración y actualización de TASKS.
+- Despliegue y QA visual Ego Lite pendientes; el planner registra el estado en `task-list/TASKS.md`.
