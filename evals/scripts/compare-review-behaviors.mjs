@@ -32,29 +32,37 @@ function normalizeCoverage(reference, coverage) {
 export function classifyReferenceBehaviors({ caseReference, reviewOutput, coverage }) {
   const reference = caseReference?.behaviorReference ?? {};
   const findings = Array.isArray(reviewOutput?.analysis?.findings) ? reviewOutput.analysis.findings : [];
+  const evidencePaths = new Set(Array.isArray(caseReference?.evidence) ? caseReference.evidence : []);
   const knownIds = new Set(Object.keys(reference));
   const correctFindings = [];
   const falsePositives = [];
   const statusMismatches = [];
   const unclassifiedFindings = [];
+  const citationsNotInEvidenceList = [];
   const seenBehaviorIds = new Set();
 
   for (const finding of findings) {
     const expectedPresence = reference[finding?.criterionId];
     if (!knownIds.has(finding?.criterionId) || typeof expectedPresence !== "boolean") {
       unclassifiedFindings.push({ criterionId: finding?.criterionId ?? null, status: finding?.status ?? null });
-      continue;
-    }
-    seenBehaviorIds.add(finding.criterionId);
-
-    if (expectedPresence && finding.status === "verified") {
-      correctFindings.push({ criterionId: finding.criterionId, status: finding.status });
-    } else if (!expectedPresence && finding.status === "verified") {
-      falsePositives.push({ criterionId: finding.criterionId, status: finding.status });
-    } else if (!expectedPresence && ["not_verified", "failed"].includes(finding.status)) {
-      correctFindings.push({ criterionId: finding.criterionId, status: finding.status });
     } else {
-      statusMismatches.push({ criterionId: finding.criterionId, status: finding.status });
+      seenBehaviorIds.add(finding.criterionId);
+
+      if (expectedPresence && finding.status === "verified") {
+        correctFindings.push({ criterionId: finding.criterionId, status: finding.status });
+      } else if (!expectedPresence && finding.status === "verified") {
+        falsePositives.push({ criterionId: finding.criterionId, status: finding.status });
+      } else if (!expectedPresence && ["not_verified", "failed"].includes(finding.status)) {
+        correctFindings.push({ criterionId: finding.criterionId, status: finding.status });
+      } else {
+        statusMismatches.push({ criterionId: finding.criterionId, status: finding.status });
+      }
+    }
+
+    for (const citation of Array.isArray(finding?.evidence) ? finding.evidence : []) {
+      if (citation?.source === "repository" && typeof citation.path === "string" && !evidencePaths.has(citation.path)) {
+        citationsNotInEvidenceList.push({ criterionId: finding?.criterionId ?? null, path: citation.path });
+      }
     }
   }
 
@@ -73,6 +81,10 @@ export function classifyReferenceBehaviors({ caseReference, reviewOutput, covera
     omissionStatus: completeCoverage ? "COMPUTED_FOR_DECLARED_COVERAGE" : "NOT_COMPUTED_COVERAGE_INCOMPLETE",
     statusMismatches,
     unclassifiedFindings,
+    citationsNotInEvidenceList,
+    citationPathCheck: Array.isArray(caseReference?.evidence)
+      ? "FIXTURE_EVIDENCE_MEMBERSHIP_ONLY"
+      : "FIXTURE_EVIDENCE_UNAVAILABLE",
     citationValidation: "SHAPE_ONLY",
     semanticValidity: "NOT_VALIDATED",
   };

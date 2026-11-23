@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import FakeLocalReviewProvider from "../providers/fake-review-provider.mjs";
 import {
   classifyReferenceBehaviors,
   compareReviewCorpus,
@@ -15,6 +16,7 @@ const persistedCorpus = JSON.parse(
 const caseA = {
   label: "A",
   commitSha: "1".repeat(40),
+  evidence: ["App.tsx"],
   behaviorReference: {
     required_validation: false,
     name_search: false,
@@ -330,4 +332,32 @@ test("la referencia mecánica A/B/C refleja los tokens técnicos ya persistidos 
     assert.equal(item.behaviorReference.recovered_status,
       present.includes("mark item recovered") && !absent.includes("recovered status"));
   }
+});
+
+test("el finding fake missing_file para A queda sin clasificar y su ruta no está en evidence del fixture", async () => {
+  const provider = new FakeLocalReviewProvider();
+  const fakeResult = await provider.callApi("", {
+    vars: {
+      fixture: "missing_file",
+      digest: "d".repeat(64),
+      inputDigest: "e".repeat(64),
+    },
+  });
+  const reviewOutput = { analysis: JSON.parse(fakeResult.output) };
+  const comparison = classifyReferenceBehaviors({
+    caseReference: caseA,
+    reviewOutput,
+    coverage: { complete: true, criterionIds: Object.keys(caseA.behaviorReference) },
+  });
+
+  assert.deepEqual(comparison.unclassifiedFindings, [{
+    criterionId: "missing-file",
+    status: "failed",
+  }]);
+  assert.deepEqual(comparison.citationsNotInEvidenceList, [{
+    criterionId: "missing-file",
+    path: "src/invented.ts",
+  }]);
+  assert.equal(comparison.citationPathCheck, "FIXTURE_EVIDENCE_MEMBERSHIP_ONLY");
+  assert.equal(comparison.semanticValidity, "NOT_VALIDATED");
 });
