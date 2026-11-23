@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ArrowLeft, GitCommitHorizontal } from "lucide-react";
 import type {
   ApiResult,
   CreateReviewSubmissionRequest,
@@ -118,8 +119,11 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
     <main className="student-screen review-screen" aria-labelledby="review-title">
       <header className="student-screen__header">
         <div>
-          <button className="review-screen__back" type="button" onClick={onBack}>← Volver a Mentor</button>
-          <p className="student-screen__eyebrow">REVIEW · COMMIT</p>
+          <button className="review-screen__back" type="button" onClick={onBack}><ArrowLeft aria-hidden="true" size={17} /> Volver a Mentor</button>
+          <div className="review-screen__identity">
+            <span className="review-screen__commit-mark" aria-hidden="true"><GitCommitHorizontal size={20} /></span>
+            <p className="student-screen__eyebrow">REVIEW <span aria-hidden="true">/</span> COMMIT</p>
+          </div>
           <h1 id="review-title">Revisa un commit</h1>
           <p className="student-screen__lead">Elige el repositorio y el commit exacto que quieres entender mejor.</p>
         </div>
@@ -129,17 +133,17 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
       <form className="review-form" onSubmit={(event) => void queueReview(event)} noValidate>
         <label className="review-field">
           <span>Usuario u organización</span>
-          <input autoComplete="off" value={fields.owner} maxLength={39} disabled={reviewIsBusy} onChange={(event) => updateField("owner", event.target.value)} aria-invalid={Boolean(fieldErrors.owner)} aria-describedby={fieldErrors.owner ? "review-owner-error" : undefined} />
+          <input aria-label="Usuario u organización" autoComplete="off" value={fields.owner} maxLength={39} disabled={reviewIsBusy} onChange={(event) => updateField("owner", event.target.value)} aria-invalid={Boolean(fieldErrors.owner)} aria-describedby={fieldErrors.owner ? "review-owner-error" : undefined} />
           {fieldErrors.owner ? <small id="review-owner-error" role="alert">{fieldErrors.owner}</small> : null}
         </label>
         <label className="review-field">
           <span>Nombre del repositorio</span>
-          <input autoComplete="off" value={fields.repo} maxLength={100} disabled={reviewIsBusy} onChange={(event) => updateField("repo", event.target.value)} aria-invalid={Boolean(fieldErrors.repo)} aria-describedby={fieldErrors.repo ? "review-repo-error" : undefined} />
+          <input aria-label="Nombre del repositorio" autoComplete="off" value={fields.repo} maxLength={100} disabled={reviewIsBusy} onChange={(event) => updateField("repo", event.target.value)} aria-invalid={Boolean(fieldErrors.repo)} aria-describedby={fieldErrors.repo ? "review-repo-error" : undefined} />
           {fieldErrors.repo ? <small id="review-repo-error" role="alert">{fieldErrors.repo}</small> : null}
         </label>
         <label className="review-field review-field--wide">
           <span>SHA del commit</span>
-          <input autoComplete="off" spellCheck={false} value={fields.commitSha} maxLength={64} disabled={reviewIsBusy} onChange={(event) => updateField("commitSha", event.target.value)} aria-invalid={Boolean(fieldErrors.commitSha)} aria-describedby={fieldErrors.commitSha ? "review-sha-help review-sha-error" : "review-sha-help"} />
+          <input aria-label="SHA del commit" autoComplete="off" spellCheck={false} value={fields.commitSha} maxLength={64} disabled={reviewIsBusy} onChange={(event) => updateField("commitSha", event.target.value)} aria-invalid={Boolean(fieldErrors.commitSha)} aria-describedby={fieldErrors.commitSha ? "review-sha-help review-sha-error" : "review-sha-help"} />
           <small id="review-sha-help">Pega el identificador completo del commit, de 40 o 64 caracteres hexadecimales.</small>
           {fieldErrors.commitSha ? <small id="review-sha-error" role="alert">{fieldErrors.commitSha}</small> : null}
         </label>
@@ -209,7 +213,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
               <ul className="review-findings">
                 {currentReview.analysis.findings.map((finding, index) => (
                   <li key={`${finding.criterionId}-${index}`}>
-                    <p className="review-finding__status">{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p>
+                    <p className="review-finding__status" data-status={finding.status}>{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p>
                     <p>{finding.reason}</p>
                     <ul>{finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}>{evidenceLabel(item)}</li>)}</ul>
                   </li>

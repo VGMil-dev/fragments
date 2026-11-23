@@ -59,6 +59,14 @@ describe("ReviewScreen", () => {
     expect(html).not.toContain("84/100");
   });
 
+  it("frames the commit workflow with a decorative Git icon and keeps the form controls labeled", () => {
+    const html = renderToStaticMarkup(<ReviewScreen {...actions} onBack={vi.fn()} />);
+
+    expect(html).toContain("review-screen__identity");
+    expect(html).toContain("review-screen__commit-mark");
+    expect(html).toContain('aria-label="SHA del commit"');
+  });
+
   it("shows only the score and evidence-backed findings from a completed response", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: completed }} onBack={vi.fn()} />);
 
@@ -67,6 +75,20 @@ describe("ReviewScreen", () => {
     expect(html).toContain("src/main.ts:3–9");
     expect(html).toContain('href="/student/trainer"');
     expect(html).toContain("Practicar en Trainer");
+  });
+
+  it("preserves semantic codes for verified, unverified, and review-needed findings", () => {
+    const finding = analysis.findings[0]!;
+    const review = { ...completed, analysis: { ...analysis, findings: [
+      { ...finding, status: "verified" as const },
+      { ...finding, criterionId: "unverified", status: "not_verified" as const },
+      { ...finding, criterionId: "review-needed", status: "failed" as const },
+    ] } };
+    const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: review }} onBack={vi.fn()} />);
+
+    expect(html).toContain('data-status="verified"');
+    expect(html).toContain('data-status="not_verified"');
+    expect(html).toContain('data-status="failed"');
   });
 
   it.each(["queued", "running", "failed"] as const)("does not offer Trainer while a review is %s", (status) => {
