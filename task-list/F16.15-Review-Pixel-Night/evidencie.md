@@ -27,4 +27,5 @@ Implementación local completada y probada. No publicada ni desplegada; queda pe
 ## Integración
 
 - Rama `codex/f16.15-review-pixel-night`; worktree aislado.
-- Commit de implementación y salida de CI/PR: pendiente de integración por el arquitecto.
+- Commit local de implementación `68eb92f4968cfd697f592a0ce652bdbdcb849a28` (`feat(F16.15): ordena evidencia en Review`).
+- No se publicó la rama ni se abrió PR; la integración queda a cargo del arquitecto.
