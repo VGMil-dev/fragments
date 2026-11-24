@@ -51,7 +51,8 @@ describePostgres("Better Auth PostgreSQL integration", () => {
       },
     });
     const email = `${namespace}-reset@example.test`;
-    await auth.api.signUpEmail({ body: { name: "Fixture Reset", email, password: "fixture-password-2026" } });
+    const created = await auth.api.signUpEmail({ body: { name: "Fixture Reset", email, password: "fixture-password-2026" } });
+    await database.user.update({ where: { id: created.user.id }, data: { isTeacher: true } });
 
     await auth.api.requestPasswordReset({ body: { email, redirectTo: "https://fragments.example.test/teacher/reset-password" } });
 
