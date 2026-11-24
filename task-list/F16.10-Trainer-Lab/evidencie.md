@@ -16,3 +16,11 @@ Estado: implementación integrada y paquete v0.5.52 aplicado; revisión visual c
 - En 320/390/768/1024/1440 px: `scrollWidth <= innerWidth`. Tabulación mostró foco visible lima sólido de 3 px.
 - Captura Ego Lite auténtica: `C:\Users\vgmil\ego\fragments-continuation-20261123\trainer-desktop.png` (fuera de Git).
 - No se probaron Review vinculada, reto, historial, zoom 200 %, contraste formal, lector de pantalla ni evaluación real. La sesión docente no se usó para este flujo. La tarea queda pendiente de revisión visual propietaria.
+
+## Revisión funcional de selección Review — 2026-11-24
+
+- Revisión estática de `TrainerScreen`: carga/error/vacío de Reviews y carga/error/vacío/reintento del historial estaban separados correctamente; el selector ya limpiaba el reto/historial anteriores y derivaba sorteo/historial de la Review elegida. No se encontró un defecto de comportamiento que justificara alterar la UI.
+- Brecha concreta de cobertura: las pruebas cubrían una Review por vez, no el cambio de selección entre Reviews. Añadí `switches between labelled fake Reviews without mixing their source, context, history or challenge`: con datos `fake-review-a`/`fake-review-b` verifica source/repo, commit, contexto/habilidad, historial separado y que `draw` reciba la Review seleccionada; comprueba que el reto previo desaparece. No se ejecutan repositorios ni IA.
+- Commit de prueba `e8d4f26` (`test(trainer): cubre cambio entre Reviews`).
+- Verificación fresca: Trainer `TrainerScreen.test.tsx` 11/11 PASS; suite web 52 archivos / 275 pruebas PASS; web typecheck PASS; web build PASS; `git diff --check` PASS. Build conserva warnings de chunk >500 kB y directivas `use client` de Lucide.
+- Review auténtica seleccionable, reto/pistas/historial productivos y QA visual con datos vinculados: **NO COMPROBADOS**. No se abrió Ego Lite, no se crearon Reviews ni se tocaron datos de producción.
