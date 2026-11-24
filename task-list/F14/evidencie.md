@@ -388,3 +388,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El alias SSH reporta `StrictHostKeyChecking=true` y `BatchMode=yes`; se usó `sudo -n` solo para listar contenedores/salud e inspeccionar en modo lectura el asset estático. No se accedió a variables de entorno ni a la base de datos.
 - Ego Lite TaskSpace 44 había terminado y exigía autorización explícita para reclamarlo. No se abrió otro espacio ni un navegador alternativo; QA visual autenticada y observación por sesión Ego Lite quedan pendientes.
 - No se ejecutaron migraciones ni escrituras académicas en producción. Aplicación de F14 queda comprobada a nivel de contenedor/artefacto; health HTTP público y pantallas autenticadas siguen **NO COMPROBADOS**.
+
+## Release Pixel Night `v0.5.57` — 2026-11-24
+
+- PR #233 se integró mediante merge normal en `main` como `7648fd5b7d5df4daed3485aef9659b5ba57d5628`; CI del PR `45314909157` SUCCESS.
+- Tag anotada `v0.5.57` apunta exactamente a ese merge. F14 run `45315350460` completó `verify-build`, `attest-package` y `publish-approved-release` en SUCCESS. Pasaron validación tag/SHA/main, PostgreSQL desechable y backup/restore, pruebas, typecheck/lint/build, metadata, imágenes ARM64, firma Sigstore y publicación del paquete a la cola protegida.
+- Aplicación pública automática verificada: `/health` HTTP 200 `ok`, database `ready`; bundle `/assets/index-DQPP14Ar.js` contiene `v0.5.57` y el SHA exacto `7648fd5b7d5df4daed3485aef9659b5ba57d5628`.
+- No hubo deploy manual, reinicio, migración, cambio de configuración ni escritura productiva. El TaskSpace estudiantil de Ego Lite no estaba disponible; QA visual autenticada queda NO COMPROBADA.
