@@ -24,3 +24,9 @@ Delta accesible implementado y verificado localmente; PR y revisión integradora
 
 - Commit de implementación: `227b882285e0764f18d45a7fda296a7d19ec728b`.
 - PR, CI, integración a `main` y release: pendientes. Esta rama no se despliega.
+
+### Actualización de PR · 2026-11-24
+
+- PR [#251](https://github.com/VGMil-dev/fragments/pull/251) abierto normalmente contra `main`.
+- Check `verify` run `45352035489`: **PENDING** al consultar; merge e integración no comprobados.
+- Commit de evidencia: `9d6b141f8c749e4607c8e815a4c189a33175fbbc` antes de esta actualización.
