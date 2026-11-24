@@ -260,7 +260,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
   });
 
-  it("carries a published mission through a fake completed Review into the student's Trainer list", async () => {
+  it("persists two ordered fake Reviews for one mission project and exposes both to Trainer", async () => {
     const db = database!;
     const assignments = createAssignmentRepository(db);
     const created = await assignments.create(teacherId, classroomId, {
@@ -283,14 +283,19 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const owner = "fixture-student";
     const repo = `academic-flow-${namespace}`;
     const commitSha = "f".repeat(40);
-    let reviewJobId: string | undefined;
+    const followupCommitSha = "a".repeat(40);
+    const reviewJobIds: string[] = [];
+    let activeReviewJobId: string | undefined;
     const snapshotBody = { owner, repo, commitSha, files: [{ path: "src/navigation.ts", content: "export const routeCount = 2;\n", sha: "e".repeat(40) }] };
-    const snapshotDigest = await digestSnapshot(snapshotBody);
-    const packedText = `FAKE_PACKED_REPOSITORY ${snapshotDigest}`;
-    const inputDigest = await sha256(packedText);
     const reviewService = createReviewService({
-      repository: { async getCommitSnapshot() { return { ...snapshotBody, digest: snapshotDigest }; } },
-      packer: { async pack() { return { text: packedText, inputDigest, tokenCount: 8 }; } },
+      repository: { async getCommitSnapshot(input) {
+        const snapshot = { ...snapshotBody, commitSha: input.commitSha };
+        return { ...snapshot, digest: await digestSnapshot(snapshot) };
+      } },
+      packer: { async pack(snapshot) {
+        const text = `FAKE_PACKED_REPOSITORY ${snapshot.digest}`;
+        return { text, inputDigest: await sha256(text), tokenCount: 8 };
+      } },
       ai: { async analyze(input) {
         return { rubricVersion: input.rubricVersion, score: 80, findings: [{
           criterionId: "navigation", status: "verified", evidence: [{ source: "repository", path: "src/navigation.ts", lines: [1, 1], digest: input.snapshotDigest }],
@@ -350,10 +355,11 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const headers = { "x-fixture-user": studentId, "x-fixture-role": "student" };
     try {
       const queuedResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { ...headers, "content-type": "application/json" },
-        body: JSON.stringify({ owner, repo, commitSha, linkedProposalId: proposal.id }) });
+        body: JSON.stringify({ owner, repo, commitSha, linkedProposalId: proposal.id, assignmentDeliverableId: "delivery-proposal" }) });
       expect(queuedResponse.status).toBe(202);
       const queued = await queuedResponse.json() as { data: { id: string; status: string } };
-      reviewJobId = queued.data.id;
+      reviewJobIds.push(queued.data.id);
+      activeReviewJobId = queued.data.id;
       expect(queued.data.status).toBe("queued");
 
       const scopedReviewStore = {
@@ -363,10 +369,10 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
           const now = new Date(nowMs);
           const leaseUntil = new Date(nowMs + leaseDurationMs);
           const claimed = await db.$transaction(async (tx) => {
-            const changed = await tx.job.updateMany({ where: { id: reviewJobId, type: "review", status: "pending" },
+            const changed = await tx.job.updateMany({ where: { id: activeReviewJobId, type: "review", status: "pending" },
               data: { status: "leased", attempts: { increment: 1 }, leaseOwner: workerId, leaseUntil, heartbeatAt: now, updatedAt: now } });
             if (changed.count !== 1) return null;
-            const row = await tx.job.findUnique({ where: { id: reviewJobId } });
+            const row = activeReviewJobId ? await tx.job.findUnique({ where: { id: activeReviewJobId } }) : null;
             if (!row) return null;
             await tx.reviewAttempt.create({ data: { jobId: row.id, attempt: row.attempts, startedAt: now, finalStatus: "running" } });
             return { id: row.id, attempts: row.attempts, payload: row.payloadJson as { request: unknown; context: unknown } };
@@ -381,20 +387,48 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       await expect(worker.runOnce()).resolves.toBe(true);
       await expect(reviewStore.getJob(queued.data.id)).resolves.toMatchObject({ id: queued.data.id, status: "completed" });
 
+      const historyUrl = `${base}/api/me/proposals/${proposal.id}/deliveries`;
+      const firstDeliveryHistoryResponse = await fetch(historyUrl, { headers });
+      expect(firstDeliveryHistoryResponse.status).toBe(200);
+      const firstDeliveryHistory = await firstDeliveryHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
+      expect(firstDeliveryHistory.data.nextDeliverableId).toBe("delivery-progress");
+      expect(firstDeliveryHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "not_started"]);
+      expect(firstDeliveryHistory.data.deliveries[0]?.attempts).toEqual([expect.objectContaining({ commitSha })]);
+
+      const nextDeliveryResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ owner, repo, commitSha: followupCommitSha, linkedProposalId: proposal.id, assignmentDeliverableId: "delivery-progress" }) });
+      expect(nextDeliveryResponse.status).toBe(202);
+      const nextDelivery = await nextDeliveryResponse.json() as { data: { id: string; status: string } };
+      reviewJobIds.push(nextDelivery.data.id);
+      activeReviewJobId = nextDelivery.data.id;
+      expect(nextDelivery.data.status).toBe("queued");
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(reviewStore.getJob(nextDelivery.data.id)).resolves.toMatchObject({ id: nextDelivery.data.id, status: "completed" });
+
+      const completeHistoryResponse = await fetch(historyUrl, { headers });
+      expect(completeHistoryResponse.status).toBe(200);
+      const completeHistory = await completeHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
+      expect(completeHistory.data.nextDeliverableId).toBeNull();
+      expect(completeHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "completed"]);
+      expect(completeHistory.data.deliveries.map((delivery) => delivery.attempts[0]?.commitSha)).toEqual([commitSha, followupCommitSha]);
+      expect(completeHistory.data.deliveries[0]?.attempts[0]?.commitSha).not.toBe(completeHistory.data.deliveries[1]?.attempts[0]?.commitSha);
+      expect(JSON.stringify(completeHistory)).not.toMatch(/findings|score|analysis|studentId/);
+
       const trainerResponse = await fetch(`${base}/api/trainer/reviews`, { headers });
       expect(trainerResponse.status).toBe(200);
       const trainer = await trainerResponse.json() as { data: Array<Record<string, unknown>> };
-      expect(trainer.data).toHaveLength(1);
-      expect(trainer.data[0]).toMatchObject({ id: queued.data.id, owner, repo, commitSha, academicContext: {
+      expect(trainer.data).toHaveLength(2);
+      expect(trainer.data).toContainEqual(expect.objectContaining({ id: queued.data.id, owner, repo, commitSha, academicContext: {
         missionTitle: "Misión integrada", missionVersion: 1, mentorContextVersion: mission.mentorContextVersion,
         classroomTitle: "Aula fixture", requiredSkills: ["Navegación"],
-      } });
+      } }));
+      expect(trainer.data).toContainEqual(expect.objectContaining({ id: nextDelivery.data.id, commitSha: followupCommitSha }));
       expect(JSON.stringify(trainer.data)).not.toMatch(/studentId|proposalId|assignmentVersionId|classroomId|score|findings/);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       if (trainerSessionHashes.size) await db.trainerSession.deleteMany({ where: { sessionHash: { in: [...trainerSessionHashes] } } });
-      if (reviewJobId) await cleanupReviewFixtureRows(db, databaseUrl!, [reviewJobId]);
+      if (reviewJobIds.length) await cleanupReviewFixtureRows(db, databaseUrl!, reviewJobIds);
     }
   });
 
