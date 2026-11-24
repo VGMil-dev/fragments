@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from "react";
-import type { InspectorChallenge } from "@fragments/contracts";
+import type { InspectorChallengeRecordResponse } from "@fragments/contracts";
 import "./inspector-teacher-panel.css";
 
 type InspectorStatus = "pending" | "assigned" | "completed" | "obsolete";
 
 type InspectorTeacherPanelProps = {
-  challenge: InspectorChallenge | null;
-  status: InspectorStatus;
+  record: InspectorChallengeRecordResponse | null;
+  teacherAuthorized?: boolean;
   onAssign: () => void | Promise<void>;
   onRecord: (form: FormData) => void | Promise<void>;
   message?: string;
@@ -19,8 +19,10 @@ const statusLabels: Record<InspectorStatus, string> = {
   obsolete: "Obsoleto",
 };
 
-export function InspectorTeacherPanel({ challenge, status, onAssign, onRecord, message }: InspectorTeacherPanelProps) {
+export function InspectorTeacherPanel({ record, teacherAuthorized = false, onAssign, onRecord, message }: InspectorTeacherPanelProps) {
   const [busy, setBusy] = useState(false);
+  const challenge = record?.challenge ?? null;
+  const status: InspectorStatus = record?.status ?? "pending";
 
   async function handleAssign() {
     setBusy(true);
@@ -36,9 +38,9 @@ export function InspectorTeacherPanel({ challenge, status, onAssign, onRecord, m
   if (!challenge) {
     return (
       <section className="inspector-panel inspector-panel--empty" aria-labelledby="inspector-title">
-        <p className="inspector-panel__eyebrow">INSPECTOR · DOCENTE</p>
-        <h2 id="inspector-title">Reto de revisión</h2>
-        <p>Selecciona una revisión reciente para preparar una conversación sobre una decisión real del proyecto.</p>
+        <p className="inspector-panel__eyebrow">DEFENSA POR COMPETENCIAS · INSPECTOR</p>
+        <h2 id="inspector-title">Sala de defensa</h2>
+        <p>Carga una revisión para consultar evidencia y preparar una defensa.</p>
         {message && <p role="status">{message}</p>}
       </section>
     );
@@ -53,17 +55,25 @@ export function InspectorTeacherPanel({ challenge, status, onAssign, onRecord, m
       <header className="inspector-panel__header">
         <div>
           <p className="inspector-panel__eyebrow">INSPECTOR · SOLO DOCENTE</p>
-          <h2 id="inspector-title">Reto de revisión</h2>
+          <h2 id="inspector-title">Sala de defensa</h2>
         </div>
         <span className={`inspector-panel__status inspector-panel__status--${status}`}>
           {statusLabels[status]}
         </span>
       </header>
 
+      {record ? <dl className="inspector-panel__review" aria-label="Revisión y commit">
+        <div><dt>Revisión</dt><dd><code>{record.reviewId}</code></dd></div>
+        <div><dt>Proyecto</dt><dd><code>{record.projectId}</code></dd></div>
+        <div><dt>Commit revisado</dt><dd><code>{record.commitSha}</code></dd></div>
+      </dl> : null}
+
       <div className="inspector-panel__evidence">
-        <span>Evidencia del commit revisado</span>
+        <span>Evidencia de la revisión</span>
         <ul>{evidence.map((item) => <li key={item}>{item}</li>)}</ul>
       </div>
+
+      <p className="inspector-panel__duration">Tiempo estimado del reto: <strong>{challenge.estimatedMinutes} min</strong></p>
 
       <dl className="inspector-panel__steps">
         <div><dt>Precondición</dt><dd>{challenge.precondition}</dd></div>
@@ -72,10 +82,10 @@ export function InspectorTeacherPanel({ challenge, status, onAssign, onRecord, m
         <div><dt>Restauración</dt><dd>{challenge.restoration}</dd></div>
       </dl>
 
-      <aside className="inspector-panel__private" aria-label="Ayuda privada para docente">
-        <span>Ayuda privada para docente</span>
+      {teacherAuthorized ? <aside className="inspector-panel__private" aria-label="Orientación privada para el docente">
+        <span>Orientación privada para el docente</span>
         <p>{challenge.teacherHint}</p>
-      </aside>
+      </aside> : null}
 
       {status === "assigned" && (
         <form className="inspector-panel__record" onSubmit={handleRecord}>
@@ -92,7 +102,21 @@ export function InspectorTeacherPanel({ challenge, status, onAssign, onRecord, m
           Asignar reto
         </button>
       )}
+      {status === "completed" && record?.defense ? <section className="inspector-panel__defense" aria-labelledby="inspector-defense-title">
+        <h3 id="inspector-defense-title">Defensa registrada</h3>
+        <dl>
+          <div><dt>Mutación explicada</dt><dd>{record.defense.mutationObserved ? "Sí" : "No"}</dd></div>
+          <div><dt>Restauración confirmada</dt><dd>{record.defense.restorationConfirmed ? "Sí" : "No"}</dd></div>
+          <div><dt>Fecha de registro</dt><dd><time dateTime={record.defense.recordedAt}>{formatDate(record.defense.recordedAt)}</time></dd></div>
+        </dl>
+      </section> : null}
+      {status === "obsolete" && record?.supersededByCommitSha ? <p className="inspector-panel__obsolete" role="status">Esta defensa quedó obsoleta cuando cambió el commit. Nuevo commit: <code>{record.supersededByCommitSha}</code></p> : null}
       {message && <p className="inspector-panel__message" role="status">{message}</p>}
     </section>
   );
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Fecha no disponible" : new Intl.DateTimeFormat("es", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
