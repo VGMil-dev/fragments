@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación local completada y probada. No publicada ni desplegada; queda pendiente revisión/integración.
+Implementación probada e integrada por PR #235. F14 publicó `v0.5.58`; la aplicación productiva del paquete continúa pendiente de confirmación.
 
 ## Cambios
 
@@ -22,10 +22,12 @@ Implementación local completada y probada. No publicada ni desplegada; queda pe
 
 - QA visual autenticada con Ego Lite, medidas 320/390/768/1024/1440 en navegador, zoom, contraste integral y lector de pantalla: **NO COMPROBADOS**. No había sesión Ego Lite Fragments-Estudiante disponible; no se creó ni cerró ninguna sesión.
 - Review con evaluación real y calidad semántica de puntuaciones/citas: **NO COMPROBADAS**. Solo se usó el fixture de componente etiquetado `fake-provider:review-fixture`; no hubo llamadas a proveedores ni datos productivos.
-- F14 y producción: NO EJECUTADOS para este branch local.
+- Aplicación de `v0.5.58` en producción: **PENDIENTE/NO COMPROBADA**. Tras publicar el paquete, Ego Lite todavía recibió `/assets/index-DQPP14Ar.js` sin el marcador `v0.5.58` ni el SHA de `main`; `/health` respondió 200, DB `ready`. No se ejecutó deploy manual.
 
 ## Integración
 
 - Rama `codex/f16.15-review-pixel-night`; worktree aislado.
 - Commit local de implementación `68eb92f4968cfd697f592a0ce652bdbdcb849a28` (`feat(F16.15): ordena evidencia en Review`).
-- No se publicó la rama ni se abrió PR; la integración queda a cargo del arquitecto.
+- PR [#235](https://github.com/VGMil-dev/fragments/pull/235) se integró mediante merge normal como `004df54d9e485e59b294cbec263020eb034bbf46`; CI PR `45320215869` SUCCESS.
+- Tag anotada `v0.5.58` apunta al merge exacto. F14 run `45320565441` completó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; imágenes ARM64, manifiesto y atestación quedaron publicados.
+- Ego Lite `Fragments-Docente` se mantuvo abierta en Control de Mentor. No había sesión `Fragments-Estudiante`; no se crearon/cerraron sesiones. Calidad semántica de evaluación y QA visual autenticada NO COMPROBADAS.
