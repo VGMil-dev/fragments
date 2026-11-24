@@ -24,6 +24,6 @@ Implementación y verificación local completadas; commit y PR pendientes. No se
 ## Integración
 
 - Rama: `codex/f16.14-mentor-pixel-night`; base asignada `3f6d742`.
-- Commit: pendiente.
+- Commit de implementación: `184a84da3cb6a2d3e8493ac5febc59753cb4267a` (`feat(mentor): alinea stepper Pixel Night`).
 - PR a `main`: pendiente.
 - `task-list/TASKS.md` no se editó; permanece bajo ownership del planner.
