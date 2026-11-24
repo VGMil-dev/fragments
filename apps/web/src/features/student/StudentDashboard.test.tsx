@@ -109,6 +109,7 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
+    expect(html.indexOf('<section class="student-dashboard__project"')).toBeLessThan(html.indexOf('<section class="student-dashboard__missions"'));
   });
 
   it("does not imply this is the student's first project when no proposal or mission is available", () => {

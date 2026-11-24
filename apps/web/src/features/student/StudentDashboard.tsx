@@ -51,6 +51,20 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
       ? <a className="student-dashboard__identity-link" href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a>
       : `@${student.githubLogin}`
     : "estudiante";
+  const priorityPanel = <section className="student-dashboard__project" aria-label="Acción prioritaria del dashboard">
+    <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
+    <div className="student-dashboard__project-copy">
+      {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : choosingMission ? <><span className="student-dashboard__status">Misiones disponibles</span><h2>Elige una misión para comenzar</h2><p>Hay varias misiones publicadas en tus aulas. Puedes elegir cuál explorar primero.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Sin misión publicada</span><h2>Empieza con una idea propia</h2><p>Aún no hay una misión activa en tus aulas. Puedes crear una propuesta en Mentor o revisar tus aulas.</p></>}
+      {dashboardMission ? <dl className="student-dashboard__mission-snapshot" aria-label="Contexto de la misión">
+        <div><dt>Materia</dt><dd>{dashboardMission.subject}</dd></div>
+        <div><dt>Versiones fijadas</dt><dd>Misión publicada v{dashboardMission.version} · Contexto Mentor v{dashboardMission.mentorContextVersion}</dd></div>
+        <div><dt>Habilidades obligatorias</dt><dd>{dashboardMission.requiredSkills.length ? dashboardMission.requiredSkills.map((skill) => skill.name).join(" · ") : "Sin habilidades obligatorias"}</dd></div>
+      </dl> : null}
+    </div>
+    <div className="student-dashboard__project-action">
+      {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : choosingMission ? <button type="button" className="button button--primary" onClick={() => onNavigate("/student/classrooms")}>Ir a Mis aulas <ArrowRight size={17} aria-hidden="true" /></button> : dashboardMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(dashboardMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
+    </div>
+  </section>;
 
   return (
     <main className={dashboardClasses} aria-labelledby="student-dashboard-title">
@@ -60,6 +74,8 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         <p>Tu siguiente paso de aprendizaje, con tus propuestas y actividad en un solo lugar.</p>
         {student.avatarUrl ? <img className="student-dashboard__avatar" src={student.avatarUrl} alt="" width="56" height="56" /> : null}
       </header>
+
+      {proposalIsPrimary ? priorityPanel : null}
 
       {visibleOtherMissions.length ? <section className="student-dashboard__missions" aria-labelledby="student-dashboard-missions">
         <header className="student-dashboard__missions-heading">
@@ -91,20 +107,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         </button> : null}
       </section> : null}
 
-      <section className="student-dashboard__project" aria-label="Acción prioritaria del dashboard">
-        <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
-        <div className="student-dashboard__project-copy">
-          {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · borrador v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Borrador sin título"}</h2><p>Continúa donde dejaste tu propuesta.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : choosingMission ? <><span className="student-dashboard__status">Misiones disponibles</span><h2>Elige una misión para comenzar</h2><p>Hay varias misiones publicadas en tus aulas. Puedes elegir cuál explorar primero.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Sin misión publicada</span><h2>Empieza con una idea propia</h2><p>Aún no hay una misión activa en tus aulas. Puedes crear una propuesta en Mentor o revisar tus aulas.</p></>}
-          {dashboardMission ? <dl className="student-dashboard__mission-snapshot" aria-label="Contexto de la misión">
-            <div><dt>Materia</dt><dd>{dashboardMission.subject}</dd></div>
-            <div><dt>Versiones fijadas</dt><dd>Misión publicada v{dashboardMission.version} · Contexto Mentor v{dashboardMission.mentorContextVersion}</dd></div>
-            <div><dt>Habilidades obligatorias</dt><dd>{dashboardMission.requiredSkills.length ? dashboardMission.requiredSkills.map((skill) => skill.name).join(" · ") : "Sin habilidades obligatorias"}</dd></div>
-          </dl> : null}
-        </div>
-        <div className="student-dashboard__project-action">
-          {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : choosingMission ? <button type="button" className="button button--primary" onClick={() => onNavigate("/student/classrooms")}>Ir a Mis aulas <ArrowRight size={17} aria-hidden="true" /></button> : dashboardMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(dashboardMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
-        </div>
-      </section>
+      {!proposalIsPrimary ? priorityPanel : null}
 
       <div className="student-dashboard__grid">
         <section className="student-dashboard__card" aria-labelledby="student-dashboard-classrooms">
