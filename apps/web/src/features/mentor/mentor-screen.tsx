@@ -138,6 +138,16 @@ function fieldsFromProposal(proposal: ProposalDraftResponse): ProposalDraftField
   };
 }
 
+function resumeStageFor(proposal: ProposalDraftResponse | undefined): number {
+  if (!proposal) return 0;
+  const validation = validateProposalDraft(fieldsFromProposal(proposal));
+  if (validation.ok) return 4;
+  const errors = validation.fieldErrors;
+  if (errors.title || errors.problem || errors.solution || errors.description || errors.purpose) return 0;
+  if (errors.goals || errors.scope || errors.technologies) return 3;
+  return 4;
+}
+
 function viabilityLabel(value: ProposalEvaluationResponse["viability"]): string {
   switch (value) {
     case "feasible": return "La propuesta es viable";
@@ -210,7 +220,7 @@ export function MentorScreen({
 }: MentorScreenProps) {
   const [fields, setFields] = useState<ProposalDraftFields>(() => initialProposal ? fieldsFromProposal(initialProposal) : EMPTY_DRAFT);
   const [technologyIds, setTechnologyIds] = useState<string[]>(() => initialProposal?.proposal.technologyIds ?? []);
-  const [activeStage, setActiveStage] = useState(() => initialEvaluation || restoreEvaluation ? 4 : 0);
+  const [activeStage, setActiveStage] = useState(() => initialEvaluation ? 4 : restoreEvaluation ? resumeStageFor(initialProposal) : 0);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProposalDraftFields, string>>>({});
   const [proposal, setProposal] = useState<ProposalDraftResponse | undefined>(initialProposal);
   const [skillClassroomId, setSkillClassroomId] = useState<string | null>(() => initialProposal?.proposal.mentorSkills?.classroomId ?? null);
@@ -341,7 +351,10 @@ export function MentorScreen({
     if (!restoreEvaluation || !initialProposal || initialEvaluation) return;
     let active = true;
     void onRecoverEvaluation(initialProposal.id).then((result) => {
-      if (active) setEvaluation(result.ok ? { status: "success", data: result.data } : null);
+      if (active && result.ok) {
+        setEvaluation({ status: "success", data: result.data });
+        setActiveStage(4);
+      } else if (active) setEvaluation(null);
     }).catch(() => { if (active) setEvaluation(null); });
     return () => { active = false; };
   }, [restoreEvaluation, initialProposal, initialEvaluation, onRecoverEvaluation]);

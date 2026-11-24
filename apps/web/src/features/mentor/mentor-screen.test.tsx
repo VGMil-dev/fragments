@@ -818,6 +818,26 @@ describe("MentorScreen", () => {
 
     expect(recover).toHaveBeenCalledWith(reopenedProposal.id);
     expect(mountedContainer.textContent).toContain("72/100");
+    expect(mountedContainer.querySelector(".mentor-stage-nav button[aria-current='step']")?.textContent).toContain("Evaluación");
+  });
+
+  it("resumes an incomplete saved proposal at its first required stage when no evaluation exists", async () => {
+    const incompleteProposal = {
+      ...proposal,
+      proposal: { ...proposal.proposal, goals: [], scope: "" },
+    };
+    const recover = vi.fn(async () => ({ ok: false as const, error: { code: "NOT_FOUND", message: "No existe una evaluación guardada." } }));
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} initialProposal={incompleteProposal} restoreEvaluation onRecoverEvaluation={recover} onBack={vi.fn()} />);
+    });
+
+    expect(recover).toHaveBeenCalledWith(incompleteProposal.id);
+    expect(mountedContainer.querySelector(".mentor-stage-nav button[aria-current='step']")?.textContent).toContain("Objetivos y alcance");
+    expect(mountedContainer.textContent).not.toContain("72/100");
   });
 
   it("shows only the evaluation and findings supplied by the response", () => {
