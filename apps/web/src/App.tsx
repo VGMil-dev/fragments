@@ -472,7 +472,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
             initialProposalId={currentProposal?.id ?? ""}
             onLoadDeliveryHistory={loadMissionDeliveryHistory}
             onOpenTrainer={() => navigate("/student/trainer")}
-            onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
+            onBack={() => { setSelectedAssignment(undefined); navigate(currentProposal ? `/student/mentor?proposalId=${encodeURIComponent(currentProposal.id)}` : "/student/mentor"); }}
           />
         ) : null}
         {path === "/student/trainer" ? <TrainerScreen api={trainerApi} onStartReview={() => navigate("/student/review")} /> : null}

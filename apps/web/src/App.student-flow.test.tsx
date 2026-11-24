@@ -267,6 +267,23 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-proposal]")).toBeNull();
   });
 
+  it("restores the proposal on Review and preserves it when returning to Mentor", async () => {
+    window.history.replaceState({}, "", "/student/review?proposalId=linked-proposal");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "linked-proposal", version: 1, proposal: { title: "Navegación accesible" } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("linked-proposal");
+    const back = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Volver desde Review");
+    await act(async () => back?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(new URLSearchParams(window.location.search).get("proposalId")).toBe("linked-proposal");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("linked-proposal:Navegación accesible");
+  });
+
   it("shows the linked mission context in Mis proyectos and continues with the same version and required skills", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
