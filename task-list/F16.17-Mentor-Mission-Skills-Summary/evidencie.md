@@ -19,3 +19,8 @@
 - Skill aplicada: `ego-browser` para la observación real; `vercel-react-best-practices` revisada selectivamente, sin optimizaciones innecesarias. Se mantuvo F16 Pixel Night y se dejaron fuera los assets candidatos.
 - Captura pre-cambio, solo local por pertenecer a una sesión autenticada: `C:\Users\vgmil\ego\fragments-game-experience-20261124\mentor-evaluation-before.png`, 1920×956, SHA-256 `C8058446ABDF7B3984A392A9676BFBB0E81B2EA99B5E31CB6DDA537B62F09FE6`.
 - Pendiente: PR/CI/merge, release legítima F14 y comprobación Ego Lite posterior al despliegue. No se guardó, evaluó ni publicó contenido durante QA.
+
+## Registro Git
+
+- Commit de implementación y evidencia inicial: `53f1701acd8649c913d4b84eb48ed5336d38b613`.
+- Rama: `codex/f16.17-mentor-mission-skills-summary`; pendiente de PR/CI/merge.
