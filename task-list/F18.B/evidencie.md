@@ -460,3 +460,11 @@ Implementación local parcial, sin migrar bases de datos. El CRUD docente, publi
 - Resultado fresco: **4/4 PASS**. Comprueba publicación y fijación de misión/contexto, matrícula y habilidades, creación de propuesta Mentor y recorrido hasta Review/Trainer usando evaluadores/workers fake deterministas. No es una evaluación semántica real ni una comprobación productiva.
 - Un intento anterior contra un contenedor QA ya existente fue rechazado por autenticación TCP antes de ejecutar el `SELECT current_database()` del test; no se escribieron datos. Se repitió correctamente en el contenedor desechable descrito arriba.
 - No se modificó código ni producción. Calidad IA real, Review productiva enlazada en Trainer, Galería e identidad cruzada permanecen **NO COMPROBADAS**; la QA visual autenticada sigue pendiente de Ego Lite.
+
+## Incremento F18.B.1 — acción de misión continúa el borrador vinculado · 2026-11-24
+
+- Línea base en Ego Lite TaskSpace estudiantil existente 60 y producción `v0.5.59`: el Dashboard mostró el borrador `FRAG-QA · Navegación de inventario escolar` vinculado a la misión `FRAG-QA · Navegación Inicio–Detalle`, versión de contexto Mentor v1. La tarjeta de esa misma misión ofrecía `Iniciar en Mentor`.
+- Hallazgo funcional concreto: `onStartMission` limpia en memoria la propuesta seleccionada en `App.tsx` y abre Mentor con la misión elegida. No elimina el borrador persistido, pero se pierde continuidad desde esa tarjeta y se inicia otra propuesta aunque exista un borrador con el mismo `assignmentVersionId`.
+- Captura auténtica solo local: `C:\Users\vgmil\ego\fragments-game-experience-20261124\dashboard-baseline-v0.5.59.png`, ancho 1920 CSS px, SHA-256 `F6FC02DEBD21CFD4E97DBD6039D41AA8C44DB4E94A56A8297FBE135C78B54FE0`. Contiene una sesión autenticada; no se publica ni se añade al repositorio.
+- La corrección propuesta es de presentación/selección del handler con datos ya cargados: match exacto de `assignmentVersionId`, continuar con `onContinueProposal`; sin coincidencia, `onStartMission` conserva su función. No cambia contratos ni escribe datos. Implementación y verificación quedan pendientes.
+- En la misma sesión, el acceso principal `Continuar en Mentor` y la tarjeta de misión se observaron; no se activó el CTA de misión, no se alteró el borrador, no se guardó ni evaluó y no se llamó IA.

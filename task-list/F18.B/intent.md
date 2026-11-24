@@ -16,6 +16,7 @@ Después de crear aulas y habilitar habilidades, falta el núcleo pedagógico qu
 - Al recuperar una propuesta guardada, indicar su misión publicada/contexto vinculados sin exponer rúbrica ni perder la identidad de la propuesta.
 - Verificar que el vínculo académico versionado sobreviva hasta una Review completada y aparezca en la lista Trainer del mismo estudiante, usando proveedores fake en `fragments_test`.
 - En Mis aulas, conservar visibles los nombres de habilidades del snapshot y permitir consultar sus descripciones sin ocupar espacio con texto largo siempre expandido.
+- Desde el Dashboard, si una tarjeta muestra una misión cuya versión exacta ya está vinculada a un borrador del estudiante, continuar ese borrador en Mentor en vez de iniciar otra propuesta para la misma misión.
 
 ## No objetivos
 
