@@ -17,5 +17,7 @@ Mentor ahora presenta hasta 1100 CSS px la etapa activa (`N de 6` + nombre), sei
 
 ## Integración y producción
 - PR [#258](https://github.com/VGMil-dev/fragments/pull/258) integrado por merge normal en `19c70b5cace015faaa62c1fb2bdd2e9aadd8bdd7`; CI `45377110207` SUCCESS.
-- F14: release `v0.5.66` sigue sin aplicación confirmada; no se crea otra tag hasta resolver ese release.
-- Ego Lite de producción: `NO COMPROBADO` hasta servir el SHA de esta implementación. Comprobación pública previa a este cambio: v0.5.65/SHA e2aa436; v0.5.66 aún no aplicado.
+- F14 recuperado tras agotar el almacenamiento del servidor. Se liberaron únicamente 142 tags de imágenes Fragments históricas, no referenciadas por contenedores ni por el rollback conservado. El poller aplicó `v0.5.66` automáticamente y luego `v0.5.67` por el flujo F14 normal.
+- `v0.5.67` (tag anotada) apunta a `a40653c10b6874f72b47c9a8027dd2d24982ad37`, que incluye el merge de F17.14. Workflow F14 `45398587029`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Ledger de VPS: release `456771380`, estado `deployed`; `fragments-web-1` y `fragments-api-1` saludables en el SHA exacto; `/health` HTTP 200 con `ok/ready`.
+- Ego Lite en la sesión estudiantil existente confirmó el pie `v0.5.67`, el indicador compacto y seis segmentos a 320, 390, 520 y 1100 CSS px; el selector cambió Idea → Contexto sin guardar datos. A 1101 y 1440 CSS px se mostraron los seis pasos horizontales y un único paso actual. Sin overflow horizontal en los anchos observados.
+- La validación productiva de F17.14 queda comprobada funcionalmente en los tamaños probados; aceptación visual propietaria, teclado/lector de pantalla y zoom 200 % siguen NO COMPROBADOS. La sesión Ego Lite estudiantil quedó abierta.
