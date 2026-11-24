@@ -9,5 +9,6 @@ Estado: implementación local completada; integración y producción pendientes.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx` — 15/15 PASS; `pnpm --filter @fragments/web test` — 54 archivos, 307/307 PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS; `git diff --check` PASS.
 - El build mantiene advertencias preexistentes: chunk JavaScript de 665 kB, y directivas `use client` de Lucide. No se modificó bundle splitting.
 - Alcance validado: selección persistente en query y recuperada desde `GET /api/me/proposals`; ID ajeno/inexistente no abre editor; error de consulta conserva estado recuperable. No hay escritura de propuestas ni llamada IA.
-- Commit de implementación, PR y CI: pendiente de registrar.
+- Commit de implementación: `844bdf7f8bcd41a52f5f7e4f12fbcf7b745f5c68` (`feat(F17.15): recuperar propuesta Mentor tras recarga`).
+- PR y CI: pendientes de publicar/registrar.
 - Despliegue y comprobación Ego Lite posterior al release: pendientes; producción actual observada sigue en `v0.5.71` y conserva la limitación documentada hasta desplegar este cambio.
