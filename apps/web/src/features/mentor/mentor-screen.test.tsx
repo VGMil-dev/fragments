@@ -170,6 +170,10 @@ describe("MentorScreen", () => {
     expect(required?.textContent).toContain("Navegación fijada");
     expect(mountedContainer.querySelector(".mentor-skills__selected")?.textContent).toContain("Accesibilidad");
 
+    const objectivesStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos y alcance"));
+    await act(async () => objectivesStage?.click());
+    expect(skillsStage?.getAttribute("aria-label")).toBe("Habilidades: Pendiente");
+
     await act(async () => mountedContainer?.querySelector<HTMLFormElement>("#mentor-proposal-form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     expect(actions.onSave).toHaveBeenCalledWith(expect.objectContaining({
       proposal: expect.objectContaining({ mentorSkills: { classroomId: classroom.id, selectedSkillIds: ["optional-1"] } }),
@@ -356,6 +360,24 @@ describe("MentorScreen", () => {
 
     expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(true);
     expect(mountedContainer.textContent).toContain("Tienes cambios pendientes de guardar.");
+  });
+
+  it("mantiene Habilidades completada al editar un campo de otra etapa", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={linkedProposal} onBack={vi.fn()} />));
+
+    const skillsStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Habilidades"));
+    expect(skillsStage?.getAttribute("aria-label")).toBe("Habilidades: Completada");
+
+    const objectivesStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Objetivos y alcance"));
+    await act(async () => objectivesStage?.click());
+    const scope = mountedContainer.querySelector<HTMLTextAreaElement>(".mentor-project-outcomes__card textarea");
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(scope, "Alcance ajustado sin cambiar las habilidades.");
+    await act(async () => scope?.dispatchEvent(new Event("input", { bubbles: true })));
+
+    expect(skillsStage?.getAttribute("aria-label")).toBe("Habilidades: Completada");
   });
 
   it("lleva Editar y Ver contexto a la etapa correspondiente", async () => {
