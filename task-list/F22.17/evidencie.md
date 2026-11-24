@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mutación productiva todavía.
+La implementación base se integró en PR #267 y se desplegó como `v0.5.70`. Durante la preparación de la promoción se detectó que el servicio manual no tenía salida de red para Resend. Por ello, no se ejecutó el bootstrap, no se modificó la cuenta y no se envió correo. El arreglo de red está en `codex/f22-admin-bootstrap-network`, pendiente de PR/checks/F14.
 
 - Commit de implementación verificada: `d16b308` (`feat(f22): habilita bootstrap admin acotado`).
 - CI inicial del PR #267 (`45468236357`) falló en la validación de perfiles Compose porque `${RESEND_API_KEY:?}` obligaba a configurar correo aun en QA. Se cambió a interpolación vacía opcional; el CLI valida Resend antes de escribir/promover y vuelve a comprobarlo antes de recuperación. CI debe repetirse tras este ajuste.
@@ -28,12 +28,13 @@ Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mu
 - `pnpm --filter @fragments/api build` — PASS.
 - Parseo local del YAML de Compose con `yaml` — PASS; servicio `bootstrap-admin` bajo perfil explícito. `docker compose config -q` quedó sin ejecutar correctamente porque falta el env_file requerido `.env.test-migrate`; no se creó archivo de entorno para la validación.
 - `git diff --check` — PASS.
+- Corrección de red: `bootstrap-admin` se une a `fragments` para salida HTTPS y a `fragments-db` (que permanece `internal`) para PostgreSQL. YAML parse/assert local PASS; suites API 196 PASS, 74 omitidas por falta de DB, typecheck y build PASS. Focal tests incluidos en la suite. Pendiente CI del PR y despliegue F14 de esta corrección.
 - La integración Better Auth/PostgreSQL del flujo reset está escrita, pero no corrió localmente por ausencia de `DATABASE_URL`; queda pendiente su salida CI con PostgreSQL efímero.
-- Integración vía PR #267 pendiente; checks #486 están PASS. No hay revisión independiente externa publicada.
-- PR normal, checks y F14 según tag anotada.
+- PR #267 se integró normalmente; CI final #487 (`45469831174`) SUCCESS. Merge SHA `d569f7633af71704ddc88992ead720c69b81fb55`; release anotada `v0.5.70`, F14 run `45470586035` SUCCESS. Producción confirma API/web en ese SHA y `/health` ok/ready.
+- PR normal para el ajuste de red, checks y F14 según tag anotada siguen pendientes.
 - En producción, confirmar solo la cuenta autorizada, preservar `isTeacher`, aceptación Resend, flujo reset y dashboard con Ego Lite.
 - Si cualquier precondición falla: detener la mutación, informar el resultado parcial y no afirmar cuenta admin/recovery completo.
 
 ## Límites
 
-No se han abierto `.env`, `.env.bootstrap`, ni variables/credenciales. No se ha conectado a la base productiva ni se envió correo.
+No se han abierto `.env`, `.env.bootstrap`, ni valores de variables/credenciales. Antes de la corrección se comprobó de forma read-only que Compose remoto no contenía el servicio manual; no se conectó a la base productiva, no se promovió ninguna cuenta y no se envió correo.

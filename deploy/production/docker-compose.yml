@@ -346,6 +346,7 @@ services:
       - node
       - apps/api/dist/auth/provision-better-auth-admin-cli.js
     networks:
+      - fragments
       - fragments-db
     read_only: true
     tmpfs:
