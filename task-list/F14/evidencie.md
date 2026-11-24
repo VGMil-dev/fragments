@@ -1,6 +1,22 @@
 # F14 — Evidencia
 
-**Estado actual:** F14 integrada; release automático al publicar una tag SemVer anotada tras superar las puertas técnicas. `Required reviewers` permanece desactivado. La configuración manual descrita en los registros históricos fue reemplazada y no debe reactivarse por iniciativa propia. La última release verificada es `v0.5.53` (2026-11-24), documentada abajo.
+**Estado actual:** F14 integrada; release automático al publicar una tag SemVer anotada tras superar las puertas técnicas. `Required reviewers` permanece desactivado. La configuración manual descrita en los registros históricos fue reemplazada y no debe reactivarse por iniciativa propia. La última release verificada es `v0.5.56` (2026-11-24), documentada abajo.
+
+## Release y aplicación automática v0.5.55 — F10.7/F16.14 Pixel Night · 2026-11-24
+
+- PR #228 y PR #229 se integraron normalmente; SHA de main `ec5a7e5a3efd00f50b9e6ff92be5efaccc800128`. Tag anotada `v0.5.55` apunta al merge exacto.
+- F14 run `45305064817`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; se publicó el paquete atestado a la cola automática.
+- Producción verificada públicamente: `/health` HTTP 200 (`ok`, DB `ready`); `/assets/index-hf2sHvom.js` contiene `v0.5.55` y el SHA exacto.
+- Sin despliegue/reinicio manual ni cambios a entorno o gates. Ledger del host e integridad/retención de backups NO COMPROBADOS.
+
+## Release y aplicación automática v0.5.56 — F17.12 elección de misión · 2026-11-24
+
+- PR #231 se integró por merge normal como `1c9601634bca5866ad4bafee212e7a6f5cfdec7d`; tag anotada nueva `v0.5.56` apunta a ese SHA exacto de `main`.
+- Preflight read-only de `fragments-production`: solo `branch_policy`, sin reviewers humanos ni wait timer; el entorno y sus controles no se modificaron.
+- F14 run `45310349097`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Pasaron la verificación tag/SHA/main, pruebas, typecheck/lint/build, metadata, PostgreSQL desechable, backup/restore, imágenes ARM64 y atestación Sigstore; el paquete aprobado se publicó para el agente pull.
+- Aplicación automática confirmada en dos comprobaciones públicas: `/health` HTTP 200 (`ok`, DB `ready`); `/assets/index-DJ51_Rsi.js` contiene `v0.5.56` y el SHA exacto.
+- No se ejecutó despliegue ni reinicio manual y no se apagó producción. Las sesiones Ego Lite permanecieron abiertas.
+- QA visual autenticada del estudiante, zoom/contraste/lector y aprobación visual propietaria NO COMPROBADOS. Ledger, hash/integridad y retención del backup del host NO COMPROBADOS.
 
 ## Release `v0.5.53` — F16.12 Galería Pixel Night · 2026-11-24
 
