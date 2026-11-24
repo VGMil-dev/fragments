@@ -19,3 +19,8 @@ Delta accesible implementado y verificado localmente; PR y revisión integradora
 - `git diff --check` — PASS.
 - QA visual/authenticated Ego Lite, tab-order real, zoom 200 %, lector de pantalla, contraste formal y aprobación visual propietaria: **NO COMPROBADOS**. No se usaron assets candidatos ni se declara aprobación de Pixel Night.
 - Commit y PR: pendientes de registrar.
+
+## Registro de integración · 2026-11-24
+
+- Commit de implementación: `227b882285e0764f18d45a7fda296a7d19ec728b`.
+- PR, CI, integración a `main` y release: pendientes. Esta rama no se despliega.
