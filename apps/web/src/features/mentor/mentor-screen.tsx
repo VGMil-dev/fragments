@@ -577,7 +577,7 @@ export function MentorScreen({
       <nav className="mentor-stage-nav mentor-stage-nav--horizontal" aria-label="Etapas de tu propuesta">
         <ol>
           {MENTOR_STAGES.map((label, index) => <li key={label}>
-            <button className={completedStage(index) ? "is-complete" : ""} type="button" aria-current={index === activeStage ? "step" : undefined} aria-label={`${label}: ${stageStatus(index)}`} onClick={() => setActiveStage(index)}>
+            <button className={completedStage(index) ? "is-complete" : ""} type="button" aria-controls="mentor-proposal-form" aria-current={index === activeStage ? "step" : undefined} aria-label={`${label}: ${stageStatus(index)}`} onClick={() => setActiveStage(index)}>
               <span className="mentor-stage-nav__number" aria-hidden="true">{completedStage(index) ? "✓" : index + 1}</span><span>{label}</span><span className={`mentor-stage-nav__state mentor-stage-nav__state--${index === activeStage ? "current" : completedStage(index) ? "complete" : "pending"}`}>{stageStatus(index)}</span>
             </button>
           </li>)}

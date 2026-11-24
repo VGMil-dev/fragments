@@ -207,6 +207,17 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).not.toContain("Importar propuesta (.docx)");
   });
 
+  it("links all six top-step controls to the one stage form", () => {
+    const html = renderToStaticMarkup(<MentorScreen {...actions} onBack={vi.fn()} />);
+    const navigationStart = html.indexOf('aria-label="Etapas de tu propuesta"');
+    const formStart = html.indexOf('id="mentor-proposal-form"');
+
+    expect(navigationStart).toBeGreaterThan(-1);
+    expect(formStart).toBeGreaterThan(navigationStart);
+    expect(html.match(/aria-controls="mentor-proposal-form"/g)).toHaveLength(6);
+    expect(html.match(/<form id="mentor-proposal-form"/g)).toHaveLength(1);
+  });
+
   it("separa en la evaluación las habilidades requeridas por la misión de las habilidades propias", async () => {
     const linked = { ...linkedProposal, proposal: { ...linkedProposal.proposal, skills: [] } };
     mountedContainer = document.createElement("div");
