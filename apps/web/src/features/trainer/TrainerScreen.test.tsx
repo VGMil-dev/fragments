@@ -31,19 +31,20 @@ describe("TrainerScreen", () => {
       const link = container.querySelector<HTMLAnchorElement>('a[href="/student/review"]');
       expect(link?.textContent).toContain("Ir a Review");
       expect(container.querySelector("h1")?.textContent).toBe("Laboratorio de desafíos");
-      expect(container.textContent).toContain("Tu siguiente reto nace de tu código");
+      expect(container.textContent).toContain("Tu entrenamiento empieza con una revisión");
       expect(container.querySelector(".trainer-empty-state")).not.toBeNull();
       expect(container.querySelector(".trainer-controls")).toBeNull();
       expect(container.querySelector(".trainer-history")).toBeNull();
       expect(container.querySelector(".trainer-empty-state__art")).toBeNull();
       expect(container.querySelector(".trainer-empty-state img")).toBeNull();
-      expect(container.textContent).toContain("LABORATORIO SIN REVISIÓN ACTIVA");
+      expect(container.textContent).toContain("Envía un commit a Review. Cuando el análisis esté completo, podrás practicar sus hallazgos en Trainer.");
       expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Repositorio");
       expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Review");
       expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Trainer");
       expect(container.querySelectorAll(".trainer-empty-state__step")).toHaveLength(3);
       expect(container.textContent).not.toMatch(/\b(?:XP|puntos|racha|nivel 1)\b/i);
-      expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
+      expect(container.querySelector(".trainer-next")).toBeNull();
+      expect(container.querySelectorAll('a[href="/student/review"]')).toHaveLength(1);
       await act(async () => link!.click());
       expect(onStartReview).toHaveBeenCalledOnce();
     } finally {
