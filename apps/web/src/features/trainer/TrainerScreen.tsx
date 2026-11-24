@@ -160,9 +160,9 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
               <li className="trainer-empty-state__connector" aria-hidden="true">→</li>
               <li className="trainer-empty-state__step"><Code2 size={21} aria-hidden="true" /><span>Trainer</span></li>
             </ol>
-            <p className="trainer-empty-state__eyebrow">LABORATORIO SIN REVISIÓN ACTIVA</p>
-            <h2 id="trainer-empty-title">Tu siguiente reto nace de tu código</h2>
-            <p>Analiza un commit en Review para habilitar prácticas con objetivos observables, pistas y registro de tu progreso.</p>
+            <p className="trainer-empty-state__eyebrow">SIGUIENTE PASO ACADÉMICO</p>
+            <h2 id="trainer-empty-title">Tu entrenamiento empieza con una revisión</h2>
+            <p>Envía un commit a Review. Cuando el análisis esté completo, podrás practicar sus hallazgos en Trainer.</p>
             <a className="trainer-empty-state__action" href="/student/review" onClick={onStartReview ? (event) => { event.preventDefault(); onStartReview(); } : undefined}>Ir a Review <ArrowRight size={17} aria-hidden="true" /></a>
             <p className="trainer-empty-state__footnote">No hay retos ni historial disponibles hasta contar con un análisis completado.</p>
           </div>
@@ -250,11 +250,11 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
           <small>La autoevaluación guiada sigue en preparación.</small>
         </div>
         {recordedChallengeId === challenge.id ? <button className="trainer-next__action" type="button" onClick={() => void draw()} disabled={drawing}>{drawing ? "Buscando reto…" : "Volver a sortear desde este análisis"}</button> : <span className="trainer-next__status">Registra tu intento arriba</span>}
-      </aside> : <aside className="trainer-next" aria-label="Próxima capacidad">
+      </aside> : reviews.length ? <aside className="trainer-next" aria-label="Próxima capacidad">
         <div className="trainer-next__icon" aria-hidden="true"><Code2 size={19} /></div>
         <div><p className="trainer-next__eyebrow">SIGUIENTE ETAPA</p><h2>Autoevaluación guiada</h2><p>La autoevaluación guiada está en preparación; todavía no forma parte de Trainer.</p></div>
         <span className="trainer-next__status">En preparación</span>
-      </aside>}
+      </aside> : null}
     </main>
   );
 }
