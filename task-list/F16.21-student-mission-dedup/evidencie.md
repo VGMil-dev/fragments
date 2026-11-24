@@ -17,5 +17,6 @@
 - `pnpm --filter @fragments/web build` — PASS (Vite transformó 2277 módulos y finalizó). El build muestra avisos ya existentes de chunk JS >500 kB y directivas `use client` de lucide.
 - Revisión reflexiva estática del diff — PASS: solo se elimina la tarjeta cuyo ID coincide con el vínculo superior; objetivos/habilidades siguen bajo la propuesta prioritaria; las otras tarjetas conservan su CTA por start/continue.
 - `git diff --check` — PASS.
-- Commit y PR: pendientes.
+- Commit de implementación: `5a7180e` (`feat(F16.21): deduplicar misión prioritaria`).
+- Push/PR: pendientes.
 - QA visual/Ego Lite y datos productivos: no ejecutados.
