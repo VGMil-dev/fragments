@@ -586,58 +586,6 @@ export function MentorScreen({
       </nav>
       <div className="mentor-stage-content">
 
-      {activeStage === 0 ? <section className="mentor-choices" aria-label="Cómo empezar tu propuesta">
-        <div className="mentor-choices__template">
-          <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">
-            Descargar plantilla Word
-          </a>
-          <label className="button button--light mentor-choices__upload">
-            Importar propuesta (.docx)
-            <input
-              ref={importInput}
-              type="file"
-              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              disabled={formBusy}
-              onChange={(event) => void importProposal(event.currentTarget.files?.[0])}
-              aria-label="Importar propuesta (.docx)"
-            />
-          </label>
-        </div>
-        <button className="mentor-choices__direct" type="button" onClick={() => titleInput.current?.focus()}>
-          Crear propuesta directamente
-        </button>
-        {importMessage ? <p className="mentor-screen__success" role="status">{importMessage}</p> : null}
-        {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
-      </section> : null}
-
-      {activeStage === 0 ? <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
-        <h2 id="mentor-saved-title">Mis propuestas guardadas</h2>
-        {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : proposalsError ? (
-          <div role="alert"><p>No pudimos cargar tus propuestas guardadas.</p><button type="button" onClick={onRetryProposals}>Volver a intentar</button></div>
-        ) : savedProposals.length ? (
-          <ul>
-            {savedProposals.map((saved) => (
-              <li key={saved.id}>
-                <span>{saved.proposal.title || "Borrador sin título"}</span>
-                <span className="mentor-saved-proposals__version">Versión {saved.version}</span>
-                {saved.assignmentVersionId || saved.assignmentContext?.assignmentVersionId ? (
-                  <span className="mentor-saved-proposals__mission">
-                    Misión vinculada{saved.assignmentContext?.mentorContext
-                      ? <> · {saved.assignmentContext.mentorContext.config.theme} · Contexto Mentor v{saved.assignmentContext.mentorContext.version}</>
-                      : " · contexto académico no disponible"}
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  aria-label={`${proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}: ${saved.proposal.title || "Borrador sin título"}`}
-                  onClick={() => onOpenProposal(saved)}
-                >{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
-              </li>
-            ))}
-          </ul>
-        ) : <p>Aún no tienes propuestas guardadas.</p>}
-      </section> : null}
-
       <form id="mentor-proposal-form" className={`mentor-form${activeStage === 1 ? " mentor-form--context" : ""}${activeStage === 4 ? " mentor-form--evaluation" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
         {activeStage === 1 ? <MentorContextStage state={contextState} /> : null}
         {activeStage === 0 ? <><label className="mentor-field mentor-field--wide">
@@ -809,6 +757,58 @@ export function MentorScreen({
           </div>
         </div> : null}
       </form>
+
+      {activeStage === 0 ? <section className="mentor-choices" aria-label="Cómo empezar tu propuesta">
+        <div className="mentor-choices__template">
+          <a className="button button--light" href="/templates/fragments-mentor-propuesta.docx" download="fragments-mentor-propuesta.docx">
+            Descargar plantilla Word
+          </a>
+          <label className="button button--light mentor-choices__upload">
+            Importar propuesta (.docx)
+            <input
+              ref={importInput}
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              disabled={formBusy}
+              onChange={(event) => void importProposal(event.currentTarget.files?.[0])}
+              aria-label="Importar propuesta (.docx)"
+            />
+          </label>
+        </div>
+        <button className="mentor-choices__direct" type="button" onClick={() => titleInput.current?.focus()}>
+          Crear propuesta directamente
+        </button>
+        {importMessage ? <p className="mentor-screen__success" role="status">{importMessage}</p> : null}
+        {importError ? <p className="mentor-screen__error" role="alert">{importError}</p> : null}
+      </section> : null}
+
+      {activeStage === 0 ? <section className="mentor-saved-proposals" aria-labelledby="mentor-saved-title">
+        <h2 id="mentor-saved-title">Mis propuestas guardadas</h2>
+        {proposalsLoading ? <p role="status">Cargando tus propuestas…</p> : proposalsError ? (
+          <div role="alert"><p>No pudimos cargar tus propuestas guardadas.</p><button type="button" onClick={onRetryProposals}>Volver a intentar</button></div>
+        ) : savedProposals.length ? (
+          <ul>
+            {savedProposals.map((saved) => (
+              <li key={saved.id}>
+                <span>{saved.proposal.title || "Borrador sin título"}</span>
+                <span className="mentor-saved-proposals__version">Versión {saved.version}</span>
+                {saved.assignmentVersionId || saved.assignmentContext?.assignmentVersionId ? (
+                  <span className="mentor-saved-proposals__mission">
+                    Misión vinculada{saved.assignmentContext?.mentorContext
+                      ? <> · {saved.assignmentContext.mentorContext.config.theme} · Contexto Mentor v{saved.assignmentContext.mentorContext.version}</>
+                      : " · contexto académico no disponible"}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={`${proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}: ${saved.proposal.title || "Borrador sin título"}`}
+                  onClick={() => onOpenProposal(saved)}
+                >{proposal?.id === saved.id ? "Propuesta abierta" : "Abrir propuesta"}</button>
+              </li>
+            ))}
+          </ul>
+        ) : <p>Aún no tienes propuestas guardadas.</p>}
+      </section> : null}
 
       {saveMessage ? <p className="mentor-screen__success" role="status">{saveMessage}</p> : null}
       {saveError ? <div className="mentor-screen__error" role="alert"><p>{saveError}</p>{versionConflict && onResolveConflict ? <button type="button" onClick={onResolveConflict}>Volver a Mis proyectos</button> : null}</div> : null}
