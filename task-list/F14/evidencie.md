@@ -411,3 +411,12 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Ego Lite estudiante verificó la separación entre habilidades propias de propuesta y la habilidad requerida de la misión en el borrador QA persistido, a 320/390/768/1024/1440 CSS px sin overflow. Dashboard y Trainer se observaron en desktop 1920 px solo como líneas base. No hubo guardado, evaluación, publicación ni llamada IA; la sesión estudiantil permanece abierta.
 - Capturas autenticadas conservadas localmente, con hashes y sin publicar en GitHub/Notion: Mentor `39EAD9F1145EEBA784D3371436865734FD67D898E5ED81FF3691E3289B5782B7`, Dashboard `F6FC02DEBD21CFD4E97DBD6039D41AA8C44DB4E94A56A8297FBE135C78B54FE0`, Trainer `2D0F7A5A7F039833DD65494007932081BEB01F0365D513F360F7DFBD92603BAB` (archivos bajo `C:\Users\vgmil\ego\fragments-game-experience-20261124\`).
 - La evaluación histórica visible no fue repetida; calidad real de puntuación Mentor/Review, accesibilidad de contraste y lector, zoom 200 %, estabilidad integral y retención/restore del backup productivo siguen **NO COMPROBADOS**.
+
+## Release Pixel Night `v0.5.61` — 2026-11-24
+
+- PRs #244, #245 y #246 se integraron mediante merges normales en `main`; el merge final es `900b5bd075e601ade487dadd49336b713f7c0334`. Tag anotada `v0.5.61` apunta exactamente a ese SHA.
+- F14 run `45341081720` terminó SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`. Pasaron validación tag/SHA/main, PostgreSQL desechable y backup/restore, suite/typecheck/lint/build, metadatos, imágenes ARM64, firma Sigstore y publicación del paquete.
+- Revisión read-only de `fragments-production`: conserva solo `branch_policy`; `Required reviewers` no está configurado. No se alteró el entorno ni los gates técnicos.
+- El aplicador automático normal registró `release_deployed tag=v0.5.61 commit=900b5bd075e601ade487dadd49336b713f7c0334`, terminó `Result=success`, `ExecMainStatus=0` y dejó API/web `Up (healthy)` sobre el SHA exacto. SSH usó `BatchMode`/host checking estrictos y consultas read-only.
+- Salud pública cache-bypass: `/health` `status=ok`, `database=ready`. El HTML entrega `/assets/index-D5BowZnw.js`, que contiene la versión y el SHA completos. No hubo deploy manual, reinicio, migración ni interrupción.
+- F14 verifica entrega de artefacto y estado de servicios; esto no declara Fragments estable para piloto ni valida calidad real de evaluaciones IA. No se accedió a variables de entorno o base productiva.
