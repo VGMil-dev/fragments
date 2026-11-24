@@ -438,3 +438,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El poll F14 aceptó release ID `457260586`; el aplicador normal registró `release_deployed`, `Result=success`, `ExecMainStatus=0`. API y web están healthy sobre el SHA exacto. Health local y público `ok/database=ready`.
 - Sin despliegue ni reinicio manual, sin cambios de `fragments-production`, secrets o gates. El cambio de código habilita egress solo al servicio manual `bootstrap-admin`; PostgreSQL sigue en la red interna. Espacio raíz al verificar: 140 GB disponibles, 28 % usado, inodos 7 %.
 - Se conservaron servicio e imágenes de rollback, volúmenes, backups y servicios vecinos. Ledger/hash de respaldo y retención detallada del host siguen NO COMPROBADOS para esta release.
+
+## Release automática v0.5.75 · 2026-11-24
+
+- PR #277 se integró por merge normal en `main` SHA `81a4a9e9006c1e55086e376d8ed62ccd2bbb52be`; CI del PR `45509184330` PASS.
+- Tag anotada `v0.5.75`, tag object `9145f9ad5f131a513e605f3d8c18ed9b67b46f3b`, apunta exactamente al SHA de `main`. F14 run `45509638382` completó `verify-build`, `attest-package` y `publish-approved-release` en SUCCESS. La release GitHub se publicó.
+- Ego Lite docente Space 44/Profile 3 verificó el artefacto servido: `/assets/index-CRG6D7Lj.js` incluye `v0.5.75` y el SHA completo; `/health` respondió HTTP 200 con `status=ok`, `database=ready`. El enlace Habilidades apareció en desktop y en menú móvil a 390×844; `/teacher/skills` cargó Catálogo de habilidades. Sin escrituras ni reinicio/deploy manual.
+- Se conservó el viewport original 1908×944/DPR2 y la pestaña del Space 44. El Space 80 no fue abierto.
+- No se inspeccionó la fila del ledger ni el hash de backup de esta release; rollback productivo no fue ejercido. La comprobación de UI confirma el release servido, no sustituye esas evidencias operativas.

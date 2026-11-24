@@ -7,7 +7,10 @@
 - Commit de aplicación: `a8f19c57690e115cf41a7eba2f1d4a1ac079aa0f` (`fix(teacher): mostrar catalogo de habilidades`).
 - TDD: la prueba nueva falló antes del cambio al no encontrar el enlace en desktop; después del cambio verifica el enlace en la navegación desktop y en el menú móvil.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/teacher/TeacherWorkspaceShell.test.tsx` PASS (5/5); `pnpm --filter @fragments/web exec vitest run` PASS (54 archivos, 311/311); `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con avisos por chunk de más de 500 kB y directivas `use client` de Lucide; `git diff --check` PASS.
-- PR #277 abierto desde `codex/cu10-teacher-skills-nav`; CI `verify` run `45509012326` pendiente en la última consulta. Estado: implementado y probado localmente; producción NO COMPROBADA, pendiente CI, integración, release F14 y validación Ego Lite. No se navegó Ego Lite tras el cambio ni se alteraron los Spaces 44/80.
+- PR #277 integrado por merge normal en `main` SHA `81a4a9e9006c1e55086e376d8ed62ccd2bbb52be`; CI `45509184330` PASS. Commit de aplicación `a8f19c57690e115cf41a7eba2f1d4a1ac079aa0f`; commits documentales `eed78a095f1263f9c7eb234b7ae02d1e28a58f60` y `18d9797790f3e7b3b4b7eea96fa8763df8975342`.
+- F14: tag anotada `v0.5.75`, tag object `9145f9ad5f131a513e605f3d8c18ed9b67b46f3b`, commit exacto `81a4a9e9006c1e55086e376d8ed62ccd2bbb52be`; run `45509638382` SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`. GitHub Release publicado.
+- Ego Lite producción: Space 44/Profile 3, versión/bundle `v0.5.75` en `index-CRG6D7Lj.js`, SHA exacto confirmado y `/health` 200 `ok/database=ready`. “Habilidades” aparece en navegación desktop; con viewport 390×844 el menú móvil aparece y contiene el mismo enlace. `/teacher/skills` cargó “Catálogo de habilidades” con el enlace activo después de esperar hidratación. Viewport original 1908×944/DPR2 restaurado; sin escrituras. Space 44 quedó preservado en la ruta de catálogo.
+- Resultado: subflujo de descubribilidad del catálogo PASS en producción. CU-10 integral continúa PARCIAL: no se probaron los accesos de misiones/rúbricas/estudiantes ni el retorno con contexto. Se preservó Space 80 sin abrirlo ni alterarlo.
 
 ## Base y preflight
 
