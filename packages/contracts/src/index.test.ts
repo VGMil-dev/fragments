@@ -110,8 +110,10 @@ describe("shared API contracts", () => {
     const effectiveConfig = { subject: "Programación", theme: "Lista de tareas", assignment: "Construye una lista con Expo.",
       requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`), expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11",
       criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] };
-    expect(StudentAssignmentSchema.safeParse({ ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
-      mentorContext: { version: 1, publishedAt: now, config: effectiveConfig } }).success).toBe(true);
+    const studentAssignment = { ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
+      mentorContext: { version: 1, publishedAt: now, config: effectiveConfig }, missionPlanVersion: 1 };
+    expect(StudentAssignmentSchema.safeParse(studentAssignment).success).toBe(true);
+    expect(StudentAssignmentSchema.safeParse({ ...studentAssignment, missionPlanVersion: undefined }).success).toBe(false);
     expect(MentorPublishedConfigSchema.safeParse({ version: 1, publishedAt: now,
       config: { ...effectiveConfig, requirements: Array.from({ length: 21 }, (_, index) => `F11 ${index + 1}`) } }).success).toBe(false);
   });

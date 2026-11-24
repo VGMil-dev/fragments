@@ -457,12 +457,12 @@ export const AssignmentVersionSchema = AssignmentVersionFieldsSchema;
 export const ClassroomAssignmentSchema = z.object({
   id: identifier, classroomId: identifier, status: AssignmentStatusSchema,
   draftVersion: z.number().int().positive(), publishedVersion: z.number().int().positive().nullable(),
-  draft: AssignmentDraftSchema.nullable(), versions: z.array(AssignmentVersionSchema).max(50), updatedAt: z.iso.datetime(),
+  draft: AssignmentDraftSchema.nullable(), versions: z.array(AssignmentVersionSchema).max(50), updatedAt: z.iso.datetime(), missionPlanVersion: z.literal(1),
 }).strict();
 export const ClassroomAssignmentsResponseSchema = z.array(ClassroomAssignmentSchema).max(200);
 export const StudentAssignmentSchema = AssignmentVersionFieldsSchema.extend({
   classroomId: identifier, classroomTitle: classroomText(120), subject: classroomText(120),
-  mentorContext: MentorEvaluationContextSchema,
+  mentorContext: MentorEvaluationContextSchema, missionPlanVersion: z.literal(1),
 }).strict();
 export const StudentAssignmentsResponseSchema = z.array(StudentAssignmentSchema).max(200);
 export const CreateAssignmentRequestSchema = AssignmentDraftSchema;

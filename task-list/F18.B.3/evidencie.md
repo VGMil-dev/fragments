@@ -31,9 +31,9 @@ Estado: IMPLEMENTACIÓN INTEGRADA Y CI/POSTGRESQL PASS; release y comprobación 
 - No se conecta cada entrega con un Review/commit, no se registra historial de entregas, ni se calcula progreso/notas. No se ejecutó IA real, Ego Lite, escritura productiva o despliegue.
 - Commit de implementación: `4b973003fa760c63135fd780067c02a20feb26c6`.
 - CI integrado del PR #261: PASS; integración PostgreSQL efímera 4/4 PASS.
-- Revisión independiente: encontró que la vista previa docente omitía los criterios de cada entrega; corregido en `c390c0c` y focal web actualizado a 10/10 PASS. CI de ese nuevo head queda pendiente.
-- Riesgo de compatibilidad condicional: F14 ejecuta `docker compose up -d --no-build --no-deps api web` en una misma invocación; no demuestra intercambio atómico y pestañas con bundles viejos pueden seguir activas. La API/clientes usan DTOs estrictos con campos nuevos. **No desplegar F18.B.3 hasta resolver o demostrar compatibilidad de web/API mixtas.**
-- Pendiente: CI del nuevo head, diseño de compatibilidad web/API, merge protegido, release F14, verificación de versión productiva y UX de Ego Lite.
+- Revisión independiente encontró que la vista previa docente omitía los criterios por entrega; corregida en `c390c0c`, focal web actualizada a 10/10 PASS.
+- Para compatibilidad con despliegue mixto, los clientes nuevos negocian `x-fragments-mission-plan: 1` y requieren `missionPlanVersion: 1`. La API omite los campos nuevos para clientes anteriores y conserva publicación legacy con F11 si no llega el header. Un cliente nuevo contra API antigua falla cerrado al faltar el marcador. Integración cubre ambas rutas; pendiente confirmación PostgreSQL en CI y revisión independiente de esta mitigación.
+- Pendiente: CI del nuevo head, revisión independiente final, merge protegido, release F14, verificación de versión productiva y UX de Ego Lite.
 
 ## Promoción administrativa solicitada, fuera de este incremento
 

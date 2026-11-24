@@ -113,8 +113,8 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected local HTTP address");
     const base = `http://127.0.0.1:${address.port}`;
-    const request = async (path: string, role: "teacher" | "student" | "anonymous", method = "GET", body?: unknown, user = role === "teacher" ? teacherId : studentId) => {
-      const response = await fetch(`${base}${path}`, { method, headers: { ...(role === "anonymous" ? {} : { "x-fixture-user": user, "x-fixture-role": role }), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const request = async (path: string, role: "teacher" | "student" | "anonymous", method = "GET", body?: unknown, user = role === "teacher" ? teacherId : studentId, includeMissionPlan = true) => {
+      const response = await fetch(`${base}${path}`, { method, headers: { ...(role === "anonymous" ? {} : { "x-fixture-user": user, "x-fixture-role": role }), ...(includeMissionPlan ? { "x-fragments-mission-plan": "1" } : {}), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       return { status: response.status, body: await response.json() as { data?: any; error?: { code: string } } };
     };
     try {
@@ -137,6 +137,9 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       const visible = await request(`/api/me/classrooms/${classroomId}/assignments`, "student");
       expect(visible.status).toBe(200);
       expect(visible.body.data).toMatchObject([{ assignmentId: created.body.data!.id, id: version.id, title: "Misión HTTP v1", missionRubric, deliverables: missionDeliverables }]);
+      const legacyVisible = await request(`/api/me/classrooms/${classroomId}/assignments`, "student", "GET", undefined, studentId, false);
+      expect(legacyVisible.body.data?.[0]).not.toHaveProperty("missionRubric");
+      expect(legacyVisible.body.data?.[0]).not.toHaveProperty("deliverables");
 
       const proposal = {
         title: "Propuesta desde la misión", problem: "El equipo necesita navegar entre pantallas.",
@@ -168,6 +171,16 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(evaluatedConfig).toMatchObject({ subject: "Programación móvil", theme: "Misión HTTP v1", rubricTitle: "Rúbrica de navegación", criteria: missionRubric.criteria, requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
       expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
       expect(evaluation.body.data).toMatchObject({ mentorContextVersion: pinnedContextVersion, proposalId: createdDraft.body.data!.id });
+
+      const legacyCreated = await request(basePath, "teacher", "POST", {
+        title: "Misión de cliente anterior", instructions: "Describe una evidencia.", objectives: ["Registrar evidencia"],
+        requiredSkillIds: [skillId], optionalSkillIds: [],
+      }, teacherId, false);
+      expect(legacyCreated.status).toBe(201);
+      expect(legacyCreated.body.data).not.toHaveProperty("missionPlanVersion");
+      const legacyPublished = await request(`${basePath}/${legacyCreated.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 1 }, teacherId, false);
+      expect(legacyPublished.status).toBe(200);
+      expect(legacyPublished.body.data?.versions?.[0]).not.toHaveProperty("deliverables");
     } finally {
       await db.classroom.update({ where: { id: classroomId }, data: { subject: "Programación móvil" } });
       server.closeAllConnections();

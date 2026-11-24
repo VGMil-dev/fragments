@@ -16,6 +16,7 @@
 - Autoría, aula, matrícula y versión siguen derivadas en backend. Ningún dato de propiedad entra desde el cliente.
 - Publicar copia campos de rúbrica/entregas a una versión nueva. Editar no modifica versiones publicadas anteriores.
 - No calcular ni combinar notas, no aplicar bloqueos por vencimiento y no cambiar estado de propuestas o Reviews.
+- La ampliación de DTO es opt-in con `x-fragments-mission-plan: 1`. El API devuelve `missionPlanVersion: 1` y los campos extendidos solo a clientes nuevos; sin ese header se eliminan los campos nuevos para que bundles antiguos mantengan sus contratos estrictos. El cliente nuevo exige el marcador y falla cerrado si habla con una API anterior. El cliente antiguo puede conservar la publicación legacy con F11 mientras no envíe el header.
 
 ## Aceptación
 
