@@ -47,6 +47,61 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Borrador anterior");
   });
 
+  it("shows the exact linked mission and its saved classroom context with the primary proposal", () => {
+    const assignmentVersionId = "mission-v1";
+    const mission = { id: assignmentVersionId, version: 1, mentorContextVersion: 2, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "React Native", description: null }] } as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentVersionId, assignmentContext: { assignmentVersionId, requiredSkills: [{ id: "skill-navigation", name: "React Native" }], mentorContext: { version: 2 } } } as unknown as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} />);
+
+    expect(html).toContain('aria-label="Contexto académico de la propuesta"');
+    expect(html).toContain("Programación Móvil");
+    expect(html).toContain("Navegación con Expo");
+    expect(html).toContain("Navegación con Expo · v1");
+    expect(html).toContain(">Contexto Mentor</dt><dd>v2</dd>");
+    expect(html).toContain("React Native");
+    expect(html).toContain("Abrir en Mentor");
+    expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
+  });
+
+  it("uses the proposal's matching snapshot when the mission list has no matching item", () => {
+    const linkedProposal = { ...proposal, assignmentVersionId: "mission-v1", assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [{ id: "skill-navigation", name: "React Native" }], mentorContext: { version: 2 } } } as unknown as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} />);
+
+    expect(html).toContain(">Contexto Mentor</dt><dd>v2</dd>");
+    expect(html).toContain("React Native");
+    expect(html).toContain("Aula y misión no disponibles en esta consulta.");
+    expect(html).not.toContain("Programación Móvil");
+    expect(html).not.toContain("Navegación con Expo");
+  });
+
+  it("does not attach saved context when its mission version conflicts with the proposal link", () => {
+    const linkedProposal = { ...proposal, assignmentVersionId: "mission-v2", assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [{ id: "skill-navigation", name: "React Native" }], mentorContext: { version: 2 } } } as unknown as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} />);
+
+    expect(html).toContain('aria-label="Contexto académico de la propuesta"');
+    expect(html).not.toContain("React Native");
+    expect(html).not.toContain(">Contexto Mentor</dt><dd>v2</dd>");
+  });
+
+  it("does not show a stale mission title while the mission query is loading", () => {
+    const mission = { id: "mission-v1", version: 1, mentorContextVersion: 2, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Aula anterior", subject: "Aplicaciones móviles", title: "Misión anterior", objectives: [], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} missionsLoading />);
+
+    expect(html).toContain("Consultando datos de aula…");
+    expect(html).not.toContain("Aula anterior");
+    expect(html).not.toContain("Misión anterior");
+  });
+
+  it("offers a secondary retry when the linked mission cannot be loaded", () => {
+    const linkedProposal = { ...proposal, assignmentVersionId: "mission-v1", assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [], mentorContext: { version: 2 } } } as unknown as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missionsError onRetryMissions={() => {}} />);
+
+    expect(html).toContain("No pudimos consultar el aula y el título de la misión.");
+    expect(html).toContain("Reintentar consulta de aula");
+    expect(html).toContain("Abrir en Mentor");
+  });
+
   it("surfaces the published classroom mission as the next step when no proposal exists", () => {
     const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[mission]} />);
