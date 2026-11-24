@@ -7,6 +7,8 @@ Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mu
 - Commit de implementación verificada: `d16b308` (`feat(f22): habilita bootstrap admin acotado`).
 - CI inicial del PR #267 (`45468236357`) falló en la validación de perfiles Compose porque `${RESEND_API_KEY:?}` obligaba a configurar correo aun en QA. Se cambió a interpolación vacía opcional; el CLI valida Resend antes de escribir/promover y vuelve a comprobarlo antes de recuperación. CI debe repetirse tras este ajuste.
 - CI #485 (`45468725123`) pasó todas sus etapas: Compose, Prisma PostgreSQL desechable, migraciones, 70 archivos de pruebas, typecheck/lint/build. Su integración de reset pasó, pero luego se revisó el fixture y se agregó `isTeacher=true` para que el caso de recuperación represente explícitamente una cuenta docente; este ajuste requiere el siguiente run.
+- Commit del ajuste de fixture: `b2d676f026498f05af83f7375afc61278b6ae7a1`.
+- CI #486 (`45469339322`) SUCCESS tras el ajuste: Compose, migraciones PostgreSQL aisladas, release/backup, 70/70 archivos de tests, typecheck, lint y build PASS. En concreto, `provision-better-auth-admin.test.ts` 4/4 y `better-auth.test.ts` 2/2 con PostgreSQL. El workflow confirma los pasos verdes.
 
 ## Archivos
 
@@ -27,7 +29,7 @@ Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mu
 - Parseo local del YAML de Compose con `yaml` — PASS; servicio `bootstrap-admin` bajo perfil explícito. `docker compose config -q` quedó sin ejecutar correctamente porque falta el env_file requerido `.env.test-migrate`; no se creó archivo de entorno para la validación.
 - `git diff --check` — PASS.
 - La integración Better Auth/PostgreSQL del flujo reset está escrita, pero no corrió localmente por ausencia de `DATABASE_URL`; queda pendiente su salida CI con PostgreSQL efímero.
-- Seguridad pendiente de revisión independiente y checks CI antes de integrar.
+- Integración vía PR #267 pendiente; checks #486 están PASS. No hay revisión independiente externa publicada.
 - PR normal, checks y F14 según tag anotada.
 - En producción, confirmar solo la cuenta autorizada, preservar `isTeacher`, aceptación Resend, flujo reset y dashboard con Ego Lite.
 - Si cualquier precondición falla: detener la mutación, informar el resultado parcial y no afirmar cuenta admin/recovery completo.
