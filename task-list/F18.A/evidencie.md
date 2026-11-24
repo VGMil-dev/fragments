@@ -4,6 +4,7 @@
 
 - Hallazgo Ego Lite de producción, v0.5.74: desde el detalle de un aula propia, el catálogo `/teacher/skills` no tenía una entrada visible cuando ya existían habilidades disponibles. La ruta del catálogo funcionaba y estaba protegida por el shell docente; el defecto era de descubribilidad, no de autorización ni persistencia.
 - Implementación local en `codex/cu10-teacher-skills-nav`: se agregó “Habilidades” a `Herramientas docentes`, que también alimenta el menú móvil. No se cambió API, datos, rutas ni controles de acceso.
+- Commit de aplicación: `a8f19c57690e115cf41a7eba2f1d4a1ac079aa0f` (`fix(teacher): mostrar catalogo de habilidades`).
 - TDD: la prueba nueva falló antes del cambio al no encontrar el enlace en desktop; después del cambio verifica el enlace en la navegación desktop y en el menú móvil.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/teacher/TeacherWorkspaceShell.test.tsx` PASS (5/5); `pnpm --filter @fragments/web exec vitest run` PASS (54 archivos, 311/311); `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con avisos por chunk de más de 500 kB y directivas `use client` de Lucide; `git diff --check` PASS.
 - Estado: implementado y probado localmente; producción NO COMPROBADA, pendiente PR, integración y release F14. No se navegó Ego Lite tras el cambio ni se alteraron los Spaces 44/80.
