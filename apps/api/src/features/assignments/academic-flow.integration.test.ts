@@ -27,6 +27,11 @@ const studentId = `academic-flow-student-${namespace}`;
 const classroomId = `academic-flow-class-${namespace}`;
 const skillId = `academic-flow-skill-${namespace}`;
 const optionalSkillId = `academic-flow-optional-skill-${namespace}`;
+const missionRubric = { title: "Rúbrica de navegación", criteria: [{ id: "criterion-navigation", title: "Navegación", description: "La acción permite llegar y regresar a la pantalla esperada.", weight: 100 }] };
+const missionDeliverables = [
+  { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Describe el recorrido que resolverás."], dueDate: null, criterionIds: ["criterion-navigation"] },
+  { id: "delivery-progress", order: 2, title: "Avance", type: "progress" as const, requirements: ["Muestra la primera navegación implementada."], dueDate: null, criterionIds: ["criterion-navigation"] },
+];
 let database: PrismaClient | undefined;
 
 describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
@@ -108,8 +113,8 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected local HTTP address");
     const base = `http://127.0.0.1:${address.port}`;
-    const request = async (path: string, role: "teacher" | "student" | "anonymous", method = "GET", body?: unknown, user = role === "teacher" ? teacherId : studentId) => {
-      const response = await fetch(`${base}${path}`, { method, headers: { ...(role === "anonymous" ? {} : { "x-fixture-user": user, "x-fixture-role": role }), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const request = async (path: string, role: "teacher" | "student" | "anonymous", method = "GET", body?: unknown, user = role === "teacher" ? teacherId : studentId, includeMissionPlan = true) => {
+      const response = await fetch(`${base}${path}`, { method, headers: { ...(role === "anonymous" ? {} : { "x-fixture-user": user, "x-fixture-role": role }), ...(includeMissionPlan ? { "x-fragments-mission-plan": "1" } : {}), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       return { status: response.status, body: await response.json() as { data?: any; error?: { code: string } } };
     };
     try {
@@ -118,19 +123,23 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect((await request(basePath, "teacher", "GET", undefined, "fixture-other-teacher")).status).toBe(404);
       const created = await request(basePath, "teacher", "POST", {
         title: "Misión HTTP v1", instructions: "Construye una navegación clara.", objectives: ["Conectar dos vistas"],
-        requiredSkillIds: [skillId], optionalSkillIds: [],
+        requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: missionDeliverables,
       });
       expect(created.status).toBe(201);
       const published = await request(`${basePath}/${created.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 1 });
       expect(published.status).toBe(200);
       const version = published.body.data!.versions.find((item: { version: number }) => item.version === 1);
       expect(version).toMatchObject({ assignmentId: created.body.data!.id, status: "published", requiredSkills: [{ id: skillId, name: "Navegación" }] });
+      expect(version).toMatchObject({ missionRubric, deliverables: missionDeliverables });
 
       const noEnrollment = await request(`/api/me/classrooms/${classroomId}/assignments`, "student", "GET", undefined, "fixture-student-without-enrollment");
       expect(noEnrollment.status).toBe(404);
       const visible = await request(`/api/me/classrooms/${classroomId}/assignments`, "student");
       expect(visible.status).toBe(200);
-      expect(visible.body.data).toMatchObject([{ assignmentId: created.body.data!.id, id: version.id, title: "Misión HTTP v1" }]);
+      expect(visible.body.data).toMatchObject([{ assignmentId: created.body.data!.id, id: version.id, title: "Misión HTTP v1", missionRubric, deliverables: missionDeliverables }]);
+      const legacyVisible = await request(`/api/me/classrooms/${classroomId}/assignments`, "student", "GET", undefined, studentId, false);
+      expect(legacyVisible.body.data?.[0]).not.toHaveProperty("missionRubric");
+      expect(legacyVisible.body.data?.[0]).not.toHaveProperty("deliverables");
 
       const proposal = {
         title: "Propuesta desde la misión", problem: "El equipo necesita navegar entre pantallas.",
@@ -147,7 +156,8 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
 
       const edit = await request(`${basePath}/${created.body.data!.id}/draft`, "teacher", "PATCH", {
         title: "Misión HTTP v2", instructions: "Conecta vistas y conserva el estado.", objectives: ["Conectar vistas", "Conservar el estado"],
-        requiredSkillIds: [skillId], optionalSkillIds: [optionalSkillId], expectedVersion: 2,
+        requiredSkillIds: [skillId], optionalSkillIds: [optionalSkillId], missionRubric: { ...missionRubric, title: "Rúbrica v2" },
+        deliverables: missionDeliverables, expectedVersion: 2,
       });
       expect(edit.status).toBe(200);
       expect((await request(`${basePath}/${created.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 3 })).status).toBe(200);
@@ -158,9 +168,19 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
 
       const evaluation = await request(`/api/proposals/${createdDraft.body.data!.id}/review`, "student", "POST");
       expect(evaluation.status).toBe(200);
-      expect(evaluatedConfig).toMatchObject({ subject: "Programación móvil", theme: "Misión HTTP v1", requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
+      expect(evaluatedConfig).toMatchObject({ subject: "Programación móvil", theme: "Misión HTTP v1", rubricTitle: "Rúbrica de navegación", criteria: missionRubric.criteria, requirements: expect.arrayContaining(["Habilidad requerida: Navegación"]) });
       expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
       expect(evaluation.body.data).toMatchObject({ mentorContextVersion: pinnedContextVersion, proposalId: createdDraft.body.data!.id });
+
+      const legacyCreated = await request(basePath, "teacher", "POST", {
+        title: "Misión de cliente anterior", instructions: "Describe una evidencia.", objectives: ["Registrar evidencia"],
+        requiredSkillIds: [skillId], optionalSkillIds: [],
+      }, teacherId, false);
+      expect(legacyCreated.status).toBe(201);
+      expect(legacyCreated.body.data).not.toHaveProperty("missionPlanVersion");
+      const legacyPublished = await request(`${basePath}/${legacyCreated.body.data!.id}/publish`, "teacher", "POST", { expectedVersion: 1 }, teacherId, false);
+      expect(legacyPublished.status).toBe(200);
+      expect(legacyPublished.body.data?.versions?.[0]).not.toHaveProperty("deliverables");
     } finally {
       await db.classroom.update({ where: { id: classroomId }, data: { subject: "Programación móvil" } });
       server.closeAllConnections();
@@ -174,7 +194,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const mentorRepository = createPrismaMentorRepository(db);
     const created = await assignments.create(teacherId, classroomId, {
       title: "Misión v1", instructions: "Diseña una pantalla de navegación verificable.", objectives: ["Demostrar navegación"],
-      requiredSkillIds: [skillId], optionalSkillIds: [],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: missionDeliverables,
     });
     expect(created).toMatchObject({ draftVersion: 1 });
     if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
@@ -186,6 +206,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
 
     const visible = await assignments.listStudent(studentId, classroomId);
     expect(visible?.map((mission) => mission.id)).toContain(missionV1.id);
+    expect(visible?.find((mission) => mission.id === missionV1.id)).toMatchObject({ missionRubric, deliverables: missionDeliverables });
     const proposalDraft = {
       title: "Propuesta desde misión v1", problem: "El grupo necesita una navegación clara para organizar sus pantallas.",
       solution: "Una barra sencilla separa las vistas y mantiene visible la sección actual.",
@@ -196,7 +217,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
 
     const edit = await assignments.updateDraft(teacherId, classroomId, created.id, 2, {
       title: "Misión v2", instructions: "Diseña una navegación con estado verificable.", objectives: ["Demostrar navegación y estado"],
-      requiredSkillIds: [skillId], optionalSkillIds: [optionalSkillId],
+      requiredSkillIds: [skillId], optionalSkillIds: [optionalSkillId], missionRubric: { ...missionRubric, title: "Rúbrica v2" }, deliverables: missionDeliverables,
     });
     expect(edit.kind).toBe("ok");
     const second = await assignments.publish(teacherId, classroomId, created.id, 3);
@@ -208,6 +229,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const missionV2 = second.assignment.versions.find((version) => version.version === 2)!;
     expect((await db.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: missionV1.id } })).snapshotJson).toMatchObject({
       title: "Misión v1", _classroomSubject: "Programación móvil", requiredSkills: [{ id: skillId }],
+      missionRubric, deliverables: missionDeliverables,
     });
 
     await db.classroom.update({ where: { id: classroomId }, data: { subject: "Diseño de interfaces" } });
@@ -243,7 +265,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const assignments = createAssignmentRepository(db);
     const created = await assignments.create(teacherId, classroomId, {
       title: "Misión integrada", instructions: "Demuestra una navegación verificable.", objectives: ["Conectar dos vistas"],
-      requiredSkillIds: [skillId], optionalSkillIds: [],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: missionDeliverables,
     });
     if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
     const published = await assignments.publish(teacherId, classroomId, created.id, 1);
@@ -381,7 +403,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const assignments = createAssignmentRepository(db);
     const created = await assignments.create(teacherId, classroomId, {
       title: "Misión para Review", instructions: "Usa un commit real.", objectives: ["Demostrar navegación"],
-      requiredSkillIds: [skillId], optionalSkillIds: [],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: missionDeliverables,
     });
     if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
     const published = await assignments.publish(teacherId, classroomId, created.id, 1);

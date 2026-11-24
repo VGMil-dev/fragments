@@ -50,6 +50,7 @@ import {
   ClassroomUpdateRequestSchema,
   SkillCreateRequestSchema,
   AssignmentDraftSchema,
+  AssignmentPublicationSchema,
   AssignmentVersionSchema,
   StudentAssignmentSchema,
 } from "./index.js";
@@ -86,19 +87,33 @@ const analysis = {
 
 describe("shared API contracts", () => {
   it("keeps mission required and optional skills disjoint and snapshots published versions", () => {
-    const draft = { title: "Lista de tareas", instructions: "Construye una lista con Expo.", objectives: ["Agregar y completar una tarea"], requiredSkillIds: ["skill-a"], optionalSkillIds: ["skill-b"] };
+    const rubric = { title: "Rúbrica de misión", criteria: [{ id: "criterion-a", title: "Navegación", description: "La acción lleva a la pantalla esperada.", weight: 100 }] };
+    const deliverables = [
+      { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal", requirements: ["Describe una solución comprobable."], dueDate: null, criterionIds: ["criterion-a"] },
+      { id: "delivery-progress", order: 2, title: "Avance", type: "progress", requirements: ["Presenta el recorrido implementado."], dueDate: "2026-12-10", criterionIds: ["criterion-a"] },
+    ];
+    const draft = { title: "Lista de tareas", instructions: "Construye una lista con Expo.", objectives: ["Agregar y completar una tarea"], requiredSkillIds: ["skill-a"], optionalSkillIds: ["skill-b"], missionRubric: rubric, deliverables };
     expect(AssignmentDraftSchema.safeParse(draft).success).toBe(true);
+    expect(AssignmentPublicationSchema.safeParse(draft).success).toBe(true);
     expect(AssignmentDraftSchema.safeParse({ ...draft, optionalSkillIds: ["skill-a"] }).success).toBe(false);
     expect(AssignmentDraftSchema.safeParse({ ...draft, teacherId: "teacher-1" }).success).toBe(false);
+    expect(AssignmentPublicationSchema.safeParse({ ...draft, missionRubric: { ...rubric, criteria: [{ ...rubric.criteria[0], weight: 99 }] } }).success).toBe(false);
+    expect(AssignmentDraftSchema.safeParse({ ...draft, missionRubric: { ...rubric, criteria: [rubric.criteria[0], { ...rubric.criteria[0] }] } }).success).toBe(false);
+    expect(AssignmentPublicationSchema.safeParse({ ...draft, deliverables: [deliverables[0]] }).success).toBe(false);
+    expect(AssignmentDraftSchema.safeParse({ ...draft, deliverables: [{ ...deliverables[1], criterionIds: ["missing-criterion"] }] }).success).toBe(false);
+    expect(AssignmentDraftSchema.safeParse({ ...draft, deliverables: [deliverables[0], { ...deliverables[1], order: 3 }] }).success).toBe(false);
     const version = { id: "version-1", assignmentId: "assignment-1", version: 1, status: "published", title: draft.title, instructions: draft.instructions, objectives: draft.objectives,
       requiredSkills: [{ id: "skill-a", name: "React Native", description: null }], optionalSkills: [{ id: "skill-b", name: "Expo", description: "Herramientas de Expo." }], mentorContextVersion: 1, createdAt: now };
     expect(AssignmentVersionSchema.safeParse(version).success).toBe(true);
     expect(AssignmentVersionSchema.safeParse({ ...version, version: 0 }).success).toBe(false);
+    expect(AssignmentVersionSchema.safeParse({ ...version, missionRubric: rubric, deliverables }).success).toBe(true);
     const effectiveConfig = { subject: "Programación", theme: "Lista de tareas", assignment: "Construye una lista con Expo.",
       requirements: Array.from({ length: 72 }, (_, index) => `Criterio ${index + 1}`), expectedLevel: "Bachillerato", rubricTitle: "Rúbrica F11",
       criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cambios observables en código.", weight: 100 }] };
-    expect(StudentAssignmentSchema.safeParse({ ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
-      mentorContext: { version: 1, publishedAt: now, config: effectiveConfig } }).success).toBe(true);
+    const studentAssignment = { ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
+      mentorContext: { version: 1, publishedAt: now, config: effectiveConfig }, missionPlanVersion: 1 };
+    expect(StudentAssignmentSchema.safeParse(studentAssignment).success).toBe(true);
+    expect(StudentAssignmentSchema.safeParse({ ...studentAssignment, missionPlanVersion: undefined })).toMatchObject({ success: true, data: { missionPlanVersion: 0 } });
     expect(MentorPublishedConfigSchema.safeParse({ version: 1, publishedAt: now,
       config: { ...effectiveConfig, requirements: Array.from({ length: 21 }, (_, index) => `F11 ${index + 1}`) } }).success).toBe(false);
   });

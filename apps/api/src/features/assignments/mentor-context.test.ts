@@ -18,6 +18,14 @@ describe("assignment mentor context", () => {
     expect(value).toMatchObject({ subject: "Aplicaciones móviles", theme: "Misión v1", assignment: "Consigna v1", requirements: ["Objetivo v1", "Habilidad requerida: Navegación", "Restricción F11"], rubricTitle: "Rúbrica F11", criteria: base.criteria });
   });
 
+  it("evaluates a mission with its published rubric instead of a later global F11 rubric", () => {
+    const missionRubric = { title: "Rúbrica móvil v1", criteria: [{ id: "criterion-navigation", title: "Navegación", description: "Comprueba el recorrido entre pantallas.", weight: 100 }] };
+    const value = buildAssignmentMentorConfig(base, { title: "Misión v1", instructions: "Conecta pantallas.", objectives: ["Navegación verificable"], missionRubric }, "Aplicaciones móviles");
+    expect(value.rubricTitle).toBe("Rúbrica móvil v1");
+    expect(value.criteria).toEqual(missionRubric.criteria);
+    expect(value.criteria).not.toEqual(base.criteria);
+  });
+
   it("uses the subject captured by the published mission rather than a later classroom subject", () => {
     const snapshot = { title: "Misión v1", instructions: "Consigna v1", objectives: ["Objetivo"], requiredSkills: [], optionalSkills: [], _classroomSubject: "Programación móvil" };
 

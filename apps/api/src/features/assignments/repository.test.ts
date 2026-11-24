@@ -34,7 +34,12 @@ function memoryDb() {
   return { state, database: { ...tx, $transaction: async (fn: (client: any) => unknown) => fn(tx) } as any };
 }
 
-const draft = { title: "Misión de observación", instructions: "Registra un fenómeno.", objectives: ["Describir el fenómeno"], requiredSkillIds: ["fixture-skill"], optionalSkillIds: [] };
+const missionRubric = { title: "Rúbrica de observación", criteria: [{ id: "criterion-observation", title: "Evidencia", description: "Describe el fenómeno con observaciones comprobables.", weight: 100 }] };
+const deliverables = [
+  { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Define una solución pequeña."], dueDate: null, criterionIds: ["criterion-observation"] },
+  { id: "delivery-progress", order: 2, title: "Avance", type: "progress" as const, requirements: ["Muestra una primera evidencia."], dueDate: null, criterionIds: ["criterion-observation"] },
+];
+const draft = { title: "Misión de observación", instructions: "Registra un fenómeno.", objectives: ["Describir el fenómeno"], requiredSkillIds: ["fixture-skill"], optionalSkillIds: [], missionRubric, deliverables };
 
 describe("assignment repository", () => {
   it("publishes immutable snapshots and publishes later edits as a new version", async () => {
@@ -45,6 +50,7 @@ describe("assignment repository", () => {
     const first = await repository.publish("fixture-teacher", "fixture-class", created!.id, 1);
     expect(first.kind).toBe("ok");
     expect(state.versions[0].snapshotJson).toMatchObject({ _classroomSubject: "Ciencias" });
+    expect(state.versions[0].snapshotJson).toMatchObject({ missionRubric, deliverables });
     expect(first.kind === "ok" && first.assignment.versions[0]).not.toHaveProperty("_classroomSubject");
     state.enrollment = { status: "active", classroom: { id: "fixture-class", title: "Ciencias", subject: "Materia editada" } };
     const studentRows = await repository.listStudent("fixture-student", "fixture-class");
@@ -53,13 +59,17 @@ describe("assignment repository", () => {
     expect(studentRows?.[0]?.mentorContext.config.subject).toBe("Ciencias");
     expect(studentRows?.[0]?.subject).toBe("Materia editada");
     expect((await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 1, draft)).kind).toBe("conflict");
-    const edited = { ...draft, title: "Misión revisada" };
+    const edited = { ...draft, title: "Misión revisada", missionRubric: { ...missionRubric, title: "Rúbrica v2" }, deliverables: [deliverables[0], { ...deliverables[1], title: "Avance v2" }] };
     const update = await repository.updateDraft("fixture-teacher", "fixture-class", created!.id, 2, edited);
     expect(update.kind).toBe("ok");
     const second = await repository.publish("fixture-teacher", "fixture-class", created!.id, 3);
     expect(second.kind).toBe("ok");
     expect(state.versions.map((item) => (item.snapshotJson as { title: string }).title)).toEqual(["Misión de observación", "Misión revisada"]);
     expect(state.versions.map((item) => item.version)).toEqual([1, 2]);
+    expect((state.versions[0].snapshotJson as any).missionRubric.title).toBe("Rúbrica de observación");
+    expect((state.versions[1].snapshotJson as any).missionRubric.title).toBe("Rúbrica v2");
+    expect((state.versions[0].snapshotJson as any).deliverables[1].title).toBe("Avance");
+    expect((state.versions[1].snapshotJson as any).deliverables[1].title).toBe("Avance v2");
   });
 
   it("rejects unavailable skills before persisting a draft", async () => {
@@ -68,6 +78,18 @@ describe("assignment repository", () => {
     const result = await repository.create("fixture-teacher", "fixture-class", { ...draft, requiredSkillIds: ["not-enabled"] });
     expect(result).toMatchObject({ kind: "invalid_skills" });
     expect(state.assignment).toBeNull();
+  });
+
+  it("does not publish a mission until it has its own 100-point rubric and at least two deliveries", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const created = await repository.create("fixture-teacher", "fixture-class", { ...draft, missionRubric: undefined, deliverables: [] } as any);
+    expect(created).toBeTruthy();
+    if (!created || "kind" in created) throw new Error("Expected an incomplete draft to remain editable.");
+    const result = await repository.publish("fixture-teacher", "fixture-class", created.id, 1);
+    expect(result).toEqual({ kind: "incomplete_assignment" });
+    expect(state.versions).toHaveLength(0);
+    expect(state.assignment.publishedVersion).toBeNull();
   });
 
   it("does not replace an existing draft when its skills are unavailable", async () => {

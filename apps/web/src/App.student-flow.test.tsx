@@ -61,7 +61,7 @@ const mission = {
   mentorContextVersion: 7, mentorContext: { version: 7, publishedAt: "2026-11-22T00:00:00.000Z", config: {
     subject: classroom.subject, theme: "Navegación", assignment: "Define una pantalla inicial.", expectedLevel: "Bachillerato", rubricTitle: "Contexto QA", requirements: ["Explicar la navegación"], criteria: [],
   } }, createdAt: "2026-11-22T00:00:00.000Z",
-} as StudentAssignment;
+} as unknown as StudentAssignment;
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot> | undefined;

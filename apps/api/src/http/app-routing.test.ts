@@ -11,6 +11,19 @@ afterEach(async () => {
 });
 
 describe("HTTP feature routing", () => {
+  it("advertises mission plan support without requiring an authenticated session", async () => {
+    const database = {} as unknown as PrismaClient;
+    const server = createServer(createHttpHandler(database));
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/mission-plan-capability`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, data: { missionPlanVersion: 1 } });
+  });
+
   it("dispatches teacher-linked Review routes before the classroom catch-all", async () => {
     const database = {
       classroom: { findFirst: vi.fn().mockResolvedValue(null) },

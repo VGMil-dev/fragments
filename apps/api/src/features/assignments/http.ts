@@ -13,13 +13,17 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
     const teacherMatch = pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/assignments$/);
     const draftMatch = pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/assignments\/([A-Za-z0-9_-]{1,100})\/draft$/);
     const publishMatch = pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/assignments\/([A-Za-z0-9_-]{1,100})\/publish$/);
+    const missionPlanEnabled = request.headers["x-fragments-mission-plan"] === "1";
     if (!studentMatch && !teacherMatch && !draftMatch && !publishMatch) return "unhandled";
     if (studentMatch && request.method === "GET") {
       const student = await auth?.student(request).catch(() => null);
       if (!student) { send(response, 401, { ok: false, error: { code: "AUTH_REQUIRED", message: "Inicia sesión para continuar." } }); return "handled"; }
       const assignments = await repository.listStudent(student.id, studentMatch[1]!);
       if (!assignments) send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró un aula activa." } });
-      else send(response, 200, { ok: true, data: StudentAssignmentsResponseSchema.parse(assignments) });
+      else {
+        const data = StudentAssignmentsResponseSchema.parse(assignments);
+        send(response, 200, { ok: true, data: missionPlanEnabled ? data : data.map(legacyStudentAssignment) });
+      }
       return "handled";
     }
     const teacherId = await auth?.teacherId(request).catch(() => null);
@@ -27,7 +31,10 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
     if (teacherMatch && request.method === "GET") {
       const rows = await repository.list(teacherId, teacherMatch[1]!);
       if (!rows) send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró un aula activa propia." } });
-      else send(response, 200, { ok: true, data: ClassroomAssignmentsResponseSchema.parse(rows) });
+      else {
+        const data = ClassroomAssignmentsResponseSchema.parse(rows);
+        send(response, 200, { ok: true, data: missionPlanEnabled ? data : data.map(legacyClassroomAssignment) });
+      }
       return "handled";
     }
     if (teacherMatch && request.method === "POST") {
@@ -37,7 +44,7 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
       const result = await repository.create(teacherId, teacherMatch[1]!, input.data);
       if (!result) send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró un aula activa propia." } });
       else if ("kind" in result) send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
-      else send(response, 201, { ok: true, data: result });
+      else send(response, 201, { ok: true, data: missionPlanEnabled ? result : legacyClassroomAssignment(result) });
       return "handled";
     }
     if (draftMatch && request.method === "PATCH") {
@@ -49,22 +56,39 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
       if (result.kind === "not_found") send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró el borrador." } });
       else if (result.kind === "conflict") send(response, 409, { ok: false, error: { code: "VERSION_CONFLICT", message: "El borrador cambió. Actualiza y vuelve a intentar." } });
       else if (result.kind === "invalid_skills") send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
-      else send(response, 200, { ok: true, data: result.assignment });
+      else send(response, 200, { ok: true, data: missionPlanEnabled ? result.assignment : legacyClassroomAssignment(result.assignment) });
       return "handled";
     }
     if (publishMatch && request.method === "POST") {
       const raw = await body(request, response); if (raw === undefined) return "handled";
       const input = PublishAssignmentRequestSchema.safeParse(raw);
       if (!input.success) { send(response, 400, { ok: false, error: { code: "INVALID_INPUT", message: "Revisa la versión del borrador." } }); return "handled"; }
-      const result = await repository.publish(teacherId, publishMatch[1]!, publishMatch[2]!, input.data.expectedVersion);
+      const result = await repository.publish(teacherId, publishMatch[1]!, publishMatch[2]!, input.data.expectedVersion, missionPlanEnabled);
       if (result.kind === "not_found") send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró el borrador." } });
       else if (result.kind === "conflict") send(response, 409, { ok: false, error: { code: "VERSION_CONFLICT", message: "El borrador cambió. Actualiza y vuelve a intentar." } });
       else if (result.kind === "invalid_skills") send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
-      else send(response, 200, { ok: true, data: result.assignment });
+      else if (result.kind === "incomplete_assignment") send(response, 409, { ok: false, error: { code: "MISSION_INCOMPLETE", message: "Completa la rúbrica propia y configura al menos dos entregas antes de publicar." } });
+      else send(response, 200, { ok: true, data: missionPlanEnabled ? result.assignment : legacyClassroomAssignment(result.assignment) });
       return "handled";
     }
     return "unhandled";
   };
+}
+
+function legacyStudentAssignment(value: unknown) {
+  const { missionRubric: _rubric, deliverables: _deliverables, missionPlanVersion: _version, ...legacy } = value as Record<string, unknown>;
+  return legacy;
+}
+
+function legacyClassroomAssignment(value: unknown) {
+  const assignment = value as Record<string, unknown>;
+  const { missionPlanVersion: _version, draft, versions, ...legacy } = assignment;
+  const stripPlan = (snapshot: unknown) => {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
+    const { missionRubric: _rubric, deliverables: _deliverables, ...rest } = snapshot as Record<string, unknown>;
+    return rest;
+  };
+  return { ...legacy, draft: draft ? stripPlan(draft) : draft, versions: Array.isArray(versions) ? versions.map(stripPlan) : versions };
 }
 
 async function body(request: IncomingMessage, response: ServerResponse): Promise<unknown | undefined> {

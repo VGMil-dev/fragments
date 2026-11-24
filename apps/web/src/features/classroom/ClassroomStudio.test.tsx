@@ -13,7 +13,7 @@ const { classroomApi, assignmentsApi } = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
   },
-  assignmentsApi: { listTeacher: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn() },
+  assignmentsApi: { listTeacher: vi.fn(), missionPlanCapability: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn() },
 }));
 
 vi.mock("../../lib/api/classroom-api.js", () => ({ classroomApi }));
@@ -39,10 +39,12 @@ afterEach(() => {
   classroomApi.update.mockReset();
   classroomApi.create.mockReset();
   assignmentsApi.listTeacher.mockReset();
+  assignmentsApi.missionPlanCapability.mockReset();
   assignmentsApi.create.mockReset();
   assignmentsApi.update.mockReset();
   assignmentsApi.publish.mockReset();
   assignmentsApi.listTeacher.mockResolvedValue({ ok: true, data: [] });
+  assignmentsApi.missionPlanCapability.mockResolvedValue({ ok: true, data: { missionPlanVersion: 1 } });
 });
 
 describe("ClassroomStudio", () => {
@@ -198,7 +200,7 @@ describe("ClassroomStudio", () => {
 
     await act(async () => retry?.click());
 
-    expect(container.querySelector('[role="status"]')?.textContent).toContain("Cargando misiones del aula");
+    expect([...container.querySelectorAll('[role="status"]')].some((status) => status.textContent?.includes("Cargando misiones del aula"))).toBe(true);
     expect([...container.querySelectorAll("button")].some((button) => button.textContent === "Reintentar carga de misiones")).toBe(false);
     await act(async () => resolveRetry({ ok: true, data: [] }));
 

@@ -9,9 +9,14 @@ import { AssignmentsPanel, StudentAssignmentsList } from "./AssignmentsPanel.js"
 const skill: SkillCatalogEntry = { id: "fixture-skill", name: "Observación", description: null, archived: false, createdAt: "2026-11-22T00:00:00.000Z", updatedAt: "2026-11-22T00:00:00.000Z" };
 const assignment = {
   id: "fixture-assignment", classroomId: "fixture-class", status: "published", draftVersion: 2, publishedVersion: 1,
-  draft: { title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"], requiredSkillIds: [skill.id], optionalSkillIds: [] },
+  draft: { title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"], requiredSkillIds: [skill.id], optionalSkillIds: [],
+    missionRubric: { title: "Rúbrica propia", criteria: [{ id: "criterion-observation", title: "Observación verificable", description: "Registra evidencia comprobable.", weight: 100 }] },
+    deliverables: [
+      { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Describe la pregunta."], dueDate: null, criterionIds: ["criterion-observation"] },
+      { id: "delivery-final", order: 2, title: "Informe final", type: "final" as const, requirements: ["Incluye evidencia."], dueDate: null, criterionIds: ["criterion-observation"] },
+    ] },
   versions: [], updatedAt: "2026-11-22T00:00:00.000Z",
-} as ClassroomAssignment;
+} as unknown as ClassroomAssignment;
 const fakeProposal = (assignmentVersionId: string): ProposalDraftResponse => ({
   id: "fixture-proposal-own", version: 1, proposal: { title: "Propuesta QA propia" },
   assignmentVersionId, updatedAt: "2026-11-24T00:00:00.000Z",
@@ -25,6 +30,12 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Editar borrador");
     expect(html).toContain("Publicar");
     expect(html).toContain("Hay cambios sin publicar");
+  });
+
+  it("blocks mission authoring when the active API does not advertise the new contract", () => {
+    const html = renderToStaticMarkup(<AssignmentsPanel assignments={[]} skills={[skill]} missionPlanAvailable={false} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />);
+    expect(html).toContain("El servidor aún no admite rúbricas y entregas versionadas.");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Crear misión<\/button>/);
   });
 
   it("shows the immutable published skill and Mentor context snapshots", () => {
@@ -44,7 +55,7 @@ describe("AssignmentsPanel", () => {
         requiredSkills: [{ id: skill.id, name: "Habilidad requerida v2", description: null }],
         optionalSkills: [], mentorContextVersion: 5, createdAt: "2026-11-23T00:00:00.000Z",
       }],
-    } as ClassroomAssignment;
+    } as unknown as ClassroomAssignment;
 
     const html = renderToStaticMarkup(<AssignmentsPanel assignments={[published]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />);
 
@@ -93,17 +104,34 @@ describe("AssignmentsPanel", () => {
     }
   });
 
+  it("shows the applicable criteria for each deliverable in the teacher preview", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
+    try {
+      await act(async () => root.render(<AssignmentsPanel assignments={[assignment]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />));
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Editar borrador")?.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Vista previa estudiantil")?.click());
+      expect(container.textContent).toContain("Informe final");
+      expect(container.textContent).toContain("Criterios: Observación verificable");
+    } finally { await act(async () => root.unmount()); container.remove(); }
+  });
+
   it("shows the mission action and passes its exact published snapshot to the callback", async () => {
     const studentAssignment = {
       id: "fixture-version", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
       title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"],
       requiredSkills: [{ id: skill.id, name: skill.name, description: "Registra hallazgos verificables en el entorno." }],
       optionalSkills: [{ id: "fixture-optional-skill", name: "Accesibilidad", description: "Comprueba el contenido con lector de pantalla." }], status: "published",
+      missionRubric: { title: "Rúbrica de exploración", criteria: [{ id: "criterion-observation", title: "Observaciones", description: "Registra evidencias del entorno.", weight: 100 }] },
+      deliverables: [
+        { id: "deliverable-proposal", order: 1, title: "Propuesta", type: "proposal", requirements: ["Describe una pregunta."], dueDate: null, criterionIds: ["criterion-observation"] },
+        { id: "deliverable-final", order: 2, title: "Informe final", type: "final", requirements: ["Incluye tres observaciones."], dueDate: "2026-12-15", criterionIds: ["criterion-observation"] },
+      ],
       mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: {
         subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
         rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
       } }, createdAt: "2026-11-22T00:00:00.000Z",
-    } as StudentAssignment;
+    } as unknown as StudentAssignment;
     const onStartProposal = vi.fn();
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} onStartProposal={onStartProposal} />);
     expect(html).toContain("Misiones del aula");
@@ -119,6 +147,12 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Bachillerato");
     expect(html).toContain("Explora tu entorno");
     expect(html).toContain("Registrar hallazgos");
+    expect(html).toContain("Rúbrica de exploración");
+    expect(html).toContain("Observaciones");
+    expect(html).toContain("Registra evidencias del entorno.");
+    expect(html).toContain("Entregas del proyecto");
+    expect(html).toContain("Informe final");
+    expect(html).toContain("Incluye tres observaciones.");
     expect(html).not.toContain("Cita observaciones verificables.");
 
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -152,7 +186,7 @@ describe("AssignmentsPanel", () => {
   });
 
   it("opens only the proposal whose assignmentVersionId exactly matches the mission id", async () => {
-    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as unknown as StudentAssignment;
     const linked = fakeProposal(studentAssignment.id);
     const onContinueProposal = vi.fn();
     const onStartProposal = vi.fn();
@@ -172,7 +206,7 @@ describe("AssignmentsPanel", () => {
   });
 
   it("continues the most recently updated proposal when several match the same mission version", () => {
-    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as unknown as StudentAssignment;
     const older = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-older", updatedAt: "2026-11-20T00:00:00.000Z" };
     const newer = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-newer", updatedAt: "2026-11-23T00:00:00.000Z" };
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[older, newer]} proposalsLoading={false} proposalsError={false} onContinueProposal={vi.fn()} />);
@@ -188,7 +222,7 @@ describe("AssignmentsPanel", () => {
   });
 
   it("does not use nested context ids or different mission versions as a proposal match", () => {
-    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as unknown as StudentAssignment;
     const stale = { ...fakeProposal("fixture-version-old"), assignmentContext: { assignmentVersionId: studentAssignment.id } } as ProposalDraftResponse;
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[stale]} proposalsLoading={false} proposalsError={false} />);
     expect(html).toContain("Iniciar propuesta");
@@ -196,7 +230,7 @@ describe("AssignmentsPanel", () => {
   });
 
   it("blocks starting while proposals are loading or unavailable and offers retry on error", async () => {
-    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as unknown as StudentAssignment;
     const onStartProposal = vi.fn();
     const loading = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading proposalsError={false} onStartProposal={onStartProposal} />);
     expect(loading).toContain("Espera mientras consultamos tus propuestas antes de iniciar.");
@@ -228,7 +262,7 @@ describe("AssignmentsPanel", () => {
         subject: "Ciencias", theme: "Explora tu entorno", assignment: "Describe lo que observas.", requirements: ["Registrar hallazgos"], expectedLevel: "Bachillerato",
         rubricTitle: "Rúbrica de prueba", criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }],
       } }, createdAt: "2026-11-23T00:00:00.000Z",
-    } as StudentAssignment;
+    } as unknown as StudentAssignment;
 
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} />);
     expect(html).toContain("Arquitectura");
@@ -258,5 +292,18 @@ describe("AssignmentsPanel", () => {
       await act(async () => root.unmount());
       container.remove();
     }
+  });
+
+  it("does not label missing plan fields as historical when the API is legacy", () => {
+    const legacyAssignment = {
+      id: "fixture-version-legacy", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
+      title: "Misión", instructions: "Avanza con una propuesta.", objectives: ["Proponer"], requiredSkills: [], optionalSkills: [], status: "published",
+      missionPlanVersion: 0, deliverables: [], mentorContextVersion: 1,
+      mentorContext: { version: 1, publishedAt: "2026-11-24T00:00:00.000Z", config: { subject: "Ciencias", theme: "Misión", assignment: "Avanza", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Base", criteria: [] } },
+      createdAt: "2026-11-24T00:00:00.000Z",
+    } as unknown as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[legacyAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} />);
+    expect(html).toContain("El servidor aún no informa la rúbrica ni las entregas versionadas");
+    expect(html).not.toContain("Esta versión histórica");
   });
 });
