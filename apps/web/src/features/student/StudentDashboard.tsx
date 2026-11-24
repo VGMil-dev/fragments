@@ -30,7 +30,16 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
   const latestSubmission = submissions.status === "success"
     ? [...submissions.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
-  const continueProposal = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+  const recentProposals = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const continueProposal = recentProposals[0];
+  const proposalForMission = (assignment: StudentAssignment) => recentProposals.find((draft) =>
+    (draft.assignmentVersionId ?? draft.assignmentContext?.assignmentVersionId) === assignment.id,
+  );
+  const continueOrStartMission = (assignment: StudentAssignment) => {
+    const linkedProposal = proposalForMission(assignment);
+    if (linkedProposal) onContinueProposal(linkedProposal);
+    else onStartMission(assignment);
+  };
   const publishedMissions = [...missions].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const proposalIsPrimary = !proposalsLoading && !proposalsError && Boolean(continueProposal);
   const choosingMission = !proposalsLoading && !proposalsError && !continueProposal && !missionsLoading && !missionsError && publishedMissions.length > 1;
@@ -62,7 +71,19 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
       </dl> : null}
     </div>
     <div className="student-dashboard__project-action">
-      {proposalsError ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button> : proposalsLoading ? null : continueProposal ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : missionsLoading ? null : missionsError ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button> : choosingMission ? <button type="button" className="button button--primary" onClick={() => onNavigate("/student/classrooms")}>Ir a Mis aulas <ArrowRight size={17} aria-hidden="true" /></button> : dashboardMission ? <button type="button" className="button button--primary" onClick={() => onStartMission(dashboardMission)}>Iniciar misión en Mentor <ArrowRight size={17} aria-hidden="true" /></button> : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
+      {proposalsError
+        ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button>
+        : proposalsLoading ? null
+          : continueProposal
+            ? <button type="button" className="button button--primary" onClick={() => onContinueProposal(continueProposal)}>Continuar en Mentor <ArrowRight size={17} aria-hidden="true" /></button>
+            : missionsLoading ? null
+              : missionsError
+                ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button>
+                : choosingMission
+                  ? <button type="button" className="button button--primary" onClick={() => onNavigate("/student/classrooms")}>Ir a Mis aulas <ArrowRight size={17} aria-hidden="true" /></button>
+                  : dashboardMission
+                    ? <button type="button" className="button button--primary" onClick={() => continueOrStartMission(dashboardMission)}>{proposalForMission(dashboardMission) ? "Continuar borrador" : "Iniciar misión en Mentor"} <ArrowRight size={17} aria-hidden="true" /></button>
+                    : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
     </div>
   </section>;
 
@@ -84,7 +105,9 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
           <p>Elige un objetivo de aprendizaje y continúa en Mentor con su contexto publicado.</p>
         </header>
         <ul className="student-dashboard__mission-list">
-          {visibleOtherMissions.map((mission) => <li key={mission.id}>
+          {visibleOtherMissions.map((mission) => {
+            const linkedProposal = proposalForMission(mission);
+            return <li key={mission.id}>
             <article className="student-dashboard__mission-card">
               <p className="student-dashboard__mission-source">{mission.subject} <span aria-hidden="true">·</span> {mission.classroomTitle}</p>
               <h3>{mission.title}</h3>
@@ -96,11 +119,12 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
                   {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
                 </ul>
               </div> : null}
-              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={`Iniciar misión: ${mission.title}`} onClick={() => onStartMission(mission)}>
-                Iniciar en Mentor <ArrowRight size={16} aria-hidden="true" />
+              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Continuar borrador vinculado a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
+                {linkedProposal ? "Continuar borrador" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
               </button>
             </article>
-          </li>)}
+          </li>;
+          })}
         </ul>
         {otherMissions.length > visibleOtherMissions.length ? <button type="button" className="student-dashboard__link student-dashboard__all-missions" onClick={() => onNavigate("/student/classrooms")}>
           Ver todas tus misiones ({otherMissions.length - visibleOtherMissions.length} más) <ArrowRight size={16} aria-hidden="true" />

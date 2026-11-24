@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StudentAssignment, StudentMe } from "@fragments/contracts";
+import type { ProposalDraftResponse, StudentAssignment, StudentMe } from "@fragments/contracts";
 import { StudentDashboard } from "./StudentDashboard";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -60,6 +60,51 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Implementa una navegación observable");
     expect(html).toContain("Iniciar misión en Mentor");
     expect(html).not.toContain("Crear mi primer proyecto");
+  });
+
+  it("continues the draft linked by assignmentVersionId from its mission card", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
+    expect(onStartMission).not.toHaveBeenCalled();
+  });
+
+  it("uses assignmentContext.assignmentVersionId when the proposal has no top-level version", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentContext: { assignmentVersionId: mission.id } } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
+    expect(onStartMission).not.toHaveBeenCalled();
+  });
+
+  it("starts the mission when no proposal matches its published version", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const unlinkedProposal = { ...proposal, assignmentVersionId: "mission-v3", assignmentContext: { assignmentVersionId: "mission-v3" } } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[unlinkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onStartMission).toHaveBeenCalledExactlyOnceWith(mission);
+    expect(onContinueProposal).not.toHaveBeenCalled();
   });
 
   it("asks the student to choose when several missions are published", () => {
