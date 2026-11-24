@@ -51,11 +51,12 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
   };
   const publishedMissions = [...missions].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const proposalIsPrimary = !proposalsLoading && !proposalsError && Boolean(continueProposal);
+  const primaryMissionVersionId = proposalIsPrimary ? continueProposal?.assignmentVersionId : undefined;
   const choosingMission = !proposalsLoading && !proposalsError && !continueProposal && !missionsLoading && !missionsError && publishedMissions.length > 1;
   const dashboardMission = proposalsLoading || proposalsError || continueProposal || missionsLoading || missionsError || choosingMission ? undefined : publishedMissions[0];
   const otherMissions = proposalsLoading || proposalsError || missionsLoading || missionsError
     ? []
-    : choosingMission ? publishedMissions : publishedMissions.filter((mission) => mission.id !== dashboardMission?.id);
+    : choosingMission ? publishedMissions : publishedMissions.filter((mission) => mission.id !== dashboardMission?.id && mission.id !== primaryMissionVersionId);
   const visibleOtherMissions = otherMissions.slice(0, 3);
   const dashboardClasses = [
     "student-dashboard",
@@ -77,6 +78,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         {continueProposalMission ? <>
           <div><dt>Aula</dt><dd>{continueProposalMission.classroomTitle}</dd></div>
           <div><dt>Misión</dt><dd>{continueProposalMission.title} · v{continueProposalMission.version}</dd></div>
+          {continueProposalMission.objectives.length ? <div><dt>Objetivos</dt><dd><ul className="student-dashboard__proposal-objectives">{continueProposalMission.objectives.map((objective, index) => <li key={`${index}-${objective}`}>{objective}</li>)}</ul></dd></div> : null}
         </> : null}
         {continueProposalMentorContextVersion ? <div><dt>Contexto Mentor</dt><dd>v{continueProposalMentorContextVersion}</dd></div> : null}
         {continueProposalSkills ? <div><dt>Habilidades obligatorias</dt><dd>{continueProposalSkills.length ? continueProposalSkills.map((skill) => skill.name).join(" · ") : "Sin habilidades obligatorias"}</dd></div> : null}
@@ -125,7 +127,6 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         <ul className="student-dashboard__mission-list">
           {visibleOtherMissions.map((mission) => {
             const linkedProposal = proposalForMission(mission);
-            const linkedProposalIsPrimary = proposalIsPrimary && linkedProposal?.id === continueProposal?.id;
             return <li key={mission.id}>
             <article className="student-dashboard__mission-card">
               <p className="student-dashboard__mission-source">{mission.subject} <span aria-hidden="true">·</span> {mission.classroomTitle}</p>
@@ -138,11 +139,9 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
                   {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
                 </ul>
               </div> : null}
-              {linkedProposalIsPrimary
-                ? <p className="student-dashboard__mission-linked-note">Tu propuesta vinculada está en el siguiente paso destacado.</p>
-                : <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Abrir propuesta vinculada a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
-                  {linkedProposal ? "Abrir propuesta" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
-                </button>}
+              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Abrir propuesta vinculada a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
+                {linkedProposal ? "Abrir propuesta" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
+              </button>
             </article>
           </li>;
           })}

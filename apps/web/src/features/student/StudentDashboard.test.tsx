@@ -128,9 +128,9 @@ describe("StudentDashboard", () => {
 
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
     const primaryAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__project-action button");
-    const missionNote = interactionContainer.querySelector<HTMLElement>(".student-dashboard__mission-linked-note");
+    const primaryContext = interactionContainer.querySelector<HTMLElement>('[aria-label="Contexto académico de la propuesta"]');
     expect(missionAction).toBeNull();
-    expect(missionNote?.textContent).toContain("Tu propuesta vinculada está en el siguiente paso destacado.");
+    expect(primaryContext?.textContent).toContain("Navegación con Expo · v4");
     expect(primaryAction?.getAttribute("aria-label")).toBe("Abrir propuesta en Mentor: Bitácora de jardín");
     await act(async () => { primaryAction?.click(); });
 
@@ -253,6 +253,31 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Misión publicada v1");
     expect(html).not.toContain("Versiones fijadas");
     expect(html).toContain("Misiones en tus aulas");
+  });
+
+  it("removes only the exact linked mission card and keeps its real objectives in the primary context", async () => {
+    const linkedMission = { id: "mission-linked-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Aula móvil", subject: "Aplicaciones móviles", title: "Navegación con Expo", objectives: ["Implementa una navegación entre pantallas.", "Verifica rutas y parámetros."], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
+    const otherMission = { ...linkedMission, id: "mission-other-v2", version: 2, title: "Accesibilidad móvil", objectives: ["Valida nombres accesibles."], requiredSkills: [{ id: "skill-accessibility", name: "Accesibilidad", description: null }] };
+    const linkedProposal = { ...proposal, assignmentVersionId: linkedMission.id, assignmentContext: { assignmentVersionId: linkedMission.id, requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil" }], mentorContext: { version: linkedMission.mentorContextVersion } } } as unknown as ProposalDraftResponse;
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[linkedMission, otherMission]} onStartMission={onStartMission} />); });
+
+    const primaryContext = interactionContainer.querySelector<HTMLElement>('[aria-label="Contexto académico de la propuesta"]');
+    const missionCards = Array.from(interactionContainer.querySelectorAll<HTMLElement>(".student-dashboard__mission-card"));
+    expect(primaryContext?.textContent).toContain("Aula móvil");
+    expect(primaryContext?.textContent).toContain("Navegación con Expo");
+    expect(primaryContext?.textContent).toContain("Implementa una navegación entre pantallas.");
+    expect(primaryContext?.textContent).toContain("Verifica rutas y parámetros.");
+    expect(primaryContext?.textContent).toContain("Navegación móvil");
+    expect(missionCards).toHaveLength(1);
+    expect(missionCards[0]?.textContent).toContain("Accesibilidad móvil");
+    expect(missionCards[0]?.textContent).not.toContain("Navegación con Expo");
+
+    const otherAction = missionCards[0]?.querySelector<HTMLButtonElement>("button");
+    expect(otherAction?.textContent).toContain("Iniciar en Mentor");
+    await act(async () => { otherAction?.click(); });
+    expect(onStartMission).toHaveBeenCalledExactlyOnceWith(otherMission);
   });
 
   it("limits mission choices to three and links to the remaining missions", () => {
