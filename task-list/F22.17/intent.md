@@ -17,3 +17,7 @@ Añadir un comando operacional de una sola cuenta que confirme dos veces el mism
 ## Owner y criterio
 
 PLANNER. TDD para la guarda exacta/idempotente, revisión de Better Auth/Resend, verificación fresca antes del commit. Skill visual/browser no aplica al comando; acceso posterior al dashboard se valida con Ego Lite.
+
+## Resultado observado · 2026-11-24
+
+PR #267 y corrección #268 están integrados; `v0.5.71` está aplicada por F14. El usuario autorizado existente fue promovido y verificado con `admin=true`, `isTeacher=true`; Resend aceptó el recovery. El owner debe completar el reset desde el correo; el login autenticado y las rutas `/admin` y `/teacher/dashboard` siguen pendientes. Véase `evidencie.md`.

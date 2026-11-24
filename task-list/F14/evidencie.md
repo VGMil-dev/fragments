@@ -430,3 +430,11 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - El timer F14 recogió y aplicó `v0.5.66` normalmente (ledger release `456571026`) después de recuperar espacio. Posteriormente, la tag anotada `v0.5.67` fue validada/publicada por el workflow F14 `45398587029` (verify-build, attest-package, publish-approved-release: SUCCESS), y el timer la recogió sin invocar manualmente el aplicador. Ledger release `456771380`, estado `deployed`, commit `a40653c10b6874f72b47c9a8027dd2d24982ad37`.
 - Verificación final: API y web de Fragments `Up (healthy)` en el SHA exacto; `/health` devolvió `ok/ready`; Pits development, test web/API y PostgreSQL continuaron saludables; `systemctl --failed` no mostró unidades fallidas. Sin cambios de secretos, reglas/protecciones, servicios, PostgreSQL, backups o mecanismo F14. F14 mantuvo su backup y healthcheck regulares.
 - El almacenamiento queda recuperado, pero el espacio no sustituye una política de retención supervisada: inventario restante de Docker reportó 27.89 GB de imágenes y 9.056 GB de build cache (7.871 GB reclaimable), preservados. Vigilar crecimiento y planificar ampliación si vuelve a aproximarse a capacidad crítica.
+
+## Release automática v0.5.71 · 2026-11-24
+
+- PR #268 merge normal en SHA `a0e75e33ca5a3115392fef093b9ba40230953416`; CI #45473906796 SUCCESS. Tag anotada `v0.5.71` apunta al mismo SHA de `main`.
+- F14 run #45474371223 terminó SUCCESS en verify-build, attest-package y publish-approved-release, incluyendo PostgreSQL disposable, backup/restore, typecheck/lint/build, metadata, ARM64 y atestación.
+- El poll F14 aceptó release ID `457260586`; el aplicador normal registró `release_deployed`, `Result=success`, `ExecMainStatus=0`. API y web están healthy sobre el SHA exacto. Health local y público `ok/database=ready`.
+- Sin despliegue ni reinicio manual, sin cambios de `fragments-production`, secrets o gates. El cambio de código habilita egress solo al servicio manual `bootstrap-admin`; PostgreSQL sigue en la red interna. Espacio raíz al verificar: 140 GB disponibles, 28 % usado, inodos 7 %.
+- Se conservaron servicio e imágenes de rollback, volúmenes, backups y servicios vecinos. Ledger/hash de respaldo y retención detallada del host siguen NO COMPROBADOS para esta release.
