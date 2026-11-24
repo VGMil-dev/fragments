@@ -27,5 +27,5 @@ Implementación focal completada. El estado sin Review ahora prioriza el inicio 
 
 ## Commits
 
-- Implementación: pendiente.
-- Evidencia final: pendiente.
+- Implementación y documentación inicial: `c72b4f4f267b3707e3141c9d6e892e4cc72542ed` (`feat(F16.22): priorizar inicio de Trainer por Review`).
+- El registro definitivo de esta evidencia se añade en un commit documental separado.
