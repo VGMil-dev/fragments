@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación probada e integrada por PR #235. F14 publicó `v0.5.58`; la aplicación productiva del paquete continúa pendiente de confirmación.
+Implementación probada, integrada por PR #235 y aplicada automáticamente en producción por F14 `v0.5.58`. QA visual autenticada del estudiante sigue pendiente.
 
 ## Cambios
 
@@ -22,7 +22,7 @@ Implementación probada e integrada por PR #235. F14 publicó `v0.5.58`; la apli
 
 - QA visual autenticada con Ego Lite, medidas 320/390/768/1024/1440 en navegador, zoom, contraste integral y lector de pantalla: **NO COMPROBADOS**. No había sesión Ego Lite Fragments-Estudiante disponible; no se creó ni cerró ninguna sesión.
 - Review con evaluación real y calidad semántica de puntuaciones/citas: **NO COMPROBADAS**. Solo se usó el fixture de componente etiquetado `fake-provider:review-fixture`; no hubo llamadas a proveedores ni datos productivos.
-- Aplicación de `v0.5.58` en producción: **PENDIENTE/NO COMPROBADA**. Tras publicar el paquete, Ego Lite todavía recibió `/assets/index-DQPP14Ar.js` sin el marcador `v0.5.58` ni el SHA de `main`; `/health` respondió 200, DB `ready`. No se ejecutó deploy manual.
+- Aplicación productiva verificada con Ego Lite: `/health` 200, `status=ok`, DB `ready`; el HTML sirve `/assets/index-M0AC9oiW.js`, cuyo bundle contiene `v0.5.58`, SHA `004df54d9e485e59b294cbec263020eb034bbf46` y el marcador de hallazgos. La primera observación tras la publicación aún entregaba v0.5.57; la observación posterior confirmó la aplicación automática. No se ejecutó deploy manual ni reinicio.
 
 ## Integración
 
@@ -30,4 +30,5 @@ Implementación probada e integrada por PR #235. F14 publicó `v0.5.58`; la apli
 - Commit local de implementación `68eb92f4968cfd697f592a0ce652bdbdcb849a28` (`feat(F16.15): ordena evidencia en Review`).
 - PR [#235](https://github.com/VGMil-dev/fragments/pull/235) se integró mediante merge normal como `004df54d9e485e59b294cbec263020eb034bbf46`; CI PR `45320215869` SUCCESS.
 - Tag anotada `v0.5.58` apunta al merge exacto. F14 run `45320565441` completó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; imágenes ARM64, manifiesto y atestación quedaron publicados.
+- PR [#236](https://github.com/VGMil-dev/fragments/pull/236) registró la publicación y primera observación pendiente; se integró normalmente como `f0bd614b147495a32aeb85c9e66c54dc04ea3d7c` con CI `45322199990` SUCCESS. La observación posterior del bundle confirmó que el agente pull aplicó `v0.5.58`.
 - Ego Lite `Fragments-Docente` se mantuvo abierta en Control de Mentor. No había sesión `Fragments-Estudiante`; no se crearon/cerraron sesiones. Calidad semántica de evaluación y QA visual autenticada NO COMPROBADAS.
