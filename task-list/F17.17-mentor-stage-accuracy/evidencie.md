@@ -16,4 +16,8 @@
 - Suite web completa: 54 archivos, 310 tests PASS.
 - `pnpm --filter @fragments/web typecheck`: PASS.
 - `pnpm --filter @fragments/web build`: PASS. Vite mostró advertencias ya existentes de chunks grandes y directiva `use client` de lucide-react; el build terminó correctamente.
-- Aún pendiente: PR/CI, release F14, health/bundle y verificación Ego Lite de la corrección desplegada. No se ejecutó Mentor/Review IA ni se guardó el borrador de producción.
+- PR #274 integrado; CI #45499970862 SUCCESS. Merge SHA `0e3128e8e198036d90559f105d6c5ca814432119`.
+- Release F14 `v0.5.74`, workflow #45500649834 y GitHub Release 457411064 completados por el flujo legítimo. `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; no hubo aprobación manual ni despliegue forzado.
+- VPS verificada en lectura: API y web healthy con imagen `sha-0e3128e8e198036d90559f105d6c5ca814432119`; `/health` 200, `database=ready`; bundle público contiene `v0.5.74` y el SHA completo. Poller, apply.path y cloudflared activos. Raíz `/dev/sda1`: 132 GB libres de 193 GB (32 % usado), inodos 8 % usados.
+- Ego Lite, Space 80/Profile 5 preservado, recarga de la propuesta QA propia en `v0.5.74` confirmó 71 % y reanudación en Objetivos y alcance, con Habilidades: Completada. Una edición local no guardada de Alcance del MVP mantuvo Habilidades: Completada; el campo se restauró vacío y no se guardó ni evaluó. Captura auténtica: `CU_QA_EVIDENCIAS/CU17-F17-17-mentor-stage-prod.png` (SHA-256 `CDE5A0963DD40FA47A3FF5B12B60E7ABB9B626C255C998542C93BBB2DB33F7CA`).
+- F17.17 queda completada: el estado de Habilidades no se invalida al editar otros campos; cambios reales de habilidades todavía requieren guardado. No se ejecutó Mentor/Review IA ni se modificó información persistida en producción.
