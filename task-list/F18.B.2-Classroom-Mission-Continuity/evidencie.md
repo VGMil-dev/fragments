@@ -1,6 +1,6 @@
 # Evidencia F18.B.2
 
-Estado: implementación integrada y desplegada mediante F14 `v0.5.63`; validación visual de la ruta autenticada en Ego Lite sigue pendiente.
+Estado: implementación integrada y desplegada mediante F14 `v0.5.63`; navegación autenticada read-only con Ego Lite comprobada.
 
 - Requisito basado en F18.B, F17 y el incremento F18.B.1 ya desplegado: en `/student/classrooms`, las misiones usan `StudentAssignmentsList`, cuyo CTA actual siempre inicia una propuesta. Debe continuar solo una propuesta propia cuyo `assignmentVersionId` coincida exactamente con la versión publicada.
 - Brecha corregida: `App.tsx` carga `GET /api/me/proposals` al entrar a `/student/classrooms` y conecta estado, reintento, continuación y nuevo inicio con `StudentClassroomsScreen` / `StudentAssignmentsList`. `proposalsLoadedPath` evita habilitar una acción con datos/error provenientes de otra ruta durante el primer render.
@@ -9,10 +9,11 @@ Estado: implementación integrada y desplegada mediante F14 `v0.5.63`; validaci�
 - Pruebas frescas: suite web `pnpm --filter @fragments/web test` — 54 archivos, 290/290 PASS; typecheck PASS; build PASS; `git diff --check` PASS. Focal de continuidad — `App.student-flow`, `StudentClassroomsScreen` y `AssignmentsPanel`: 28/28 PASS.
 - El test integrado confirma que una misión en Mis aulas abre la propuesta propia vinculada y conserva contexto/skill en Mentor. Prueba aparte confirma que el CTA para nueva propuesta espera la respuesta de `GET /api/me/proposals`; el test unitario también cubre match exacto, versión distinta, error y reintento, y selecciona la propuesta más recientemente actualizada si hay varias del mismo snapshot.
 - Revisión reflexiva independiente: CLEAN tras detectar y cerrar la ventana de carga del primer render con datos del path anterior.
-- El build conserva advertencias del bundle >500 kB y directivas `use client` de Lucide. La verificación Ego Lite de este flujo productivo sigue NO COMPROBADA; no se navegaron ni cerraron sesiones, ni se modificó producción.
+- El build conserva advertencias del bundle >500 kB y directivas `use client` de Lucide. No se realizaron escrituras productivas ni evaluaciones IA.
 - Integración: PR [#250](https://github.com/VGMil-dev/fragments/pull/250) merge normal en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`; CI `45349920851` PASS.
 - Release: tag anotada `v0.5.63`, F14 run `45350400117` SUCCESS en verify-build, atestación Sigstore y publicación aprobada.
 - Aplicación automática verificada en solo lectura: `fragments-release-apply.service` `Result=success`, `ExecMainStatus=0`, `ActiveState=inactive`; imágenes `fragments-api` y `fragments-web` `sha-89fad1cf1de4d1841b281b2eecd0b4812318c83f`, ambas healthy. `https://fragments.gavanti.org/health` respondió `ok/database=ready`; bundle `/assets/index-BW-_rB4s.js` contiene `v0.5.63` y el SHA exacto.
 - Comando remoto ejecutado: `ssh servidor 'sudo systemctl show fragments-release-apply.service -p Result -p ExecMainStatus -p ActiveState && sudo docker inspect fragments-api-1 fragments-web-1 --format "{{.Name}} {{.Config.Image}} {{.State.Health.Status}}" && curl --silent --show-error --fail https://fragments.gavanti.org/health'` — salida: aplicador `success/0/inactive`, ambos contenedores healthy en SHA exacto y health `ok/ready`.
 - Verificación pública del bundle con PowerShell (`Invoke-WebRequest` a `/`, lectura del asset `/assets/index-BW-_rB4s.js` y comprobación `.Contains('v0.5.63')` / `.Contains('89fad1cf1de4d1841b281b2eecd0b4812318c83f')`) — `True/True`.
-- No se hicieron escrituras productivas ni evaluaciones IA. La verificación Ego Lite autenticada de este flujo específico continúa NO COMPROBADA; no se cerraron ni reemplazaron sesiones.
+- Ego Lite, TaskSpace 60 de estudiante existente: `/student/classrooms` mostró una misión publicada y «Abrir propuesta vinculada». Abrirla llevó a Mentor con seis etapas, una etapa actual y un formulario único. Contexto cargó como académico; la etapa Habilidades conservó el estado de requisito. Solo lectura: no se guardó ni evaluó. La sesión se devolvió a `/student/dashboard` y quedó abierta. Se comprobó el recorrido de esta cuenta; no se generaliza a otras matrículas.
+- No se hicieron escrituras productivas ni evaluaciones IA; la calidad de puntuación Mentor/Review sigue NO COMPROBADA.
