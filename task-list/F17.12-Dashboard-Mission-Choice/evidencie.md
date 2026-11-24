@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementado y verificado localmente; PR e integración pendientes. Si no existe un borrador y hay varias misiones publicadas, ya no se promueve la de mayor `createdAt` como prioridad. La CTA principal lleva a Mis aulas y las opciones conservan sus objetivos, habilidades y acciones secundarias reales.
+Implementado, integrado y desplegado en `v0.5.56` por F14. Si no existe un borrador y hay varias misiones publicadas, ya no se promueve la de mayor `createdAt` como prioridad. La CTA principal lleva a Mis aulas y las opciones conservan sus objetivos, habilidades y acciones secundarias reales.
 
 ## Alcance aplicado
 
@@ -22,6 +22,9 @@ Implementado y verificado localmente; PR e integración pendientes. Si no existe
 - `git diff --check` — PASS.
 - Revisión independiente — CLEAN para lógica, alcance y estados. El revisor señaló y se cerró la brecha de prueba de destino de CTA.
 - Commit de implementación: `ec07d6c527883a5270b0eff4b0f6542c0fd21bf8`.
+- Test integrado: `317ee7f64f359e51c61e8ad4fec37e245e505fd7`; el mock devuelve la misión solo para su aula para evitar IDs duplicados.
+- PR #231 merge normal; SHA de main `1c9601634bca5866ad4bafee212e7a6f5cfdec7d`; CI final `45309888142` SUCCESS. El primer CI (`45309368135`) detectó el mock duplicado y quedó corregido.
+- F14 tag `v0.5.56`, run `45310349097` — SUCCESS. Bundle público `/assets/index-DJ51_Rsi.js` contiene versión/SHA exactos y `/health` confirma `ok`/`ready` en dos comprobaciones.
 
 ## No comprobado
 
