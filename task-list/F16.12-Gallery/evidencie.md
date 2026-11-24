@@ -23,5 +23,13 @@ Estado: implementación publicada en PR #224; integración central y QA visual d
 - Commit inicial de implementación: `9823b60d81c1a0ef604dca0ed6f8c1128de20b40` (`feat(gallery): mejora galeria Pixel Night`).
 - Corrección de contraste hover: `d25aea30d6a4c1626e0b7e766b341cab849542d8` (`fix(gallery): corrige contraste hover`). El estado hover usa fondo cobalt y texto claro; una prueba calcula el contraste a partir de los tokens referenciados por la regla y exige WCAG AA (4.5:1).
 - Verificación fresca tras la corrección: `pnpm --filter @fragments/web exec vitest run src/features/gallery/gallery-screen.test.tsx` — `Test Files 1 passed (1)`, `Tests 7 passed (7)`; `pnpm --filter @fragments/web typecheck` — `tsc -p tsconfig.json`, terminado correctamente; `git diff --check` — terminado correctamente con el aviso Git CRLF→LF de `gallery-screen.css`.
-- `task-list/TASKS.md` no se editó por límite explícito de ownership; la actualización central corresponde al planner.
+- El planner añadió a `TASKS.md` la fila F16.12 y creó este `intent.md`/`spec.md` sin tocar ownership UI ni archivos compartidos de producto.
 - PR #224: abierto contra `main`; rama publicada `codex/f16.12-gallery`; sin merge.
+
+## Revisión independiente y CI
+
+- Revisión reflexiva independiente: detectó P2 en el contraste del hover (≈1.06:1). Se corrigió a `--f16-cobalt` / `--f16-text-primary`; cálculo WCAG contrastado de nuevo: **5.98:1** (≥4.5:1 AA). Sin regresiones adicionales encontradas.
+- Test nuevo calcula contraste desde los tokens usados por la regla hover; exige WCAG AA.
+- Vitest focal posterior al fix: 7/7 PASS; typecheck web y `git diff --check` PASS.
+- CI del head `d498d365fdcca84231ee03ad1e0488d621990076`: run `45293938276`, job `verify` SUCCESS (incluye test/typecheck/lint/build y validación del workflow).
+- La verificación CI `45293938276` corresponde al head de código `d498d36` y fue SUCCESS. El commit documental del planner altera solo `task-list/`; debe pasar CI en el head final del PR antes del merge. Aún no hay merge ni release F14; QA visual Ego Lite en la release queda pendiente.
