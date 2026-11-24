@@ -6,6 +6,12 @@ import "./inspector-teacher-workspace.css";
 
 type InspectorApi = ReturnType<typeof createInspectorApi>;
 type AuthState = "loading" | "anonymous" | "teacher" | "denied";
+const recordStatusLabels: Record<InspectorChallengeRecordResponse["status"], string> = {
+  pending: "Pendiente",
+  assigned: "Asignado",
+  completed: "Realizado",
+  obsolete: "Obsoleto",
+};
 
 async function checkTeacherSession(): Promise<AuthState> {
   try {
@@ -121,7 +127,7 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
     setMessage("Defensa registrada.");
   }
 
-  if (authState === "loading") return <main className="inspector-workspace" aria-live="polite">Comprobando el acceso docente…</main>;
+  if (authState === "loading") return <main className="inspector-workspace" aria-busy="true"><p role="status" aria-live="polite">Comprobando el acceso docente…</p></main>;
   if (authState !== "teacher") return (
     <main className="inspector-workspace" aria-labelledby="inspector-workspace-title">
       <header className="inspector-workspace__header">
@@ -146,13 +152,13 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
     <main className="inspector-workspace" aria-labelledby="inspector-workspace-title">
       <header className="inspector-workspace__header">
         <a className="inspector-workspace__home" href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>← Inicio</a>
-        <p>FRAGMENTS · ESPACIO DOCENTE</p>
-        <h1 id="inspector-workspace-title">Inspector</h1>
-        <span>Los retos parten de evidencia del commit y la ayuda permanece privada.</span>
+        <p>FRAGMENTS · INSPECTOR DOCENTE</p>
+        <h1 id="inspector-workspace-title">Sala de defensa</h1>
+        <span>Revisa la evidencia del commit, prepara una modificación temporal y registra la restauración.</span>
         <button className="inspector-workspace__logout" type="button" onClick={() => void signOut()}>Cerrar sesión</button>
       </header>
       <form className="inspector-workspace__lookup" onSubmit={loadReview}>
-        <label htmlFor="inspector-review-id">ID de revisión</label>
+        <label htmlFor="inspector-review-id">Identificador de revisión</label>
         <input id="inspector-review-id" name="reviewId" value={reviewId} onChange={(event) => setReviewId(event.target.value)} required maxLength={100} />
         <button type="submit">Cargar revisión</button>
         <button type="button" onClick={() => void createChallenge()} disabled={!reviewId.trim()}>Crear reto</button>
@@ -160,13 +166,13 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
       {records.length > 1 ? (
         <label className="inspector-workspace__select-label" htmlFor="inspector-challenge-id">Reto de esta revisión
           <select id="inspector-challenge-id" value={active?.id ?? ""} onChange={(event) => setSelectedId(event.target.value)}>
-            {records.map((record) => <option key={record.id} value={record.id}>{record.status} · {record.id}</option>)}
+            {records.map((record) => <option key={record.id} value={record.id}>{recordStatusLabels[record.status]} · {record.commitSha.slice(0, 7)}</option>)}
           </select>
         </label>
       ) : null}
       <InspectorTeacherPanel
-        challenge={active?.challenge ?? null}
-        status={active?.status ?? "pending"}
+        record={active}
+        teacherAuthorized={authState === "teacher"}
         onAssign={assignChallenge}
         onRecord={recordDefense}
         message={message}
