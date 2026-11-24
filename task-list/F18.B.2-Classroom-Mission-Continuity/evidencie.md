@@ -1,6 +1,6 @@
 # Evidencia F18.B.2
 
-Estado: implementación integrada localmente y verificada; PR/CI/release pendientes.
+Estado: implementación integrada y desplegada mediante F14 `v0.5.63`; validación visual de la ruta autenticada en Ego Lite sigue pendiente.
 
 - Requisito basado en F18.B, F17 y el incremento F18.B.1 ya desplegado: en `/student/classrooms`, las misiones usan `StudentAssignmentsList`, cuyo CTA actual siempre inicia una propuesta. Debe continuar solo una propuesta propia cuyo `assignmentVersionId` coincida exactamente con la versión publicada.
 - Brecha corregida: `App.tsx` carga `GET /api/me/proposals` al entrar a `/student/classrooms` y conecta estado, reintento, continuación y nuevo inicio con `StudentClassroomsScreen` / `StudentAssignmentsList`. `proposalsLoadedPath` evita habilitar una acción con datos/error provenientes de otra ruta durante el primer render.
@@ -9,5 +9,10 @@ Estado: implementación integrada localmente y verificada; PR/CI/release pendien
 - Pruebas frescas: suite web `pnpm --filter @fragments/web test` — 54 archivos, 290/290 PASS; typecheck PASS; build PASS; `git diff --check` PASS. Focal de continuidad — `App.student-flow`, `StudentClassroomsScreen` y `AssignmentsPanel`: 28/28 PASS.
 - El test integrado confirma que una misión en Mis aulas abre la propuesta propia vinculada y conserva contexto/skill en Mentor. Prueba aparte confirma que el CTA para nueva propuesta espera la respuesta de `GET /api/me/proposals`; el test unitario también cubre match exacto, versión distinta, error y reintento, y selecciona la propuesta más recientemente actualizada si hay varias del mismo snapshot.
 - Revisión reflexiva independiente: CLEAN tras detectar y cerrar la ventana de carga del primer render con datos del path anterior.
-- El build conserva advertencias del bundle >500 kB y directivas `use client` de Lucide. PR, CI y F14 pendientes. La verificación Ego Lite de este flujo productivo sigue NO COMPROBADA; no se navegaron ni cerraron sesiones, ni se modificó producción.
-- Próximo paso: publicar PR por merge normal, esperar CI, integrar si pasa y usar F14 solo tras checks verdes. Revisar con Ego Lite únicamente una sesión académica autorizada, sin guardar ni reevaluar propuestas.
+- El build conserva advertencias del bundle >500 kB y directivas `use client` de Lucide. La verificación Ego Lite de este flujo productivo sigue NO COMPROBADA; no se navegaron ni cerraron sesiones, ni se modificó producción.
+- Integración: PR [#250](https://github.com/VGMil-dev/fragments/pull/250) merge normal en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`; CI `45349920851` PASS.
+- Release: tag anotada `v0.5.63`, F14 run `45350400117` SUCCESS en verify-build, atestación Sigstore y publicación aprobada.
+- Aplicación automática verificada en solo lectura: `fragments-release-apply.service` `Result=success`, `ExecMainStatus=0`, `ActiveState=inactive`; imágenes `fragments-api` y `fragments-web` `sha-89fad1cf1de4d1841b281b2eecd0b4812318c83f`, ambas healthy. `https://fragments.gavanti.org/health` respondió `ok/database=ready`; bundle `/assets/index-BW-_rB4s.js` contiene `v0.5.63` y el SHA exacto.
+- Comando remoto ejecutado: `ssh servidor 'sudo systemctl show fragments-release-apply.service -p Result -p ExecMainStatus -p ActiveState && sudo docker inspect fragments-api-1 fragments-web-1 --format "{{.Name}} {{.Config.Image}} {{.State.Health.Status}}" && curl --silent --show-error --fail https://fragments.gavanti.org/health'` — salida: aplicador `success/0/inactive`, ambos contenedores healthy en SHA exacto y health `ok/ready`.
+- Verificación pública del bundle con PowerShell (`Invoke-WebRequest` a `/`, lectura del asset `/assets/index-BW-_rB4s.js` y comprobación `.Contains('v0.5.63')` / `.Contains('89fad1cf1de4d1841b281b2eecd0b4812318c83f')`) — `True/True`.
+- No se hicieron escrituras productivas ni evaluaciones IA. La verificación Ego Lite autenticada de este flujo específico continúa NO COMPROBADA; no se cerraron ni reemplazaron sesiones.
