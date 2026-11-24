@@ -3,7 +3,12 @@ export interface PasswordResetEmail {
   url: string;
 }
 
-export type PasswordResetEmailSender = (message: PasswordResetEmail) => Promise<void>;
+export interface PasswordResetEmailAccepted {
+  providerAccepted: true;
+  providerMessageId?: string;
+}
+
+export type PasswordResetEmailSender = (message: PasswordResetEmail) => Promise<PasswordResetEmailAccepted>;
 
 export function createResendPasswordResetEmailSender(options: {
   apiKey?: string;
@@ -30,5 +35,15 @@ export function createResendPasswordResetEmailSender(options: {
       }),
     });
     if (!response.ok) throw new Error("Resend no aceptó el correo de recuperación.");
+    let providerMessageId: string | undefined;
+    try {
+      const payload: unknown = await response.json();
+      if (payload && typeof payload === "object" && "id" in payload && typeof payload.id === "string") {
+        providerMessageId = payload.id;
+      }
+    } catch {
+      // HTTP 2xx confirms provider acceptance; response details are intentionally discarded.
+    }
+    return { providerAccepted: true, ...(providerMessageId ? { providerMessageId } : {}) };
   };
 }

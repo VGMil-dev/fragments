@@ -10,6 +10,7 @@
     "dev": "node --env-file=../../.env --import tsx --watch src/main.ts",
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
     "provision:teacher": "node --env-file=../../.env --import tsx src/auth/provision-better-auth-teacher.ts",
+    "provision:admin-existing-teacher": "node --env-file=../../.env --import tsx src/auth/provision-better-auth-admin-cli.ts",
     "test": "vitest run --maxWorkers=1",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
