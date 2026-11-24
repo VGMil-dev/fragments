@@ -3,10 +3,11 @@ import { createResendPasswordResetEmailSender } from "./resend-password-reset.js
 
 describe("Resend password reset sender", () => {
   it("sends the one-time reset link with native fetch and does not inspect response bodies", async () => {
-    const fetcher = vi.fn(async () => new Response(null, { status: 200 }));
+    const fetcher = vi.fn(async () => Response.json({ id: "resend-message-fixture" }, { status: 200 }));
     const sender = createResendPasswordResetEmailSender({ apiKey: "test-resend-key", from: "Fragments <noreply@fragments.gavanti.org>", fetcher });
 
-    await sender({ email: "teacher@example.test", url: "https://fragments.gavanti.org/teacher/reset-password#token=one-time-test-token" });
+    await expect(sender({ email: "teacher@example.test", url: "https://fragments.gavanti.org/teacher/reset-password#token=one-time-test-token" }))
+      .resolves.toEqual({ providerAccepted: true, providerMessageId: "resend-message-fixture" });
 
     expect(fetcher).toHaveBeenCalledOnce();
     const [url, init] = fetcher.mock.calls[0];

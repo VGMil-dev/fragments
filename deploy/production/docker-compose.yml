@@ -324,6 +324,41 @@ services:
     mem_limit: 512m
     restart: "no"
 
+  bootstrap-admin:
+    image: fragments-api:0.1.0-mvp-arm64
+    platform: linux/arm64
+    profiles: [bootstrap-admin]
+    env_file:
+      - path: .env.bootstrap
+        required: true
+        format: raw
+    environment:
+      API_PORT: "3000"
+      AUTH_ENABLED: "true"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?PUBLIC_APP_URL is required}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
+      FRAGMENTS_ADMIN_EMAIL: ${FRAGMENTS_ADMIN_EMAIL:-}
+      FRAGMENTS_ADMIN_CONFIRM_EMAIL: ${FRAGMENTS_ADMIN_CONFIRM_EMAIL:-}
+    entrypoint:
+      - node
+      - apps/api/dist/auth/provision-better-auth-admin-cli.js
+    networks:
+      - fragments-db
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    cpus: 0.2
+    mem_limit: 512m
+    restart: "no"
+
   bootstrap-test:
     image: fragments-api:0.1.0-mvp-arm64
     platform: linux/arm64

@@ -41,6 +41,19 @@ Primero instalar el contenido de `systemd/` en `/etc/systemd/system/` y crear `/
 
 El servicio `bootstrap` usa solo variables de auth y de la cuenta docente. Provisiona la cuenta en el volumen de producción con el módulo ya compilado; no habilita registro público en el API.
 
+### Promoción explícita de una cuenta docente existente
+
+`bootstrap-admin` es un servicio operacional manual, separado de `up` y de las migraciones. Requiere correo y confirmación idénticos, localiza una sola cuenta que ya tenga `isTeacher=true`, agrega únicamente el rol Better Auth `admin` y conserva el rol docente y roles adicionales. Después, solicita por Better Auth un enlace de recuperación de una hora y exige que Resend responda HTTP 2xx antes de reportar aceptación. Nunca crea usuarios ni cambia contraseña directamente.
+
+Tras publicar una release mediante F14, el operador debe indicar dos veces el mismo correo autorizado. El comando no imprime tokens, URLs de recuperación, secretos ni cuerpos de proveedor:
+
+```sh
+FRAGMENTS_ADMIN_EMAIL=persona@example.com FRAGMENTS_ADMIN_CONFIRM_EMAIL=persona@example.com \
+  docker compose -f deploy/production/docker-compose.yml --profile bootstrap-admin run --rm bootstrap-admin
+```
+
+Una salida exitosa confirma la fila docente/admin y aceptación del correo por Resend; la persona todavía debe abrir el enlace y elegir su contraseña. No ejecutar este bootstrap como parte del arranque regular.
+
 ## Backups y recuperación
 
 El servicio `backup` usa usuarios de solo lectura y `pg_dump` en formato archive para ambas bases, valida cada dump con `pg_restore --list`, calcula SHA-256, guarda archivos con modo `0600` y elimina únicamente `fragments-*.dump` vencidos según la retención de 14 días. systemd lo programa diariamente. La ubicación está en la misma VPS; aún no equivale a un backup fuera del host.

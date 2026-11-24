@@ -38,4 +38,27 @@ describePostgres("Better Auth PostgreSQL integration", () => {
       .toEqual({ email, isTeacher: true });
     expect(await service.teacherId(request)).toBe(signup.user.id);
   });
+
+  it("requests an existing teacher password reset through the configured sender and reset route", async () => {
+    const messages: Array<{ email: string; url: string }> = [];
+    const auth = createFragmentsAuth(database, {
+      secret: "test-only-better-auth-secret-0123456789",
+      publicAppURL: "https://fragments.example.test",
+      allowSignUp: true,
+      passwordResetEmailSender: async (message) => {
+        messages.push(message);
+        return { providerAccepted: true, providerMessageId: "fake-resend-id" };
+      },
+    });
+    const email = `${namespace}-reset@example.test`;
+    await auth.api.signUpEmail({ body: { name: "Fixture Reset", email, password: "fixture-password-2026" } });
+
+    await auth.api.requestPasswordReset({ body: { email, redirectTo: "https://fragments.example.test/teacher/reset-password" } });
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.email).toBe(email);
+    const resetUrl = new URL(messages[0]!.url);
+    expect(resetUrl.pathname).toBe("/teacher/reset-password");
+    expect(resetUrl.hash).toMatch(/^#token=[^&]+$/);
+  });
 });
