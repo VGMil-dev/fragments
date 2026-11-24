@@ -1,6 +1,6 @@
 # Evidencia F18.B.3
 
-Estado: IMPLEMENTACIÓN LOCAL VERIFICADA PARCIAL; integración PostgreSQL, revisión, PR y producción pendientes.
+Estado: IMPLEMENTACIÓN INTEGRADA Y CI/POSTGRESQL PASS; release y comprobación productiva pendientes.
 
 ## Preflight
 
@@ -20,6 +20,7 @@ Estado: IMPLEMENTACIÓN LOCAL VERIFICADA PARCIAL; integración PostgreSQL, revis
 - `pnpm --filter @fragments/web typecheck` y `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web build` — PASS; mantiene el aviso conocido de chunk >500 kB.
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts` — cuatro pruebas omitidas porque `DATABASE_URL` no está configurada en este proceso. Se encontró un contenedor PostgreSQL de prueba preexistente en `127.0.0.1:55447`, pero no se adivinaron roles/credenciales ni se modificó. La integración queda **NO COMPROBADA localmente**, pendiente de CI con base efímera y preflight `current_database() = fragments_test`.
+- PR [#261](https://github.com/VGMil-dev/fragments/pull/261). Implementación `4b973003fa760c63135fd780067c02a20feb26c6`, documentación inicial `b62cabb34743339dd9262227d4d316ca54e93a95`. CI `45443102711` **SUCCESS**; los logs muestran `academic-flow.integration.test.ts` 4/4 PASS con PostgreSQL efímero de CI y la suite API 69 archivos PASS. El resultado PostgreSQL sí está comprobado en CI aislada aunque la ejecución local se omitió.
 
 ## Cambios locales
 
@@ -29,6 +30,10 @@ Estado: IMPLEMENTACIÓN LOCAL VERIFICADA PARCIAL; integración PostgreSQL, revis
 - Classroom Studio edita y previsualiza rúbrica/entregas y bloquea publicar un borrador incompleto. Mis aulas muestra la configuración publicada del estudiante.
 - No se conecta cada entrega con un Review/commit, no se registra historial de entregas, ni se calcula progreso/notas. No se ejecutó IA real, Ego Lite, escritura productiva o despliegue.
 - Commit de implementación: `4b973003fa760c63135fd780067c02a20feb26c6`.
+- CI integrado del PR #261: PASS; integración PostgreSQL efímera 4/4 PASS.
+- Revisión independiente: encontró que la vista previa docente omitía los criterios de cada entrega; corregido en `c390c0c` y focal web actualizado a 10/10 PASS. CI de ese nuevo head queda pendiente.
+- Riesgo de compatibilidad condicional: F14 ejecuta `docker compose up -d --no-build --no-deps api web` en una misma invocación; no demuestra intercambio atómico y pestañas con bundles viejos pueden seguir activas. La API/clientes usan DTOs estrictos con campos nuevos. **No desplegar F18.B.3 hasta resolver o demostrar compatibilidad de web/API mixtas.**
+- Pendiente: CI del nuevo head, diseño de compatibilidad web/API, merge protegido, release F14, verificación de versión productiva y UX de Ego Lite.
 
 ## Promoción administrativa solicitada, fuera de este incremento
 
