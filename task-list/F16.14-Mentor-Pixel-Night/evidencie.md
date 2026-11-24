@@ -2,28 +2,35 @@
 
 ## Estado
 
-Implementación y verificación local completadas; commit y PR pendientes. No se hizo QA visual ni se abrió Ego Lite según la instrucción de esta tarea.
+Implementado, integrado y desplegado como parte de `v0.5.55` mediante F14. La verificación productiva read-only cargó Control de Mentor en Ego Lite docente; el QA visual estudiantil y de accesibilidad sigue pendiente.
 
 ## Alcance aplicado
 
-- Ownership: `apps/web/src/features/mentor/mentor-screen.tsx`, `mentor-screen.css`, `mentor-screen.test.tsx` y esta evidencia.
-- Skill leída: `vercel-react-best-practices` (`C:\Users\vgmil\.agents\skills\vercel-react-best-practices\SKILL.md`). Aplicación selectiva: derivar el progreso en render desde los campos actuales; sin efectos, nuevas dependencias ni cambios de datos.
-- «Borrador completado: X %» y su barra accessible se muestran también en Evaluación, sin cambiar el cálculo de campos válidos.
-- Stepper conserva seis etapas, botones y estados reales. En el breakpoint compacto mantiene el listado visible con estados; 3 columnas hasta 520 CSS px y 2 columnas por debajo. Acentos alineados con cobalt/lime y tokens semánticos F16.
+- «Borrador completado: X %» y la barra accesible se muestran también en Evaluación; el progreso sigue derivado de campos válidos actuales.
+- El stepper conserva las seis etapas, botones y estados reales. En tamaño compacto mantiene visibles etiquetas y estados en cuadrícula de dos o tres columnas.
+- Acentos alineados con cobalt/lime y tokens semánticos F16.
 - Sin cambios a shell, navegación global, APIs, contratos, permisos, persistencia, rúbricas ni otros módulos.
 
-## Verificación fresca
+## Verificación
 
-- Rojo TDD: `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx` — falló en la expectativa nueva porque el progreso no se mostraba durante Evaluación; falló además la expectativa de regla compacta del stepper.
-- Verde: `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx` — `Test Files 1 passed (1)`, `Tests 39 passed (39)`.
-- `pnpm --filter @fragments/web typecheck` — `tsc -p tsconfig.json`, terminado correctamente.
-- `pnpm --filter @fragments/web build` — Vite terminó correctamente (`✓ built in 569ms`). Advertencias: chunk principal >500 kB y directivas `use client` de `lucide-react`.
-- `git diff --check` — terminó correctamente.
-- QA visual/Ego Lite, zoom 200 % y lector de pantalla: pendientes, no solicitados en este incremento.
+- TDD rojo inicial: fallaron las expectativas nuevas para progreso durante Evaluación y regla compacta.
+- `pnpm --filter @fragments/web exec vitest run src/features/mentor/mentor-screen.test.tsx` — PASS, 39/39.
+- `pnpm --filter @fragments/web typecheck` — PASS.
+- `pnpm --filter @fragments/web build` — PASS; se mantienen advertencias de chunk >500 kB y directivas `use client` de Lucide.
+- `git diff --check` — PASS.
+- CI PR #229, run `45304646954` — SUCCESS.
+- Revisión reflexiva independiente — CLEAN.
+- Ego Lite existente Fragments-Docente: `/teacher/mentor-control` cargó tras 5 segundos; se observaron configuración activa versión 1 y formulario. Solo lectura, sin guardar cambios.
 
-## Integración
+## Integración y despliegue
 
-- Rama: `codex/f16.14-mentor-pixel-night`; base asignada `3f6d742`.
-- Commit de implementación: `184a84da3cb6a2d3e8493ac5febc59753cb4267a` (`feat(mentor): alinea stepper Pixel Night`).
-- PR #229 a `main`: abierto; rama publicada `codex/f16.14-mentor-pixel-night`; sin merge.
-- `task-list/TASKS.md` no se editó; permanece bajo ownership del planner.
+- Implementación `184a84da3cb6a2d3e8493ac5febc59753cb4267a`.
+- PR #229 merge normal; commit de main `ec5a7e5a3efd00f50b9e6ff92be5efaccc800128`.
+- Tag anotada `v0.5.55`; F14 run `45305064817` — SUCCESS.
+- Verificación productiva read-only: `/health` informa `ok` y base `ready`; bundle `/assets/index-hf2sHvom.js` contiene `v0.5.55` y el SHA de main.
+
+## No comprobado
+
+- No se validó en navegador el stepper en anchos compactos, zoom 200 %, lector de pantalla ni foco con teclado.
+- La sesión Ego Lite estudiantil no estaba disponible; las vistas del estudiante siguen NO COMPROBADAS.
+- Fragments continúa en validación; estos resultados no declaran estabilidad ni aptitud para piloto.
