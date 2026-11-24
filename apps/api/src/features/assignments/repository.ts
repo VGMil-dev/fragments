@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { ClassroomAssignmentSchema, MentorEvaluationContextSchema, StudentAssignmentSchema } from "@fragments/contracts";
+import { AssignmentPublicationSchema, ClassroomAssignmentSchema, MentorEvaluationContextSchema, StudentAssignmentSchema, type AssignmentDraft } from "@fragments/contracts";
 import { buildAssignmentMentorConfig } from "./mentor-context.js";
 
-type Draft = { title: string; instructions: string; objectives: string[]; requiredSkillIds: string[]; optionalSkillIds: string[] };
 type Db = PrismaClient | Prisma.TransactionClient;
 
 function publicSnapshot(value: Prisma.JsonValue): Record<string, unknown> {
@@ -34,14 +33,14 @@ export function createAssignmentRepository(database: PrismaClient) {
       const rows = await database.classroomAssignment.findMany({ where: { classroomId }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }] });
       return Promise.all(rows.map((row) => dto(database, row)));
     },
-    async create(teacherId: string, classroomId: string, draft: Draft) {
+    async create(teacherId: string, classroomId: string, draft: AssignmentDraft) {
       if (!await ownedActiveClassroom(database, teacherId, classroomId)) return null;
       if (!await hasEnabledSkills(database, classroomId, [...draft.requiredSkillIds, ...draft.optionalSkillIds])) return { kind: "invalid_skills" as const };
       const now = new Date();
       const row = await database.classroomAssignment.create({ data: { id: randomUUID(), classroomId, status: "draft", draftVersion: 1, draftJson: draft as Prisma.InputJsonValue, createdAt: now, updatedAt: now } });
       return dto(database, row);
     },
-    async updateDraft(teacherId: string, classroomId: string, assignmentId: string, expectedVersion: number, draft: Draft) {
+    async updateDraft(teacherId: string, classroomId: string, assignmentId: string, expectedVersion: number, draft: AssignmentDraft) {
       return database.$transaction(async (tx) => {
         if (!await ownedActiveClassroom(tx, teacherId, classroomId)) return { kind: "not_found" as const };
         const row = await tx.classroomAssignment.findFirst({ where: { id: assignmentId, classroomId } });
@@ -61,13 +60,16 @@ export function createAssignmentRepository(database: PrismaClient) {
         const row = await tx.classroomAssignment.findFirst({ where: { id: assignmentId, classroomId } });
         if (!row) return { kind: "not_found" as const };
         if (row.draftVersion !== expectedVersion || row.status === "archived") return { kind: "conflict" as const };
-        const draft = row.draftJson as unknown as Draft;
+        const parsedDraft = AssignmentPublicationSchema.safeParse(row.draftJson);
+        if (!parsedDraft.success) return { kind: "incomplete_assignment" as const };
+        const draft = parsedDraft.data;
         const availability = await tx.classroomSkillAvailability.findMany({ where: { classroomId, enabled: true, skillId: { in: [...draft.requiredSkillIds, ...draft.optionalSkillIds] }, skill: { archived: false } }, include: { skill: true } });
         const skills = new Map(availability.map(({ skill }) => [skill.id, { id: skill.id, name: skill.name, description: skill.description }]));
         if ([...draft.requiredSkillIds, ...draft.optionalSkillIds].some((id) => !skills.has(id))) return { kind: "invalid_skills" as const };
         const context = await tx.mentorControlVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } });
         const version = (row.publishedVersion ?? 0) + 1, now = new Date(), versionId = randomUUID();
         const snapshot = { title: draft.title, instructions: draft.instructions, objectives: draft.objectives,
+          missionRubric: draft.missionRubric, deliverables: draft.deliverables,
           _classroomSubject: classroom.subject,
           requiredSkills: draft.requiredSkillIds.map((id) => skills.get(id)!), optionalSkills: draft.optionalSkillIds.map((id) => skills.get(id)!) };
         const claimed = await tx.classroomAssignment.updateMany({ where: { id: assignmentId, classroomId, draftVersion: expectedVersion, publishedVersion: row.publishedVersion, status: { not: "archived" } }, data: { status: "published", publishedVersion: version, draftVersion: { increment: 1 }, updatedAt: now } });

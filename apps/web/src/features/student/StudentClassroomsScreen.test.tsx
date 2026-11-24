@@ -21,7 +21,7 @@ const mission = {
     subject: room.subject, theme: "Observar", assignment: "Describe una observación.", expectedLevel: "Bachillerato", rubricTitle: "Rúbrica de prueba",
     criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }], requirements: ["Registrar evidencia"],
   } }, createdAt: "2026-11-19T12:00:00.000Z",
-} as StudentAssignment;
+} as unknown as StudentAssignment;
 const fakeOwnProposal = { id: "fixture-own-proposal", version: 2, proposal: { title: "Propuesta propia" }, assignmentVersionId: mission.id, updatedAt: "2026-11-24T00:00:00.000Z" } as unknown as ProposalDraftResponse;
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot> | undefined;

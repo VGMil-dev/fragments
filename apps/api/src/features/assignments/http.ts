@@ -60,6 +60,7 @@ export function createAssignmentHttp(database: PrismaClient, auth?: FragmentsAut
       if (result.kind === "not_found") send(response, 404, { ok: false, error: { code: "NOT_FOUND", message: "No se encontró el borrador." } });
       else if (result.kind === "conflict") send(response, 409, { ok: false, error: { code: "VERSION_CONFLICT", message: "El borrador cambió. Actualiza y vuelve a intentar." } });
       else if (result.kind === "invalid_skills") send(response, 409, { ok: false, error: { code: "SKILLS_UNAVAILABLE", message: "Activa las habilidades seleccionadas en el aula." } });
+      else if (result.kind === "incomplete_assignment") send(response, 409, { ok: false, error: { code: "MISSION_INCOMPLETE", message: "Completa la rúbrica propia y configura al menos dos entregas antes de publicar." } });
       else send(response, 200, { ok: true, data: result.assignment });
       return "handled";
     }

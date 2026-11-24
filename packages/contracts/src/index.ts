@@ -353,16 +353,85 @@ export const ClassroomSkillAvailabilitySchema = z.object({ classroomId: identifi
 export const AssignmentStatusSchema = z.enum(["draft", "published", "archived"]);
 export const AssignmentRequiredSkillSchema = z.object({ id: identifier, name: classroomText(100) }).strict();
 export const AssignmentSkillSnapshotSchema = AssignmentRequiredSkillSchema.extend({ description: z.string().trim().max(1000).nullable() }).strict();
+export const AssignmentMissionRubricSchema = z.object({
+  title: classroomText(120),
+  criteria: z.array(MentorRubricCriterionSchema).min(1).max(10),
+}).strict().superRefine((rubric, context) => {
+  const ids = new Set<string>();
+  let totalWeight = 0;
+  rubric.criteria.forEach((criterion, index) => {
+    if (ids.has(criterion.id)) context.addIssue({ code: "custom", path: ["criteria", index, "id"], message: "Cada criterio necesita un identificador distinto." });
+    ids.add(criterion.id);
+    totalWeight += criterion.weight;
+  });
+  if (totalWeight !== 100) context.addIssue({ code: "custom", path: ["criteria"], message: "Los pesos de la rúbrica deben sumar 100." });
+});
+export const AssignmentMissionRubricDraftSchema = z.object({
+  title: z.string().trim().max(120),
+  criteria: z.array(z.object({
+    id: identifier,
+    title: z.string().trim().max(120),
+    description: z.string().trim().max(800),
+    weight: z.number().int().min(0).max(100),
+  }).strict()).max(10),
+}).strict().superRefine((rubric, context) => {
+  const ids = new Set<string>();
+  rubric.criteria.forEach((criterion, index) => {
+    if (ids.has(criterion.id)) context.addIssue({ code: "custom", path: ["criteria", index, "id"], message: "Cada criterio necesita un identificador distinto." });
+    ids.add(criterion.id);
+  });
+});
+const AssignmentDeliverableFieldsSchema = z.object({
+  id: identifier,
+  order: z.number().int().min(1).max(12),
+  title: z.string().trim().max(160),
+  type: z.enum(["proposal", "progress", "final"]),
+  requirements: z.array(z.string().trim().max(500)).max(20),
+  dueDate: z.iso.date().nullable().optional(),
+  criterionIds: z.array(identifier).max(10),
+}).strict();
+export const AssignmentDeliverableDraftSchema = AssignmentDeliverableFieldsSchema;
+export const AssignmentDeliverableSchema = AssignmentDeliverableFieldsSchema.extend({
+  title: classroomText(160),
+  requirements: z.array(classroomText(500)).min(1).max(20),
+  criterionIds: z.array(identifier).min(1).max(10),
+}).strict();
 const AssignmentDraftFieldsSchema = z.object({
   title: classroomText(160),
   instructions: classroomText(5000),
   objectives: z.array(classroomText(240)).min(1).max(12),
   requiredSkillIds: z.array(identifier).min(1).max(20),
   optionalSkillIds: z.array(identifier).max(20),
+  missionRubric: AssignmentMissionRubricDraftSchema.optional(),
+  deliverables: z.array(AssignmentDeliverableDraftSchema).max(12).default([]),
 }).strict();
 const assignmentSkillListsAreDisjoint = (value: { requiredSkillIds: string[]; optionalSkillIds: string[] }) => new Set([...value.requiredSkillIds, ...value.optionalSkillIds]).size === value.requiredSkillIds.length + value.optionalSkillIds.length;
-export const AssignmentDraftSchema = AssignmentDraftFieldsSchema.refine(assignmentSkillListsAreDisjoint, {
-  message: "Una habilidad no puede ser obligatoria y optativa a la vez.",
+const validateAssignmentDraft = (value: z.infer<typeof AssignmentDraftFieldsSchema>, context: z.RefinementCtx) => {
+  if (!assignmentSkillListsAreDisjoint(value)) context.addIssue({ code: "custom", path: ["optionalSkillIds"], message: "Una habilidad no puede ser obligatoria y optativa a la vez." });
+  const ids = new Set<string>();
+  value.deliverables.forEach((deliverable, index) => {
+    if (ids.has(deliverable.id)) context.addIssue({ code: "custom", path: ["deliverables", index, "id"], message: "Cada entrega necesita un identificador distinto." });
+    ids.add(deliverable.id);
+    if (deliverable.order !== index + 1) context.addIssue({ code: "custom", path: ["deliverables", index, "order"], message: "Ordena las entregas sin saltos." });
+    if (new Set(deliverable.criterionIds).size !== deliverable.criterionIds.length) context.addIssue({ code: "custom", path: ["deliverables", index, "criterionIds"], message: "No repitas criterios en una entrega." });
+  });
+  if (value.deliverables.length) {
+    const criterionIds = new Set(value.missionRubric?.criteria.map((criterion) => criterion.id) ?? []);
+    value.deliverables.forEach((deliverable, index) => {
+      if (deliverable.criterionIds.some((id) => !criterionIds.has(id))) {
+        context.addIssue({ code: "custom", path: ["deliverables", index, "criterionIds"], message: "Cada entrega debe usar criterios de la rúbrica de la misión." });
+      }
+    });
+  }
+};
+export const AssignmentDraftSchema = AssignmentDraftFieldsSchema.superRefine(validateAssignmentDraft);
+export const AssignmentPublicationSchema = AssignmentDraftSchema.superRefine((draft, context) => {
+  const rubric = AssignmentMissionRubricSchema.safeParse(draft.missionRubric);
+  if (!rubric.success) context.addIssue({ code: "custom", path: ["missionRubric"], message: "Completa una rúbrica propia cuyos pesos sumen 100 antes de publicar." });
+  if (draft.deliverables.length < 2) context.addIssue({ code: "custom", path: ["deliverables"], message: "Configura al menos dos entregas antes de publicar la misión." });
+  draft.deliverables.forEach((deliverable, index) => {
+    if (!AssignmentDeliverableSchema.safeParse(deliverable).success) context.addIssue({ code: "custom", path: ["deliverables", index], message: "Completa los datos y criterios de cada entrega antes de publicar." });
+  });
 });
 const AssignmentVersionFieldsSchema = AssignmentDraftFieldsSchema.extend({
   id: identifier,
@@ -371,9 +440,19 @@ const AssignmentVersionFieldsSchema = AssignmentDraftFieldsSchema.extend({
   status: z.literal("published"),
   requiredSkills: z.array(AssignmentSkillSnapshotSchema).min(1).max(20),
   optionalSkills: z.array(AssignmentSkillSnapshotSchema).max(20),
+  missionRubric: AssignmentMissionRubricSchema.optional(),
+  deliverables: z.array(AssignmentDeliverableSchema).max(12).default([]),
   mentorContextVersion: z.number().int().positive(),
   createdAt: z.iso.datetime(),
-}).omit({ requiredSkillIds: true, optionalSkillIds: true }).strict();
+}).omit({ requiredSkillIds: true, optionalSkillIds: true }).strict().superRefine((version, context) => {
+  if (version.deliverables.length && !version.missionRubric) context.addIssue({ code: "custom", path: ["missionRubric"], message: "La versión requiere una rúbrica para sus entregas." });
+  const criteria = new Set(version.missionRubric?.criteria.map((criterion) => criterion.id) ?? []);
+  version.deliverables.forEach((deliverable, index) => {
+    if (deliverable.order !== index + 1 || deliverable.criterionIds.some((id) => !criteria.has(id))) {
+      context.addIssue({ code: "custom", path: ["deliverables", index], message: "La entrega debe conservar orden y criterios de la rúbrica publicada." });
+    }
+  });
+});
 export const AssignmentVersionSchema = AssignmentVersionFieldsSchema;
 export const ClassroomAssignmentSchema = z.object({
   id: identifier, classroomId: identifier, status: AssignmentStatusSchema,
@@ -658,6 +737,9 @@ export type MentorSubmissionResponse = z.infer<typeof MentorSubmissionResponseSc
 export type ReviewSubmissionResponse = z.infer<typeof ReviewSubmissionResponseSchema>;
 export type VerifySubmissionResponse = z.infer<typeof VerifySubmissionResponseSchema>;
 export type AssignmentDraft = z.infer<typeof AssignmentDraftSchema>;
+export type AssignmentMissionRubric = z.infer<typeof AssignmentMissionRubricSchema>;
+export type AssignmentMissionRubricDraft = z.infer<typeof AssignmentMissionRubricDraftSchema>;
+export type AssignmentDeliverable = z.infer<typeof AssignmentDeliverableSchema>;
 export type AssignmentVersion = z.infer<typeof AssignmentVersionSchema>;
 export type ClassroomAssignment = z.infer<typeof ClassroomAssignmentSchema>;
 export type StudentAssignment = z.infer<typeof StudentAssignmentSchema>;

@@ -1,4 +1,4 @@
-import { AssignmentRequiredSkillSchema, MentorControlConfigSchema, MentorEvaluationConfigSchema, type MentorEvaluationConfig } from "@fragments/contracts";
+import { AssignmentMissionRubricSchema, AssignmentRequiredSkillSchema, MentorControlConfigSchema, MentorEvaluationConfigSchema, type MentorEvaluationConfig } from "@fragments/contracts";
 
 export function assignmentSkillSnapshots(snapshotValue: unknown, key: "requiredSkills" | "optionalSkills"): Array<{ id: string; name: string }> {
   if (!snapshotValue || typeof snapshotValue !== "object") return [];
@@ -13,16 +13,18 @@ export function assignmentSkillSnapshots(snapshotValue: unknown, key: "requiredS
 
 export function buildAssignmentMentorConfig(baseValue: unknown, snapshotValue: unknown, subject: string): MentorEvaluationConfig {
   const base = MentorControlConfigSchema.parse(baseValue);
-  const mission = snapshotValue && typeof snapshotValue === "object" ? snapshotValue as { title?: unknown; instructions?: unknown; objectives?: unknown; requiredSkills?: unknown; optionalSkills?: unknown; _classroomSubject?: unknown } : {};
+  const mission = snapshotValue && typeof snapshotValue === "object" ? snapshotValue as { title?: unknown; instructions?: unknown; objectives?: unknown; requiredSkills?: unknown; optionalSkills?: unknown; missionRubric?: unknown; _classroomSubject?: unknown } : {};
   const pinnedSubject = typeof mission._classroomSubject === "string" ? mission._classroomSubject : subject;
   const requiredSkills = assignmentSkillSnapshots(mission, "requiredSkills").map((skill) => skill.name);
   const optionalSkills = assignmentSkillSnapshots(mission, "optionalSkills").map((skill) => skill.name);
   const objectives = Array.isArray(mission.objectives) ? mission.objectives.filter((item): item is string => typeof item === "string") : [];
+  const missionRubric = AssignmentMissionRubricSchema.safeParse(mission.missionRubric);
   return MentorEvaluationConfigSchema.parse({
     ...base,
     subject: pinnedSubject.slice(0, 120),
     theme: typeof mission.title === "string" ? mission.title.slice(0, 160) : base.theme,
     assignment: typeof mission.instructions === "string" ? mission.instructions.slice(0, 3000) : base.assignment,
+    ...(missionRubric.success ? { rubricTitle: missionRubric.data.title, criteria: missionRubric.data.criteria } : {}),
     requirements: [...objectives, ...requiredSkills.map((name) => `Habilidad requerida: ${name}`), ...optionalSkills.map((name) => `Habilidad optativa: ${name}`), ...base.requirements],
   });
 }
