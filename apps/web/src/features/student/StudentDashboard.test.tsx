@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StudentAssignment, StudentMe } from "@fragments/contracts";
+import type { ProposalDraftResponse, StudentAssignment, StudentMe } from "@fragments/contracts";
 import { StudentDashboard } from "./StudentDashboard";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -25,7 +25,8 @@ describe("StudentDashboard", () => {
     expect(html).toContain("CENTRO DE MISIONES");
     expect(html).toContain("Siguiente paso");
     expect(html).toContain("Bitácora de jardín");
-    expect(html).toContain("Siguiente paso · borrador v2");
+    expect(html).toContain("Siguiente paso · propuesta v2");
+    expect(html).toContain('aria-label="Abrir propuesta en Mentor: Bitácora de jardín"');
     expect(html).toContain("student-dashboard--has-proposal");
     expect(html).toContain("Aún no tienes aulas activas");
     expect(html).toContain("Aún no tienes entregas generadas");
@@ -42,7 +43,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[olderProposal, newestProposal]} />);
 
     expect(html).toContain("Propuesta más reciente");
-    expect(html).toContain("Siguiente paso · borrador v3");
+    expect(html).toContain("Siguiente paso · propuesta v3");
     expect(html).not.toContain("Borrador anterior");
   });
 
@@ -60,6 +61,55 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Implementa una navegación observable");
     expect(html).toContain("Iniciar misión en Mentor");
     expect(html).not.toContain("Crear mi primer proyecto");
+  });
+
+  it("opens the proposal linked by assignmentVersionId with an accurate accessible label", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    expect(missionAction?.textContent).toContain("Abrir propuesta");
+    expect(missionAction?.getAttribute("aria-label")).toBe("Abrir propuesta vinculada a misión: Navegación con Expo");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
+    expect(onStartMission).not.toHaveBeenCalled();
+  });
+
+  it("does not treat assignmentContext as a version match without the top-level assignmentVersionId", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, assignmentContext: { assignmentVersionId: mission.id } } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    expect(missionAction?.textContent).toContain("Iniciar en Mentor");
+    expect(missionAction?.getAttribute("aria-label")).toBe("Iniciar misión: Navegación con Expo");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onStartMission).toHaveBeenCalledExactlyOnceWith(mission);
+    expect(onContinueProposal).not.toHaveBeenCalled();
+  });
+
+  it("starts the mission when no proposal matches its published version", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const unlinkedProposal = { ...proposal, assignmentVersionId: "mission-v3", assignmentContext: { assignmentVersionId: "mission-v3" } } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    const onStartMission = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[unlinkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    await act(async () => { missionAction?.click(); });
+
+    expect(onStartMission).toHaveBeenCalledExactlyOnceWith(mission);
+    expect(onContinueProposal).not.toHaveBeenCalled();
   });
 
   it("asks the student to choose when several missions are published", () => {
@@ -105,7 +155,7 @@ describe("StudentDashboard", () => {
 
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("student-dashboard--has-proposal");
-    expect(html).toContain("Continuar en Mentor");
+    expect(html).toContain("Abrir en Mentor");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
@@ -153,7 +203,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
 
     expect(html).toContain("Bitácora de jardín");
-    expect(html).toContain("Continuar en Mentor");
+    expect(html).toContain("Abrir en Mentor");
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
