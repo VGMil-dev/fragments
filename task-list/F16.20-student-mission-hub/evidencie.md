@@ -18,7 +18,7 @@
 - Datos productivos, IA real y despliegue: no usados.
 - Commit de implementación: `b63da47` (`feat(F16.20): mostrar contexto académico prioritario`).
 - PR #253 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/253 (sin fusionar ni desplegar).
-- La creación del PR indicó `mergeable=false` y base `main` en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`; el arquitecto debe revisar/integrar la base según el flujo compartido.
+- GitHub reportó `mergeable=false` al crear y actualizar el PR con base `main` en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`. Una comprobación local posterior confirmó que ese SHA de `origin/main` es ancestro del head; la causa del estado de mergeabilidad no quedó comprobada y requiere revisión del arquitecto.
 
 ## Limitaciones
 
