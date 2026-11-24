@@ -16,7 +16,8 @@
 - `git diff --check` — PASS.
 - QA visual/Ego Lite: no ejecutado; esta entrega verifica componentes con tests y build, no afirma validación de viewport en navegador.
 - Datos productivos, IA real y despliegue: no usados.
-- Commit de implementación y publicación de rama/PR: pendientes.
+- Commit de implementación: `b63da47` (`feat(F16.20): mostrar contexto académico prioritario`).
+- Publicación de rama/PR: pendiente.
 
 ## Limitaciones
 
