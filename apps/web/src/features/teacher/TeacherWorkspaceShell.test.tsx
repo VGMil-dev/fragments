@@ -50,6 +50,19 @@ afterEach(() => {
 });
 
 describe("TeacherWorkspaceShell", () => {
+  it("exposes the skills catalog in desktop and mobile teacher navigation", async () => {
+    vi.stubGlobal("fetch", sessionFetch({ id: "fixture-teacher", name: "Docente de prueba", isTeacher: true }));
+    classroomApi.dashboardSummary.mockResolvedValue({ ok: true, data: summary });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<TeacherWorkspaceShell path="/teacher/dashboard" navigate={vi.fn()} />));
+
+    expect(container.querySelector('nav[aria-label="Herramientas docentes"] a[href="/teacher/skills"]')?.textContent).toContain("Habilidades");
+    expect(container.querySelector('details.teacher-sidebar__mobile-menu a[href="/teacher/skills"]')?.textContent).toContain("Habilidades");
+  });
+
   it("uses the authorized dashboard summary and leaves unavailable tracking empty", async () => {
     vi.stubGlobal("fetch", sessionFetch({ id: "fixture-teacher", name: "Docente de prueba", isTeacher: true }));
     classroomApi.dashboardSummary.mockResolvedValue({ ok: true, data: summary });
