@@ -32,6 +32,15 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
     : undefined;
   const recentProposals = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const continueProposal = recentProposals[0];
+  const continueProposalMission = !missionsLoading && !missionsError && continueProposal?.assignmentVersionId
+    ? missions.find((mission) => mission.id === continueProposal.assignmentVersionId)
+    : undefined;
+  const continueProposalContext = continueProposal?.assignmentVersionId
+    && continueProposal.assignmentContext?.assignmentVersionId === continueProposal.assignmentVersionId
+    ? continueProposal.assignmentContext
+    : undefined;
+  const continueProposalSkills = continueProposalContext?.requiredSkills ?? continueProposalMission?.requiredSkills;
+  const continueProposalMentorContextVersion = continueProposalContext?.mentorContext?.version ?? continueProposalMission?.mentorContextVersion;
   const proposalForMission = (assignment: StudentAssignment) => recentProposals.find((draft) =>
     draft.assignmentVersionId === assignment.id,
   );
@@ -64,6 +73,15 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
     <div className="student-dashboard__project-art" aria-hidden="true"><Layers3 size={34} /></div>
     <div className="student-dashboard__project-copy">
       {proposalsLoading ? <><span className="student-dashboard__status">Siguiente paso</span><h2>Buscando tus propuestas</h2><p role="status">Consultando tus proyectos guardados…</p></> : proposalsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus propuestas</h2><p role="alert">Tus proyectos siguen protegidos. Puedes volver a intentar.</p></> : continueProposal ? <><span className="student-dashboard__status">Siguiente paso · propuesta v{continueProposal.version}</span><h2>{continueProposal.proposal.title || "Propuesta sin título"}</h2><p>Abre tu propuesta para revisarla o continuarla.</p></> : missionsLoading ? <><span className="student-dashboard__status">Centro de misiones</span><h2>Buscando una misión disponible</h2><p role="status">Consultando las misiones publicadas en tus aulas…</p></> : missionsError ? <><span className="student-dashboard__status student-dashboard__status--warning">Requiere atención</span><h2>No pudimos consultar tus misiones</h2><p role="alert">Puedes volver a intentar. Tus aulas y proyectos siguen disponibles.</p></> : choosingMission ? <><span className="student-dashboard__status">Misiones disponibles</span><h2>Elige una misión para comenzar</h2><p>Hay varias misiones publicadas en tus aulas. Puedes elegir cuál explorar primero.</p></> : dashboardMission ? <><span className="student-dashboard__status">Misión publicada · {dashboardMission.classroomTitle}</span><h2>{dashboardMission.title}</h2><p>{dashboardMission.objectives[0] ?? "Continúa con el contexto publicado por tu docente."}</p></> : <><span className="student-dashboard__status">Sin misión publicada</span><h2>Empieza con una idea propia</h2><p>Aún no hay una misión activa en tus aulas. Puedes crear una propuesta en Mentor o revisar tus aulas.</p></>}
+      {!proposalsLoading && !proposalsError && continueProposal?.assignmentVersionId ? <dl className="student-dashboard__proposal-context" aria-label="Contexto académico de la propuesta">
+        {continueProposalMission ? <>
+          <div><dt>Aula</dt><dd>{continueProposalMission.classroomTitle}</dd></div>
+          <div><dt>Misión</dt><dd>{continueProposalMission.title} · v{continueProposalMission.version}</dd></div>
+        </> : null}
+        {continueProposalMentorContextVersion ? <div><dt>Contexto Mentor</dt><dd>v{continueProposalMentorContextVersion}</dd></div> : null}
+        {continueProposalSkills ? <div><dt>Habilidades obligatorias</dt><dd>{continueProposalSkills.length ? continueProposalSkills.map((skill) => skill.name).join(" · ") : "Sin habilidades obligatorias"}</dd></div> : null}
+        {!continueProposalMission ? <div><dt>Aula y misión</dt><dd>{missionsLoading ? <span role="status">Consultando datos de aula…</span> : missionsError ? <><span role="alert">No pudimos consultar el aula y el título de la misión.</span> <button className="student-dashboard__link" type="button" onClick={onRetryMissions}>Reintentar consulta de aula</button></> : "Aula y misión no disponibles en esta consulta."}</dd></div> : null}
+      </dl> : null}
       {dashboardMission ? <dl className="student-dashboard__mission-snapshot" aria-label="Contexto de la misión">
         <div><dt>Materia</dt><dd>{dashboardMission.subject}</dd></div>
         <div><dt>Versiones fijadas</dt><dd>Misión publicada v{dashboardMission.version} · Contexto Mentor v{dashboardMission.mentorContextVersion}</dd></div>
