@@ -28,6 +28,7 @@ Estado: IMPLEMENTACIÓN LOCAL VERIFICADA PARCIAL; integración PostgreSQL, revis
 - Mentor toma la rúbrica del snapshot enlazado; usa F11 global para snapshots históricos sin rúbrica propia.
 - Classroom Studio edita y previsualiza rúbrica/entregas y bloquea publicar un borrador incompleto. Mis aulas muestra la configuración publicada del estudiante.
 - No se conecta cada entrega con un Review/commit, no se registra historial de entregas, ni se calcula progreso/notas. No se ejecutó IA real, Ego Lite, escritura productiva o despliegue.
+- Commit de implementación: `4b973003fa760c63135fd780067c02a20feb26c6`.
 
 ## Promoción administrativa solicitada, fuera de este incremento
 
