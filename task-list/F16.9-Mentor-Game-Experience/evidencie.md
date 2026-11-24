@@ -28,10 +28,18 @@ Estado: ajuste funcional integrado y paquete v0.5.52 aplicado; revisión visual 
 - Build: `pnpm --filter @fragments/web build` — PASS. Permanecen los avisos ya existentes de chunk de 636 kB y directivas `use client` de Lucide.
 - `git diff --check` — PASS.
 - QA autenticada/visual Ego Lite en navegador y validación real de tabulación a 320/390/768/1024/1440 — NO COMPROBADOS en este incremento. No se afirma aprobación visual propietaria ni aptitud para piloto.
-- Commit, CI y PR: pendientes de registrar tras la integración normal de esta rama.
+- El estado final de commit, CI, PR y release se registra en “Integración y QA post-release v0.5.61” abajo.
 
 ### Registro posterior al push · 2026-11-24
 
 - Commit de implementación: `574ca0a8f8167a858114caddf640d9c9483ff358`.
 - PR [#244](https://github.com/VGMil-dev/fragments/pull/244) abierto normalmente contra `main`.
 - `gh pr checks 244`: GitHub no reportó checks en la rama al momento de esta consulta. CI queda pendiente; no se afirma integración ni despliegue.
+
+## Integración y QA post-release v0.5.61 · 2026-11-24
+
+- PR [#244](https://github.com/VGMil-dev/fragments/pull/244) se integró mediante merge normal. Commit de implementación `574ca0a8f8167a858114caddf640d9c9483ff358`; merge de PR `f0d87506f252ebe05b11e89852b2d6428d4b1bf0`; CI actualizado `45340414428` SUCCESS.
+- La release conjunta F14 `v0.5.61` apunta al SHA `900b5bd075e601ade487dadd49336b713f7c0334`; run `45341081720` terminó SUCCESS en verify-build, atestación Sigstore y publish-approved-release. El aplicador normal terminó `Result=success`, `ExecMainStatus=0`; API/web healthy sobre el mismo SHA. `/health` devolvió `ok/ready` y `/assets/index-D5BowZnw.js` contiene tag y SHA exactos.
+- Ego Lite, TaskSpace 60 existente, navegó desde la acción prioritaria del Dashboard a `/student/mentor`. Se observó la propuesta QA persistida en su etapa real de Evaluación, seis etapas con una activa, contexto y habilidad requerida de misión. Tabulación dejó foco visible de 3 px. No se leyó ni modificó el valor de campos, no se guardó ni reevaluó. Esto no valida la calidad de la evaluación histórica.
+- En 320/390/768/1024/1440 CSS px, el documento no presentó desbordamiento horizontal. Captura auténtica local, fuera de Git y Notion: `C:\Users\vgmil\ego\fragments-pixel-night-current-20261124\mentor-v0.5.61.png`, SHA-256 `6082B3936C38389FEDF36CB9EDE1B71711A8AE9D6871253EF84FB49BDEF9E77A`. Contiene estado autenticado y no se comparte.
+- Aún NO COMPROBADOS: zoom 200 %, contraste formal, lector de pantalla y aceptación visual propietaria. F16 sigue en validación; no se declara aptitud para piloto. La pestaña y sesión Ego Lite se dejaron abiertas.
