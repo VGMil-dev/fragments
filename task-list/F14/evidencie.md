@@ -395,3 +395,10 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Tag anotada `v0.5.57` apunta exactamente a ese merge. F14 run `45315350460` completó `verify-build`, `attest-package` y `publish-approved-release` en SUCCESS. Pasaron validación tag/SHA/main, PostgreSQL desechable y backup/restore, pruebas, typecheck/lint/build, metadata, imágenes ARM64, firma Sigstore y publicación del paquete a la cola protegida.
 - Aplicación pública automática verificada: `/health` HTTP 200 `ok`, database `ready`; bundle `/assets/index-DQPP14Ar.js` contiene `v0.5.57` y el SHA exacto `7648fd5b7d5df4daed3485aef9659b5ba57d5628`.
 - No hubo deploy manual, reinicio, migración, cambio de configuración ni escritura productiva. El TaskSpace estudiantil de Ego Lite no estaba disponible; QA visual autenticada queda NO COMPROBADA.
+
+## Release Review Pixel Night `v0.5.58` — 2026-11-24
+
+- PR [#235](https://github.com/VGMil-dev/fragments/pull/235) se integró por merge normal como `004df54d9e485e59b294cbec263020eb034bbf46`; CI del PR `45320215869` SUCCESS. La tag anotada nueva `v0.5.58` apunta a ese SHA exacto de `main`.
+- F14 run [`45320565441`](https://github.com/VGMil-dev/fragments/actions/runs/45320565441) SUCCESS: validación de tag/SHA/main, PostgreSQL desechable y backup/restore, suite/typecheck/lint/build, metadatos, imágenes ARM64, atestación Sigstore y publicación aprobada del paquete, manifiesto y atestación.
+- Ego Lite tras publicar: `/health` HTTP 200, `status=ok`, database `ready`; el HTML todavía sirve `/assets/index-DQPP14Ar.js`, que no contiene `v0.5.58` ni el SHA `004df54d9e485e59b294cbec263020eb034bbf46`. La aplicación por el agente pull sigue **PENDIENTE/NO COMPROBADA**. No se intentó deploy manual ni se modificaron servicios/controles.
+- QA visual autenticada de Review y accesibilidad con Ego Lite estudiante, y calidad semántica de puntuaciones/citas IA: **NO COMPROBADAS**. No se hicieron escrituras productivas ni llamadas a proveedores.
