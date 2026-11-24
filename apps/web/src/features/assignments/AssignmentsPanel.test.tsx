@@ -171,6 +171,22 @@ describe("AssignmentsPanel", () => {
     } finally { await act(async () => root.unmount()); container.remove(); }
   });
 
+  it("continues the most recently updated proposal when several match the same mission version", () => {
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const older = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-older", updatedAt: "2026-11-20T00:00:00.000Z" };
+    const newer = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-newer", updatedAt: "2026-11-23T00:00:00.000Z" };
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[older, newer]} proposalsLoading={false} proposalsError={false} onContinueProposal={vi.fn()} />);
+    expect(html).toContain("Abrir propuesta vinculada");
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container); const root = createRoot(container); const onContinueProposal = vi.fn();
+    try {
+      act(() => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[older, newer]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} />));
+      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Explora tu entorno"]');
+      act(() => action?.click());
+      expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(newer);
+    } finally { act(() => root.unmount()); container.remove(); }
+  });
+
   it("does not use nested context ids or different mission versions as a proposal match", () => {
     const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
     const stale = { ...fakeProposal("fixture-version-old"), assignmentContext: { assignmentVersionId: studentAssignment.id } } as ProposalDraftResponse;

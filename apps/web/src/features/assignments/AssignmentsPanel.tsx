@@ -92,6 +92,7 @@ export function StudentAssignmentsList({
   onContinueProposal?: (proposal: ProposalDraftResponse) => void;
   onStartProposal?: (assignment: StudentAssignment) => void;
 }) {
+  const recentProposals = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   return <section className="student-assignments" aria-labelledby="student-assignments-title">
     <h2 id="student-assignments-title">Misiones del aula</h2>
     {assignments.length ? <ul>{assignments.map((assignment) => <li key={assignment.id}>
@@ -114,7 +115,7 @@ export function StudentAssignmentsList({
           </div>
         </details>
         {proposalsLoading ? <p role="status">Espera mientras consultamos tus propuestas antes de iniciar.</p> : proposalsError ? <div role="alert"><p>No pudimos consultar tus propuestas. Para evitar duplicados, vuelve a intentarlo antes de iniciar.</p>{onRetryProposals ? <button type="button" onClick={onRetryProposals}>Reintentar propuestas</button> : null}</div> : (() => {
-          const linkedProposal = proposals.find((proposal) => proposal.assignmentVersionId === assignment.id);
+          const linkedProposal = recentProposals.find((proposal) => proposal.assignmentVersionId === assignment.id);
           return linkedProposal
             ? <button type="button" aria-label={`Abrir propuesta vinculada: ${assignment.title}`} disabled={!onContinueProposal} onClick={() => onContinueProposal?.(linkedProposal)}>Abrir propuesta vinculada</button>
             : <button type="button" aria-label={`Iniciar propuesta: ${assignment.title}`} disabled={!onStartProposal} onClick={() => onStartProposal?.(assignment)}>Iniciar propuesta</button>;

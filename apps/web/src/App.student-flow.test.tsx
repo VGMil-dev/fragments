@@ -113,6 +113,51 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-mission-classroom]")?.textContent).toBe(classroom.id);
   });
 
+  it("continues the exact proposal linked to a mission opened from Mis aulas", async () => {
+    window.history.replaceState({}, "", "/student/classrooms");
+    mocks.assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{
+      id: "linked-classroom-proposal",
+      version: 4,
+      proposal: { title: "Propuesta móvil" },
+      assignmentVersionId: mission.id,
+      updatedAt: "2026-11-23T12:00:00.000Z",
+      assignmentContext: {
+        assignmentVersionId: mission.id,
+        requiredSkills: [{ id: "required-navigation", name: "Navegación" }],
+        mentorContext: { version: 7, config: { theme: "Navegación fijada", rubricTitle: "Rúbrica fijada" } },
+      },
+    }] });
+
+    await act(async () => root?.render(<App />));
+
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    expect(linked).toBeDefined();
+    await act(async () => linked?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("linked-classroom-proposal:Propuesta móvil");
+    expect(container?.querySelector("[data-testid=mentor-proposal-assignment-version]")?.textContent).toBe(mission.id);
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación fijada");
+    expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
+  });
+
+  it("waits for owned proposals before allowing a new classroom proposal", async () => {
+    let finishProposals: () => void = () => undefined;
+    mocks.studentApi.getMyProposals.mockImplementation(() => new Promise((resolve) => {
+      finishProposals = () => resolve({ ok: true, data: [] });
+    }));
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.textContent).toContain("Espera mientras consultamos tus propuestas antes de iniciar.");
+    expect(container?.querySelector('button[aria-label="Iniciar propuesta: Aplicación móvil"]')).toBeNull();
+
+    await act(async () => finishProposals());
+
+    expect(container?.querySelector('button[aria-label="Iniciar propuesta: Aplicación móvil"]')).not.toBeNull();
+  });
+
   it("does not offer a generic proposal when classrooms cannot be checked and retries the classroom query", async () => {
     window.history.replaceState({}, "", "/student/dashboard");
     mocks.studentApi.getMyClassrooms.mockResolvedValueOnce({ ok: false, error: { code: "UNAVAILABLE", message: "No disponible" } });
@@ -249,7 +294,7 @@ describe("student mission to Mentor flow", () => {
 
   it("keeps the published context and version when the student starts and saves a proposal", async () => {
     await act(async () => root?.render(<App />));
-    const start = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Aplicación móvil"]');
+    const start = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta: Aplicación móvil"]');
     expect(start).toBeTruthy();
 
     await act(async () => start?.click());
@@ -275,7 +320,7 @@ describe("student mission to Mentor flow", () => {
 
     const classroomsLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent?.includes("Mis aulas"));
     await act(async () => classroomsLink?.click());
-    const startAgain = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Aplicación móvil"]');
+    const startAgain = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta: Aplicación móvil"]');
     await act(async () => startAgain?.click());
     const reviewLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent === "Review");
     await act(async () => reviewLink?.click());
