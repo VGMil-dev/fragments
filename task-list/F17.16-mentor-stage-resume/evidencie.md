@@ -1,6 +1,6 @@
 # Evidencia F17.16
 
-Estado: implementación local confirmada en `16af14a3a2acaaa0c85c05d4f74015b727562063`; PR, checks y despliegue pendientes.
+Estado: PR #272 abierta desde `codex/f17-16-mentor-stage-resume`; checks y despliegue pendientes.
 
 ## Pruebas
 
@@ -16,3 +16,5 @@ Estado: implementación local confirmada en `16af14a3a2acaaa0c85c05d4f74015b7275
 Solo prueba con callbacks fake en Vitest. No se hizo llamada a proveedor IA, escritura productiva ni validación visual/browser. Para cerrar: PR y checks; despliegue únicamente mediante F14 y validación Ego Lite posterior.
 
 - Commit de implementación: `16af14a3a2acaaa0c85c05d4f74015b727562063` (`fix(F17.16): reanudar Mentor en etapa pendiente`).
+- Commit de evidencia/índice: `c1c485ed321f0c1385184aa9e7faca1c29071ef9` (`docs(F17.16): registrar pruebas y commit`).
+- PR #272: https://github.com/VGMil-dev/fragments/pull/272; Actions aún no devolvió ejecuciones para el HEAD al consultar.
