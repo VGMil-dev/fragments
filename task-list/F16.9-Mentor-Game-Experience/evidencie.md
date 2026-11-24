@@ -29,3 +29,9 @@ Estado: ajuste funcional integrado y paquete v0.5.52 aplicado; revisión visual 
 - `git diff --check` — PASS.
 - QA autenticada/visual Ego Lite en navegador y validación real de tabulación a 320/390/768/1024/1440 — NO COMPROBADOS en este incremento. No se afirma aprobación visual propietaria ni aptitud para piloto.
 - Commit, CI y PR: pendientes de registrar tras la integración normal de esta rama.
+
+### Registro posterior al push · 2026-11-24
+
+- Commit de implementación: `574ca0a8f8167a858114caddf640d9c9483ff358`.
+- PR [#244](https://github.com/VGMil-dev/fragments/pull/244) abierto normalmente contra `main`.
+- `gh pr checks 244`: GitHub no reportó checks en la rama al momento de esta consulta. CI queda pendiente; no se afirma integración ni despliegue.
