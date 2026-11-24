@@ -1,5 +1,13 @@
 5B4FB97C8F7F2377511A48EE0522D5E6637C15F30CA8B1FA0B2DB54642A2B011# F18.A — Evidencia
 
+## Acceso directo al catálogo docente (CU-10)
+
+- Hallazgo Ego Lite de producción, v0.5.74: desde el detalle de un aula propia, el catálogo `/teacher/skills` no tenía una entrada visible cuando ya existían habilidades disponibles. La ruta del catálogo funcionaba y estaba protegida por el shell docente; el defecto era de descubribilidad, no de autorización ni persistencia.
+- Implementación local en `codex/cu10-teacher-skills-nav`: se agregó “Habilidades” a `Herramientas docentes`, que también alimenta el menú móvil. No se cambió API, datos, rutas ni controles de acceso.
+- TDD: la prueba nueva falló antes del cambio al no encontrar el enlace en desktop; después del cambio verifica el enlace en la navegación desktop y en el menú móvil.
+- Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/teacher/TeacherWorkspaceShell.test.tsx` PASS (5/5); `pnpm --filter @fragments/web exec vitest run` PASS (54 archivos, 311/311); `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con avisos por chunk de más de 500 kB y directivas `use client` de Lucide; `git diff --check` PASS.
+- Estado: implementado y probado localmente; producción NO COMPROBADA, pendiente PR, integración y release F14. No se navegó Ego Lite tras el cambio ni se alteraron los Spaces 44/80.
+
 ## Base y preflight
 
 - Rama: `codex/f18a-classroom-foundation`; worktree: `C:\Users\vgmil\.codex\worktrees\f18a-classroom\fragments`.

@@ -13,6 +13,7 @@ Fragments no tiene persistencia académica para aulas, matrículas ni habilidade
 - Restringir vistas estudiantiles a sus propias solicitudes, aulas activas y habilidades habilitadas.
 - Mantener un catálogo privado por docente, con IDs estables y archivado no destructivo.
 - Entregar UI docente persistida, accesible y basada en F16.
+- Mantener el acceso al catálogo de habilidades visible en la navegación docente de escritorio y móvil, sin depender del estado del aula actual.
 
 ## No objetivos
 

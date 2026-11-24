@@ -186,6 +186,7 @@ const primaryNavigation = [
 ];
 const toolNavigation = [
   { label: "Classroom Studio", path: "/teacher/classrooms", icon: BriefcaseBusiness },
+  { label: "Habilidades", path: "/teacher/skills", icon: GraduationCap },
   { label: "Control de Mentor", path: "/teacher/mentor-control", icon: Shield },
   { label: "Review", path: "/teacher/review", icon: GitBranch },
   { label: "Inspector", path: "/teacher/inspector", icon: TerminalSquare },

@@ -13,7 +13,7 @@
 
 ## Interfaz docente
 
-Implementar Mis aulas, Nueva aula, detalle/Miembros y Habilidades con datos de API, sin fixtures de producción. Mantener cabecera superior, tokens/componentes F16, iconos funcionales Lucide, estados de carga/vacío/error/permisos y navegación de teclado. Omitir funciones no incluidas en F18.A.
+Implementar Mis aulas, Nueva aula, detalle/Miembros y Habilidades con datos de API, sin fixtures de producción. Mantener cabecera superior, tokens/componentes F16, iconos funcionales Lucide, estados de carga/vacío/error/permisos y navegación de teclado. El catálogo de Habilidades debe tener una entrada directa y persistente en la navegación docente de escritorio y móvil, sin depender del estado del aula actual. Omitir funciones no incluidas en F18.A.
 
 ## Aceptación
 
