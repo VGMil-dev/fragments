@@ -18,5 +18,7 @@
 - Revisión reflexiva estática del diff — PASS: solo se elimina la tarjeta cuyo ID coincide con el vínculo superior; objetivos/habilidades siguen bajo la propuesta prioritaria; las otras tarjetas conservan su CTA por start/continue.
 - `git diff --check` — PASS.
 - Commit de implementación: `5a7180e` (`feat(F16.21): deduplicar misión prioritaria`).
-- Push/PR: pendientes.
+- Commit documental: `48858a8` (evidencia con pruebas y SHA).
+- Rama publicada por push normal; PR #254 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/254 (sin fusionar ni desplegar).
+- CI `Fragments CI` run `45357649675` para el head inicial publicado: `in_progress` al consultarlo. La actualización del SHA documental genera otro run; su estado queda pendiente de consulta.
 - QA visual/Ego Lite y datos productivos: no ejecutados.
