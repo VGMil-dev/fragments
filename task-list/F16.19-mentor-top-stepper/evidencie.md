@@ -30,3 +30,9 @@ Delta accesible implementado y verificado localmente; PR y revisión integradora
 - PR [#251](https://github.com/VGMil-dev/fragments/pull/251) abierto normalmente contra `main`.
 - Check `verify` run `45352035489`: **PENDING** al consultar; merge e integración no comprobados.
 - Commit de evidencia: `9d6b141f8c749e4607c8e815a4c189a33175fbbc` antes de esta actualización.
+
+### Reconciliación del head de PR · 2026-11-24
+
+- En la comprobación, el branch remoto `codex/f16-19-mentor-top-stepper` apuntaba a `e9e9cc09a4b7f91fb918e2381a5d6cf4e5a6218f`, pero GitHub reportaba `9d6b141f8c749e4607c8e815a4c189a33175fbbc` tanto en la API del PR #251 como en `refs/pull/251/head`; el listado de commits del PR también terminaba en `9d6b141`.
+- `main` y la base del PR permanecían en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`. El check `verify` run `45352035489` estaba PASS para el head anterior; ese resultado no valida commits posteriores.
+- Se registra esta observación mediante un commit append-only y push normal para solicitar la actualización del head y el CI. No se reescribió historia ni se forzó la actualización. El nuevo CI y la sincronización del PR quedan pendientes de comprobación.
