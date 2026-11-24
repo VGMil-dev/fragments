@@ -32,7 +32,13 @@ export function GalleryScreen({ state, onChoose, selected, detailLoading = false
         </div>
         <DataSourceBadge mode={mode} />
       </header>
-      <p className="gallery-publication-note" role="note"><strong>Publicación:</strong> al guardar una evaluación de Mentor que cumple los criterios, se publica automáticamente esa versión. La ficha muestra la propuesta, metas, habilidades, etiquetas y temas, alcance, restricciones, perfil GitHub y contexto de materia, consigna y rúbrica; no muestra puntaje ni comentarios privados. La ven estudiantes con sesión y docentes. El estudiante no tiene opt-out ni puede retirar una ficha desde el portal; editar la propuesta no quita una versión publicada. Un docente puede retirarla con registro de auditoría.</p>
+      <aside className="gallery-publication-note" role="note" aria-label="Aviso de publicación">
+        <p className="gallery-publication-note__essential"><strong>Aviso:</strong> las evaluaciones de Mentor que cumplen los criterios se publican automáticamente. El estudiante no puede retirar una ficha desde el portal; editar la propuesta tampoco retira una versión publicada.</p>
+        <details>
+          <summary>Ver alcance y privacidad</summary>
+          <p>La ficha muestra la propuesta, metas, habilidades, etiquetas y temas, alcance, restricciones, perfil GitHub y contexto de materia, consigna y rúbrica; no muestra puntaje ni comentarios privados. La ven estudiantes con sesión y docentes. El estudiante no tiene opt-out. Un docente puede retirar una publicación con registro de auditoría.</p>
+        </details>
+      </aside>
 
       {selected ? (
         <section className="gallery-detail" aria-labelledby="gallery-detail-title">
