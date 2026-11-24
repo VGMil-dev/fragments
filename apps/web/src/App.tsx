@@ -269,6 +269,18 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     return () => { active = false; controller.abort(); };
   }, [path, student, selectedAssignment, selectedProposal, mentorContextReload, navigate]);
 
+  const loadMissionDeliveryHistory = useCallback((proposalId: string) => studentApi.getMissionDeliveryHistory(proposalId), []);
+  const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
+    setSelectedAssignment(undefined);
+    setSelectedProposal(proposal);
+    let mentorEvaluationExists = false;
+    try {
+      const submissionsResult = await studentApi.getMySubmissions();
+      mentorEvaluationExists = submissionsResult.ok && submissionsResult.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
+    } catch { /* Fall back to the saved proposal in Mentor when the summary is unavailable. */ }
+    navigate(mentorEvaluationExists ? "/student/review" : "/student/mentor");
+  }, [navigate]);
+
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
   if (!student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
 
@@ -321,7 +333,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           onRetryMissions={() => classroomsError ? setClassroomsReload((value) => value + 1) : setDashboardMissionsReload((value) => value + 1)}
           submissions={submissions}
           onRetrySubmissions={() => setSubmissionsReload((value) => value + 1)}
-          onContinueProposal={(proposal) => { setSelectedAssignment(undefined); setSelectedProposal(proposal); navigate("/student/mentor"); }}
+          onContinueProposal={(proposal) => { void continueProposal(proposal); }}
           onStartMission={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
           onCreateProposal={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           onNavigate={navigate}
@@ -336,7 +348,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           proposalsLoading={proposalsForCurrentPathLoading}
           proposalsError={proposalsForCurrentPathError}
           onRetryProposals={() => setProposalsReload((value) => value + 1)}
-          onContinueProposal={(proposal) => { setSelectedAssignment(undefined); setSelectedProposal(proposal); navigate("/student/mentor"); }}
+          onContinueProposal={(proposal) => { void continueProposal(proposal); }}
           onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
         /> : null}
         {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
@@ -432,6 +444,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
             linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
+            initialProposalId={selectedProposal?.id ?? ""}
+            onLoadDeliveryHistory={loadMissionDeliveryHistory}
             onOpenTrainer={() => navigate("/student/trainer")}
             onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />

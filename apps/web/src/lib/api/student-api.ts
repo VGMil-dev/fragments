@@ -22,6 +22,7 @@ import {
   UpdateProposalRequestSchema,
   UpdateProposalDraftRequestSchema,
   ReviewRequestSchema,
+  MissionDeliveryHistorySchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
   type ApiResult,
@@ -45,6 +46,7 @@ import {
   type UpdateProposalRequest,
   type UpdateProposalDraftRequest,
   type ReviewRequest,
+  type MissionDeliveryHistory,
   type ReviewResponse,
   type ReviewSubmissionResponse,
 } from "@fragments/contracts";
@@ -177,6 +179,11 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
       const request = ReviewRequestSchema.safeParse(input);
       if (!request.success) return Promise.resolve(invalid<ReviewResponse>());
       return client.request("/api/reviews", ReviewResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+    getMissionDeliveryHistory(proposalId: string, signal?: AbortSignal): Promise<ApiResult<MissionDeliveryHistory>> {
+      const id = encodeId(proposalId);
+      if (!id) return Promise.resolve(invalid<MissionDeliveryHistory>());
+      return client.request(`/api/me/proposals/${id}/deliveries`, MissionDeliveryHistorySchema, withSignal(signal));
     },
 
     retryReview(reviewId: string, signal?: AbortSignal): Promise<ApiResult<ReviewResponse>> {

@@ -597,7 +597,10 @@ export const ReviewRequestSchema = z.object({
   repo: githubRepo,
   commitSha: gitObjectId,
   linkedProposalId: identifier.optional(),
-}).strict();
+  assignmentDeliverableId: identifier.optional(),
+}).strict().superRefine((request, context) => {
+  if (request.assignmentDeliverableId && !request.linkedProposalId) context.addIssue({ code: "custom", path: ["linkedProposalId"], message: "Una entrega requiere una propuesta de misión vinculada." });
+});
 export const ReviewAcademicLinkSchema = z.object({
   proposalId: identifier,
   proposalVersion: z.number().int().positive(),
@@ -609,6 +612,23 @@ export const ReviewAcademicLinkSchema = z.object({
   classroomId: identifier,
   classroomTitle: nonEmptyText.max(160),
   requiredSkills: z.array(classroomText(100)).max(20).optional(),
+  deliverable: AssignmentDeliverableSchema.optional(),
+}).strict();
+export const MissionDeliveryHistorySchema = z.object({
+  proposalId: identifier,
+  assignmentVersionId: identifier,
+  nextDeliverableId: identifier.nullable(),
+  deliveries: z.array(z.object({
+    deliverable: AssignmentDeliverableSchema,
+    status: z.enum(["not_started", "queued", "running", "failed", "completed"]),
+    attempts: z.array(z.object({
+      reviewId: identifier,
+      commitSha: gitObjectId,
+      status: z.enum(["queued", "running", "failed", "completed"]),
+      createdAt: z.iso.datetime(),
+      updatedAt: z.iso.datetime(),
+    }).strict()).max(2000),
+  }).strict()).max(12),
 }).strict();
 export const TeacherClassroomReviewSchema = z.object({
   reviewId: identifier,
@@ -729,6 +749,7 @@ export type MentorControlEvaluationHistoryItem = z.infer<typeof MentorControlEva
 export type MentorControlWorkspaceResponse = z.infer<typeof MentorControlWorkspaceResponseSchema>;
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
 export type ReviewAcademicLink = z.infer<typeof ReviewAcademicLinkSchema>;
+export type MissionDeliveryHistory = z.infer<typeof MissionDeliveryHistorySchema>;
 export type TeacherClassroomReview = z.infer<typeof TeacherClassroomReviewSchema>;
 export type ReviewQueuedResponse = z.infer<typeof ReviewQueuedResponseSchema>;
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;

@@ -184,4 +184,54 @@ describe("ReviewScreen", () => {
       container.remove();
     }
   });
+
+  it("loads the persisted history and submits only the current delivery manually", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    const onQueue = vi.fn(async () => actions.onQueue());
+    const onRetry = vi.fn(async () => actions.onRetry());
+    const onLoadDeliveryHistory = vi.fn(async () => ({ ok: true as const, data: {
+      proposalId: "proposal-1", assignmentVersionId: "mission-v1", nextDeliverableId: "delivery-2", deliveries: [
+        { deliverable: { id: "delivery-1", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Definir alcance"], criterionIds: ["criterion-1"] }, status: "completed" as const,
+          attempts: [
+            { reviewId: "review-failed", commitSha: "c".repeat(40), status: "failed" as const, createdAt: "2026-11-24T11:00:00.000Z", updatedAt: "2026-11-24T11:00:00.000Z" },
+            { reviewId: "review-1", commitSha: "a".repeat(40), status: "completed" as const, createdAt: "2026-11-24T12:00:00.000Z", updatedAt: "2026-11-24T12:00:00.000Z" },
+          ] },
+        { deliverable: { id: "delivery-2", order: 2, title: "Avance", type: "progress" as const, requirements: ["Implementar rutas"], criterionIds: ["criterion-1"] }, status: "not_started" as const, attempts: [] },
+      ],
+    } }));
+    const linkedProposal = { id: "proposal-1", proposal: { title: "Rutas de Expo" }, assignmentVersionId: "mission-v1",
+      assignmentContext: { assignmentVersionId: "mission-v1", mentorContext: { version: 2, config: { theme: "Programación móvil" } } } } as never;
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} onRetry={onRetry} linkedProposals={[linkedProposal]} onLoadDeliveryHistory={onLoadDeliveryHistory} onBack={vi.fn()} />));
+      const select = container.querySelector<HTMLSelectElement>('select[aria-label="Vincular Review a una propuesta"]')!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, "proposal-1");
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(container.textContent).toContain("Siguiente entrega");
+      expect(container.textContent).toContain("Commit");
+      const retry = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Reintentar esta Review"));
+      expect(retry).toBeDefined();
+      await act(async () => retry?.click());
+      expect(onRetry).toHaveBeenCalledWith("review-failed");
+      const inputs = [...container.querySelectorAll<HTMLInputElement>(".review-form input")];
+      const setInput = (input: HTMLInputElement, value: string) => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      await act(async () => {
+        setInput(inputs[0]!, "fixture-student"); setInput(inputs[1]!, "expo-app"); setInput(inputs[2]!, "b".repeat(40));
+        container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      });
+      expect(onLoadDeliveryHistory).toHaveBeenCalledWith("proposal-1");
+      expect(onQueue).toHaveBeenCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "b".repeat(40), linkedProposalId: "proposal-1", assignmentDeliverableId: "delivery-2" });
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
 });

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
-  ReviewAcademicLinkSchema, ReviewRequestSchema, ReviewResponseSchema, SubmissionResponseSchema, TeacherClassroomReviewsResponseSchema,
+  AssignmentDeliverableSchema, MissionDeliveryHistorySchema, ReviewAcademicLinkSchema, ReviewRequestSchema, ReviewResponseSchema, SubmissionResponseSchema, TeacherClassroomReviewsResponseSchema,
+  type MissionDeliveryHistory,
   type ReviewRequest,
 } from "@fragments/contracts";
 import type { ReviewContext, ReviewRecord } from "./review.service.js";
@@ -108,6 +109,42 @@ export function createPrismaReviewStore(database: PrismaClient) {
   }
 
   const store = {
+    async listMissionDeliveryHistory(studentId: string, proposalId: string): Promise<MissionDeliveryHistory | null> {
+      const proposal = await database.proposal.findFirst({ where: { id: proposalId, ownerUserId: studentId, assignmentVersionId: { not: null } },
+        select: { id: true, assignmentVersionId: true } });
+      if (!proposal?.assignmentVersionId) return null;
+      const version = await database.classroomAssignmentVersion.findUnique({ where: { id: proposal.assignmentVersionId },
+        include: { assignment: { include: { classroom: true } } } });
+      if (!version || version.assignment.status !== "published" || version.assignment.classroom.status !== "active") return null;
+      const enrollment = await database.classEnrollment.findFirst({ where: { classroomId: version.assignment.classroomId, studentId,
+        status: "active", classroom: { status: "active" } }, select: { id: true } });
+      if (!enrollment) return null;
+      const snapshot = version.snapshotJson && typeof version.snapshotJson === "object" && !Array.isArray(version.snapshotJson)
+        ? version.snapshotJson as Record<string, unknown> : {};
+      const rawDeliverables = Array.isArray(snapshot.deliverables) ? snapshot.deliverables : [];
+      const deliverables = rawDeliverables.map((item) => AssignmentDeliverableSchema.parse(item));
+      const rows = await database.job.findMany({ where: { type: jobType,
+        payloadJson: { path: ["context", "academicLink", "proposalId"], equals: proposal.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }) as JobRow[];
+      const attemptsByDeliverable = new Map<string, Array<{ reviewId: string; commitSha: string; status: "queued" | "running" | "failed" | "completed"; createdAt: string; updatedAt: string }>>();
+      for (const row of rows) {
+        const payload = parsePayload(row.payloadJson);
+        const link = payload.context.academicLink;
+        if (payload.context.studentId !== studentId || !link || link.proposalId !== proposal.id || link.assignmentVersionId !== version.id || !link.deliverable) continue;
+        if (!deliverables.some((item) => item.id === link.deliverable!.id)) continue;
+        const status: "queued" | "running" | "failed" | "completed" = row.status === "done" ? payload.record ? "completed" : "failed" : row.status === "failed" ? "failed" : row.status === "leased" ? "running" : "queued";
+        const attempts = attemptsByDeliverable.get(link.deliverable.id) ?? [];
+        attempts.push({ reviewId: row.id, commitSha: payload.request.commitSha, status, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
+        attemptsByDeliverable.set(link.deliverable.id, attempts);
+      }
+      const deliveries = deliverables.map((deliverable) => {
+        const attempts = attemptsByDeliverable.get(deliverable.id) ?? [];
+        const latest = attempts.at(-1);
+        const status = attempts.some((attempt) => attempt.status === "completed") ? "completed" : latest?.status ?? "not_started";
+        return { deliverable, status, attempts };
+      });
+      const nextDeliverableId = deliveries.find((item) => item.status !== "completed")?.deliverable.id ?? null;
+      return MissionDeliveryHistorySchema.parse({ proposalId: proposal.id, assignmentVersionId: version.id, nextDeliverableId, deliveries });
+    },
     async enqueue(input: { request: ReviewRequest; context: ReviewContext }): Promise<ReviewJobView> {
       const request = ReviewRequestSchema.parse(input.request); const context = parseContext(input.context);
       const key = await reviewIdempotencyKey(request, context); const now = new Date();

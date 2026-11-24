@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   ApiResultSchema,
   CreateReviewSubmissionRequestSchema,
+  MissionDeliveryHistorySchema,
   ReviewAcademicLinkSchema,
   ReviewQueuedResponseSchema,
   ReviewRequestSchema,
@@ -18,7 +19,7 @@ type Store = ReturnType<typeof createPrismaReviewStore>;
 type Service = ReturnType<typeof createReviewService>;
 type RouteResult = "handled" | "unhandled";
 export type ReviewContextResolver = (request: IncomingMessage, input: ReturnType<typeof ReviewRequestSchema.parse>) => Promise<ReviewContext | null>;
-export type ReviewAcademicLinkResolver = (studentId: string, proposalId: string) => Promise<unknown | null>;
+export type ReviewAcademicLinkResolver = (studentId: string, proposalId: string, deliverableId?: string, commitSha?: string) => Promise<unknown | null>;
 export type ReviewTeacherIdResolver = (request: IncomingMessage) => Promise<string | null>;
 
 export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null>;
@@ -38,13 +39,28 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       }
       return "handled";
     }
-    const studentRoute = (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
+    const deliveryHistoryMatch = request.method === "GET" && url.pathname.match(/^\/api\/me\/proposals\/([A-Za-z0-9_-]{1,100})\/deliveries$/);
+    const studentRoute = Boolean(deliveryHistoryMatch) || (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
     const studentId = studentRoute && options.resolveStudentId ? await options.resolveStudentId(request) : null;
     if (studentRoute && options.resolveStudentId && !studentId) {
       sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Review.");
       return "handled";
     }
     const ownsJob = async (id: string) => !options.resolveStudentId || Boolean(studentId && await options.store.getStudentIdForJob(id) === studentId);
+    if (deliveryHistoryMatch) {
+      if (!studentId || !options.store.listMissionDeliveryHistory) {
+        sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta solicitada.");
+        return "handled";
+      }
+      try {
+        const history = await options.store.listMissionDeliveryHistory(studentId, deliveryHistoryMatch[1]!);
+        if (!history) { sendError(response, 404, "NOT_FOUND", "No se encontró la propuesta solicitada."); return "handled"; }
+        sendJson(response, 200, MissionDeliveryHistorySchema.parse(history));
+      } catch {
+        sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo consultar el historial de entregas.");
+      }
+      return "handled";
+    }
     const resolveRequestContext = async (input: ReturnType<typeof ReviewRequestSchema.parse>, storedAcademicLink?: ReviewContext["academicLink"]): Promise<ReviewContext | null> => {
       const context = await options.resolveContext(request, input);
       if (!context || !input.linkedProposalId) return context;
@@ -54,7 +70,7 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       }
       if (!context.githubLogin || context.githubLogin.toLowerCase() !== input.owner.toLowerCase()) return null;
       if (!studentId || !options.resolveAcademicLink) return null;
-      const link = ReviewAcademicLinkSchema.safeParse(await options.resolveAcademicLink(studentId, input.linkedProposalId));
+      const link = ReviewAcademicLinkSchema.safeParse(await options.resolveAcademicLink(studentId, input.linkedProposalId, input.assignmentDeliverableId, input.commitSha));
       return link.success ? { ...context, academicLink: link.data } : null;
     };
 
@@ -102,7 +118,8 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
           return "handled";
         }
         const reviewRequest = ReviewRequestSchema.parse({ owner: current.owner, repo: current.repo, commitSha: current.commitSha,
-          ...(current.linkedProposalId ? { linkedProposalId: current.linkedProposalId } : {}) });
+          ...(current.linkedProposalId ? { linkedProposalId: current.linkedProposalId } : {}),
+          ...(current.academicLink?.deliverable ? { assignmentDeliverableId: current.academicLink.deliverable.id } : {}) });
         const context = await resolveRequestContext(reviewRequest, current.academicLink);
         if (!context || await reviewIdempotencyKey(reviewRequest, context) !== current.key) {
           sendError(response, 404, "NOT_FOUND", "No se encontró la revisión solicitada.");
@@ -245,13 +262,13 @@ async function readJson(request: IncomingMessage, response: ServerResponse): Pro
 }
 
 function sendJson(response: ServerResponse, status: number, data: unknown): void {
-  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema)).parse({ ok: true, data });
+  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema).or(MissionDeliveryHistorySchema)).parse({ ok: true, data });
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" });
   response.end(JSON.stringify(body));
 }
 
 function sendError(response: ServerResponse, status: number, code: string, message: string): void {
-  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema)).parse({ ok: false, error: { code, message } });
+  const body = ApiResultSchema(ReviewResponseSchema.or(ReviewQueuedResponseSchema).or(ReviewSubmissionResponseSchema).or(VerifySubmissionResponseSchema).or(TeacherClassroomReviewsResponseSchema).or(MissionDeliveryHistorySchema)).parse({ ok: false, error: { code, message } });
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff" });
   response.end(JSON.stringify(body));
 }

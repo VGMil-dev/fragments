@@ -34,6 +34,7 @@ import {
   TeacherSessionResponseSchema,
   ReviewRequestSchema,
   ReviewAcademicLinkSchema,
+  MissionDeliveryHistorySchema,
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
   TeacherClassroomReviewsResponseSchema,
@@ -457,6 +458,8 @@ describe("shared API contracts", () => {
     const request = { owner: "student", repo: "course-project", commitSha: "b".repeat(40) };
     expect(ReviewRequestSchema.safeParse(request).success).toBe(true);
     expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "proposal-1" }).success).toBe(true);
+    expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "proposal-1", assignmentDeliverableId: "delivery-1" }).success).toBe(true);
+    expect(ReviewRequestSchema.safeParse({ ...request, assignmentDeliverableId: "delivery-1" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, repositoryUrl: "http://127.0.0.1/secret" }).success).toBe(false);
   });
@@ -469,6 +472,15 @@ describe("shared API contracts", () => {
     expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: Array.from({ length: 21 }, () => "Skill") }).success).toBe(false);
     expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: ["Navegación", 1] }).success).toBe(false);
     expect(ReviewAcademicLinkSchema.safeParse({ ...link, requiredSkills: undefined }).success).toBe(true);
+  });
+
+  it("validates delivery history without exposing private analysis", () => {
+    const result = MissionDeliveryHistorySchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "mission-v1", nextDeliverableId: "delivery-2", deliveries: [{
+      deliverable: { id: "delivery-1", order: 1, title: "Propuesta", type: "proposal", requirements: ["Definir alcance"], criterionIds: ["criterion-1"] },
+      status: "completed", attempts: [{ reviewId: "review-1", commitSha: "a".repeat(40), status: "completed", createdAt: now, updatedAt: now }],
+    }] });
+    expect(result.success).toBe(true);
+    expect(MissionDeliveryHistorySchema.safeParse({ proposalId: "proposal-1", assignmentVersionId: "mission-v1", nextDeliverableId: "delivery-2", privateFindings: "no", deliveries: [] }).success).toBe(false);
   });
 
   it("validates a minimal classroom Review progress row", () => {
