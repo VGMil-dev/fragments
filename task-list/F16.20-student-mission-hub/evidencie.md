@@ -17,7 +17,8 @@
 - QA visual/Ego Lite: no ejecutado; esta entrega verifica componentes con tests y build, no afirma validación de viewport en navegador.
 - Datos productivos, IA real y despliegue: no usados.
 - Commit de implementación: `b63da47` (`feat(F16.20): mostrar contexto académico prioritario`).
-- Publicación de rama/PR: pendiente.
+- PR #253 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/253 (sin fusionar ni desplegar).
+- La creación del PR indicó `mergeable=false` y base `main` en `89fad1cf1de4d1841b281b2eecd0b4812318c83f`; el arquitecto debe revisar/integrar la base según el flujo compartido.
 
 ## Limitaciones
 
