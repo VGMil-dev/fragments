@@ -1,4 +1,4 @@
-import { ApiResultSchema } from "@fragments/contracts";
+import { ApiResultSchema, AssignmentMissionPlanCapabilitySchema } from "@fragments/contracts";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
@@ -137,6 +137,11 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
         return;
       }
       options.auth.handle(request, response);
+      return;
+    }
+    if (pathname === "/api/mission-plan-capability" && request.method === "GET") {
+      response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" })
+        .end(JSON.stringify({ ok: true, data: AssignmentMissionPlanCapabilitySchema.parse({ missionPlanVersion: 1 }) }));
       return;
     }
     if (teacherAccountHandler && await teacherAccountHandler(request, response) === "handled") return;

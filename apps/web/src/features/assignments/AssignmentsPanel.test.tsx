@@ -32,6 +32,12 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Hay cambios sin publicar");
   });
 
+  it("blocks mission authoring when the active API does not advertise the new contract", () => {
+    const html = renderToStaticMarkup(<AssignmentsPanel assignments={[]} skills={[skill]} missionPlanAvailable={false} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />);
+    expect(html).toContain("El servidor aún no admite rúbricas y entregas versionadas.");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Crear misión<\/button>/);
+  });
+
   it("shows the immutable published skill and Mentor context snapshots", () => {
     const published = {
       ...assignment,
@@ -286,5 +292,18 @@ describe("AssignmentsPanel", () => {
       await act(async () => root.unmount());
       container.remove();
     }
+  });
+
+  it("does not label missing plan fields as historical when the API is legacy", () => {
+    const legacyAssignment = {
+      id: "fixture-version-legacy", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias",
+      title: "Misión", instructions: "Avanza con una propuesta.", objectives: ["Proponer"], requiredSkills: [], optionalSkills: [], status: "published",
+      missionPlanVersion: 0, deliverables: [], mentorContextVersion: 1,
+      mentorContext: { version: 1, publishedAt: "2026-11-24T00:00:00.000Z", config: { subject: "Ciencias", theme: "Misión", assignment: "Avanza", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Base", criteria: [] } },
+      createdAt: "2026-11-24T00:00:00.000Z",
+    } as unknown as StudentAssignment;
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[legacyAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} />);
+    expect(html).toContain("El servidor aún no informa la rúbrica ni las entregas versionadas");
+    expect(html).not.toContain("Esta versión histórica");
   });
 });

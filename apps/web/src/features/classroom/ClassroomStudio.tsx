@@ -18,6 +18,7 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
   const [assignments, setAssignments] = useState<ClassroomAssignment[]>([]);
   const [assignmentLoadError, setAssignmentLoadError] = useState<string | null>(null);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [missionPlanAvailable, setMissionPlanAvailable] = useState(false);
   const [skills, setSkills] = useState<Array<SkillCatalogEntry & { enabled?: boolean }>>([]);
   const [students, setStudents] = useState<TeacherStudentEntry[]>([]);
   const [allSkills, setAllSkills] = useState<SkillCatalogEntry[]>([]);
@@ -37,10 +38,12 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
     if (announce) setAssignmentLoading(true);
     setAssignmentLoadError(null);
     try {
-      const result = await assignmentsApi.listTeacher(classroomId);
+      const [result, capability] = await Promise.all([assignmentsApi.listTeacher(classroomId), assignmentsApi.missionPlanCapability()]);
+      setMissionPlanAvailable(capability.ok && capability.data.missionPlanVersion === 1);
       if (result.ok) setAssignments(result.data);
       else setAssignmentLoadError("No pudimos cargar las misiones del aula.");
     } catch {
+      setMissionPlanAvailable(false);
       setAssignmentLoadError("No pudimos cargar las misiones del aula.");
     } finally {
       if (announce) setAssignmentLoading(false);
@@ -216,7 +219,7 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
             {skills.every((skill) => skill.archived) ? <><p className="cs-empty-inline">Crea habilidades en el catálogo para habilitarlas aquí.</p><a className="cs-button cs-button--primary" href="/teacher/skills" onClick={(event) => { event.preventDefault(); navigate("/teacher/skills"); }}>Ir al catálogo de habilidades</a></> : null}
           </section>
         </div>
-        <div className="cs-panel cs-assignments"><AssignmentsPanel assignments={assignments} skills={skills} busy={busy || contentLoading || assignmentLoading || classroom.status !== "active"} loading={contentLoading || assignmentLoading} loadError={assignmentLoadError} onRetryLoad={retryAssignments} onCreate={createAssignment} onUpdate={updateAssignment} onPublish={publishAssignment} /></div>
+        <div className="cs-panel cs-assignments"><AssignmentsPanel assignments={assignments} skills={skills} missionPlanAvailable={missionPlanAvailable} busy={busy || contentLoading || assignmentLoading || classroom.status !== "active"} loading={contentLoading || assignmentLoading} loadError={assignmentLoadError} onRetryLoad={retryAssignments} onCreate={createAssignment} onUpdate={updateAssignment} onPublish={publishAssignment} /></div>
       </> : null}
       {!isNew && !isSkills && !detailId ? <section className="cs-list" aria-label="Mis aulas">{contentLoading ? <p role="status">Cargando tus aulas…</p> : classrooms.length ? classrooms.map((item) => <a className="cs-panel cs-classroom-card" key={item.id} href={`/teacher/classrooms/${item.id}`} onClick={(event) => { event.preventDefault(); navigate(`/teacher/classrooms/${item.id}`); }}><span className="cs-card-mark" aria-hidden="true"><BookOpen /></span><span><small>{item.subject}{item.period ? ` · ${item.period}` : " · Aula compartida"}</small><strong>{item.title}</strong></span><span className="cs-status">Ver aula</span></a>) : <div className="cs-empty"><BookOpen aria-hidden="true" /><h2>Empieza con un aula</h2><p>Crea un espacio temático que puedan compartir estudiantes autorizados de distintos paralelos.</p><button className="cs-button cs-button--primary" type="button" onClick={() => navigate("/teacher/classrooms/new")}><Plus size={18} aria-hidden="true" />Crear primera aula</button></div>}</section> : null}
     </div>

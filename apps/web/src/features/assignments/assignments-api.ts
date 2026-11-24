@@ -1,6 +1,6 @@
 import {
   AssignmentDraftSchema, ClassroomAssignmentSchema, ClassroomAssignmentsResponseSchema, CreateAssignmentRequestSchema,
-  PublishAssignmentRequestSchema, StudentAssignmentsResponseSchema, UpdateAssignmentDraftRequestSchema,
+  AssignmentMissionPlanCapabilitySchema, PublishAssignmentRequestSchema, StudentAssignmentsResponseSchema, UpdateAssignmentDraftRequestSchema,
 } from "@fragments/contracts";
 import { createApiClient } from "../../lib/api/api-client.js";
 
@@ -10,6 +10,7 @@ const json = (method: string, value: unknown): RequestInit => ({ method, headers
 const segment = (value: string) => encodeURIComponent(value);
 
 export const assignmentsApi = {
+  missionPlanCapability() { return api.request("/api/mission-plan-capability", AssignmentMissionPlanCapabilitySchema); },
   listTeacher(classroomId: string) { return api.request(`/api/teacher/classrooms/${segment(classroomId)}/assignments`, ClassroomAssignmentsResponseSchema, { headers: planHeaders }); },
   create(classroomId: string, draft: unknown) {
     const input = CreateAssignmentRequestSchema.safeParse(draft);

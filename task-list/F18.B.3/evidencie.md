@@ -1,6 +1,6 @@
 # Evidencia F18.B.3
 
-Estado: IMPLEMENTACIÓN INTEGRADA Y CI/POSTGRESQL PASS; release y comprobación productiva pendientes.
+Estado: IMPLEMENTACIÓN Y SUITES LOCALES PASS; CI del último ajuste, revisión independiente, merge protegido, release y comprobación productiva pendientes.
 
 ## Preflight
 
@@ -19,6 +19,9 @@ Estado: IMPLEMENTACIÓN INTEGRADA Y CI/POSTGRESQL PASS; release y comprobación 
 - `pnpm --filter @fragments/web exec vitest run src/features/assignments/AssignmentsPanel.test.tsx src/features/student/StudentClassroomsScreen.test.tsx` — 17/17 PASS. Comprueba las nuevas vistas de configuración, tarjetas estudiante, criterios, entregas y continuidad del flujo existente.
 - `pnpm --filter @fragments/web typecheck` y `pnpm --filter @fragments/api typecheck` — PASS.
 - `pnpm --filter @fragments/web build` — PASS; mantiene el aviso conocido de chunk >500 kB.
+- `pnpm exec turbo run test typecheck lint build --force` — 11/11 tareas PASS; web 54 archivos/301 pruebas PASS, API 50 archivos/191 pruebas PASS y 19 archivos/73 pruebas omitidas por requerir PostgreSQL/config local, contratos 31/31 PASS; typecheck, lint y builds PASS. El bundle advierte un chunk >500 kB y directivas `use client` de Lucide.
+- Pruebas focales tras la negociación de capacidad y ajuste del mensaje estudiante: web 26/26 PASS; API 3 PASS y 8 omitidas por requerir base local.
+- `git diff --check` — PASS; Git notificó normalización CRLF→LF en dos archivos, sin errores de whitespace.
 - `pnpm --filter @fragments/api exec vitest run src/features/assignments/academic-flow.integration.test.ts` — cuatro pruebas omitidas porque `DATABASE_URL` no está configurada en este proceso. Se encontró un contenedor PostgreSQL de prueba preexistente en `127.0.0.1:55447`, pero no se adivinaron roles/credenciales ni se modificó. La integración queda **NO COMPROBADA localmente**, pendiente de CI con base efímera y preflight `current_database() = fragments_test`.
 - PR [#261](https://github.com/VGMil-dev/fragments/pull/261). Implementación `4b973003fa760c63135fd780067c02a20feb26c6`, documentación inicial `b62cabb34743339dd9262227d4d316ca54e93a95`. CI `45443102711` **SUCCESS**; los logs muestran `academic-flow.integration.test.ts` 4/4 PASS con PostgreSQL efímero de CI y la suite API 69 archivos PASS. El resultado PostgreSQL sí está comprobado en CI aislada aunque la ejecución local se omitió.
 
@@ -32,8 +35,8 @@ Estado: IMPLEMENTACIÓN INTEGRADA Y CI/POSTGRESQL PASS; release y comprobación 
 - Commit de implementación: `4b973003fa760c63135fd780067c02a20feb26c6`.
 - CI integrado del PR #261: PASS; integración PostgreSQL efímera 4/4 PASS.
 - Revisión independiente encontró que la vista previa docente omitía los criterios por entrega; corregida en `c390c0c`, focal web actualizada a 10/10 PASS.
-- Para compatibilidad con despliegue mixto, los clientes nuevos negocian `x-fragments-mission-plan: 1` y requieren `missionPlanVersion: 1`. La API omite los campos nuevos para clientes anteriores y conserva publicación legacy con F11 si no llega el header. Un cliente nuevo contra API antigua falla cerrado al faltar el marcador. Integración cubre ambas rutas; pendiente confirmación PostgreSQL en CI y revisión independiente de esta mitigación.
-- Pendiente: CI del nuevo head, revisión independiente final, merge protegido, release F14, verificación de versión productiva y UX de Ego Lite.
+- Compatibilidad con despliegue mixto: la API expone `GET /api/mission-plan-capability`; los clientes nuevos negocian `x-fragments-mission-plan: 1` y los DTO incorporan `missionPlanVersion: 1`. La API omite campos nuevos a clientes viejos y conserva su publish F11 legacy. El frontend nuevo consulta capacidad; ante API vieja conserva lectura de misiones existentes pero bloquea autoría/publicación hasta actualizar, sin bloquear el inicio de propuestas estudiantiles.
+- El CI `45446577770` completó SUCCESS para el commit previo `27aba84`; no cubre aún los cambios locales de capability/legacy-client gating. El PR #261 sigue OPEN y MERGEABLE, sin revisión aprobatoria registrada. La revisión independiente encontró y se corrigió un mensaje engañoso de compatibilidad en la vista estudiante. CI de este head, confirmación independiente final, merge protegido, release F14, verificación de versión productiva y UX de Ego Lite pendientes.
 
 ## Promoción administrativa solicitada, fuera de este incremento
 

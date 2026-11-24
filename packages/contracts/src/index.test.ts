@@ -113,7 +113,7 @@ describe("shared API contracts", () => {
     const studentAssignment = { ...version, classroomId: "classroom-1", classroomTitle: "Programación Móvil", subject: "Programación",
       mentorContext: { version: 1, publishedAt: now, config: effectiveConfig }, missionPlanVersion: 1 };
     expect(StudentAssignmentSchema.safeParse(studentAssignment).success).toBe(true);
-    expect(StudentAssignmentSchema.safeParse({ ...studentAssignment, missionPlanVersion: undefined }).success).toBe(false);
+    expect(StudentAssignmentSchema.safeParse({ ...studentAssignment, missionPlanVersion: undefined })).toMatchObject({ success: true, data: { missionPlanVersion: 0 } });
     expect(MentorPublishedConfigSchema.safeParse({ version: 1, publishedAt: now,
       config: { ...effectiveConfig, requirements: Array.from({ length: 21 }, (_, index) => `F11 ${index + 1}`) } }).success).toBe(false);
   });
