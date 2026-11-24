@@ -4,6 +4,8 @@
 
 Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mutación productiva todavía.
 
+- Commit de implementación verificada: `d16b308` (`feat(f22): habilita bootstrap admin acotado`).
+
 ## Archivos
 
 - `apps/api/src/auth/provision-better-auth-admin.ts`: regla condicional de promoción de una sola identidad existente.
