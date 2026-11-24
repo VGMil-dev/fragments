@@ -626,6 +626,19 @@ describe("MentorScreen", () => {
     expect(html).not.toContain("scope necesita");
   });
 
+  it("keeps the Idea tab order aligned with the visible form-first hierarchy", () => {
+    const html = renderToStaticMarkup(<MentorScreen {...actions} onBack={vi.fn()} />);
+
+    const stageContentStart = html.indexOf('class="mentor-stage-content"');
+    const formStart = html.indexOf('id="mentor-proposal-form"', stageContentStart);
+    const wordActionsStart = html.indexOf('aria-label="Cómo empezar tu propuesta"', stageContentStart);
+    const savedProposalsStart = html.indexOf('aria-labelledby="mentor-saved-title"', stageContentStart);
+
+    expect(formStart).toBeGreaterThan(stageContentStart);
+    expect(wordActionsStart).toBeGreaterThan(formStart);
+    expect(savedProposalsStart).toBeGreaterThan(wordActionsStart);
+  });
+
   it("shows editable objectives, MVP, expected outcome, catalog technologies, and hides personal constraints", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
