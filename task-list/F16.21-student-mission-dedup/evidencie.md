@@ -20,5 +20,8 @@
 - Commit de implementación: `5a7180e` (`feat(F16.21): deduplicar misión prioritaria`).
 - Commit documental: `48858a8` (evidencia con pruebas y SHA).
 - Rama publicada por push normal; PR #254 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/254 (sin fusionar ni desplegar).
-- CI del head publicado `43052d1`: `Fragments CI` run `45357731460`, job `verify` SUCCESS; el run concluyó `success` en GitHub.
+- CI del head previo `cba1402`: `Fragments CI` run `45358138645`, `verify` SUCCESS.
+- Sincronización con `origin/main` `0ecb58200842feac4fe346c0de23351da0279e65` mediante merge normal sin conflictos: merge commit `e8137f0`. El merge incorporó evidencia de F16.19, F16.20 y F18.B.2, además de la actualización de `TASKS.md` que ya estaba en `main`; no cambió los archivos del Dashboard de esta tarea.
+- Después del merge: prueba focal `pnpm --filter @fragments/web exec vitest run src/features/student/StudentDashboard.test.tsx` — 23/23 PASS; `git diff --check` — PASS.
+- CI del nuevo head: pendiente tras publicar la sincronización.
 - QA visual/Ego Lite y datos productivos: no ejecutados.
