@@ -7,7 +7,7 @@
 - Commit de aplicación: `a8f19c57690e115cf41a7eba2f1d4a1ac079aa0f` (`fix(teacher): mostrar catalogo de habilidades`).
 - TDD: la prueba nueva falló antes del cambio al no encontrar el enlace en desktop; después del cambio verifica el enlace en la navegación desktop y en el menú móvil.
 - Verificación fresca: `pnpm --filter @fragments/web exec vitest run src/features/teacher/TeacherWorkspaceShell.test.tsx` PASS (5/5); `pnpm --filter @fragments/web exec vitest run` PASS (54 archivos, 311/311); `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS con avisos por chunk de más de 500 kB y directivas `use client` de Lucide; `git diff --check` PASS.
-- Estado: implementado y probado localmente; producción NO COMPROBADA, pendiente PR, integración y release F14. No se navegó Ego Lite tras el cambio ni se alteraron los Spaces 44/80.
+- PR #277 abierto desde `codex/cu10-teacher-skills-nav`; CI `verify` run `45509012326` pendiente en la última consulta. Estado: implementado y probado localmente; producción NO COMPROBADA, pendiente CI, integración, release F14 y validación Ego Lite. No se navegó Ego Lite tras el cambio ni se alteraron los Spaces 44/80.
 
 ## Base y preflight
 
