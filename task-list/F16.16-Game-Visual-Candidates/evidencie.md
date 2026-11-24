@@ -25,3 +25,9 @@ Tres ilustraciones generadas y optimizadas en WebP. Permanecen **Candidatas**; n
 
 - Commit de candidatos: `2af872721d191332fdd5920892327b5efbf242b4`.
 - Verificación fresca tras el commit: `git status --short --branch` confirmó solamente los artefactos de F16.16 antes del registro; `git diff --check` PASS; dimensiones, formato ARGB y rango alfa 0–255 se comprobaron de nuevo antes del commit.
+
+## Integración
+
+- PR [#238](https://github.com/VGMil-dev/fragments/pull/238) merged normalmente; merge commit `632c8c9545aa0a3b27ab11b366d1dd337fb7bf71`.
+- CI `45327446930` SUCCESS, incluyendo tests, typecheck, lint y build.
+- F14/release: no aplicable. Este PR solo añadió recursos candidatos sin referencia desde la aplicación; no requiere despliegue.
