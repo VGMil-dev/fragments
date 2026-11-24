@@ -459,6 +459,33 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
         missionTitle: "Misión para Review", mentorContextVersion: mission.mentorContextVersion, classroomId, requiredSkills: ["Navegación"] } } });
       expect(await store.getJob(linkedBody.data.id)).toMatchObject({ linkedProposalId: proposal.id, academicLink: { proposalId: proposal.id, classroomId } });
 
+      const historyHeaders = { "x-fixture-user": studentId, "x-fixture-role": "student" };
+      const firstHistory = await fetch(`${base}/api/me/proposals/${proposal.id}/deliveries`, { headers: historyHeaders });
+      expect(firstHistory.status).toBe(200);
+      expect(await firstHistory.json()).toMatchObject({ ok: true, data: { proposalId: proposal.id, assignmentVersionId: mission.id,
+        nextDeliverableId: "delivery-proposal", deliveries: [{ status: "not_started", attempts: [] }, { status: "not_started", attempts: [] }] } });
+      const historyFromOtherStudent = await fetch(`${base}/api/me/proposals/${proposal.id}/deliveries`, { headers: { "x-fixture-user": "fixture-other-student", "x-fixture-role": "student" } });
+      expect(historyFromOtherStudent.status).toBe(404);
+      const futureDelivery = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", ...historyHeaders },
+        body: JSON.stringify({ ...linkedRequest, commitSha: "e".repeat(40), assignmentDeliverableId: "delivery-progress" }) });
+      expect(futureDelivery.status).toBe(404);
+      const currentDeliveryRequest = { ...linkedRequest, commitSha: "d".repeat(40), assignmentDeliverableId: "delivery-proposal" };
+      const currentDelivery = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", ...historyHeaders }, body: JSON.stringify(currentDeliveryRequest) });
+      expect(currentDelivery.status).toBe(202);
+      const currentDeliveryBody = await currentDelivery.json() as { data: { id: string } };
+      const duplicateDelivery = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", ...historyHeaders }, body: JSON.stringify(currentDeliveryRequest) });
+      expect((await duplicateDelivery.json() as { data: { id: string } }).data.id).toBe(currentDeliveryBody.data.id);
+      expect(await store.getJob(currentDeliveryBody.data.id)).toMatchObject({ academicLink: { deliverable: { id: "delivery-proposal", order: 1 } } });
+      const historyAfterQueue = await fetch(`${base}/api/me/proposals/${proposal.id}/deliveries`, { headers: historyHeaders });
+      const historyAfterQueueBody = await historyAfterQueue.json() as { data: { nextDeliverableId: string; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
+      expect(historyAfterQueueBody.data.nextDeliverableId).toBe("delivery-proposal");
+      expect(historyAfterQueueBody.data.deliveries[0]?.status).toBe("queued");
+      expect(historyAfterQueueBody.data.deliveries[0]?.attempts).toEqual([expect.objectContaining({ commitSha: "d".repeat(40), status: "queued" })]);
+      expect(JSON.stringify(historyAfterQueueBody)).not.toMatch(/findings|score|analysis|studentId/);
+      const nextBeforeCompletion = await fetch(`${base}/api/reviews`, { method: "POST", headers: { "content-type": "application/json", ...historyHeaders },
+        body: JSON.stringify({ ...linkedRequest, commitSha: "b".repeat(40), assignmentDeliverableId: "delivery-progress" }) });
+      expect(nextBeforeCompletion.status).toBe(404);
+
       for (let index = 1; index <= 101; index++) await store.enqueue({ request: { owner: "fixture-former-student", repo: "old-work", commitSha: index.toString(16).padStart(40, "0") },
         context: { projectId: "fixture-former-student/old-work", rubricVersion: "review-test-v1", evaluatorVersion: "fake-offline-v1", studentId: "fixture-former-student",
           academicLink: { proposalId: proposal.id, proposalVersion: proposal.version, proposalTitle: "Proyecto de navegación", assignmentVersionId: mission.id,
@@ -467,7 +494,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
         context: { projectId: "fixture-student/private-work", rubricVersion: "review-test-v1", evaluatorVersion: "fake-offline-v1", studentId } });
       const teacherResponse = await fetch(`${base}/api/teacher/classrooms/${classroomId}/reviews`, { headers: { "x-fixture-user": teacherId, "x-fixture-role": "teacher" } });
       const teacherBody = await teacherResponse.json() as { data: Array<Record<string, unknown>> };
-      expect(teacherBody.data).toHaveLength(1);
+      expect(teacherBody.data).toHaveLength(2);
       expect(teacherBody.data[0]).toMatchObject({ reviewId: linkedBody.data.id, proposalTitle: "Proyecto de navegación", missionTitle: "Misión para Review", status: "queued" });
       expect(JSON.stringify(teacherBody.data)).not.toContain(studentId);
       expect(JSON.stringify(teacherBody.data)).not.toContain(unlinked.id);

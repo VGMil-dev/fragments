@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, GitCommitHorizontal } from "lucide-react";
 import type {
   ApiResult,
   CreateReviewSubmissionRequest,
   EvidenceReference,
+  MissionDeliveryHistory,
   ReviewRequest,
   ReviewResponse,
   ReviewSubmissionResponse,
@@ -26,6 +27,8 @@ export interface ReviewScreenProps {
   onOpenTrainer?: () => void;
   mode?: DataMode;
   linkedProposals?: ProposalDraftResponse[];
+  initialProposalId?: string;
+  onLoadDeliveryHistory?: (proposalId: string) => Promise<ApiResult<MissionDeliveryHistory>>;
 }
 
 const EMPTY_FIELDS: ReviewFields = { owner: "", repo: "", commitSha: "" };
@@ -36,7 +39,7 @@ function evidenceLabel(evidence: EvidenceReference): string {
     : `Campo: ${evidence.field}`;
 }
 
-export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, onOpenTrainer, mode = "real", linkedProposals = [] }: ReviewScreenProps) {
+export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, onOpenTrainer, mode = "real", linkedProposals = [], initialProposalId = "", onLoadDeliveryHistory }: ReviewScreenProps) {
   const initialData = initialReview?.status === "success" ? initialReview.data : undefined;
   const [fields, setFields] = useState<ReviewFields>(() => initialData
     ? { owner: initialData.owner, repo: initialData.repo, commitSha: initialData.commitSha }
@@ -44,8 +47,12 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ReviewFields, string>>>({});
   const [reviewState, setReviewState] = useState<AsyncState<ReviewResponse> | null>(initialReview ?? null);
   const [submission, setSubmission] = useState<AsyncState<ReviewSubmissionResponse> | null>(null);
-  const [linkedProposalId, setLinkedProposalId] = useState("");
+  const [linkedProposalId, setLinkedProposalId] = useState(initialProposalId);
+  const [deliveryHistory, setDeliveryHistory] = useState<{ status: "idle" | "loading" | "error" | "success"; data?: MissionDeliveryHistory }>({ status: "idle" });
+  const deliveryRequestKey = useRef("");
   const linkedProposal = linkedProposals.find((proposal) => proposal.id === linkedProposalId);
+  const nextDeliveryId = deliveryHistory.status === "success" ? deliveryHistory.data?.nextDeliverableId : null;
+  const hasDeliveryPlan = Boolean(deliveryHistory.status === "success" && deliveryHistory.data?.deliveries.length);
 
   function updateField(field: keyof ReviewFields, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
@@ -66,7 +73,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
     setReviewState({ status: "loading" });
     setSubmission(null);
     try {
-      const result = await onQueue({ ...validated.data, ...(linkedProposal ? { linkedProposalId: linkedProposal.id } : {}) });
+      const result = await onQueue({ ...validated.data, ...(linkedProposal ? { linkedProposalId: linkedProposal.id } : {}), ...(hasDeliveryPlan && nextDeliveryId ? { assignmentDeliverableId: nextDeliveryId } : {}) });
       setReviewState(result.ok
         ? { status: "success", data: result.data }
         : { status: "error", retry: () => void queueReview() });
@@ -74,6 +81,24 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
       setReviewState({ status: "error", retry: () => void queueReview() });
     }
   }
+
+  const loadDeliveryHistory = useCallback(async (proposalId: string) => {
+    deliveryRequestKey.current = proposalId;
+    setLinkedProposalId(proposalId);
+    setReviewState(null);
+    setSubmission(null);
+    if (!proposalId || !onLoadDeliveryHistory) { setDeliveryHistory({ status: "idle" }); return; }
+    setDeliveryHistory({ status: "loading" });
+    try {
+      const result = await onLoadDeliveryHistory(proposalId);
+      if (deliveryRequestKey.current !== proposalId) return;
+      setDeliveryHistory(result.ok ? { status: "success", data: result.data } : { status: "error" });
+    } catch { if (deliveryRequestKey.current === proposalId) setDeliveryHistory({ status: "error" }); }
+  }, [onLoadDeliveryHistory]);
+
+  useEffect(() => {
+    if (initialProposalId && onLoadDeliveryHistory) void loadDeliveryHistory(initialProposalId);
+  }, [initialProposalId, onLoadDeliveryHistory, loadDeliveryHistory]);
 
   async function refreshReview(reviewId: string) {
     setReviewState({ status: "loading" });
@@ -149,7 +174,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
         </label>
         {linkedProposals.length ? <label className="review-field review-field--wide">
           <span>Vincular a una propuesta y compartir con el docente (opcional)</span>
-          <select aria-label="Vincular Review a una propuesta" value={linkedProposalId} disabled={reviewIsBusy} onChange={(event) => { setLinkedProposalId(event.target.value); setReviewState(null); setSubmission(null); }}>
+          <select aria-label="Vincular Review a una propuesta" value={linkedProposalId} disabled={reviewIsBusy} onChange={(event) => void loadDeliveryHistory(event.target.value)}>
             <option value="">Sin vínculo académico</option>
             {linkedProposals.map((proposal) => <option key={proposal.id} value={proposal.id}>
               {(proposal.proposal.title || "Propuesta sin título")} · {proposal.assignmentContext?.mentorContext.config.theme} · Contexto Mentor v{proposal.assignmentContext?.mentorContext.version}
@@ -157,9 +182,24 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
           </select>
           {linkedProposal ? <small>Solo puedes compartir un repositorio cuyo propietario sea tu cuenta GitHub vinculada. El docente de esa aula verá el estado, la puntuación y el commit.</small> : null}
         </label> : null}
+        {linkedProposal && onLoadDeliveryHistory ? <section className="review-field review-field--wide" aria-label="Entregas del proyecto">
+          <h3>Entregas del proyecto</h3>
+          {deliveryHistory.status === "loading" ? <p role="status">Cargando historial de esta propuesta…</p> : null}
+          {deliveryHistory.status === "error" ? <p role="alert">No se pudo recuperar el historial. Vuelve a seleccionar la propuesta antes de enviar un commit.</p> : null}
+          {deliveryHistory.status === "success" && hasDeliveryPlan ? <>
+            <ol>{deliveryHistory.data!.deliveries.map(({ deliverable, status, attempts }) => <li key={deliverable.id}>
+              <strong>{deliverable.title}</strong> · {status === "not_started" ? "Pendiente" : status === "queued" ? "En cola" : status === "running" ? "En análisis" : status === "failed" ? "Falló" : "Review completada"}
+              {deliverable.id === nextDeliveryId ? <span> · Siguiente entrega</span> : null}
+              {attempts.length ? <ul>{attempts.map((attempt) => <li key={attempt.reviewId}>Commit <code>{attempt.commitSha}</code> · {attempt.status === "completed" ? "Review completada" : attempt.status === "queued" ? "En cola" : attempt.status === "running" ? "En análisis" : "Falló"}{attempt.status === "failed" ? <> · <button type="button" className="button button--light" onClick={() => void retryReview(attempt.reviewId)}>Reintentar esta Review</button></> : null}</li>)}</ul> : null}
+            </li>)}</ol>
+            <p className="review-screen__hint">Cada revisión es orientativa. Completarla no significa aprobación docente ni nota.</p>
+          </> : null}
+          {deliveryHistory.status === "success" && deliveryHistory.data?.deliveries.length === 0 ? <p>Esta misión no tiene entregas versionadas; se conserva el flujo de Review actual.</p> : null}
+          {deliveryHistory.status === "success" && hasDeliveryPlan && !nextDeliveryId ? <p role="status">Todas las entregas tienen una Review completada. El historial permanece disponible.</p> : null}
+        </section> : null}
         <div className="review-form__footer">
           <p>{linkedProposal ? `Se compartirá con el docente de ${linkedProposal.assignmentContext?.mentorContext.config.theme}.` : "La revisión se vincula al commit que elegiste."}</p>
-          <button className="button button--primary" type="submit" disabled={reviewIsBusy}>
+          <button className="button button--primary" type="submit" disabled={reviewIsBusy || Boolean(linkedProposal && onLoadDeliveryHistory && deliveryHistory.status !== "success") || Boolean(hasDeliveryPlan && !nextDeliveryId)}>
             {reviewIsBusy ? "Enviando commit…" : "Evaluar commit"}
           </button>
         </div>

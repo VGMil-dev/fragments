@@ -45,7 +45,7 @@ vi.mock("./features/mentor", () => ({
   ),
 }));
 vi.mock("./features/review", () => ({
-  ReviewScreen: ({ onBack, onOpenTrainer, linkedProposals }: { onBack: () => void; onOpenTrainer?: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }> }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><button type="button" onClick={onBack}>Volver desde Review</button><button type="button" data-testid="review-to-trainer" onClick={onOpenTrainer}>Continuar en Trainer</button></section>,
+  ReviewScreen: ({ onBack, onOpenTrainer, linkedProposals, initialProposalId }: { onBack: () => void; onOpenTrainer?: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }>; initialProposalId?: string }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><p data-testid="review-initial-proposal">{initialProposalId}</p><button type="button" onClick={onBack}>Volver desde Review</button><button type="button" data-testid="review-to-trainer" onClick={onOpenTrainer}>Continuar en Trainer</button></section>,
 }));
 vi.mock("./features/trainer", () => ({
   TrainerScreen: ({ onStartReview }: { onStartReview?: () => void }) => <section><button type="button" data-testid="trainer-to-review" onClick={onStartReview}>Empezar en Review</button></section>,
@@ -140,6 +140,21 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-proposal-assignment-version]")?.textContent).toBe(mission.id);
     expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación fijada");
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
+  });
+
+  it("continues to Review when the linked proposal already has a persisted Mentor evaluation", async () => {
+    window.history.replaceState({}, "", "/student/classrooms");
+    mocks.assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{
+      id: "evaluated-mission-proposal", version: 2, proposal: { title: "Navegación Expo" }, assignmentVersionId: mission.id,
+      updatedAt: "2026-11-23T12:00:00.000Z", assignmentContext: { assignmentVersionId: mission.id, requiredSkills: [], mentorContext: { version: 7, config: { theme: "Navegación" } } },
+    }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "evaluated-mission-proposal" }] });
+    await act(async () => root?.render(<App />));
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    await act(async () => linked?.click());
+    expect(window.location.pathname).toBe("/student/review");
+    expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("evaluated-mission-proposal");
   });
 
   it("waits for owned proposals before allowing a new classroom proposal", async () => {

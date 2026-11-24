@@ -79,6 +79,14 @@ describe("createStudentApi", () => {
     expect(fetcher).toHaveBeenCalledWith("/api/me/proposals", expect.any(Object));
   });
 
+  it("loads the owned proposal delivery history with the shared schema", async () => {
+    const data = { proposalId: "proposal-one", assignmentVersionId: "mission-v1", nextDeliverableId: null, deliveries: [] };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, data }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+    await expect(api.getMissionDeliveryHistory("proposal-one")).resolves.toEqual({ ok: true, data });
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/me/proposals/proposal-one/deliveries");
+  });
+
   it("updates an owned proposal with its expected version", async () => {
     const saved = {
       id: "proposal-1", version: 2,
