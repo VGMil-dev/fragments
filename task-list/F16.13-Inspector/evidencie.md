@@ -25,4 +25,9 @@
 
 ## Commit
 - Implementación: `c217026` (`feat(F16.13): reencuadra Inspector docente`).
+- Evidencia de implementación: `c797ca4` (`docs(F16.13): registra verificacion de Inspector`).
+- Pull request #226: https://github.com/VGMil-dev/fragments/pull/226, dirigido a `main`.
+- CI de GitHub Actions, ejecución `45299755193`: `verify` SUCCESS el 2026-11-24; incluye Vitest, typecheck, lint y build, y validaciones de release/backups.
+- Revisión reflexiva independiente del diff: CLEAN; no encontró regresiones obvias en permisos, UI o reflow estático. QA visual con Ego Lite sigue NO COMPROBADA.
+- Pendiente de integración: merge normal del PR y release anotada F14; no iniciar hasta completar la integración.
 
