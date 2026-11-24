@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Code2, GitBranch, Sparkles } from "lucide-react";
+import { ArrowRight, Code2, GitBranch, Search, Sparkles } from "lucide-react";
 import type { TrainerChallenge, TrainerHistoryItem, TrainerReview, TrainerStatus } from "../../lib/api/trainer-api";
 import type { createTrainerApi } from "../../lib/api/trainer-api";
 import "./trainer-screen.css";
@@ -153,7 +153,13 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
       {!loading && !loadFailed && !reviews.length ? (
         <section className="trainer-empty-state" aria-labelledby="trainer-empty-title">
           <div className="trainer-empty-state__content">
-            <div className="trainer-empty-state__mark" aria-hidden="true"><GitBranch size={25} strokeWidth={1.8} /><span>REVIEW → TRAINER</span></div>
+            <ol className="trainer-empty-state__journey" aria-label="Recorrido de práctica">
+              <li className="trainer-empty-state__step"><GitBranch size={21} aria-hidden="true" /><span>Repositorio</span></li>
+              <li className="trainer-empty-state__connector" aria-hidden="true">→</li>
+              <li className="trainer-empty-state__step"><Search size={21} aria-hidden="true" /><span>Review</span></li>
+              <li className="trainer-empty-state__connector" aria-hidden="true">→</li>
+              <li className="trainer-empty-state__step"><Code2 size={21} aria-hidden="true" /><span>Trainer</span></li>
+            </ol>
             <p className="trainer-empty-state__eyebrow">LABORATORIO SIN REVISIÓN ACTIVA</p>
             <h2 id="trainer-empty-title">Tu siguiente reto nace de tu código</h2>
             <p>Analiza un commit en Review para habilitar prácticas con objetivos observables, pistas y registro de tu progreso.</p>
