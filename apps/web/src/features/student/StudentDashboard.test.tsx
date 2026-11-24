@@ -25,7 +25,8 @@ describe("StudentDashboard", () => {
     expect(html).toContain("CENTRO DE MISIONES");
     expect(html).toContain("Siguiente paso");
     expect(html).toContain("Bitácora de jardín");
-    expect(html).toContain("Siguiente paso · borrador v2");
+    expect(html).toContain("Siguiente paso · propuesta v2");
+    expect(html).toContain('aria-label="Abrir propuesta en Mentor: Bitácora de jardín"');
     expect(html).toContain("student-dashboard--has-proposal");
     expect(html).toContain("Aún no tienes aulas activas");
     expect(html).toContain("Aún no tienes entregas generadas");
@@ -42,7 +43,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[olderProposal, newestProposal]} />);
 
     expect(html).toContain("Propuesta más reciente");
-    expect(html).toContain("Siguiente paso · borrador v3");
+    expect(html).toContain("Siguiente paso · propuesta v3");
     expect(html).not.toContain("Borrador anterior");
   });
 
@@ -62,7 +63,7 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Crear mi primer proyecto");
   });
 
-  it("continues the draft linked by assignmentVersionId from its mission card", async () => {
+  it("opens the proposal linked by assignmentVersionId with an accurate accessible label", async () => {
     const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
     const linkedProposal = { ...proposal, assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
     const onContinueProposal = vi.fn();
@@ -71,6 +72,8 @@ describe("StudentDashboard", () => {
     await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
 
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    expect(missionAction?.textContent).toContain("Abrir propuesta");
+    expect(missionAction?.getAttribute("aria-label")).toBe("Abrir propuesta vinculada a misión: Navegación con Expo");
     await act(async () => { missionAction?.click(); });
 
     expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
@@ -86,6 +89,8 @@ describe("StudentDashboard", () => {
     await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
 
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
+    expect(missionAction?.textContent).toContain("Iniciar en Mentor");
+    expect(missionAction?.getAttribute("aria-label")).toBe("Iniciar misión: Navegación con Expo");
     await act(async () => { missionAction?.click(); });
 
     expect(onStartMission).toHaveBeenCalledExactlyOnceWith(mission);
@@ -150,7 +155,7 @@ describe("StudentDashboard", () => {
 
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("student-dashboard--has-proposal");
-    expect(html).toContain("Continuar en Mentor");
+    expect(html).toContain("Abrir en Mentor");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
@@ -198,7 +203,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
 
     expect(html).toContain("Bitácora de jardín");
-    expect(html).toContain("Continuar en Mentor");
+    expect(html).toContain("Abrir en Mentor");
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
