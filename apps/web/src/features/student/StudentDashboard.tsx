@@ -33,7 +33,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
   const recentProposals = [...proposals].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const continueProposal = recentProposals[0];
   const proposalForMission = (assignment: StudentAssignment) => recentProposals.find((draft) =>
-    (draft.assignmentVersionId ?? draft.assignmentContext?.assignmentVersionId) === assignment.id,
+    draft.assignmentVersionId === assignment.id,
   );
   const continueOrStartMission = (assignment: StudentAssignment) => {
     const linkedProposal = proposalForMission(assignment);

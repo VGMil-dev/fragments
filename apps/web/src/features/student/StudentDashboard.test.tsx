@@ -77,7 +77,7 @@ describe("StudentDashboard", () => {
     expect(onStartMission).not.toHaveBeenCalled();
   });
 
-  it("uses assignmentContext.assignmentVersionId when the proposal has no top-level version", async () => {
+  it("does not treat assignmentContext as a version match without the top-level assignmentVersionId", async () => {
     const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
     const linkedProposal = { ...proposal, assignmentContext: { assignmentVersionId: mission.id } } as unknown as ProposalDraftResponse;
     const onContinueProposal = vi.fn();
@@ -88,8 +88,8 @@ describe("StudentDashboard", () => {
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
     await act(async () => { missionAction?.click(); });
 
-    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
-    expect(onStartMission).not.toHaveBeenCalled();
+    expect(onStartMission).toHaveBeenCalledExactlyOnceWith(mission);
+    expect(onContinueProposal).not.toHaveBeenCalled();
   });
 
   it("starts the mission when no proposal matches its published version", async () => {
