@@ -1,7 +1,15 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudentAssignment, StudentMe } from "@fragments/contracts";
 import { StudentDashboard } from "./StudentDashboard";
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+let interactionContainer: HTMLDivElement | undefined;
+let interactionRoot: Root | undefined;
+afterEach(() => { if (interactionRoot) act(() => interactionRoot?.unmount()); interactionContainer?.remove(); interactionRoot = undefined; interactionContainer = undefined; });
 
 const student: StudentMe = { authenticated: true, id: "fixture-student", githubLogin: "fixture-student", avatarUrl: null, profileUrl: "https://github.com/fixture-student", registeredAt: "2026-11-19T12:00:00.000Z" };
 const proposal = { id: "fixture-proposal", version: 2, proposal: { title: "Bitácora de jardín" }, updatedAt: "2026-11-19T12:00:00.000Z" };
@@ -52,25 +60,39 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Crear mi primer proyecto");
   });
 
-  it("keeps one mission as the primary step and offers other published missions as secondary routes", () => {
+  it("asks the student to choose when several missions are published", () => {
     const earlierMission = { id: "mission-earlier", version: 2, mentorContextVersion: 4, createdAt: "2026-11-20T12:00:00.000Z", classroomTitle: "Aula de diseño", subject: "Aplicaciones móviles", title: "Diseño de pantallas", objectives: ["Presenta una pantalla accesible"], requiredSkills: [{ id: "skill-a11y", name: "Accesibilidad", description: null }] } as StudentAssignment;
     const latestMission = { id: "mission-latest", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Aula de Expo", subject: "Aplicaciones móviles", title: "Navegación con Expo", objectives: ["Implementa navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission]} />);
 
-    expect(html).toContain("Misión publicada · Aula de Expo");
+    expect(html).toContain("Elige una misión para comenzar");
+    expect(html).toContain("Hay varias misiones publicadas en tus aulas. Puedes elegir cuál explorar primero.");
+    expect(html).not.toContain("Misión publicada · Aula de Expo");
     expect(html).toContain("Navegación con Expo");
-    expect(html).toContain("Materia");
     expect(html).toContain("Aplicaciones móviles");
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Diseño de pantallas");
     expect(html).toContain("Presenta una pantalla accesible");
     expect(html).toContain("Habilidades obligatorias");
     expect(html).toMatch(/<ul[^>]*aria-label="Habilidades obligatorias"[^>]*>[\s\S]*?<li>Accesibilidad<\/li>[\s\S]*?<\/ul>/);
-    expect(html).toContain('aria-label="Acción prioritaria del dashboard"');
     expect(html).toContain("student-dashboard__mission-action--secondary");
+    expect(html).toContain("Ir a Mis aulas");
     expect(html).not.toContain("0 XP");
     expect(html).not.toContain("0% de progreso");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
+  });
+
+  it("navigates to Mis aulas from the primary action when several missions are available", async () => {
+    const earlierMission = { id: "mission-earlier", version: 2, mentorContextVersion: 4, createdAt: "2026-11-20T12:00:00.000Z", classroomTitle: "Aula de diseño", subject: "Aplicaciones móviles", title: "Diseño de pantallas", objectives: ["Presenta una pantalla accesible"], requiredSkills: [] } as unknown as StudentAssignment;
+    const latestMission = { ...earlierMission, id: "mission-latest", createdAt: "2026-11-23T12:00:00.000Z", title: "Navegación con Expo" };
+    const onNavigate = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission]} onNavigate={onNavigate} />); });
+
+    const primaryAction = Array.from(interactionContainer.querySelectorAll<HTMLButtonElement>(".student-dashboard__project-action button"))[0];
+    await act(async () => { primaryAction?.click(); });
+
+    expect(onNavigate).toHaveBeenCalledExactlyOnceWith("/student/classrooms");
   });
 
   it("keeps the latest proposal as the only primary action while published missions remain secondary", () => {
@@ -104,22 +126,20 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Misiones en tus aulas");
   });
 
-  it("shows the remaining published missions as secondary routes without replacing the primary mission", () => {
+  it("limits mission choices to three and links to the remaining missions", () => {
     const earlierMission = { id: "mission-earlier", version: 2, mentorContextVersion: 4, createdAt: "2026-11-20T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Diseño de pantallas", objectives: ["Presenta una pantalla accesible"], requiredSkills: [{ id: "skill-a11y", name: "Accesibilidad", description: null }] } as StudentAssignment;
     const latestMission = { id: "mission-latest", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", subject: "Aplicaciones móviles", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [{ id: "skill-navigation", name: "Navegación móvil", description: null }] } as StudentAssignment;
-    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission]} />);
+    const thirdMission = { ...earlierMission, id: "mission-third", title: "Prototipo", objectives: ["Valida el prototipo"] };
+    const fourthMission = { ...latestMission, id: "mission-fourth", title: "Prueba final", objectives: ["Comprueba el flujo"] };
+    const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission, thirdMission, fourthMission]} />);
 
-    expect(html).toContain("Navegación con Expo");
-    expect(html).toContain("Materia");
-    expect(html).toContain("Aplicaciones móviles");
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Diseño de pantallas");
-    expect(html).toContain("Presenta una pantalla accesible");
-    expect(html).toContain("<p>Habilidades obligatorias</p>");
-    expect(html).toMatch(/<ul[^>]*aria-label="Habilidades obligatorias"[^>]*>[\s\S]*?<li>Accesibilidad<\/li>[\s\S]*?<\/ul>/);
-    expect(html).toContain('aria-label="Iniciar misión: Diseño de pantallas"');
-    expect(html).not.toContain("0 XP");
-    expect(html).not.toContain("0% de progreso");
+    expect(html).toContain("Navegación con Expo");
+    expect(html).toContain("Prueba final");
+    expect(html).not.toContain("Prototipo");
+    expect(html.match(/student-dashboard__mission-card/g)).toHaveLength(3);
+    expect(html).toContain("Ver todas tus misiones (1 más)");
   });
 
   it("keeps the most recent proposal primary while retaining missions as secondary options", () => {

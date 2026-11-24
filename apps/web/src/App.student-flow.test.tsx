@@ -95,9 +95,10 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
-  it("starts the newest published classroom mission directly from the Dashboard with its pinned context and skills", async () => {
+  it("starts the only published classroom mission directly from the Dashboard with its pinned context and skills", async () => {
     window.history.replaceState({}, "", "/student/dashboard");
     mocks.studentApi.getMyClassrooms.mockResolvedValue({ ok: true, data: [otherClassroom, classroom] });
+    mocks.assignmentsApi.listStudent.mockImplementation(async (classroomId: string) => ({ ok: true, data: classroomId === classroom.id ? [mission] : [] }));
     await act(async () => root?.render(<App />));
 
     const start = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent?.includes("Iniciar misión en Mentor"));
