@@ -5,6 +5,7 @@
 Implementación en rama `codex/f22-admin-provisioning`; no hay PR, release ni mutación productiva todavía.
 
 - Commit de implementación verificada: `d16b308` (`feat(f22): habilita bootstrap admin acotado`).
+- CI inicial del PR #267 (`45468236357`) falló en la validación de perfiles Compose porque `${RESEND_API_KEY:?}` obligaba a configurar correo aun en QA. Se cambió a interpolación vacía opcional; el CLI valida Resend antes de escribir/promover y vuelve a comprobarlo antes de recuperación. CI debe repetirse tras este ajuste.
 
 ## Archivos
 
