@@ -14,4 +14,3 @@ Implementación en curso. La última revisión estática detectó que, sin borra
 
 - Pendiente; registrar salidas frescas antes de cerrar la tarea.
 - Ego Lite de estudiante no disponible en la sesión actual; QA visual queda NO COMPROBADA salvo que el TaskSpace existente reaparezca.
-
