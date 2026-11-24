@@ -582,7 +582,13 @@ export function MentorScreen({
             </button>
           </li>)}
         </ol>
-        <label className="mentor-stage-nav__mobile"><span>Etapa {activeStage + 1} de {MENTOR_STAGES.length}</span><select aria-label="Seleccionar etapa de la propuesta" value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}</select></label>
+        <label className="mentor-stage-nav__mobile">
+          <span className="mentor-stage-nav__mobile-current" aria-live="polite" aria-atomic="true">Etapa {activeStage + 1} de {MENTOR_STAGES.length} · {activeStageLabel}</span>
+          <span className="mentor-stage-nav__segments" aria-hidden="true">
+            {MENTOR_STAGES.map((label, index) => <span key={label} className={`mentor-stage-nav__segment mentor-stage-nav__segment--${index === activeStage ? "current" : completedStage(index) ? "complete" : "pending"}`} />)}
+          </span>
+          <select aria-label="Seleccionar etapa de la propuesta" value={activeStage} onChange={(event) => setActiveStage(Number(event.target.value))}>{MENTOR_STAGES.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}</select>
+        </label>
       </nav>
       <div className="mentor-stage-content">
 

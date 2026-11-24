@@ -517,12 +517,24 @@ describe("MentorScreen", () => {
     expect(mountedContainer.querySelector(".mentor-context--academic")).toBeNull();
   });
 
-  it("keeps stage labels and real statuses visible in the compact stepper breakpoint", () => {
-    expect(mentorCss).toContain("@media (max-width: 1100px)");
-    expect(mentorCss).toContain(".mentor-stage-nav--horizontal ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }");
-    expect(mentorCss).toContain(".mentor-stage-nav__state { position: static; grid-column: 2;");
-    expect(mentorCss).toContain("@media (max-width: 520px) {");
-    expect(mentorCss).toContain(".mentor-stage-nav--horizontal ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
+  it("uses a compact current-stage selector through 1100px instead of a multi-row stepper", () => {
+    expect(mentorCss).toContain("@media (max-width: 1100px) {");
+    expect(mentorCss).toContain(".mentor-stage-nav--horizontal ol { display: none; }");
+    expect(mentorCss).toContain(".mentor-stage-nav--horizontal .mentor-stage-nav__mobile { display: grid;");
+    expect(mentorCss).toContain(".mentor-stage-nav__segments { display: grid; grid-column: 1; grid-row: 2; grid-template-columns: repeat(6, minmax(0, 1fr));");
+    expect(mentorCss).not.toContain(".mentor-stage-nav--horizontal ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));");
+  });
+
+  it("announces the current stage and keeps the six-stage progress segments decorative", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} />); });
+
+    expect(mountedContainer.querySelector(".mentor-stage-nav__mobile-current")?.textContent).toBe("Etapa 1 de 6 · Idea");
+    expect(mountedContainer.querySelectorAll(".mentor-stage-nav__segments span")).toHaveLength(6);
+    expect(mountedContainer.querySelector(".mentor-stage-nav__segments")?.getAttribute("aria-hidden")).toBe("true");
+    expect(mountedContainer.querySelector<HTMLSelectElement>(".mentor-stage-nav__mobile select")?.getAttribute("aria-label")).toBe("Seleccionar etapa de la propuesta");
   });
 
   it("shows only the authorized read-only academic context when one is published", async () => {
