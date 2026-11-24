@@ -16,6 +16,6 @@ Mentor ahora presenta hasta 1100 CSS px la etapa activa (`N de 6` + nombre), sei
 - Revisión UX/UI independiente: CLEAN; confirma reflow 320–1100 y accesibilidad del selector. No usó navegador.
 
 ## Integración y producción
-- PR: pendiente de publicación.
-- F14: pendiente; no se creará otra tag mientras v0.5.66 siga sin aplicación confirmada.
+- PR [#258](https://github.com/VGMil-dev/fragments/pull/258) integrado por merge normal en `19c70b5cace015faaa62c1fb2bdd2e9aadd8bdd7`; CI `45377110207` SUCCESS.
+- F14: release `v0.5.66` sigue sin aplicación confirmada; no se crea otra tag hasta resolver ese release.
 - Ego Lite de producción: `NO COMPROBADO` hasta servir el SHA de esta implementación. Comprobación pública previa a este cambio: v0.5.65/SHA e2aa436; v0.5.66 aún no aplicado.
