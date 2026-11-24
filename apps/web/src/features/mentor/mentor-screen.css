@@ -525,6 +525,7 @@
 .mentor-summary-row h4 { margin: 0 0 .15rem; font-size: 1rem; }
 .mentor-summary-row p, .mentor-summary-row small { margin: 0; color: #d8e3f4; font-size: .9rem; line-height: 1.4; overflow-wrap: anywhere; }
 .mentor-summary-row small { display: block; margin-top: .2rem; color: #aebfda; }
+.mentor-summary-mission-skills { margin-top: .4rem; }
 .mentor-summary-row ul { margin: .15rem 0; padding-left: 1rem; color: #ecf4ff; }
 .mentor-summary-row li::marker { color: var(--f16-lime); }
 .mentor-summary-row .button { min-height: 38px; padding: .4rem .7rem; white-space: nowrap; }

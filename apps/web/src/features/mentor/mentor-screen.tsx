@@ -819,7 +819,19 @@ export function MentorScreen({
           <h3>{proposal?.proposal.title ?? (fields.title.trim() || "Tu idea")}</h3>
           <article className="mentor-summary-row"><div><span aria-hidden="true">◉</span><div><h4>Idea y propósito</h4><p>{proposal?.proposal.description || fields.description.trim() || "Aún no has completado la descripción."}</p><small>{proposal?.proposal.purpose || fields.purpose.trim() || "Propósito aún sin completar."}</small></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(0)}>Editar</button></article>
           <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Contexto de clase</h4><p>{contextState.status === "success" ? [proposalClassroom?.title, contextState.data.config.subject].filter(Boolean).join(" · ") : contextState.status === "empty" ? "Modo personal; no hay contexto de aula asociado." : contextState.status === "loading" ? "Cargando el contexto de clase." : "No pudimos cargar el contexto de clase."}</p>{contextState.status === "success" ? <small>{contextState.data.config.assignment}</small> : null}</div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(1)}>Ver contexto</button></article>
-          <article className="mentor-summary-row"><div><span aria-hidden="true">⌘</span><div><h4>Habilidades y tecnologías</h4><p>{proposal?.proposal.skills?.length ? proposal.proposal.skills.join(" · ") : "No hay habilidades guardadas."}</p><div className="mentor-summary-tags">{(proposal?.proposal.technologies ?? []).map((item) => <span key={item}>{item}</span>)}</div></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(2)}>Editar</button></article>
+          <article className="mentor-summary-row"><div><span aria-hidden="true">⌘</span><div>
+            <h4>Habilidades y tecnologías de tu propuesta</h4>
+            <p>{proposal?.proposal.skills?.length ? proposal.proposal.skills.join(" · ") : "No has guardado habilidades propias en esta propuesta."}</p>
+            <div className="mentor-summary-tags">{(proposal?.proposal.technologies ?? []).map((item) => <span key={item}>{item}</span>)}</div>
+            {proposal?.assignmentVersionId ? <div className="mentor-summary-mission-skills">
+              <small>Habilidades requeridas por la misión</small>
+              {proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId
+                ? requiredMissionSkills.length
+                  ? <ul aria-label="Habilidades requeridas por la misión">{requiredMissionSkills.map((skill) => <li key={skill.id}>{skill.name}</li>)}</ul>
+                  : <p>La misión vinculada no requiere habilidades específicas.</p>
+                : <p>No se pudieron recuperar las habilidades requeridas de la misión.</p>}
+            </div> : null}
+          </div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(2)}>Editar</button></article>
           <article className="mentor-summary-row"><div><span aria-hidden="true">◎</span><div><h4>Objetivos y alcance</h4><ul>{proposal?.proposal.goals?.length ? proposal.proposal.goals.map((goal) => <li key={goal}>{goal}</li>) : <li>Aún no has definido objetivos.</li>}</ul><p><strong>Alcance MVP:</strong> {proposal?.proposal.scope || "Aún sin completar."}</p></div></div><button type="button" className="button button--secondary" onClick={() => setActiveStage(3)}>Editar</button></article>
         </section>
         <aside className="mentor-evaluation__panel" aria-labelledby="mentor-evaluation-title">

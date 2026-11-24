@@ -207,6 +207,39 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).not.toContain("Importar propuesta (.docx)");
   });
 
+  it("separa en la evaluación las habilidades requeridas por la misión de las habilidades propias", async () => {
+    const linked = { ...linkedProposal, proposal: { ...linkedProposal.proposal, skills: [] } };
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(
+      <MentorScreen {...actions} initialProposal={linked} requiredMissionSkills={linked.assignmentContext.requiredSkills} onBack={vi.fn()} />,
+    ));
+
+    await openEvaluationStage();
+
+    expect(mountedContainer.textContent).toContain("No has guardado habilidades propias en esta propuesta.");
+    expect(mountedContainer.querySelector('[aria-label="Habilidades requeridas por la misión"]')?.textContent).toContain("Navegación con Expo");
+    expect(mountedContainer.textContent).not.toContain("No hay habilidades guardadas.");
+  });
+
+  it.each(["sin requisitos", "sin snapshot disponible"] as const)("distingue una misión vinculada %s en el resumen de evaluación", async (caseName) => {
+    const linked = caseName === "sin requisitos"
+      ? { ...linkedProposal, assignmentContext: { ...linkedProposal.assignmentContext, requiredSkills: [] } }
+      : { ...linkedProposal, assignmentContext: undefined };
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => mountedRoot?.render(<MentorScreen {...actions} initialProposal={linked} onBack={vi.fn()} />));
+
+    await openEvaluationStage();
+
+    expect(mountedContainer.textContent).toContain("Habilidades requeridas por la misión");
+    expect(mountedContainer.textContent).toContain(caseName === "sin requisitos"
+      ? "La misión vinculada no requiere habilidades específicas."
+      : "No se pudieron recuperar las habilidades requeridas de la misión.");
+  });
+
   it("guarda el borrador antes de avanzar y expone el estado actual de cada etapa", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
