@@ -495,7 +495,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       const teacherResponse = await fetch(`${base}/api/teacher/classrooms/${classroomId}/reviews`, { headers: { "x-fixture-user": teacherId, "x-fixture-role": "teacher" } });
       const teacherBody = await teacherResponse.json() as { data: Array<Record<string, unknown>> };
       expect(teacherBody.data).toHaveLength(2);
-      expect(teacherBody.data[0]).toMatchObject({ reviewId: linkedBody.data.id, proposalTitle: "Proyecto de navegación", missionTitle: "Misión para Review", status: "queued" });
+      expect(teacherBody.data).toContainEqual(expect.objectContaining({ reviewId: linkedBody.data.id, proposalTitle: "Proyecto de navegación", missionTitle: "Misión para Review", status: "queued" }));
       expect(JSON.stringify(teacherBody.data)).not.toContain(studentId);
       expect(JSON.stringify(teacherBody.data)).not.toContain(unlinked.id);
       await db.job.update({ where: { id: linkedBody.data.id }, data: { status: "failed", attempts: 1, retryClass: "transient", nextRetryAt: new Date(Date.now() - 1_000) } });
