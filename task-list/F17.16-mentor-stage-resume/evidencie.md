@@ -1,6 +1,6 @@
 # Evidencia F17.16
 
-Estado: implementación local en curso; sin commit, PR o despliegue al registrar esta evidencia.
+Estado: implementación local confirmada en `16af14a3a2acaaa0c85c05d4f74015b727562063`; PR, checks y despliegue pendientes.
 
 ## Pruebas
 
@@ -13,4 +13,6 @@ Estado: implementación local en curso; sin commit, PR o despliegue al registrar
 
 ## Límites
 
-Solo prueba con callbacks fake en Vitest. No se hizo llamada a proveedor IA, escritura productiva ni validación visual/browser. Para cerrar: revisar el diff, commit propio, PR y checks; despliegue únicamente mediante F14 y validación Ego Lite posterior. Hash de commit: pendiente.
+Solo prueba con callbacks fake en Vitest. No se hizo llamada a proveedor IA, escritura productiva ni validación visual/browser. Para cerrar: PR y checks; despliegue únicamente mediante F14 y validación Ego Lite posterior.
+
+- Commit de implementación: `16af14a3a2acaaa0c85c05d4f74015b727562063` (`fix(F17.16): reanudar Mentor en etapa pendiente`).
