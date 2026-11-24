@@ -111,7 +111,11 @@
   cursor: pointer;
 }
 
-.gallery-entry__action:hover { background: color-mix(in srgb, var(--f16-lime) 86%, white); }
+.gallery-entry__action:hover {
+  border-color: var(--f16-cobalt);
+  background: var(--f16-cobalt);
+  color: var(--f16-text-primary);
+}
 .gallery-entry__action:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .gallery-entry__action:active { filter: brightness(.92); }
 

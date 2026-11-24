@@ -1,6 +1,22 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { GalleryScreen } from "./gallery-screen";
+
+const galleryCss = readFileSync(new URL("./gallery-screen.css", import.meta.url), "utf8");
+const designTokens = readFileSync(new URL("../../styles/tokens.css", import.meta.url), "utf8");
+
+function readToken(name: string): string {
+  const value = designTokens.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6});`, "i"))?.[1];
+  if (!value) throw new Error(`Missing color token: ${name}`);
+  return value;
+}
+
+function relativeLuminance(color: string): number {
+  const channels = color.slice(1).match(/.{2}/g)!.map((channel) => Number.parseInt(channel, 16) / 255) as [number, number, number];
+  const linear = channels.map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+  return linear[0]! * 0.2126 + linear[1]! * 0.7152 + linear[2]! * 0.0722;
+}
 
 const entry = {
   id: "garden-notes",
@@ -25,6 +41,17 @@ const entry = {
 };
 
 describe("GalleryScreen", () => {
+  it("uses a hover foreground and background with WCAG AA text contrast", () => {
+    const hover = galleryCss.match(/\.gallery-entry__action:hover\s*\{([^}]*)\}/)?.[1] ?? "";
+    const backgroundToken = hover.match(/background:\s*var\(--([\w-]+)/)?.[1];
+    const foregroundToken = hover.match(/(?:^|\n)\s*color:\s*var\(--([\w-]+)/)?.[1];
+
+    expect(backgroundToken).toBeTruthy();
+    expect(foregroundToken).toBeTruthy();
+    const luminances = [relativeLuminance(readToken(backgroundToken!)), relativeLuminance(readToken(foregroundToken!))].sort((a, b) => b - a);
+    expect((luminances[0]! + 0.05) / (luminances[1]! + 0.05)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("renders public author and academic context without private grades", () => {
     const html = renderToStaticMarkup(
       <GalleryScreen state={{ status: "success", data: [entry] }} onChoose={vi.fn()} />,
