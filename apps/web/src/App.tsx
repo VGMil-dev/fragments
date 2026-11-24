@@ -79,6 +79,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const proposalsForCurrentPathLoading = proposalsLoading || proposalsLoadedPath !== path;
+  const proposalsForCurrentPathError = proposalsLoadedPath === path && proposalsError;
   const requiredMissionSkills = selectedProposal
     ? requiredSkillsFromProposalContext(selectedProposal)
     : selectedAssignment?.requiredSkills ?? [];
@@ -310,8 +312,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           classroomsError={classroomsError}
           onRetryClassrooms={() => setClassroomsReload((value) => value + 1)}
           proposals={ownedProposals}
-          proposalsLoading={proposalsLoading || proposalsLoadedPath !== path}
-          proposalsError={proposalsError}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
           onRetryProposals={() => setProposalsReload((value) => value + 1)}
           missions={dashboardMissions}
           missionsLoading={dashboardMissionsLoading}
@@ -331,8 +333,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           error={classroomsError}
           onRefresh={() => setClassroomsReload((value) => value + 1)}
           proposals={ownedProposals}
-          proposalsLoading={proposalsLoading}
-          proposalsError={proposalsError}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
           onRetryProposals={() => setProposalsReload((value) => value + 1)}
           onContinueProposal={(proposal) => { setSelectedAssignment(undefined); setSelectedProposal(proposal); navigate("/student/mentor"); }}
           onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
@@ -390,8 +392,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
             savedProposals={ownedProposals.map(proposalForMentor)}
-              proposalsLoading={proposalsLoading}
-              proposalsError={proposalsError}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
               onRetryProposals={() => setProposalsReload((value) => value + 1)}
               classrooms={myClassrooms}
               classroomsLoading={classroomsLoading}
