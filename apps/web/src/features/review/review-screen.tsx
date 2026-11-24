@@ -177,6 +177,13 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
         </div>
         {!reviewState ? <p className="review-screen__hint">Envía un commit para ver el estado de su revisión.</p> : null}
         {reviewState?.status === "success" && linkedProposal ? <p className="review-screen__hint" role="status">Revisión vinculada a “{linkedProposal.proposal.title || "Propuesta sin título"}”. El docente autorizado podrá consultar su progreso.</p> : null}
+        {currentReview ? <section className="review-source" aria-label="Commit en revisión">
+          <dl>
+            <div><dt>Repositorio</dt><dd><code>{currentReview.owner}/{currentReview.repo}</code></dd></div>
+            <div><dt>Commit exacto</dt><dd><code>{currentReview.commitSha}</code></dd></div>
+          </dl>
+          <span className="review-source__status" data-status={currentReview.status}>{currentReview.status === "queued" ? "En cola" : currentReview.status === "running" ? "En análisis" : currentReview.status === "failed" ? "Falló" : "Completado"}</span>
+        </section> : null}
         {reviewState?.status === "loading" ? <AsyncStateView state={reviewState} render={() => null} /> : null}
         {reviewState?.status === "error" ? <AsyncStateView state={reviewState} render={() => null} /> : null}
         {currentReview?.status === "queued" ? (
@@ -205,21 +212,24 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
             <div className="review-analysis__summary">
               <div>
                 <h3>Orientación para este commit</h3>
-                <p><code>{currentReview.owner}/{currentReview.repo}@{currentReview.commitSha}</code></p>
+                <p>Resultado devuelto por la revisión seleccionada.</p>
               </div>
-              <p className="review-analysis__score">{currentReview.analysis.score}/100</p>
+              <p className="review-analysis__score" aria-label={`Puntuación devuelta: ${currentReview.analysis.score} de 100`}>{currentReview.analysis.score}/100</p>
             </div>
             {currentReview.analysis.findings.length ? (
-              <ul className="review-findings">
+              <>
+                <h4 className="review-findings__title">Hallazgos devueltos · {currentReview.analysis.findings.length}</h4>
+                <ul className="review-findings" aria-label="Hallazgos devueltos por Review">
                 {currentReview.analysis.findings.map((finding, index) => (
                   <li key={`${finding.criterionId}-${index}`}>
-                    <p className="review-finding__status" data-status={finding.status}>{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p>
+                    <div className="review-finding__heading"><span>Hallazgo {index + 1}</span><p className="review-finding__status" data-status={finding.status}>{finding.status === "verified" ? "Verificado" : finding.status === "not_verified" ? "Aún no verificado" : "Necesita revisión"}</p></div>
                     <p>{finding.reason}</p>
-                    <ul>{finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}>{evidenceLabel(item)}</li>)}</ul>
+                    <ul aria-label={`Evidencias del hallazgo ${index + 1}`}>{finding.evidence.map((item, evidenceIndex) => <li key={`${finding.criterionId}-${evidenceIndex}`}><code>{evidenceLabel(item)}</code></li>)}</ul>
                   </li>
                 ))}
-              </ul>
-            ) : null}
+                </ul>
+              </>
+            ) : <><h4 className="review-findings__title">Hallazgos devueltos · 0</h4><p className="review-screen__hint">Esta revisión no devolvió hallazgos para mostrar.</p></>}
             {currentReview.analysis.limitations.length ? <p className="review-screen__hint">Límites de esta orientación: {currentReview.analysis.limitations.join(" ")}</p> : null}
             <button className="button button--primary" type="button" disabled={submission?.status === "loading"} onClick={() => void generateSubmission(currentReview.id)}>
               {submission?.status === "loading" ? "Preparando entrega…" : "Generar entrega"}

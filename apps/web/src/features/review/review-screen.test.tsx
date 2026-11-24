@@ -71,6 +71,7 @@ describe("ReviewScreen", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: completed }} onBack={vi.fn()} />);
 
     expect(html).toContain("84/100");
+    expect(html).toContain("Hallazgos devueltos · 1");
     expect(html).toContain("El punto de entrada conecta los módulos principales.");
     expect(html).toContain("src/main.ts:3–9");
     expect(html).toContain('href="/student/trainer"');
@@ -110,8 +111,31 @@ describe("ReviewScreen", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: queued }} onBack={vi.fn()} />);
 
     expect(html).toContain("Tu commit está en la cola");
+    expect(html).toContain("classroom/demo");
+    expect(html).toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(html).toContain("En cola");
     expect(html).toContain("Actualizar estado");
     expect(html).not.toContain("84/100");
+  });
+
+  it("makes the exact repository and commit visible for every analysis state", () => {
+    for (const status of ["queued", "running", "failed"] as const) {
+      const review = { ...completed, status } as never;
+      const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: review }} onBack={vi.fn()} />);
+
+      expect(html).toContain('aria-label="Commit en revisión"');
+      expect(html).toContain("classroom/demo");
+      expect(html).toContain("a".repeat(40));
+      expect(html).toContain(status === "queued" ? "En cola" : status === "running" ? "En análisis" : "Falló");
+    }
+  });
+
+  it("explains when a completed analysis returned no findings", () => {
+    const empty = { ...completed, analysis: { ...analysis, findings: [] } };
+    const html = renderToStaticMarkup(<ReviewScreen {...actions} initialReview={{ status: "success", data: empty }} onBack={vi.fn()} />);
+
+    expect(html).toContain("Hallazgos devueltos · 0");
+    expect(html).toContain("Esta revisión no devolvió hallazgos para mostrar.");
   });
 
   it("does not expose raw server text when a review fails", () => {
