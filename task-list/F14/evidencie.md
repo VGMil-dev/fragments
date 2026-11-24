@@ -1,6 +1,15 @@
 # F14 — Evidencia
 
-**Estado:** IMPLEMENTADA E INTEGRADA; autorización manual configurada para el modelo de mantenedor individual. Código F14 integrado en `main` mediante PR #7, SHA `ddf141447ec7b982afb58a65db5b47debb7e597c`. La aprobación sigue siendo obligatoria; no se creó ni publicó una tag nueva ni hubo despliegue F14.
+**Estado actual:** F14 integrada; release automático al publicar una tag SemVer anotada tras superar las puertas técnicas. `Required reviewers` permanece desactivado. La configuración manual descrita en los registros históricos fue reemplazada y no debe reactivarse por iniciativa propia. La última release verificada es `v0.5.53` (2026-11-24), documentada abajo.
+
+## Release `v0.5.53` — F16.12 Galería Pixel Night · 2026-11-24
+
+- PR #224 merge normal; commit `90873bfc5d4d0d2061f693e86febb650606181c2` en `main`.
+- Tag anotada `v0.5.53` apunta exactamente a ese commit. F14 run `45294837360`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. Verify-build completó tests, typecheck, lint/build, verificaciones de backup/restore y rollback, bundle metadata e imágenes ARM64. El paquete atestado se publicó a la cola para el agente pull existente; no se desplegó manualmente.
+- Entorno `fragments-production` consultado read-only: la única regla informada es `branch_policy`; no hay `Required reviewers` humano. No se alteró el entorno ni sus controles.
+- Producción verificada públicamente después del ciclo pull: `/health` HTTP 200 con `status=ok`, `database=ready`; asset `/assets/index-S15JAbH-.js` contiene `v0.5.53` y SHA `90873bfc5d4d0d2061f693e86febb650606181c2`.
+- Sin apagado/reinicio manual, escritura en base productiva ni lectura de secretos.
+- Integridad/retención independiente de backups y ledger del host siguen NO COMPROBADAS.
 
 ## Procedencia histórica de `v0.3.1` — comprobación independiente del código F14
 
@@ -26,7 +35,7 @@
 Consultas y cambios del 2026-11-12 en `VGMil-dev/fragments`:
 
 - Actions habilitadas con `allowed_actions=selected`, `sha_pinning_required=true`; listas permitidas: `actions/checkout`, `actions/setup-node`, `actions/upload-artifact`, `actions/download-artifact`, `actions/attest` y `pnpm/action-setup`, todos referenciados por SHA completo en los workflows. No se permiten otras acciones externas.
-- Entorno `fragments-production`: revisor requerido `VGMil-dev` (ID `259344844`), `prevent_self_review=false`, `can_admins_bypass=false`, sin secretos ni variables; política de despliegue limitada al patrón de tag `v*.*.*`. Verificado por `GET /environments/fragments-production`; la API de colaboradores solo devuelve `VGMil-dev`. Se permite que el mantenedor individual apruebe manualmente su propia ejecución porque no hay segundo colaborador. Se conserva el paso obligatorio de aprobación y el bypass administrativo sigue desactivado. Esto reduce la independencia de la revisión y queda registrado por autorización expresa del propietario para esta publicación.
+- **Histórico, no configuración vigente (2026-11-12):** `fragments-production` usaba entonces revisor requerido `VGMil-dev` (`prevent_self_review=false`). Esa aprobación humana fue desactivada posteriormente por decisión explícita del propietario. Consulta read-only del 2026-11-24 informó únicamente `branch_policy`; no hay `Required reviewers` humanos.
 - Ruleset activo `Fragments main via pull request` para `refs/heads/main`: PR obligatorio, merge normal, check `verify` obligatorio desde GitHub Actions (integration ID `15368`), sin bypass (`current_user_can_bypass=never`), force-push y borrado prohibidos.
 - Ruleset activo `Fragments version tags immutable` para `refs/tags/v*.*.*`: actualización y borrado prohibidos, sin bypass. No se creó ni cambió tag alguna.
 - La API no permite administrar `can_admins_bypass`; se desactivó en la interfaz de GitHub y luego se verificó por REST como `false`.
