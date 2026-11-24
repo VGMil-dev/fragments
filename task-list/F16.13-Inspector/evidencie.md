@@ -29,5 +29,12 @@
 - Pull request #226: https://github.com/VGMil-dev/fragments/pull/226, dirigido a `main`.
 - CI de GitHub Actions, ejecución `45299755193`: `verify` SUCCESS el 2026-11-24; incluye Vitest, typecheck, lint y build, y validaciones de release/backups.
 - Revisión reflexiva independiente del diff: CLEAN; no encontró regresiones obvias en permisos, UI o reflow estático. QA visual con Ego Lite sigue NO COMPROBADA.
-- Pendiente de integración: merge normal del PR y release anotada F14; no iniciar hasta completar la integración.
+
+## Integración y release F14
+- PR #226 se integró por merge normal el 2026-11-24 como `d6f31f10b9ec67f791e212169894f562b6b91c78`.
+- CI de la integración, ejecución `45300233941`: SUCCESS.
+- Tag anotada `v0.5.54` sobre el SHA exacto `d6f31f10b9ec67f791e212169894f562b6b91c78`; F14 run `45300581223`: verify-build, attest-package y publish-approved-release SUCCESS.
+- Verificación pública posterior: `/health` status `ok`, database `ready`; bundle `/assets/index-qqo0NTNJ.js` contiene la versión y el SHA exactos. No se hizo deploy manual.
+- Durante la aplicación automática se observó un HTTP 502 transitorio; la comprobación posterior recuperó health y bundle correctos.
+- Ego Lite visual autenticado post-release sigue NO COMPROBADO. No se cerraron ni reemplazaron sesiones. Contrast formal, zoom 200 %, lector y revisión propietaria siguen pendientes; el diseño no se declara aprobado.
 
