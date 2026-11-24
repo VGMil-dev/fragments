@@ -60,7 +60,7 @@ function requiredSkillsFromProposalContext(proposal: ProposalDraftResponse): Arr
   return proposalMissionContext(proposal)?.requiredSkills ?? [];
 }
 
-function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: string) => void }) {
+function StudentWorkspace({ path, search, navigate }: { path: string; search: string; navigate: (path: string) => void }) {
   const [gallery, setGallery] = useState<AsyncState<AcademicGalleryEntry[]>>({ status: "loading" });
   const [reload, setReload] = useState(0);
   const [inspiration, setInspiration] = useState<AcademicGalleryEntry | undefined>();
@@ -79,10 +79,17 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const requestedProposalId = ["/student/mentor", "/student/review"].includes(path)
+    ? new URLSearchParams(search).get("proposalId")
+    : null;
+  const routeProposal = requestedProposalId ? ownedProposals.find((proposal) => proposal.id === requestedProposalId) : undefined;
+  const currentProposal = requestedProposalId ? routeProposal : selectedProposal;
   const proposalsForCurrentPathLoading = proposalsLoading || proposalsLoadedPath !== path;
   const proposalsForCurrentPathError = proposalsLoadedPath === path && proposalsError;
-  const requiredMissionSkills = selectedProposal
-    ? requiredSkillsFromProposalContext(selectedProposal)
+  const proposalRecoveryPending = Boolean(requestedProposalId && !routeProposal && proposalsForCurrentPathLoading);
+  const proposalRecoveryFailed = Boolean(requestedProposalId && !routeProposal && !proposalRecoveryPending);
+  const requiredMissionSkills = currentProposal
+    ? requiredSkillsFromProposalContext(currentProposal)
     : selectedAssignment?.requiredSkills ?? [];
   const [galleryOffset, setGalleryOffset] = useState(0);
   const [galleryNextOffset, setGalleryNextOffset] = useState<number | null>(null);
@@ -240,12 +247,13 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
     if (path !== "/student/mentor" || !student) return;
     let active = true;
     const controller = new AbortController();
-    if (selectedAssignment && (!selectedProposal || selectedProposal.assignmentVersionId === selectedAssignment.id)) {
+    if (requestedProposalId && !routeProposal) return;
+    if (selectedAssignment && (!currentProposal || currentProposal.assignmentVersionId === selectedAssignment.id)) {
       setMentorContext({ status: "success", data: selectedAssignment.mentorContext });
       return () => { active = false; controller.abort(); };
     }
-    if (selectedProposal?.assignmentVersionId) {
-      const pinnedContext = proposalMissionContext(selectedProposal);
+    if (currentProposal?.assignmentVersionId) {
+      const pinnedContext = proposalMissionContext(currentProposal);
       setMentorContext(pinnedContext
         ? { status: "success", data: pinnedContext.mentorContext }
         : { status: "error", message: "No pudimos recuperar el contexto de la misión fijada a esta propuesta.", retry: () => navigate("/student/projects"), retryLabel: "Volver a mis proyectos" });
@@ -267,19 +275,22 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
       if (active) setMentorContext({ status: "error", message: "No pudimos consultar el contexto docente autorizado.", retry: () => setMentorContextReload((value) => value + 1) });
     });
     return () => { active = false; controller.abort(); };
-  }, [path, student, selectedAssignment, selectedProposal, mentorContextReload, navigate]);
+  }, [path, student, selectedAssignment, currentProposal, requestedProposalId, routeProposal, mentorContextReload, navigate]);
 
   const loadMissionDeliveryHistory = useCallback((proposalId: string) => studentApi.getMissionDeliveryHistory(proposalId), []);
-  const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
+  const openProposal = useCallback((proposal: ProposalDraftResponse, destination: "/student/mentor" | "/student/review" = "/student/mentor") => {
     setSelectedAssignment(undefined);
     setSelectedProposal(proposal);
+    navigate(`${destination}?proposalId=${encodeURIComponent(proposal.id)}`);
+  }, [navigate]);
+  const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
     let mentorEvaluationExists = false;
     try {
       const submissionsResult = await studentApi.getMySubmissions();
       mentorEvaluationExists = submissionsResult.ok && submissionsResult.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
     } catch { /* Fall back to the saved proposal in Mentor when the summary is unavailable. */ }
-    navigate(mentorEvaluationExists ? "/student/review" : "/student/mentor");
-  }, [navigate]);
+    openProposal(proposal, mentorEvaluationExists ? "/student/review" : "/student/mentor");
+  }, [openProposal]);
 
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
   if (!student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
@@ -368,7 +379,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
                   </ul> : missionContext ? <p>Esta misión no fijó habilidades requeridas.</p> : <p>El contexto fijado para esta misión no está disponible.</p>}
                 </details> : null}
               </div>
-              <button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => { setSelectedProposal(item); navigate("/student/mentor"); }}>Continuar</button>
+              <button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => openProposal(item)}>Continuar</button>
             </li>;
           })}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
           <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Crear una propuesta</button>
@@ -393,15 +404,22 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onCreateProposal={() => { setInspiration(undefined); setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           />
         ) : null}
-        {path === "/student/mentor" ? (
+        {path === "/student/mentor" && requestedProposalId && proposalRecoveryFailed ? <main className="student-portal" aria-labelledby="proposal-recovery-title">
+          <h1 id="proposal-recovery-title">No pudimos abrir esa propuesta</h1>
+          {proposalsForCurrentPathError
+            ? <div role="alert"><p>No pudimos comprobar tus propuestas guardadas. Inténtalo de nuevo.</p><button type="button" onClick={() => setProposalsReload((value) => value + 1)}>Reintentar</button></div>
+            : <div role="alert"><p>No encontramos esa propuesta en tu cuenta.</p><button type="button" onClick={() => navigate("/student/projects")}>Volver a Mis proyectos</button></div>}
+        </main> : null}
+        {path === "/student/mentor" && requestedProposalId && proposalRecoveryPending ? <main className="student-portal" aria-labelledby="proposal-loading-title"><h1 id="proposal-loading-title">Abriendo tu propuesta</h1><p role="status">Cargando tus propuestas guardadas…</p></main> : null}
+        {path === "/student/mentor" && (!requestedProposalId || currentProposal) ? (
           <>
             {inspiration ? <p className="student-workspace__inspiration" role="note">Tomaste “{inspiration.title}” como referencia. Describe tu propia idea antes de guardarla.</p> : null}
             <MentorScreen
-              key={selectedProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
-              initialProposal={selectedProposal ? proposalForMentor(selectedProposal) : undefined}
-              missionClassroomId={!selectedProposal ? selectedAssignment?.classroomId : undefined}
+              key={currentProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
+              initialProposal={currentProposal ? proposalForMentor(currentProposal) : undefined}
+              missionClassroomId={!currentProposal ? selectedAssignment?.classroomId : undefined}
               requiredMissionSkills={requiredMissionSkills}
-              restoreEvaluation={Boolean(selectedProposal)}
+              restoreEvaluation={Boolean(currentProposal)}
               contextState={mentorContext}
             savedProposals={ownedProposals.map(proposalForMentor)}
           proposalsLoading={proposalsForCurrentPathLoading}
@@ -413,7 +431,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               onRetryClassrooms={() => setClassroomsReload((value) => value + 1)}
               onLoadClassroomSkills={studentApi.getMyClassroomSkills}
               onResolveConflict={() => { setSelectedProposal(undefined); setProposalsReload((value) => value + 1); navigate("/student/projects"); }}
-              onOpenProposal={setSelectedProposal}
+              onOpenProposal={(proposal) => openProposal(proposal)}
               onSave={async (draft) => {
                 const result = await studentApi.saveProposalDraft({ ...draft, ...(selectedAssignment ? { assignmentVersionId: selectedAssignment.id } : {}) });
                 if (result.ok) setOwnedProposals((current) => [result.data, ...current.filter((entry) => entry.id !== result.data.id)]);
@@ -436,7 +454,14 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             />
           </>
         ) : null}
-        {path === "/student/review" ? (
+        {path === "/student/review" && requestedProposalId && proposalRecoveryFailed ? <main className="student-portal" aria-labelledby="proposal-recovery-title">
+          <h1 id="proposal-recovery-title">No pudimos abrir esa propuesta</h1>
+          {proposalsForCurrentPathError
+            ? <div role="alert"><p>No pudimos comprobar tus propuestas guardadas. Inténtalo de nuevo.</p><button type="button" onClick={() => setProposalsReload((value) => value + 1)}>Reintentar</button></div>
+            : <div role="alert"><p>No encontramos esa propuesta en tu cuenta.</p><button type="button" onClick={() => navigate("/student/projects")}>Volver a Mis proyectos</button></div>}
+        </main> : null}
+        {path === "/student/review" && requestedProposalId && proposalRecoveryPending ? <main className="student-portal" aria-labelledby="proposal-loading-title"><h1 id="proposal-loading-title">Abriendo tu propuesta</h1><p role="status">Cargando tus propuestas guardadas…</p></main> : null}
+        {path === "/student/review" && (!requestedProposalId || currentProposal) ? (
           <ReviewScreen
             onQueue={(request) => studentApi.createReview(request)}
             onRetry={(reviewId) => studentApi.retryReview(reviewId)}
@@ -444,10 +469,10 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
             onGenerateSubmission={(request) => studentApi.createReviewSubmission(request)}
             onPdf={(submissionId) => studentApi.downloadReviewPdf(submissionId)}
             linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
-            initialProposalId={selectedProposal?.id ?? ""}
+            initialProposalId={currentProposal?.id ?? ""}
             onLoadDeliveryHistory={loadMissionDeliveryHistory}
             onOpenTrainer={() => navigate("/student/trainer")}
-            onBack={() => { setSelectedAssignment(undefined); navigate("/student/mentor"); }}
+            onBack={() => { setSelectedAssignment(undefined); navigate(currentProposal ? `/student/mentor?proposalId=${encodeURIComponent(currentProposal.id)}` : "/student/mentor"); }}
           />
         ) : null}
         {path === "/student/trainer" ? <TrainerScreen api={trainerApi} onStartReview={() => navigate("/student/review")} /> : null}
@@ -458,9 +483,10 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
 }
 
 export function App() {
-  const [path, setPath] = useState(() => window.location.pathname);
+  const [location, setLocation] = useState(() => ({ path: window.location.pathname, search: window.location.search }));
+  const { path, search } = location;
   useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname);
+    const onPopState = () => setLocation({ path: window.location.pathname, search: window.location.search });
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -475,13 +501,15 @@ export function App() {
   }, [path]);
 
   const navigate = useCallback((nextPath: string) => {
-    window.history.pushState({}, "", nextPath);
-    setPath(nextPath);
+    const nextLocation = new URL(nextPath, window.location.origin);
+    const href = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    window.history.pushState({}, "", href);
+    setLocation({ path: nextLocation.pathname, search: nextLocation.search });
   }, []);
 
   if (path === "/student/login") return <><StudentLoginScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/auth/complete") return <><OAuthCompletionScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
-  if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
+  if (path.startsWith("/student/")) return <StudentWorkspace path={path} search={search} navigate={navigate} />;
   if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin") return <><div id="route-content" tabIndex={-1}><AdminOverviewScreen diagnosticsApi={adminDiagnosticsApi} queueApi={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/diagnostics") return <><div id="route-content" tabIndex={-1}><AdminDiagnosticsScreen api={adminDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;

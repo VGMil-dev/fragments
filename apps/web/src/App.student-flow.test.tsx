@@ -229,6 +229,61 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
   });
 
+  it("restores the requested own proposal when Mentor is opened from its URL", async () => {
+    window.history.replaceState({}, "", "/student/mentor?proposalId=linked-proposal");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "linked-proposal", version: 2, proposal: { title: "Navegación accesible" }, assignmentVersionId: "mission-v1",
+        assignmentContext: { assignmentVersionId: "mission-v1", requiredSkills: [{ id: "required-navigation", name: "Navegación" }], mentorContext: { version: 7, config: { theme: "Navegación para la aplicación" } } } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("linked-proposal:Navegación accesible");
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación para la aplicación");
+    expect(container?.querySelector("[data-testid=mentor-required-skills]")?.textContent).toBe("Navegación");
+  });
+
+  it("does not show an empty Mentor form when a requested proposal is not owned", async () => {
+    window.history.replaceState({}, "", "/student/mentor?proposalId=not-owned");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "another-proposal", version: 1, proposal: { title: "Otra propuesta" } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.querySelector("[role=alert]")?.textContent).toContain("No encontramos esa propuesta en tu cuenta");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")).toBeNull();
+    expect(container?.querySelector("[data-testid=mentor-context]")).toBeNull();
+  });
+
+  it("keeps a requested proposal out of the empty editor when loading proposals fails", async () => {
+    window.history.replaceState({}, "", "/student/mentor?proposalId=linked-proposal");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: false, error: { code: "OTHER", message: "Unavailable" } });
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.querySelector("[role=alert]")?.textContent).toContain("No pudimos comprobar tus propuestas guardadas");
+    expect(container?.querySelector("[role=alert] button")?.textContent).toBe("Reintentar");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")).toBeNull();
+  });
+
+  it("restores the proposal on Review and preserves it when returning to Mentor", async () => {
+    window.history.replaceState({}, "", "/student/review?proposalId=linked-proposal");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
+      { id: "linked-proposal", version: 1, proposal: { title: "Navegación accesible" } },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("linked-proposal");
+    const back = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Volver desde Review");
+    await act(async () => back?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(new URLSearchParams(window.location.search).get("proposalId")).toBe("linked-proposal");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("linked-proposal:Navegación accesible");
+  });
+
   it("shows the linked mission context in Mis proyectos and continues with the same version and required skills", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [
@@ -303,6 +358,7 @@ describe("student mission to Mentor flow", () => {
     const continueProposal = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Huerto escolar"]');
     await act(async () => continueProposal?.click());
     expect(window.location.pathname).toBe("/student/mentor");
+    expect(new URLSearchParams(window.location.search).get("proposalId")).toBe("proposal-one");
     expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toBe("proposal-one:Huerto escolar");
     expect(container?.querySelector("[data-testid=mentor-restore-evaluation]")?.textContent).toBe("true");
   });
