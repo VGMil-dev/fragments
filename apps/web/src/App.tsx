@@ -20,6 +20,7 @@ import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherWorkspaceShell } from "./features/teacher/TeacherWorkspaceShell";
 import { AdminDiagnosticsScreen } from "./features/admin-diagnostics/AdminDiagnosticsScreen.js";
 import { adminDiagnosticsApi } from "./features/admin-diagnostics/admin-diagnostics-api.js";
+import { AdminOverviewScreen } from "./features/admin-console/AdminOverviewScreen.js";
 import { AdminRequestsScreen } from "./features/admin-requests/AdminRequestsScreen.js";
 import { adminRequestsApi } from "./features/admin-requests/admin-requests-api.js";
 import { AdminQueueSummaryScreen } from "./features/admin-queue/AdminQueueSummaryScreen.js";
@@ -452,6 +453,7 @@ export function App() {
   if (path === "/auth/complete") return <><OAuthCompletionScreen navigate={navigate} /><footer className="route-version"><BuildVersion /></footer></>;
   if (path.startsWith("/student/")) return <StudentWorkspace path={path} navigate={navigate} />;
   if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin") return <><div id="route-content" tabIndex={-1}><AdminOverviewScreen diagnosticsApi={adminDiagnosticsApi} queueApi={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/diagnostics") return <><div id="route-content" tabIndex={-1}><AdminDiagnosticsScreen api={adminDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/requests") return <><div id="route-content" tabIndex={-1}><AdminRequestsScreen api={adminRequestsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;

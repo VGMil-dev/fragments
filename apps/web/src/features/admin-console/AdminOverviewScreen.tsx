@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AdminDiagnosticsApi, AdminRequestDiagnostic, DiagnosticRouteFamily } from "../admin-diagnostics/admin-diagnostics-api.js";
 import type { AdminQueueApi, AdminQueueSummary } from "../admin-queue/admin-queue-api.js";
+import { AdminConsoleNavigation } from "./AdminConsoleNavigation.js";
 import "./admin-overview.css";
 
 type ViewState<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; reason: "AUTH_REQUIRED" | "FORBIDDEN" | "OTHER" };
@@ -16,13 +17,6 @@ const familyLabels: Record<DiagnosticRouteFamily, string> = {
   "admin.diagnostics": "Diagnósticos admin", "admin.requests": "Solicitudes admin",
   "admin.queue": "Cola admin", "admin.audit_log": "Registro admin", other: "Otra ruta",
 };
-
-const toolLinks = [
-  ["/admin/diagnostics", "Diagnósticos"], ["/admin/requests", "Solicitudes académicas"],
-  ["/admin/queue", "Cola de trabajos"], ["/admin/audit-log", "Registro de actividad"],
-  ["/admin/review-events", "Eventos de Review"], ["/admin/mentor-events", "Eventos de Mentor"],
-  ["/admin/trainer-events", "Eventos de Trainer"], ["/admin/teachers", "Cuentas docentes"],
-] as const;
 
 export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsApi: AdminDiagnosticsApi; queueApi: AdminQueueApi }) {
   const [diagnostics, setDiagnostics] = useState<ViewState<AdminRequestDiagnostic[]>>({ status: "loading" });
@@ -68,6 +62,7 @@ export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsA
         {loading ? "Actualizando…" : diagnostics.status === "error" || queue.status === "error" ? "Reintentar resumen" : "Actualizar resumen"}
       </button>
     </header>
+    <AdminConsoleNavigation current="overview" />
 
     {loading ? <p className="admin-overview__loading" role="status" aria-live="polite">Cargando el resumen de administración…</p> : null}
 
@@ -111,11 +106,6 @@ export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsA
         </> : null}
       </section>
     </div>
-
-    <nav className="admin-overview__tools" aria-label="Herramientas administrativas actuales">
-      <h2>Herramientas</h2>
-      <ul>{toolLinks.map(([href, label]) => <li key={href}><a href={href}>{label}<span aria-hidden="true">→</span></a></li>)}</ul>
-    </nav>
   </main>;
 }
 
