@@ -156,3 +156,23 @@ Español y tokens F16. Dentro del aula docente: listado, crear/editar, distingui
 - Si una habilidad trae descripción, mostrar un disclosure `<details>` independiente, accesible y cerrado por defecto; si la descripción falta, no añadir un control vacío. La categoría optativa no aparece cuando no contiene habilidades.
 - Las descripciones largas deben envolver dentro del layout; no cambiar snapshots, contexto de Mentor, rutas, API ni persistencia.
 - La prueba UI verifica nombres, texto largo, descripción ausente, categoría optativa vacía, foco del resumen, disclosure cerrado y apertura.
+# Incremento F18.B.1 — continuidad Dashboard → misión → propuesta
+
+## Alcance
+
+Al activar una misión publicada desde la tarjeta secundaria del Dashboard, se debe buscar en las propuestas ya cargadas una propuesta cuyo `assignmentVersionId` coincida con el `id` de esa versión publicada. También se acepta el mismo vínculo desde `assignmentContext.assignmentVersionId` cuando el campo directo no esté disponible. Si existe coincidencia exacta, la acción continúa esa propuesta usando el handler existente `onContinueProposal`; de lo contrario conserva `onStartMission` y el comportamiento actual.
+
+La identidad del vínculo es la versión publicada exacta. Una propuesta fijada a una versión anterior no se debe relinkear automáticamente a una versión nueva. El CTA principal del borrador más reciente permanece sin cambios.
+
+## Aceptación
+
+1. Given una misión publicada y un borrador ligado al mismo `assignmentVersionId`, when el estudiante activa la tarjeta de esa misión, then el Dashboard continúa el borrador coincidente y no invoca `onStartMission`.
+2. Given una misión sin borrador ligado a esa versión, when se activa la tarjeta, then se invoca `onStartMission` con la misión elegida.
+3. Given que el borrador está ligado a otra versión, when se activa la misión actualmente publicada, then no se cambia la versión guardada: se conserva el inicio de la versión actual.
+4. La etiqueta accesible explica si se continuará una propuesta o se iniciará una misión.
+5. No se agregan llamadas de API, DTO, rutas, autosave, escritura, evaluación ni efectos secundarios.
+6. La regresión del Dashboard falla antes del cambio, pasa después y la suite/typecheck/build web quedan verdes.
+
+## Fuera de alcance
+
+No reordenar o sustituir el borrador principal, no modificar la política de publicación, no fusionar propuestas, no migrar datos y no iniciar ni guardar nada automáticamente.
