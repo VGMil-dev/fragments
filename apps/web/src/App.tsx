@@ -70,6 +70,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [ownedProposals, setOwnedProposals] = useState<ProposalDraftResponse[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState(false);
+  const [proposalsLoadedPath, setProposalsLoadedPath] = useState<string | null>(null);
   const [proposalsReload, setProposalsReload] = useState(0);
   const [submissions, setSubmissions] = useState<AsyncState<StudentSubmissionsResponse>>({ status: "loading" });
   const [submissionsReload, setSubmissionsReload] = useState(0);
@@ -78,6 +79,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const proposalsForCurrentPathLoading = proposalsLoading || proposalsLoadedPath !== path;
+  const proposalsForCurrentPathError = proposalsLoadedPath === path && proposalsError;
   const requiredMissionSkills = selectedProposal
     ? requiredSkillsFromProposalContext(selectedProposal)
     : selectedAssignment?.requiredSkills ?? [];
@@ -206,7 +209,7 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
   }, [selectedId]);
 
   useEffect(() => {
-    if (!["/student/mentor", "/student/dashboard", "/student/projects", "/student/review"].includes(path) || !student) return;
+    if (!["/student/mentor", "/student/dashboard", "/student/projects", "/student/review", "/student/classrooms"].includes(path) || !student) return;
     let active = true;
     setProposalsLoading(true);
     setProposalsError(false);
@@ -214,8 +217,9 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
       if (!active) return;
       if (result.ok) setOwnedProposals(result.data);
       else setProposalsError(true);
+      setProposalsLoadedPath(path);
       setProposalsLoading(false);
-    }).catch(() => { if (active) { setProposalsError(true); setProposalsLoading(false); } });
+    }).catch(() => { if (active) { setProposalsError(true); setProposalsLoadedPath(path); setProposalsLoading(false); } });
     return () => { active = false; };
   }, [path, student, proposalsReload]);
 
@@ -308,8 +312,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           classroomsError={classroomsError}
           onRetryClassrooms={() => setClassroomsReload((value) => value + 1)}
           proposals={ownedProposals}
-          proposalsLoading={proposalsLoading}
-          proposalsError={proposalsError}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
           onRetryProposals={() => setProposalsReload((value) => value + 1)}
           missions={dashboardMissions}
           missionsLoading={dashboardMissionsLoading}
@@ -322,7 +326,19 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
           onCreateProposal={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           onNavigate={navigate}
         /> : null}
-        {path === "/student/classrooms" ? <StudentClassroomsScreen classrooms={myClassrooms} requests={myClassroomRequests} loading={classroomsLoading} error={classroomsError} onRefresh={() => setClassroomsReload((value) => value + 1)} onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }} /> : null}
+        {path === "/student/classrooms" ? <StudentClassroomsScreen
+          classrooms={myClassrooms}
+          requests={myClassroomRequests}
+          loading={classroomsLoading}
+          error={classroomsError}
+          onRefresh={() => setClassroomsReload((value) => value + 1)}
+          proposals={ownedProposals}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
+          onRetryProposals={() => setProposalsReload((value) => value + 1)}
+          onContinueProposal={(proposal) => { setSelectedAssignment(undefined); setSelectedProposal(proposal); navigate("/student/mentor"); }}
+          onStartProposal={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
+        /> : null}
         {path === "/student/projects" ? <main className="student-portal" aria-labelledby="projects-title"><p className="student-screen__eyebrow">MI TRABAJO</p><h1 id="projects-title">Mis proyectos</h1>
           {proposalsLoading ? <p role="status">Cargando tus proyectos…</p> : proposalsError ? <p role="alert">No pudimos cargar tus proyectos. Inténtalo de nuevo más tarde.</p> : ownedProposals.length ? <ul className="student-project-list">{ownedProposals.map((item) => {
             const missionContext = proposalMissionContext(item);
@@ -376,8 +392,8 @@ function StudentWorkspace({ path, navigate }: { path: string; navigate: (path: s
               restoreEvaluation={Boolean(selectedProposal)}
               contextState={mentorContext}
             savedProposals={ownedProposals.map(proposalForMentor)}
-              proposalsLoading={proposalsLoading}
-              proposalsError={proposalsError}
+          proposalsLoading={proposalsForCurrentPathLoading}
+          proposalsError={proposalsForCurrentPathError}
               onRetryProposals={() => setProposalsReload((value) => value + 1)}
               classrooms={myClassrooms}
               classroomsLoading={classroomsLoading}

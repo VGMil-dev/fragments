@@ -1,17 +1,29 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import type { ClassroomSummary, SkillCatalogEntry, StudentAssignment, StudentClassroomRequest } from "@fragments/contracts";
+import type { ClassroomSummary, ProposalDraftResponse, SkillCatalogEntry, StudentAssignment, StudentClassroomRequest } from "@fragments/contracts";
 import { studentApi } from "../../lib/api/student-api-instance";
 import { assignmentsApi } from "../assignments/assignments-api.js";
 import { StudentAssignmentsList } from "../assignments/AssignmentsPanel.js";
 import "./StudentClassroomsScreen.css";
 
-type Props = { classrooms: ClassroomSummary[]; requests: StudentClassroomRequest[]; loading: boolean; error: string | null; onRefresh: () => void; onStartProposal?: (assignment: StudentAssignment) => void };
+type Props = {
+  classrooms: ClassroomSummary[];
+  requests: StudentClassroomRequest[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  proposals?: ProposalDraftResponse[];
+  proposalsLoading?: boolean;
+  proposalsError?: boolean;
+  onRetryProposals?: () => void;
+  onContinueProposal?: (proposal: ProposalDraftResponse) => void;
+  onStartProposal?: (assignment: StudentAssignment) => void;
+};
 
 function statusLabel(status: StudentClassroomRequest["status"]) {
   return status === "pending" ? "Pendiente de aprobación" : status === "active" ? "Activa" : status === "rejected" ? "Rechazada" : "Retirada";
 }
 
-export function StudentClassroomsScreen({ classrooms, requests, loading, error, onRefresh, onStartProposal }: Props) {
+export function StudentClassroomsScreen({ classrooms, requests, loading, error, onRefresh, proposals = [], proposalsLoading = true, proposalsError = false, onRetryProposals, onContinueProposal, onStartProposal }: Props) {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -91,7 +103,7 @@ export function StudentClassroomsScreen({ classrooms, requests, loading, error, 
           const roomAssignments = assignments[room.id];
           return <li key={room.id} className="student-classrooms__card"><div><p>{room.subject} · {room.groupLabel}{room.period ? ` · ${room.period}` : ""}</p><h3>{room.title}</h3><span className="student-classrooms__status">Matrícula activa</span></div>
             <div className="student-classrooms__skills"><h4>Habilidades autorizadas</h4>{roomSkills === null ? <><p role="alert">No pudimos cargar las habilidades de esta aula.</p><button className="student-classrooms__link" type="button" aria-label={`Reintentar habilidades de ${room.title}`} onClick={() => void loadSkills(room.id)}>Reintentar habilidades</button></> : roomSkills === undefined ? <p role="status">Cargando habilidades…</p> : roomSkills.length ? <ul>{roomSkills.map((skill) => <li key={skill.id}>{skill.name}</li>)}</ul> : <p>Aún no hay habilidades habilitadas.</p>}</div>
-            <div className="student-classrooms__missions">{roomAssignments === undefined ? <p role="status">Cargando misiones…</p> : roomAssignments === null ? <><p role="alert">No pudimos cargar las misiones de esta aula.</p><button className="student-classrooms__link" type="button" aria-label={`Reintentar misiones de ${room.title}`} onClick={() => void loadMissions(room.id)}>Reintentar misiones</button></> : <StudentAssignmentsList assignments={roomAssignments} {...(onStartProposal ? { onStartProposal } : {})} />}</div>
+            <div className="student-classrooms__missions">{roomAssignments === undefined ? <p role="status">Cargando misiones…</p> : roomAssignments === null ? <><p role="alert">No pudimos cargar las misiones de esta aula.</p><button className="student-classrooms__link" type="button" aria-label={`Reintentar misiones de ${room.title}`} onClick={() => void loadMissions(room.id)}>Reintentar misiones</button></> : <StudentAssignmentsList assignments={roomAssignments} proposals={proposals} proposalsLoading={proposalsLoading} proposalsError={proposalsError} {...(onRetryProposals ? { onRetryProposals } : {})} {...(onContinueProposal ? { onContinueProposal } : {})} {...(onStartProposal ? { onStartProposal } : {})} />}</div>
           </li>;
         })}</ul> : <p>Aún no tienes matrículas activas. Cuando el docente apruebe tu solicitud, el aula aparecerá aquí.</p>}
       </section>
