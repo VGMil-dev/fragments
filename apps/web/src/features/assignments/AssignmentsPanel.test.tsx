@@ -9,7 +9,12 @@ import { AssignmentsPanel, StudentAssignmentsList } from "./AssignmentsPanel.js"
 const skill: SkillCatalogEntry = { id: "fixture-skill", name: "Observación", description: null, archived: false, createdAt: "2026-11-22T00:00:00.000Z", updatedAt: "2026-11-22T00:00:00.000Z" };
 const assignment = {
   id: "fixture-assignment", classroomId: "fixture-class", status: "published", draftVersion: 2, publishedVersion: 1,
-  draft: { title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"], requiredSkillIds: [skill.id], optionalSkillIds: [] },
+  draft: { title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"], requiredSkillIds: [skill.id], optionalSkillIds: [],
+    missionRubric: { title: "Rúbrica propia", criteria: [{ id: "criterion-observation", title: "Observación verificable", description: "Registra evidencia comprobable.", weight: 100 }] },
+    deliverables: [
+      { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Describe la pregunta."], dueDate: null, criterionIds: ["criterion-observation"] },
+      { id: "delivery-final", order: 2, title: "Informe final", type: "final" as const, requirements: ["Incluye evidencia."], dueDate: null, criterionIds: ["criterion-observation"] },
+    ] },
   versions: [], updatedAt: "2026-11-22T00:00:00.000Z",
 } as unknown as ClassroomAssignment;
 const fakeProposal = (assignmentVersionId: string): ProposalDraftResponse => ({
@@ -91,6 +96,18 @@ describe("AssignmentsPanel", () => {
       await act(async () => root.unmount());
       container.remove();
     }
+  });
+
+  it("shows the applicable criteria for each deliverable in the teacher preview", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
+    try {
+      await act(async () => root.render(<AssignmentsPanel assignments={[assignment]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />));
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Editar borrador")?.click());
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent === "Vista previa estudiantil")?.click());
+      expect(container.textContent).toContain("Informe final");
+      expect(container.textContent).toContain("Criterios: Observación verificable");
+    } finally { await act(async () => root.unmount()); container.remove(); }
   });
 
   it("shows the mission action and passes its exact published snapshot to the callback", async () => {
