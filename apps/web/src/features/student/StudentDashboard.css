@@ -89,6 +89,32 @@
   pointer-events: none;
 }
 
+.student-dashboard--has-proposal .student-dashboard__project {
+  border-color: var(--dashboard-edge);
+  border-radius: .9rem;
+  background: linear-gradient(110deg, rgb(21 88 201 / 16%), var(--dashboard-surface) 72%);
+  box-shadow: none;
+}
+
+.student-dashboard--has-proposal .student-dashboard__project::after {
+  display: none;
+}
+
+.student-dashboard--single-mission .student-dashboard__project {
+  border-left: 3px solid var(--dashboard-lime);
+}
+
+.student-dashboard--mission-choice .student-dashboard__project {
+  min-height: 0;
+  border-color: var(--dashboard-edge);
+  background: var(--dashboard-surface);
+  box-shadow: none;
+}
+
+.student-dashboard--mission-choice .student-dashboard__project::after {
+  display: none;
+}
+
 .student-dashboard--pixel .student-dashboard__project-art {
   width: 76px;
   border: 1px solid rgb(212 255 36 / 45%);
@@ -152,9 +178,13 @@
 .student-dashboard--pixel .student-dashboard__missions {
   margin: 0 0 1rem;
   padding: clamp(1rem, 2.5vw, 1.5rem);
-  border: 1px solid var(--dashboard-edge);
+  border: 1px solid #4d6891;
+  border-left: 3px solid var(--dashboard-lime);
   border-radius: 1rem;
-  background: var(--dashboard-surface);
+  background:
+    linear-gradient(125deg, rgb(21 88 201 / 14%), transparent 58%),
+    var(--dashboard-surface);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 16%);
 }
 
 .student-dashboard--pixel .student-dashboard__missions-heading .student-screen__eyebrow {
@@ -197,9 +227,16 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 1rem;
-  border: 1px solid #344560;
+  border: 1px solid #526989;
+  border-top: 2px solid var(--dashboard-cobalt);
   border-radius: .75rem;
-  background: var(--dashboard-raised);
+  background: linear-gradient(145deg, #15223a, var(--dashboard-raised) 68%);
+  transition: border-color .15s ease, background-color .15s ease;
+}
+
+.student-dashboard--pixel .student-dashboard__mission-card:hover,
+.student-dashboard--pixel .student-dashboard__mission-card:focus-within {
+  border-color: var(--dashboard-lime);
 }
 
 .student-dashboard--pixel .student-dashboard__mission-source {
@@ -269,6 +306,7 @@
 }
 
 .student-dashboard--pixel .student-dashboard__mission-action--secondary {
+  min-height: 44px;
   padding-inline: .2rem;
   border-color: transparent;
   background: transparent;
@@ -416,6 +454,10 @@
     min-height: 0;
   }
 
+  .student-dashboard--pixel .student-dashboard__mission-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  }
+
   .student-dashboard--pixel .student-dashboard__project-art {
     width: 56px;
   }
@@ -451,6 +493,8 @@
 
   .student-dashboard--pixel .student-dashboard__project {
     grid-template-columns: 1fr;
+    gap: .75rem;
+    padding: 1rem;
   }
 
   .student-dashboard--pixel .student-dashboard__project-art {
@@ -464,6 +508,19 @@
 
   .student-dashboard--pixel .student-dashboard__project-action {
     justify-content: stretch;
+  }
+
+  .student-dashboard--pixel .student-dashboard__missions {
+    padding: .85rem;
+  }
+
+  .student-dashboard--pixel .student-dashboard__mission-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-dashboard--pixel .student-dashboard__mission-card {
+    min-width: 0;
+    padding: .9rem;
   }
 
   .student-dashboard--pixel .student-dashboard__gallery {

@@ -26,6 +26,7 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Siguiente paso");
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("Siguiente paso · borrador v2");
+    expect(html).toContain("student-dashboard--has-proposal");
     expect(html).toContain("Aún no tienes aulas activas");
     expect(html).toContain("Aún no tienes entregas generadas");
     expect(html).toContain("Explorar Galería");
@@ -50,6 +51,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[mission]} />);
 
     expect(html).toContain("Misión publicada · Programación Móvil");
+    expect(html).toContain("student-dashboard--single-mission");
     expect(html).toContain("Misión publicada v4");
     expect(html).toContain("Contexto Mentor v7");
     expect(html).toContain("Habilidades obligatorias");
@@ -66,6 +68,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} missions={[earlierMission, latestMission]} />);
 
     expect(html).toContain("Elige una misión para comenzar");
+    expect(html).toContain("student-dashboard--mission-choice");
     expect(html).toContain("Hay varias misiones publicadas en tus aulas. Puedes elegir cuál explorar primero.");
     expect(html).not.toContain("Misión publicada · Aula de Expo");
     expect(html).toContain("Navegación con Expo");
@@ -77,6 +80,7 @@ describe("StudentDashboard", () => {
     expect(html).toMatch(/<ul[^>]*aria-label="Habilidades obligatorias"[^>]*>[\s\S]*?<li>Accesibilidad<\/li>[\s\S]*?<\/ul>/);
     expect(html).toContain("student-dashboard__mission-action--secondary");
     expect(html).toContain("Ir a Mis aulas");
+    expect(html.indexOf('<section class="student-dashboard__missions"')).toBeLessThan(html.indexOf('<section class="student-dashboard__project"'));
     expect(html).not.toContain("0 XP");
     expect(html).not.toContain("0% de progreso");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
@@ -100,6 +104,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
 
     expect(html).toContain("Bitácora de jardín");
+    expect(html).toContain("student-dashboard--has-proposal");
     expect(html).toContain("Continuar en Mentor");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
