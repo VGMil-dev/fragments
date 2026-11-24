@@ -283,6 +283,15 @@
   font-weight: 700;
 }
 
+.student-dashboard--pixel .student-dashboard__mission-linked-note {
+  margin: .55rem 0 0;
+  padding-top: .55rem;
+  border-top: 1px solid #3b4b63;
+  color: var(--dashboard-muted);
+  font-size: .8rem;
+  line-height: 1.4;
+}
+
 .student-dashboard--pixel .student-dashboard__mission-skills li {
   padding: .2rem .45rem;
   border: 1px solid #516380;

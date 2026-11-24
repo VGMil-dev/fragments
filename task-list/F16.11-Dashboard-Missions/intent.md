@@ -2,4 +2,6 @@
 
 Dar al dashboard una jerarquía visual propia: una acción principal y el siguiente paso académico real, con información del alumno, aulas, borradores y misiones solo desde las fuentes ya conectadas. Conservar el comportamiento que prioriza el borrador propio.
 
+Cuando la propuesta prioritaria ya es la propuesta ligada a una misión visible, conservar el objetivo y las habilidades de esa misión pero presentar la acción una sola vez. Las propuestas vinculadas no prioritarias siguen teniendo su acceso directo.
+
 Sin alterar contratos, permisos, navegación global ni la precedencia de F18.B. La UI será candidata hasta revisión visual.

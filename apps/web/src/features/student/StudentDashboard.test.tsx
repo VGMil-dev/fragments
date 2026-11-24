@@ -63,7 +63,7 @@ describe("StudentDashboard", () => {
     expect(html).not.toContain("Crear mi primer proyecto");
   });
 
-  it("opens the proposal linked by assignmentVersionId with an accurate accessible label", async () => {
+  it("uses one action when the mission-linked proposal is already the primary proposal", async () => {
     const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
     const linkedProposal = { ...proposal, assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
     const onContinueProposal = vi.fn();
@@ -72,12 +72,30 @@ describe("StudentDashboard", () => {
     await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal]} missions={[mission]} onContinueProposal={onContinueProposal} onStartMission={onStartMission} />); });
 
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
-    expect(missionAction?.textContent).toContain("Abrir propuesta");
+    const primaryAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__project-action button");
+    const missionNote = interactionContainer.querySelector<HTMLElement>(".student-dashboard__mission-linked-note");
+    expect(missionAction).toBeNull();
+    expect(missionNote?.textContent).toContain("Tu propuesta vinculada está en el siguiente paso destacado.");
+    expect(primaryAction?.getAttribute("aria-label")).toBe("Abrir propuesta en Mentor: Bitácora de jardín");
+    await act(async () => { primaryAction?.click(); });
+
+    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
+    expect(onStartMission).not.toHaveBeenCalled();
+  });
+
+  it("keeps the mission action when its linked proposal is not the primary proposal", async () => {
+    const mission = { id: "mission-v4", version: 4, mentorContextVersion: 7, createdAt: "2026-11-23T12:00:00.000Z", classroomTitle: "Programación Móvil", title: "Navegación con Expo", objectives: ["Implementa una navegación observable"], requiredSkills: [] } as unknown as StudentAssignment;
+    const linkedProposal = { ...proposal, id: "linked-proposal", assignmentVersionId: mission.id } as unknown as ProposalDraftResponse;
+    const latestProposal = { ...proposal, id: "latest-proposal", version: 3, proposal: { title: "Propuesta más reciente" }, updatedAt: "2026-11-20T12:00:00.000Z" } as unknown as ProposalDraftResponse;
+    const onContinueProposal = vi.fn();
+    interactionContainer = document.createElement("div"); document.body.append(interactionContainer); interactionRoot = createRoot(interactionContainer);
+    await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal, latestProposal]} missions={[mission]} onContinueProposal={onContinueProposal} />); });
+
+    const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
     expect(missionAction?.getAttribute("aria-label")).toBe("Abrir propuesta vinculada a misión: Navegación con Expo");
     await act(async () => { missionAction?.click(); });
 
     expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
-    expect(onStartMission).not.toHaveBeenCalled();
   });
 
   it("does not treat assignmentContext as a version match without the top-level assignmentVersionId", async () => {
