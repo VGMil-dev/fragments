@@ -20,5 +20,5 @@
 - Commit de implementación: `5a7180e` (`feat(F16.21): deduplicar misión prioritaria`).
 - Commit documental: `48858a8` (evidencia con pruebas y SHA).
 - Rama publicada por push normal; PR #254 abierto contra `main`: https://github.com/VGMil-dev/fragments/pull/254 (sin fusionar ni desplegar).
-- CI `Fragments CI` run `45357649675` para el head inicial publicado: `in_progress` al consultarlo. La actualización del SHA documental genera otro run; su estado queda pendiente de consulta.
+- CI del head publicado `43052d1`: `Fragments CI` run `45357731460`, job `verify` SUCCESS; el run concluyó `success` en GitHub.
 - QA visual/Ego Lite y datos productivos: no ejecutados.
