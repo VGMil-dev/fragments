@@ -1,6 +1,6 @@
 # Evidencia F18.B.3
 
-Estado: IMPLEMENTACIÓN Y SUITES LOCALES PASS; CI del último ajuste, revisión independiente, merge protegido, release y comprobación productiva pendientes.
+Estado: IMPLEMENTACIÓN INTEGRADA Y v0.5.68 DESPLEGADA; pruebas autenticadas post-release y continuidad de entregas pendientes.
 
 ## Preflight
 
@@ -36,9 +36,19 @@ Estado: IMPLEMENTACIÓN Y SUITES LOCALES PASS; CI del último ajuste, revisión 
 - CI integrado del PR #261: PASS; integración PostgreSQL efímera 4/4 PASS.
 - Revisión independiente encontró que la vista previa docente omitía los criterios por entrega; corregida en `c390c0c`, focal web actualizada a 10/10 PASS.
 - Compatibilidad con despliegue mixto: la API expone `GET /api/mission-plan-capability`; los clientes nuevos negocian `x-fragments-mission-plan: 1` y los DTO incorporan `missionPlanVersion: 1`. La API omite campos nuevos a clientes viejos y conserva su publish F11 legacy. El frontend nuevo consulta capacidad; ante API vieja conserva lectura de misiones existentes pero bloquea autoría/publicación hasta actualizar, sin bloquear el inicio de propuestas estudiantiles.
-- El CI `45446577770` completó SUCCESS para el commit previo `27aba84`; el ajuste posterior tiene su propia validación registrada a continuación. El PR #261 sigue OPEN y MERGEABLE, sin aprobación de GitHub. Merge protegido, release F14, verificación de versión productiva y UX de Ego Lite pendientes.
+- El CI `45446577770` completó SUCCESS para el commit previo `27aba84`; la integración final del PR y la release se registran en la sección posterior.
 - Commit de negociación de compatibilidad: `9ca05deb14d7c35abae4911d6ba7f8b8bece0a0b`. Revisión reflexiva independiente confirma resuelto el aviso de API antigua en estudiante, sin otros hallazgos en este cambio.
-- CI del commit `9ca05de`: ejecución `45448796884` **SUCCESS**; 11/11 tareas, web 54 archivos/301 pruebas, API 69 archivos/264 pruebas e integración `academic-flow.integration.test.ts` 4/4 con PostgreSQL efímero, contratos 31/31. PR #261 sigue OPEN/MERGEABLE y no muestra aprobación GitHub; no se ha integrado, desplegado ni validado con Ego Lite.
+- CI del commit `9ca05de`: ejecución `45448796884` **SUCCESS**; 11/11 tareas, web 54 archivos/301 pruebas, API 69 archivos/264 pruebas e integración `academic-flow.integration.test.ts` 4/4 con PostgreSQL efímero, contratos 31/31.
+
+## Integración y release F14 · 2026-11-24
+
+- PR #261 se integró mediante merge normal `608143fb13865a31373f139e5a248ac88292f4f9`. El commit documental `f1419dac8046c4e6c7214df2f08a01b958149d9e` pasó CI `45449333665` SUCCESS.
+- Tag anotada `v0.5.68` sobre el SHA exacto de main. F14 run `45449889989` completó `verify-build`, atestación Sigstore y `publish-approved-release` en SUCCESS. No se modificaron migraciones ni controles de F14.
+- Verificación pública read-only: `/health` devolvió `ok/ready`; el bundle `/assets/index-UZZrt3PK.js` contiene `v0.5.68` y el SHA exacto `608143fb13865a31373f139e5a248ac88292f4f9`.
+- Ego Lite docente, espacio 44: p1 cargó la versión y SHA exactos tras recarga; la sesión estaba desconectada y mostró el formulario de acceso. No se introdujeron credenciales. Se conservaron p1 y p2; p2 ya estaba sin responder y no se cerró.
+- Ego Lite estudiante, espacio 60: el runtime informó que la tarea había terminado y prohíbe reclamarla/reanudarla sin petición explícita del propietario. No se intentó otra vez. La UI autenticada post-release queda **NO COMPROBADA**.
+- Receptor/historial de entregas y vínculo individual entrega→Review/commit aún no están implementados en este incremento. Calidad semántica Mentor/Review real sigue **NO COMPROBADA**; no hubo evaluación IA ni escritura académica productiva.
+- La cuenta de correo autorizada para promoción a admin sigue bloqueada por falta de mecanismo administrativo autorizado disponible; fuera del alcance de este incremento. No se usó SQL ni se cambió la identidad.
 
 ## Promoción administrativa solicitada, fuera de este incremento
 
