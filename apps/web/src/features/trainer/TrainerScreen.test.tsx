@@ -38,6 +38,10 @@ describe("TrainerScreen", () => {
       expect(container.querySelector(".trainer-empty-state__art")).toBeNull();
       expect(container.querySelector(".trainer-empty-state img")).toBeNull();
       expect(container.textContent).toContain("LABORATORIO SIN REVISIÓN ACTIVA");
+      expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Repositorio");
+      expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Review");
+      expect(container.querySelector('[aria-label="Recorrido de práctica"]')?.textContent).toContain("Trainer");
+      expect(container.querySelectorAll(".trainer-empty-state__step")).toHaveLength(3);
       expect(container.textContent).not.toMatch(/\b(?:XP|puntos|racha|nivel 1)\b/i);
       expect(container.textContent).toContain("La autoevaluación guiada está en preparación");
       await act(async () => link!.click());
