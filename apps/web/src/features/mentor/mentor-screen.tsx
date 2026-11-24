@@ -313,7 +313,7 @@ export function MentorScreen({
           && validText(fields.description, 3000)
           && validText(fields.purpose, 1000);
       case 1: return contextState.status === "success";
-      case 2: return Boolean(proposal && !isDirty && !skillsChanged);
+      case 2: return Boolean(proposal && !skillsChanged);
       case 3: return validText(fields.scope, 3000) && Boolean(goals.length) && !validateTechnologyList(fields.technologies);
       case 4: return Boolean(evaluation?.status === "success" && evaluation.data.proposalVersion === proposal?.version && savedCurrentVersion);
       case 5: return coverReady;
