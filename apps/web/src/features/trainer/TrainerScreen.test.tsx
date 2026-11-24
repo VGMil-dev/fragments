@@ -104,6 +104,60 @@ describe("TrainerScreen", () => {
     }
   });
 
+  it("switches between labelled fake Reviews without mixing their source, context, history or challenge", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const fakeReviewA = { id: "fake-review-a", owner: "fake-student", repo: "fake-project-a", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z",
+      academicContext: { missionTitle: "Fake misión A", missionVersion: 1, mentorContextVersion: 2, classroomTitle: "Fake aula A", requiredSkills: ["Fake habilidad A"] } };
+    const fakeReviewB = { id: "fake-review-b", owner: "fake-student", repo: "fake-project-b", commitSha: "b".repeat(40), updatedAt: "2026-11-02T00:00:00Z",
+      academicContext: { missionTitle: "Fake misión B", missionVersion: 3, mentorContextVersion: 4, classroomTitle: "Fake aula B", requiredSkills: ["Fake habilidad B"] } };
+    const fakeHistoryA = { id: "fake-attempt-a", reviewId: fakeReviewA.id, challengeId: "fake-challenge-a", feature: "Fake historial A", status: "completed" as const, hintsUsed: 1, attemptedAt: "2026-11-01T01:00:00Z" };
+    const fakeHistoryB = { id: "fake-attempt-b", reviewId: fakeReviewB.id, challengeId: "fake-challenge-b", feature: "Fake historial B", status: "pending" as const, hintsUsed: 2, attemptedAt: "2026-11-02T01:00:00Z" };
+    const fakeChallengeA = { id: "fake-challenge-a", reviewId: fakeReviewA.id, projectId: "fake-project-a", commitSha: fakeReviewA.commitSha,
+      feature: "Fake reto A", task: "Observa el caso fake A.", expectedObservation: "La observación fake A coincide.", restoration: "Restaura el caso fake A.", estimatedMinutes: 5,
+      sourcePath: "src/fake-a.ts", sourceLines: [1, 2], hints: ["Fake pista A1", "Fake pista A2", "Fake pista A3"], createdAt: "2026-11-01T02:00:00Z" };
+    const fakeChallengeB = { ...fakeChallengeA, id: "fake-challenge-b", reviewId: fakeReviewB.id, projectId: "fake-project-b", commitSha: fakeReviewB.commitSha,
+      feature: "Fake reto B", task: "Observa el caso fake B.", expectedObservation: "La observación fake B coincide.", restoration: "Restaura el caso fake B.", sourcePath: "src/fake-b.ts" };
+    const history = vi.fn(async (reviewId: string) => ({ ok: true as const, data: reviewId === fakeReviewA.id ? [fakeHistoryA] : [fakeHistoryB] }));
+    const draw = vi.fn(async (reviewId: string) => ({ ok: true as const, data: { challenge: reviewId === fakeReviewA.id ? fakeChallengeA : fakeChallengeB, category: "new" as const, bankSize: 1 } }));
+    const api = { reviews: async () => ({ ok: true, data: [fakeReviewA, fakeReviewB] }), history, draw } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} />));
+      const select = container.querySelector<HTMLSelectElement>("#trainer-review")!;
+      expect(select.value).toBe(fakeReviewA.id);
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain(fakeReviewA.repo);
+      expect(container.querySelector(".trainer-academic-context")?.textContent).toContain("Fake habilidad A");
+      expect(container.querySelector(".trainer-history__list")?.textContent).toContain("Fake historial A");
+      expect(history).toHaveBeenNthCalledWith(1, fakeReviewA.id);
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      expect(draw).toHaveBeenNthCalledWith(1, fakeReviewA.id);
+      expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Fake reto A");
+
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(select, fakeReviewB.id);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(select.value).toBe(fakeReviewB.id);
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain(fakeReviewB.repo);
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain(fakeReviewB.commitSha);
+      expect(container.querySelector(".trainer-academic-context")?.textContent).toContain("Fake habilidad B");
+      expect(container.querySelector(".trainer-history__list")?.textContent).toContain("Fake historial B");
+      expect(container.querySelector(".trainer-history__list")?.textContent).not.toContain("Fake historial A");
+      expect(container.querySelector(".trainer-challenge")).toBeNull();
+      expect(history).toHaveBeenNthCalledWith(2, fakeReviewB.id);
+
+      await act(async () => [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Sortear reto"))!.click());
+      expect(draw).toHaveBeenNthCalledWith(2, fakeReviewB.id);
+      expect(container.querySelector(".trainer-challenge")?.textContent).toContain("Fake reto B");
+      expect(container.querySelector(".trainer-challenge")?.textContent).not.toContain("Fake reto A");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
   it("distinguishes history loading and failure, and retries until a successful empty result", async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     let finishFirst!: (result: { ok: false; error: { code: string; message: string } }) => void;
