@@ -9,10 +9,11 @@
 
 ## Implementación y verificación
 
+- Commit de implementación: `af13e58239ce1ac0206789e2a4f390ee43589eb4` (`fix(mentor): conserva estado de habilidades`).
 - Se quitó `isDirty` global del cálculo de completitud de Habilidades. `skillsChanged` continúa invalidando el estado mientras haya cambios de habilidades sin guardar.
 - Prueba TDD: el caso nuevo falló antes del cambio con `Expected: Habilidades: Completada; Received: Habilidades: Pendiente`.
 - Prueba focal Mentor: 47/47 PASS.
 - Suite web completa: 54 archivos, 310 tests PASS.
 - `pnpm --filter @fragments/web typecheck`: PASS.
 - `pnpm --filter @fragments/web build`: PASS. Vite mostró advertencias ya existentes de chunks grandes y directiva `use client` de lucide-react; el build terminó correctamente.
-- Aún pendiente: commit, PR/CI, release F14, health/bundle y verificación Ego Lite de la corrección desplegada. No se ejecutó Mentor/Review IA ni se guardó el borrador de producción.
+- Aún pendiente: PR/CI, release F14, health/bundle y verificación Ego Lite de la corrección desplegada. No se ejecutó Mentor/Review IA ni se guardó el borrador de producción.
