@@ -20,3 +20,8 @@ Tres ilustraciones generadas y optimizadas en WebP. Permanecen **Candidatas**; n
 - `Get-FileHash -Algorithm SHA256` produjo los hashes listados.
 - No se ejecutaron pruebas de aplicación: no hubo cambios de código.
 - QA visual en pantalla y aceptación del propietario: **PENDIENTE**. Los archivos no se consumen desde la aplicación.
+
+## Registro de integración
+
+- Commit de candidatos: `2af872721d191332fdd5920892327b5efbf242b4`.
+- Verificación fresca tras el commit: `git status --short --branch` confirmó solamente los artefactos de F16.16 antes del registro; `git diff --check` PASS; dimensiones, formato ARGB y rango alfa 0–255 se comprobaron de nuevo antes del commit.
