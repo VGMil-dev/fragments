@@ -564,13 +564,13 @@ export function MentorScreen({
           <h1 id="mentor-title">{stageHeadings[activeStage]}</h1>
           <p className="student-screen__lead">{stageDescription}</p>
         </div>
-        {activeStage === 4 ? null : <section className="mentor-progress-card" aria-label="Progreso del borrador">
+        <section className="mentor-progress-card" aria-label="Progreso del borrador">
           <p>Borrador completado: <strong>{draftProgress} %</strong></p>
           <div className="mentor-progress-card__track" role="progressbar" aria-label="Campos válidos del borrador" aria-valuemin={0} aria-valuemax={100} aria-valuenow={draftProgress}>
             <span style={{ width: `${draftProgress}%` }} />
           </div>
           <DataSourceBadge mode={mode} {...(evaluation?.status === "success" ? { modelId: evaluation.data.analysis.modelId } : {})} />
-        </section>}
+        </section>
       </header>
 
       <div className={`mentor-stage-layout${activeStage === 4 ? " mentor-stage-layout--evaluation" : ""}`}>

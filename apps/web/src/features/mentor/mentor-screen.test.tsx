@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../lib/api/student-api-instance", () => ({ studentApi: {
   getTechnologyCatalog: vi.fn(async () => ({ ok: true, data: { items: [], nextCursor: null } })),
@@ -9,6 +10,8 @@ vi.mock("../../lib/api/student-api-instance", () => ({ studentApi: {
 } }));
 import type { ClassroomSummary, SkillCatalogEntry } from "@fragments/contracts";
 import { MentorScreen } from "./mentor-screen";
+
+const mentorCss = readFileSync("src/features/mentor/mentor-screen.css", "utf8");
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -184,6 +187,9 @@ describe("MentorScreen", () => {
     expect(mountedContainer.querySelector("h1")?.textContent).toBe("Evalúa tu propuesta");
     expect(mountedContainer.querySelectorAll(".mentor-stage-nav--horizontal li")).toHaveLength(6);
     expect(mountedContainer.querySelector(".mentor-stage-nav--horizontal li button[aria-current='step']")?.textContent).toContain("Evaluación");
+    expect(Array.from(mountedContainer.querySelectorAll(".mentor-stage-nav__state")).map((state) => state.textContent)).toEqual([
+      "Completada", "Modo personal", "Completada", "Completada", "Etapa actual", "Pendiente",
+    ]);
     expect(mountedContainer.querySelector("[aria-label='Preparación de la propuesta']")?.getAttribute("aria-valuenow")).toBe("100");
     const evaluationForm = mountedContainer.querySelector<HTMLFormElement>(".mentor-form--evaluation");
     expect(evaluationForm?.childElementCount).toBe(0);
@@ -195,7 +201,8 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).toContain("Guardar borrador");
     expect(mountedContainer.textContent).toContain("Si cumple los criterios, la propuesta se publicará automáticamente");
     expect(mountedContainer.querySelector<HTMLButtonElement>(".mentor-evaluate-button")?.disabled).toBe(false);
-    expect(mountedContainer.querySelector(".mentor-progress-card")).toBeNull();
+    expect(mountedContainer.querySelector(".mentor-progress-card")?.textContent).toContain("Borrador completado: 100 %");
+    expect(mountedContainer.querySelector(".mentor-progress-card [role='progressbar']")?.getAttribute("aria-valuenow")).toBe("100");
     expect(mountedContainer.textContent).not.toContain("Descargar plantilla Word");
     expect(mountedContainer.textContent).not.toContain("Importar propuesta (.docx)");
   });
@@ -464,6 +471,14 @@ describe("MentorScreen", () => {
     expect(mountedContainer.textContent).toContain("Modo personal");
     expect(mountedContainer.querySelector(".mentor-field")).toBeNull();
     expect(mountedContainer.querySelector(".mentor-context--academic")).toBeNull();
+  });
+
+  it("keeps stage labels and real statuses visible in the compact stepper breakpoint", () => {
+    expect(mentorCss).toContain("@media (max-width: 1100px)");
+    expect(mentorCss).toContain(".mentor-stage-nav--horizontal ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }");
+    expect(mentorCss).toContain(".mentor-stage-nav__state { position: static; grid-column: 2;");
+    expect(mentorCss).toContain("@media (max-width: 520px) {");
+    expect(mentorCss).toContain(".mentor-stage-nav--horizontal ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
   });
 
   it("shows only the authorized read-only academic context when one is published", async () => {
