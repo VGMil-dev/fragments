@@ -107,6 +107,7 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         <ul className="student-dashboard__mission-list">
           {visibleOtherMissions.map((mission) => {
             const linkedProposal = proposalForMission(mission);
+            const linkedProposalIsPrimary = proposalIsPrimary && linkedProposal?.id === continueProposal?.id;
             return <li key={mission.id}>
             <article className="student-dashboard__mission-card">
               <p className="student-dashboard__mission-source">{mission.subject} <span aria-hidden="true">·</span> {mission.classroomTitle}</p>
@@ -119,9 +120,11 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
                   {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
                 </ul>
               </div> : null}
-              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Abrir propuesta vinculada a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
-                {linkedProposal ? "Abrir propuesta" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
-              </button>
+              {linkedProposalIsPrimary
+                ? <p className="student-dashboard__mission-linked-note">Tu propuesta vinculada está en el siguiente paso destacado.</p>
+                : <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Abrir propuesta vinculada a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
+                  {linkedProposal ? "Abrir propuesta" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
+                </button>}
             </article>
           </li>;
           })}
