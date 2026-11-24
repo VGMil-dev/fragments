@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { AssignmentDraft, ClassroomAssignment, SkillCatalogEntry, StudentAssignment } from "@fragments/contracts";
+import type { AssignmentDraft, ClassroomAssignment, ProposalDraftResponse, SkillCatalogEntry, StudentAssignment } from "@fragments/contracts";
 import "./assignments-panel.css";
 
 type Props = {
@@ -75,7 +75,23 @@ function AssignmentSkillSnapshotList({ label, skills }: { label: string; skills:
   </section>;
 }
 
-export function StudentAssignmentsList({ assignments, onStartProposal }: { assignments: StudentAssignment[]; onStartProposal?: (assignment: StudentAssignment) => void }) {
+export function StudentAssignmentsList({
+  assignments,
+  proposals = [],
+  proposalsLoading = true,
+  proposalsError = false,
+  onRetryProposals,
+  onContinueProposal,
+  onStartProposal,
+}: {
+  assignments: StudentAssignment[];
+  proposals?: ProposalDraftResponse[];
+  proposalsLoading?: boolean;
+  proposalsError?: boolean;
+  onRetryProposals?: () => void;
+  onContinueProposal?: (proposal: ProposalDraftResponse) => void;
+  onStartProposal?: (assignment: StudentAssignment) => void;
+}) {
   return <section className="student-assignments" aria-labelledby="student-assignments-title">
     <h2 id="student-assignments-title">Misiones del aula</h2>
     {assignments.length ? <ul>{assignments.map((assignment) => <li key={assignment.id}>
@@ -97,7 +113,12 @@ export function StudentAssignmentsList({ assignments, onStartProposal }: { assig
             {assignment.mentorContext.config.requirements.length ? <><h4>Requisitos de la misión y del aula</h4><ul>{assignment.mentorContext.config.requirements.map((requirement, index) => <li key={`${index}-${requirement}`}>{requirement}</li>)}</ul></> : null}
           </div>
         </details>
-        <button type="button" aria-label={`Iniciar propuesta para ${assignment.title}`} disabled={!onStartProposal} onClick={() => onStartProposal?.(assignment)}>Iniciar propuesta</button>
+        {proposalsLoading ? <p role="status">Espera mientras consultamos tus propuestas antes de iniciar.</p> : proposalsError ? <div role="alert"><p>No pudimos consultar tus propuestas. Para evitar duplicados, vuelve a intentarlo antes de iniciar.</p>{onRetryProposals ? <button type="button" onClick={onRetryProposals}>Reintentar propuestas</button> : null}</div> : (() => {
+          const linkedProposal = proposals.find((proposal) => proposal.assignmentVersionId === assignment.id);
+          return linkedProposal
+            ? <button type="button" aria-label={`Abrir propuesta vinculada: ${assignment.title}`} disabled={!onContinueProposal} onClick={() => onContinueProposal?.(linkedProposal)}>Abrir propuesta vinculada</button>
+            : <button type="button" aria-label={`Iniciar propuesta: ${assignment.title}`} disabled={!onStartProposal} onClick={() => onStartProposal?.(assignment)}>Iniciar propuesta</button>;
+        })()}
       </article>
     </li>)}</ul> : <p className="assignments-panel__empty">Tu docente aún no ha publicado misiones en esta aula.</p>}
   </section>;

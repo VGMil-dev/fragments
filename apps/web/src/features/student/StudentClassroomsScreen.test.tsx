@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StudentAssignment } from "@fragments/contracts";
+import type { ProposalDraftResponse, StudentAssignment } from "@fragments/contracts";
 
 const { studentApi, assignmentsApi } = vi.hoisted(() => ({ studentApi: { getMyClassroomSkills: vi.fn() }, assignmentsApi: { listStudent: vi.fn() } }));
 vi.mock("../../lib/api/student-api-instance", () => ({ studentApi }));
@@ -22,6 +22,7 @@ const mission = {
     criteria: [{ id: "criterion-1", title: "Evidencia", description: "Cita observaciones verificables.", weight: 100 }], requirements: ["Registrar evidencia"],
   } }, createdAt: "2026-11-19T12:00:00.000Z",
 } as StudentAssignment;
+const fakeOwnProposal = { id: "fixture-own-proposal", version: 2, proposal: { title: "Propuesta propia" }, assignmentVersionId: mission.id, updatedAt: "2026-11-24T00:00:00.000Z" } as unknown as ProposalDraftResponse;
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
@@ -97,6 +98,32 @@ describe("StudentClassroomsScreen", () => {
     expect(studentApi.getMyClassroomSkills).toHaveBeenCalledOnce();
     expect(container.textContent).toContain("Misión recuperada");
     expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("passes own proposals to the mission list and continues only the exact linked proposal", async () => {
+    studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
+    assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    const onContinueProposal = vi.fn();
+    const onStartProposal = vi.fn();
+    container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+    await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} proposals={[fakeOwnProposal]} proposalsLoading={false} proposalsError={false} onRetryProposals={vi.fn()} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />));
+
+    const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Misión recuperada"]');
+    expect(action?.textContent).toContain("Abrir propuesta vinculada");
+    await act(async () => action?.click());
+    expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(fakeOwnProposal);
+    expect(onStartProposal).not.toHaveBeenCalled();
+  });
+
+  it("blocks mission starts by default until the own-proposals state is supplied", async () => {
+    studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
+    assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    const onStartProposal = vi.fn();
+    container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+    await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} onStartProposal={onStartProposal} />));
+    expect(container.textContent).toContain("Espera mientras consultamos tus propuestas antes de iniciar.");
+    expect(container.querySelector('button[aria-label="Iniciar propuesta: Misión recuperada"]')).toBeNull();
+    expect(onStartProposal).not.toHaveBeenCalled();
   });
 
   it("retries a failed skill request for only that classroom resource", async () => {

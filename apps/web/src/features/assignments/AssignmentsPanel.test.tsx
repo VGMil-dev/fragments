@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { ClassroomAssignment, SkillCatalogEntry, StudentAssignment } from "@fragments/contracts";
+import type { ClassroomAssignment, ProposalDraftResponse, SkillCatalogEntry, StudentAssignment } from "@fragments/contracts";
 import { AssignmentsPanel, StudentAssignmentsList } from "./AssignmentsPanel.js";
 
 const skill: SkillCatalogEntry = { id: "fixture-skill", name: "Observación", description: null, archived: false, createdAt: "2026-11-22T00:00:00.000Z", updatedAt: "2026-11-22T00:00:00.000Z" };
@@ -12,6 +12,10 @@ const assignment = {
   draft: { title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: ["Registrar hallazgos"], requiredSkillIds: [skill.id], optionalSkillIds: [] },
   versions: [], updatedAt: "2026-11-22T00:00:00.000Z",
 } as ClassroomAssignment;
+const fakeProposal = (assignmentVersionId: string): ProposalDraftResponse => ({
+  id: "fixture-proposal-own", version: 1, proposal: { title: "Propuesta QA propia" },
+  assignmentVersionId, updatedAt: "2026-11-24T00:00:00.000Z",
+} as unknown as ProposalDraftResponse);
 
 describe("AssignmentsPanel", () => {
   it("shows draft editing and publication actions with skill categories", () => {
@@ -101,7 +105,7 @@ describe("AssignmentsPanel", () => {
       } }, createdAt: "2026-11-22T00:00:00.000Z",
     } as StudentAssignment;
     const onStartProposal = vi.fn();
-    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />);
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} onStartProposal={onStartProposal} />);
     expect(html).toContain("Misiones del aula");
     expect(html).toContain("Habilidades requeridas");
     expect(html).toContain("Observación");
@@ -122,14 +126,14 @@ describe("AssignmentsPanel", () => {
     document.body.append(container);
     const root = createRoot(container);
     try {
-      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} onStartProposal={onStartProposal} />));
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} onStartProposal={onStartProposal} />));
       const context = container.querySelector<HTMLDetailsElement>(".student-assignments__context");
       const contextSummary = context?.querySelector("summary");
       expect(context?.open).toBe(false);
       expect(container.querySelector(".student-assignments__mission-version")?.textContent).toBe("Misión publicada v1 · Contexto Mentor v3");
       await act(async () => contextSummary?.click());
       expect(context?.open).toBe(true);
-      const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta para Explora tu entorno"]');
+      const button = container.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta: Explora tu entorno"]');
       expect(button).toBeTruthy();
       await act(async () => button?.click());
       expect(onStartProposal).toHaveBeenCalledExactlyOnceWith(studentAssignment);
@@ -147,6 +151,54 @@ describe("AssignmentsPanel", () => {
     }
   });
 
+  it("opens only the proposal whose assignmentVersionId exactly matches the mission id", async () => {
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const linked = fakeProposal(studentAssignment.id);
+    const onContinueProposal = vi.fn();
+    const onStartProposal = vi.fn();
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[linked]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />);
+
+    expect(html).toContain("Abrir propuesta vinculada");
+    expect(html).not.toContain("Iniciar propuesta");
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
+    try {
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[linked]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />));
+      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Explora tu entorno"]');
+      await act(async () => action?.click());
+      expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linked);
+      expect(onStartProposal).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); container.remove(); }
+  });
+
+  it("does not use nested context ids or different mission versions as a proposal match", () => {
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const stale = { ...fakeProposal("fixture-version-old"), assignmentContext: { assignmentVersionId: studentAssignment.id } } as ProposalDraftResponse;
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[stale]} proposalsLoading={false} proposalsError={false} />);
+    expect(html).toContain("Iniciar propuesta");
+    expect(html).not.toContain("Abrir propuesta vinculada");
+  });
+
+  it("blocks starting while proposals are loading or unavailable and offers retry on error", async () => {
+    const studentAssignment = { id: "fixture-version-match", assignmentId: "fixture-assignment", version: 1, classroomId: "fixture-class", classroomTitle: "Ciencias", subject: "Ciencias", title: "Explora tu entorno", instructions: "Describe lo que observas.", objectives: [], requiredSkills: [], optionalSkills: [], status: "published", mentorContextVersion: 3, mentorContext: { version: 3, publishedAt: "2026-11-22T00:00:00.000Z", config: { subject: "Ciencias", theme: "Explora", assignment: "Describe.", requirements: [], expectedLevel: "Bachillerato", rubricTitle: "Rúbrica fake", criteria: [] } }, createdAt: "2026-11-22T00:00:00.000Z" } as StudentAssignment;
+    const onStartProposal = vi.fn();
+    const loading = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading proposalsError={false} onStartProposal={onStartProposal} />);
+    expect(loading).toContain("Espera mientras consultamos tus propuestas antes de iniciar.");
+    expect(loading).not.toContain("Iniciar propuesta");
+
+    const onRetryProposals = vi.fn();
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
+    try {
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError onRetryProposals={onRetryProposals} onStartProposal={onStartProposal} />));
+      expect(container.textContent).toContain("No pudimos consultar tus propuestas. Para evitar duplicados, vuelve a intentarlo antes de iniciar.");
+      expect(container.textContent).not.toContain("Iniciar propuesta");
+      await act(async () => container.querySelector<HTMLButtonElement>("button")?.click());
+      expect(onRetryProposals).toHaveBeenCalledOnce();
+      expect(onStartProposal).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); container.remove(); }
+  });
+
   it("keeps skill names visible and puts only existing descriptions behind individual disclosures", async () => {
     const longDescription = "D".repeat(1000);
     const studentAssignment = {
@@ -162,7 +214,7 @@ describe("AssignmentsPanel", () => {
       } }, createdAt: "2026-11-23T00:00:00.000Z",
     } as StudentAssignment;
 
-    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} />);
+    const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} />);
     expect(html).toContain("Arquitectura");
     expect(html).toContain("Lectura");
     expect(html).toContain(longDescription);
@@ -176,7 +228,7 @@ describe("AssignmentsPanel", () => {
     document.body.append(container);
     const root = createRoot(container);
     try {
-      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} />));
+      await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[]} proposalsLoading={false} proposalsError={false} />));
       const details = container.querySelector<HTMLDetailsElement>(".student-assignments__skill-description");
       const summary = details?.querySelector("summary");
       expect(details?.open).toBe(false);
