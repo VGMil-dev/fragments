@@ -409,12 +409,23 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
         return trainerRepository.ensureSession(sessionHash, now);
       },
     };
+    let trainerChallengeProviderCalls = 0;
     const trainerService = createTrainerService({
       reviews: {
         listCompleted: async (student) => student === studentId ? reviewStore.listCompletedForStudent(studentId) : [],
-        async getEvidence() { return null; },
+        async getEvidence(reviewId) {
+          const record = await reviewStore.getById(reviewId);
+          if (!record) return null;
+          const snapshotWithoutDigest = { ...snapshotBody, commitSha: record.commitSha };
+          const snapshot = { ...snapshotWithoutDigest, digest: await digestSnapshot(snapshotWithoutDigest) };
+          return { id: record.id, projectId: record.projectId, commitSha: record.commitSha, owner: record.owner, repo: record.repo, snapshot, analysis: record.analysis };
+        },
       },
-      provider: { async createChallenge() { throw new Error("La prueba no solicita retos ni ejecuta código de repositorios."); } },
+      provider: { async createChallenge(input) {
+        trainerChallengeProviderCalls++;
+        return { precondition: "La navegación tiene dos destinos definidos.", mutation: `Cambia temporalmente la navegación en ${input.evidence.path}.`,
+          demonstration: "Comprueba qué ruta deja de estar disponible.", restoration: "Revierte el cambio temporal y confirma los dos destinos.", estimatedMinutes: 8 };
+      } },
       store: trainerStore,
     });
     const auth = {
@@ -535,6 +546,35 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(trainer.data).toContainEqual(expect.objectContaining({ id: nextDelivery.data.id, commitSha: followupCommitSha }));
       expect(trainer.data).toContainEqual(expect.objectContaining({ id: finalDelivery.data.id, commitSha: finalCommitSha }));
       expect(JSON.stringify(trainer.data)).not.toMatch(/studentId|proposalId|assignmentVersionId|classroomId|score|findings/);
+
+      const trainerCookie = trainerResponse.headers.get("set-cookie")?.split(";")[0];
+      expect(trainerCookie).toContain("fragments_trainer_session=");
+      const drawResponse = await fetch(`${base}/api/trainer/draw`, { method: "POST", headers: { ...headers, cookie: trainerCookie!, "content-type": "application/json" },
+        body: JSON.stringify({ reviewId: queued.data.id }) });
+      expect(drawResponse.status).toBe(200);
+      const drawResult = await drawResponse.json() as { data: { challenge: { id: string; reviewId: string; commitSha: string; sourcePath: string; estimatedMinutes: number }; category: string; bankSize: number } };
+      expect(drawResult.data).toMatchObject({ category: "new", bankSize: 1, challenge: {
+        reviewId: queued.data.id, commitSha, sourcePath: "src/navigation.ts", estimatedMinutes: 8,
+      } });
+      expect(JSON.stringify(drawResult)).not.toMatch(/score|findings|studentId|assignmentVersionId/);
+      expect(trainerChallengeProviderCalls).toBe(1);
+
+      const attempt = { reviewId: queued.data.id, challengeId: drawResult.data.challenge.id, status: "completed", hintsUsed: 1,
+        idempotencyKey: "0638cb24-e634-4331-b053-10b2c9e98313" };
+      const attemptResponse = await fetch(`${base}/api/trainer/attempts`, { method: "POST", headers: { ...headers, cookie: trainerCookie!, "content-type": "application/json" },
+        body: JSON.stringify(attempt) });
+      expect(attemptResponse.status).toBe(201);
+      const recorded = await attemptResponse.json() as { data: { id: string; status: string; challengeId: string; hintsUsed: number } };
+      expect(recorded.data).toMatchObject({ status: "completed", challengeId: drawResult.data.challenge.id, hintsUsed: 1 });
+      const retryResponse = await fetch(`${base}/api/trainer/attempts`, { method: "POST", headers: { ...headers, cookie: trainerCookie!, "content-type": "application/json" },
+        body: JSON.stringify(attempt) });
+      expect(retryResponse.status).toBe(201);
+      await expect(retryResponse.json()).resolves.toMatchObject({ data: { id: recorded.data.id } });
+      const historyResponse = await fetch(`${base}/api/trainer/history?reviewId=${queued.data.id}`, { headers: { ...headers, cookie: trainerCookie! } });
+      expect(historyResponse.status).toBe(200);
+      await expect(historyResponse.json()).resolves.toMatchObject({ data: [expect.objectContaining({ id: recorded.data.id, reviewId: queued.data.id,
+        challengeId: drawResult.data.challenge.id, status: "completed", hintsUsed: 1 })] });
+      expect(await db.trainerAttempt.count({ where: { reviewId: queued.data.id, session: { sessionHash: { in: [...trainerSessionHashes] } } } })).toBe(1);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
