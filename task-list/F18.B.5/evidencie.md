@@ -1,6 +1,6 @@
 # Evidencia F18.B.5
 
-Estado: implementación local; integración PR y despliegue F14 pendientes.
+Estado: implementado, integrado y desplegado en producción por F14. Validación UI autenticada en Ego Lite post-release: pendiente/no comprobada.
 
 ## Hallazgo
 
@@ -24,4 +24,12 @@ La continuación enviaba a `/student/trainer` sin `reviewId`. `TrainerScreen` to
 
 Commit de implementación: `509992ce9325fba563adcabd96f6d4194f4cd0ca` (`feat(F18.B.5): selecciona Review final al continuar`).
 
-CI del PR, merge, release, despliegue y comprobación productiva: pendientes. CU-20/CU-23/CU-24 globales siguen PARCIALES hasta pruebas con Review real autorizada; no se ejecutó evaluación IA.
+## Integración y despliegue
+
+- PR [#295](https://github.com/VGMil-dev/fragments/pull/295) pasó CI [#45643593723](https://github.com/VGMil-dev/fragments/actions/runs/45643593723) y se integró mediante merge normal en `main`, SHA `3165a638ef5b08775149021ff5d04be8760c3156`.
+- Release anotada `v0.5.84`, tag object `f14d9c777759cdf35c630ea8c607060ab9cf29d9`, apunta al merge SHA exacto. F14 [run #45644130350](https://github.com/VGMil-dev/fragments/actions/runs/45644130350) terminó SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`; pruebas de migración/backup/restore, agente, test, typecheck, lint, build, metadata, ARM64 y atestación pasaron.
+- El agente pull y aplicador F14 procesaron la release normalmente. Ledger de producción: release `458302326`, tag `v0.5.84`, SHA exacto, estado `deployed`, completado `2026-11-25T15:29:26Z`. Backup `fragments-prod-2026-11-25T15-29-11-736Z.dump`, 98,423 bytes, `restored_to_temporary_database`, SHA-256 `a638cb740fcaf867247d1d7a58bb40db78298816933cb3f54c669ac68a565bcf`.
+- Verificación del host: API/web Fragments healthy en imagen SHA exacta; `https://fragments.gavanti.org/health` devolvió `ok/database=ready`. Poll timer y apply path activos. `/dev/sda1`: 103 GB disponibles (47 % usado), inodos 11 %. Tymeslot, ImagenEC y Pits permanecen saludables. La imagen previa `c1dda89e31038682d45bbbcde468075689886f11` se conserva como rollback. No se ejerció rollback productivo.
+- Ego Lite autenticado post-release no disponible: Spaces autorizados 44/80 no aparecen en los perfiles consultados. Por ello la selección visible del Review final en Trainer queda **NO COMPROBADA** en producción. No se creó un Space nuevo, no se alteraron sesiones, no se generó Review/reto/intento y no se llamó IA.
+
+CU-20 y CU-24 globales siguen PARCIALES/NO COMPROBADOS para el recorrido real con Review completada; CU-23 no cambia. La prueba automatizada usa fixtures locales y no verifica semántica de IA. Proveedor, presupuesto, calidad Mentor/Review, accesibilidad integral y estabilidad de piloto permanecen NO COMPROBADOS.
