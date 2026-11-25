@@ -28,6 +28,7 @@ Estado: implementado y desplegado; verificación funcional del PDF en producció
 - `pnpm exec vitest run apps/api/src/adapters/ai/pdf-renderer.test.ts apps/api/src/features/mentor/service.test.ts` — 2 archivos, 13/13 PASS. `pnpm --filter @fragments/api typecheck` PASS. `git diff --check` PASS.
 - Un intento adicional de inspección con `pdfinfo` no pudo generar el archivo temporal de prueba porque `tsx` no resolvió desde la raíz; el segundo intento de script temporal fue rechazado por la política del host. No se declara esa verificación de parser como PASS; el test automatizado verifica los objetos y el texto escapado.
 - Sin acceso autenticado de Ego Lite en Space 80, la descarga post-fix en producción sigue **NO COMPROBADA**. Sin despliegue posterior de este cambio, los acentos de producción también siguen **NO COMPROBADOS**. No hubo llamadas IA ni escrituras productivas.
+- Commit de implementación: `f8551b8` (`fix(F04.1): preserve Spanish text in mentor PDFs`). La rama aún requiere PR, CI e integración F14 antes de cualquier comprobación productiva.
 
 ## PR y release F14
 
