@@ -22,4 +22,6 @@ La continuación enviaba a `/student/trainer` sin `reviewId`. `TrainerScreen` to
 - `pnpm --filter @fragments/web build` — PASS; persisten avisos existentes de bundle >500 kB y directivas `use client` de lucide-react.
 - `git diff --check` — PASS.
 
-Commit de implementación/evidencia: pendiente. CI del PR, merge, release, despliegue y comprobación productiva: pendientes. CU-20/CU-23/CU-24 globales siguen PARCIALES hasta pruebas con Review real autorizada; no se ejecutó evaluación IA.
+Commit de implementación: `509992ce9325fba563adcabd96f6d4194f4cd0ca` (`feat(F18.B.5): selecciona Review final al continuar`).
+
+CI del PR, merge, release, despliegue y comprobación productiva: pendientes. CU-20/CU-23/CU-24 globales siguen PARCIALES hasta pruebas con Review real autorizada; no se ejecutó evaluación IA.
