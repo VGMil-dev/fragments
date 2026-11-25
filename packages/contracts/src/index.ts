@@ -300,6 +300,11 @@ export const TeacherStudentEntrySchema = z.object({
   registeredAt: z.iso.datetime(),
   projectCount: z.number().int().min(0),
 }).strict();
+export const TeacherStudentIdentitySchema = TeacherStudentEntrySchema.omit({ projectCount: true });
+export const TeacherStudentIdentityPageSchema = z.object({
+  items: z.array(TeacherStudentIdentitySchema).max(50),
+  nextOffset: z.number().int().min(0).nullable(),
+}).strict();
 export const TeacherStudentsPageSchema = z.object({
   items: z.array(TeacherStudentEntrySchema).max(50),
   nextOffset: z.number().int().min(0).nullable(),
@@ -714,6 +719,8 @@ export type AcademicGalleryEntry = z.infer<typeof AcademicGalleryEntrySchema>;
 export type AcademicGalleryPage = z.infer<typeof AcademicGalleryPageSchema>;
 export type AcademicGalleryDetail = z.infer<typeof AcademicGalleryDetailSchema>;
 export type TeacherStudentEntry = z.infer<typeof TeacherStudentEntrySchema>;
+export type TeacherStudentIdentity = z.infer<typeof TeacherStudentIdentitySchema>;
+export type TeacherStudentIdentityPage = z.infer<typeof TeacherStudentIdentityPageSchema>;
 export type TeacherStudentsPage = z.infer<typeof TeacherStudentsPageSchema>;
 export type Classroom = z.infer<typeof ClassroomSchema>;
 export type ClassroomSummary = z.infer<typeof ClassroomSummarySchema>;

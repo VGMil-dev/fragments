@@ -15,7 +15,7 @@ import {
   SkillCatalogEntrySchema,
   StudentClassroomRequestsSchema,
   StudentClassroomsSchema,
-  TeacherStudentsPageSchema,
+  TeacherStudentIdentityPageSchema,
 } from "@fragments/contracts";
 import { createApiClient } from "./api-client.js";
 
@@ -40,7 +40,7 @@ export const classroomApi = {
   archiveSkill(id: string) { return api.request(`/api/teacher/skills/${id}/archive`, SkillCatalogEntrySchema, { method: "POST" }); },
   classroomSkills(classroomId: string) { return api.request(`/api/teacher/classrooms/${classroomId}/skills`, ClassroomSkillsResponseSchema); },
   setSkill(classroomId: string, skillId: string, enabled: boolean) { return api.request(`/api/teacher/classrooms/${classroomId}/skills/${skillId}`, ClassroomSkillAvailabilitySchema, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled }) }); },
-  students() { return api.request("/api/teacher/students?offset=0&limit=50", TeacherStudentsPageSchema); },
+  students() { return api.request("/api/teacher/student-identities?offset=0&limit=50", TeacherStudentIdentityPageSchema); },
   myClassrooms() { return api.request("/api/me/classrooms", StudentClassroomsSchema); },
   myRequests() { return api.request("/api/me/classroom-requests", StudentClassroomRequestsSchema); },
 };

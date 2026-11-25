@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Archive, ArrowLeft, BookOpen, Check, ClipboardList, Pencil, Plus, Users, X } from "lucide-react";
-import type { AssignmentDraft, Classroom, ClassroomAssignment, ClassEnrollment, SkillCatalogEntry, TeacherStudentEntry } from "@fragments/contracts";
+import type { AssignmentDraft, Classroom, ClassroomAssignment, ClassEnrollment, SkillCatalogEntry, TeacherStudentIdentity } from "@fragments/contracts";
 import { classroomApi } from "../../lib/api/classroom-api.js";
 import { AssignmentsPanel } from "../assignments/AssignmentsPanel.js";
 import { assignmentsApi } from "../assignments/assignments-api.js";
@@ -20,7 +20,7 @@ export function ClassroomStudio({ path, navigate, embedded = false }: { path: st
   const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [missionPlanAvailable, setMissionPlanAvailable] = useState(false);
   const [skills, setSkills] = useState<Array<SkillCatalogEntry & { enabled?: boolean }>>([]);
-  const [students, setStudents] = useState<TeacherStudentEntry[]>([]);
+  const [students, setStudents] = useState<TeacherStudentIdentity[]>([]);
   const [allSkills, setAllSkills] = useState<SkillCatalogEntry[]>([]);
   const [joinCode, setJoinCode] = useState<JoinCode | null>(null);
   const [message, setMessage] = useState("");

@@ -1,7 +1,6 @@
 import {
   AcademicGalleryDetailSchema,
   AcademicGalleryPageSchema,
-  HistoricalProjectsResponseSchema,
   GalleryWithdrawalResponseSchema,
   MeResponseSchema,
   TeacherProjectsResponseSchema,
@@ -37,9 +36,6 @@ export function createIdentityApi(client: ApiClient) {
       const id = encodeId(userId);
       if (!id) return Promise.resolve({ ok: false, error: { code: "INVALID_REQUEST", message: "No se encontró el perfil." } });
       return client.request(`/api/teacher/students/${id}/projects`, TeacherProjectsResponseSchema, signal ? { signal } : {});
-    },
-    getHistoricalProjects(signal?: AbortSignal): Promise<ApiResult<Array<{ id: string; title: string; currentVersion: number; updatedAt: string }>>> {
-      return client.request("/api/teacher/historical-projects", HistoricalProjectsResponseSchema, signal ? { signal } : {});
     },
     async withdrawProject(projectId: string, reason: string, signal?: AbortSignal): Promise<ApiResult<{ withdrawn: true }>> {
       const id = encodeId(projectId);
