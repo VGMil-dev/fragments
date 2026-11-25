@@ -89,6 +89,40 @@ async function serve(handler: (request: IncomingMessage, response: ServerRespons
 }
 
 describePostgres("Review queue worker and feature HTTP handler — PostgreSQL integration", () => {
+  it("rejects a linked proposal when the requested repository owner differs from the authenticated GitHub account", async () => {
+    const f = await fixture();
+    const resolveAcademicLink = vi.fn(async () => ({
+      proposalId: "proposal-owned-by-student",
+      proposalVersion: 1,
+      assignmentVersionId: "mission-v1",
+      missionTitle: "QA mission",
+      missionVersion: 1,
+      mentorContextVersion: 1,
+      classroomId: "classroom-qa",
+      classroomTitle: "QA classroom",
+    }));
+    const handler = createReviewHttp({
+      store: f.store,
+      service: f.service,
+      resolveStudentId: async (incoming) => incoming.headers["x-student-id"] === "student-a" ? "student-a" : null,
+      resolveContext: async () => ({ ...f.context, studentId: "student-a", githubLogin: "student-a" }),
+      resolveAcademicLink,
+    });
+
+    await serve(handler, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/reviews`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-student-id": "student-a" },
+        body: JSON.stringify({ ...f.request, owner: "another-account", linkedProposalId: "proposal-owned-by-student" }),
+      });
+      expect(response.status).toBe(404);
+      expect(await response.json()).toMatchObject({ error: { code: "ACADEMIC_LINK_UNAVAILABLE" } });
+    });
+
+    expect(resolveAcademicLink).not.toHaveBeenCalled();
+    expect(f.store.enqueue).not.toHaveBeenCalled();
+  });
+
   it("limits Inspector review access to the teacher's active classroom and enrolled student", async () => {
     const f = await fixture();
     const teacherId = `teacher-${randomUUID()}`;
