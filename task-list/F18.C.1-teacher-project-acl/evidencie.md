@@ -30,7 +30,10 @@
 
 - Rama: `codex/f18-c1-teacher-project-acl`.
 - Commit de implementación y evidencias iniciales: `8eef145952165602b7b6d741d571f75637d1b9fd`.
-- PR, CI, merge y F14: pendientes. El control vigente se conserva; no se creó tag ni se desplegó.
+- Rama sincronizada sin conflictos con `origin/main` `8239c1bc7a7448e792f19974215712b304dc28b6`; merge commit `d06248e30390e3730035b4ee872a976888d94a69`.
+- Tras el merge, focal ACL/HTTP/habilidades: 3 archivos, 14/14 PASS en PostgreSQL efímero.
+- Suite API completa post-merge: 70/71 archivos, 270/271 pruebas PASS; falla `review/worker-http.test.ts` en “requires a student session…” al buscar un análisis ausente durante `createPdf`. La prueba pasa aislada (1/1, 8 omitidas); el fallo aparece al correr el conjunto completo. No toca archivos F18.C.1 y queda documentado para CI/revisión.
+- PR, CI, merge final y F14: pendientes. El control vigente se conserva; no se creó tag ni se desplegó.
 - Producción continúa en v0.5.75, donde la corrección no está disponible; CU-30 sigue FAIL provisional hasta release F14 y revalidación segura.
 - Sin escrituras productivas, llamadas IA, captura de datos de terceros ni operación sobre contenedores de otras tareas.
 
