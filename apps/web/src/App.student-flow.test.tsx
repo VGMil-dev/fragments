@@ -13,7 +13,7 @@ type ProposalContextProbe = {
 const mocks = vi.hoisted(() => {
   const studentApi = {
     getMe: vi.fn(), getMyClassrooms: vi.fn(), getMyClassroomRequests: vi.fn(),
-    getMyClassroomSkills: vi.fn(), getMentorContext: vi.fn(), getMyProposals: vi.fn(), getMySubmissions: vi.fn(), getGallery: vi.fn(),
+    getMyClassroomSkills: vi.fn(), getMentorContext: vi.fn(), getMyProposals: vi.fn(), getMySubmissions: vi.fn(), getMissionDeliveryHistory: vi.fn(), getGallery: vi.fn(),
     saveProposalDraft: vi.fn(),
   };
   return { studentApi, assignmentsApi: { listStudent: vi.fn() } };
@@ -76,6 +76,7 @@ beforeEach(() => {
   mocks.studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [] });
+  mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: false, error: { code: "NOT_FOUND", message: "No history" } });
   mocks.studentApi.getGallery.mockResolvedValue({ ok: true, data: { items: [], nextOffset: null } });
   mocks.studentApi.getMentorContext.mockResolvedValue({ ok: true, data: { version: 2 } });
   mocks.studentApi.saveProposalDraft.mockResolvedValue({ ok: true, data: { id: "proposal-1", version: 1, proposal: { title: "Borrador de misión" } } });
@@ -155,6 +156,27 @@ describe("student mission to Mentor flow", () => {
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/review");
     expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("evaluated-mission-proposal");
+  });
+
+  it("continues to Trainer after every published delivery has a completed Review", async () => {
+    window.history.replaceState({}, "", "/student/classrooms");
+    mocks.assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{
+      id: "completed-mission-proposal", version: 2, proposal: { title: "Navegación Expo" }, assignmentVersionId: mission.id,
+      updatedAt: "2026-11-23T12:00:00.000Z", assignmentContext: { assignmentVersionId: mission.id, requiredSkills: [], mentorContext: { version: 7, config: { theme: "Navegación" } } },
+    }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "completed-mission-proposal" }] });
+    mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: true, data: {
+      proposalId: "completed-mission-proposal", assignmentVersionId: mission.id, nextDeliverableId: null,
+      deliveries: [
+        { deliverable: { id: "delivery-1", order: 1, title: "Propuesta", type: "proposal", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [] },
+        { deliverable: { id: "delivery-2", order: 2, title: "Avance", type: "progress", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [] },
+      ],
+    } });
+    await act(async () => root?.render(<App />));
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    await act(async () => linked?.click());
+    expect(window.location.pathname).toBe("/student/trainer");
   });
 
   it("waits for owned proposals before allowing a new classroom proposal", async () => {

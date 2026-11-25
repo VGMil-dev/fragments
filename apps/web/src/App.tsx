@@ -12,6 +12,7 @@ import { TrainerScreen } from "./features/trainer";
 import { createTrainerApi } from "./lib/api/trainer-api";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
+import { missionContinuationDestination } from "./features/student/mission-continuation.js";
 import { StudentDashboard } from "./features/student/StudentDashboard";
 import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
 import { assignmentsApi } from "./features/assignments/assignments-api.js";
@@ -280,18 +281,21 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
   }, [path, student, selectedAssignment, currentProposal, requestedProposalId, routeProposal, mentorContextReload, navigate]);
 
   const loadMissionDeliveryHistory = useCallback((proposalId: string) => studentApi.getMissionDeliveryHistory(proposalId), []);
-  const openProposal = useCallback((proposal: ProposalDraftResponse, destination: "/student/mentor" | "/student/review" = "/student/mentor") => {
+  const openProposal = useCallback((proposal: ProposalDraftResponse, destination: "/student/mentor" | "/student/review" | "/student/trainer" = "/student/mentor") => {
     setSelectedAssignment(undefined);
     setSelectedProposal(proposal);
     navigate(`${destination}?proposalId=${encodeURIComponent(proposal.id)}`);
   }, [navigate]);
   const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
-    let mentorEvaluationExists = false;
-    try {
-      const submissionsResult = await studentApi.getMySubmissions();
-      mentorEvaluationExists = submissionsResult.ok && submissionsResult.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
-    } catch { /* Fall back to the saved proposal in Mentor when the summary is unavailable. */ }
-    openProposal(proposal, mentorEvaluationExists ? "/student/review" : "/student/mentor");
+    const [submissionsResult, historyResult] = await Promise.allSettled([
+      studentApi.getMySubmissions(),
+      proposal.assignmentVersionId ? studentApi.getMissionDeliveryHistory(proposal.id) : Promise.resolve(null),
+    ]);
+    const mentorEvaluationExists = submissionsResult.status === "fulfilled"
+      && submissionsResult.value.ok
+      && submissionsResult.value.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
+    const history = historyResult.status === "fulfilled" && historyResult.value?.ok ? historyResult.value.data : undefined;
+    openProposal(proposal, missionContinuationDestination(mentorEvaluationExists, history));
   }, [openProposal]);
 
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;

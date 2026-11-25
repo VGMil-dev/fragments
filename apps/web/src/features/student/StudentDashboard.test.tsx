@@ -26,7 +26,7 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Siguiente paso");
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("Siguiente paso · propuesta v2");
-    expect(html).toContain('aria-label="Abrir propuesta en Mentor: Bitácora de jardín"');
+    expect(html).toContain('aria-label="Continuar proyecto: Bitácora de jardín"');
     expect(html).toContain("student-dashboard--has-proposal");
     expect(html).toContain("Aún no tienes aulas activas");
     expect(html).toContain("Aún no tienes entregas generadas");
@@ -59,7 +59,7 @@ describe("StudentDashboard", () => {
     expect(html).toContain("Navegación con Expo · v1");
     expect(html).toContain(">Contexto Mentor</dt><dd>v2</dd>");
     expect(html).toContain("React Native");
-    expect(html).toContain("Abrir en Mentor");
+    expect(html).toContain("Continuar proyecto");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
   });
 
@@ -99,7 +99,7 @@ describe("StudentDashboard", () => {
 
     expect(html).toContain("No pudimos consultar el aula y el título de la misión.");
     expect(html).toContain("Reintentar consulta de aula");
-    expect(html).toContain("Abrir en Mentor");
+    expect(html).toContain("Continuar proyecto");
   });
 
   it("surfaces the published classroom mission as the next step when no proposal exists", () => {
@@ -131,7 +131,7 @@ describe("StudentDashboard", () => {
     const primaryContext = interactionContainer.querySelector<HTMLElement>('[aria-label="Contexto académico de la propuesta"]');
     expect(missionAction).toBeNull();
     expect(primaryContext?.textContent).toContain("Navegación con Expo · v4");
-    expect(primaryAction?.getAttribute("aria-label")).toBe("Abrir propuesta en Mentor: Bitácora de jardín");
+    expect(primaryAction?.getAttribute("aria-label")).toBe("Continuar proyecto: Bitácora de jardín");
     await act(async () => { primaryAction?.click(); });
 
     expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
@@ -147,7 +147,7 @@ describe("StudentDashboard", () => {
     await act(async () => { interactionRoot?.render(<StudentDashboard {...defaultProps} proposals={[linkedProposal, latestProposal]} missions={[mission]} onContinueProposal={onContinueProposal} />); });
 
     const missionAction = interactionContainer.querySelector<HTMLButtonElement>(".student-dashboard__mission-action");
-    expect(missionAction?.getAttribute("aria-label")).toBe("Abrir propuesta vinculada a misión: Navegación con Expo");
+    expect(missionAction?.getAttribute("aria-label")).toBe("Continuar proyecto de misión: Navegación con Expo");
     await act(async () => { missionAction?.click(); });
 
     expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linkedProposal);
@@ -228,7 +228,7 @@ describe("StudentDashboard", () => {
 
     expect(html).toContain("Bitácora de jardín");
     expect(html).toContain("student-dashboard--has-proposal");
-    expect(html).toContain("Abrir en Mentor");
+    expect(html).toContain("Continuar proyecto");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
     expect(html.match(/class="button button--primary"/g)).toHaveLength(1);
@@ -301,7 +301,7 @@ describe("StudentDashboard", () => {
     const html = renderToStaticMarkup(<StudentDashboard {...defaultProps} proposals={[proposal]} missions={[mission]} />);
 
     expect(html).toContain("Bitácora de jardín");
-    expect(html).toContain("Abrir en Mentor");
+    expect(html).toContain("Continuar proyecto");
     expect(html).toContain("Misiones en tus aulas");
     expect(html).toContain("Primera navegación");
     expect(html).not.toContain("Misión publicada v1");
