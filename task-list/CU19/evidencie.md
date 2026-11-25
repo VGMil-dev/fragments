@@ -4,6 +4,8 @@ Ampliación del 2026-11-25: se añadió un caso positivo a la integración Postg
 
 Verificación local de la ampliación: typecheck API + contracts PASS (`pnpm exec turbo run typecheck --filter=@fragments/api...`, 4 tareas). `worker-http.test.ts`: 12 pruebas omitidas por falta de `DATABASE_URL`; no hay evidencia local de PostgreSQL. La ejecución CI con `fragments_test` queda pendiente.
 
+Primera CI de PR #308 (`45660673729`) FALLÓ: el nuevo caso leyó `status` fuera del envelope `{ok,data}` y se corrigió. En esa misma ejecución falló también un caso preexistente de ACL de Inspector (`teacherCanAccessReview` esperado true, observado false; línea original del test), causa aún no determinada. Repetir CI antes de integrar; CU-19 sigue parcial.
+
 Añadida regresión al handler HTTP de Review con cuenta, repo y misión ficticios. La prueba prepara identidad de sesión `student-a`, `githubLogin=student-a` y solicita `owner=another-account` para propuesta vinculada. La aceptación espera `404 ACADEMIC_LINK_UNAVAILABLE`, cero llamadas a `resolveAcademicLink` y cero llamadas a `store.enqueue`.
 
 La prueba está en `apps/api/src/features/review/worker-http.test.ts` dentro de suite PostgreSQL. Ejecución local del archivo: 1 suite, 11 pruebas SKIPPED porque no hay `DATABASE_URL`; Docker no está disponible (daemon `dockerDesktopLinuxEngine` no responde). No se afirma que la prueba pasó localmente. CI de PR requerido para ejecutar en base efímera `fragments_test`.

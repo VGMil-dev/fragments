@@ -122,7 +122,7 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
         body: JSON.stringify({ ...f.request, owner: "student", linkedProposalId: proposalId, assignmentDeliverableId: "delivery-qa" }),
       });
       expect(response.status).toBe(202);
-      const queued = await response.json() as { id: string; status: string };
+      const { data: queued } = await response.json() as { data: { id: string; status: string } };
       expect(queued.status).toBe("queued");
       persistedJobId = queued.id;
     });
