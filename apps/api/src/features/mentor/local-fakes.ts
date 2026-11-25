@@ -91,8 +91,8 @@ export function createMinimalPdfRenderer(): PdfRenderer {
 function wrapPdfLine(value: string): string[] {
   const normalized = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "?");
   const chunks: string[] = [];
-  for (let remaining = normalized; remaining.length > 88; remaining = remaining.slice(88)) chunks.push(remaining.slice(0, 88));
-  chunks.push(normalized.slice(0, 88));
+  for (let offset = 0; offset < normalized.length; offset += 88) chunks.push(normalized.slice(offset, offset + 88));
+  if (chunks.length === 0) chunks.push("");
   return chunks;
 }
 

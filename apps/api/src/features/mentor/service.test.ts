@@ -142,6 +142,34 @@ describe("Mentor service", () => {
     expect(pdfCalls).toBe(1);
   });
 
+  it("preserves the tail of long proposal fields in the PDF", async () => {
+    const longProblem = `${"A".repeat(88)}${"B".repeat(25)}`;
+    const detailedProposal = { ...proposal, problem: longProblem };
+    const service = createMentorService({ evaluator: fakeEvaluator, pdf: createMinimalPdfRenderer() });
+    const evaluation = await service.evaluate(detailedProposal);
+    const submission = await service.createSubmission({ sourceId: "proposal-long-field", proposal: detailedProposal, evaluation });
+
+    const pdf = new TextDecoder().decode(await service.renderPdf(submission));
+
+    expect(pdf.match(/A{88}/g)).toHaveLength(1);
+    expect(pdf.match(/B{25}/g)).toHaveLength(1);
+  });
+
+  it.each([89, 176, 177])("wraps a %i-character field without dropping or repeating fragments", async (length) => {
+    const field = `${"Q".repeat(length - 1)}Z`;
+    const detailedProposal = { ...proposal, problem: field };
+    const service = createMentorService({ evaluator: fakeEvaluator, pdf: createMinimalPdfRenderer() });
+    const evaluation = await service.evaluate(detailedProposal);
+    const submission = await service.createSubmission({ sourceId: `proposal-length-${length}`, proposal: detailedProposal, evaluation });
+
+    const pdf = new TextDecoder().decode(await service.renderPdf(submission));
+
+    const textLines = [...pdf.matchAll(/\((.*?)\) Tj/g)].map((match) => match[1]);
+    const problemIndex = textLines.indexOf("Problema");
+    const renderedProblem = textLines.slice(problemIndex + 1, problemIndex + 1 + Math.ceil(length / 88)).join("");
+    expect(renderedProblem).toBe(field);
+  });
+
   it("refuses to render when the snapshot JSON no longer matches its hash", async () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     const evaluation = await service.evaluate(proposal);
