@@ -12,6 +12,7 @@
 ## Estado
 
 - Código: navegación nativa por anclas a datos, estudiantes, habilidades y misiones/rúbricas dentro del aula actual; sin cambios de API ni datos.
+- Commit de implementación: `0ec008a42921966ad50cb555461e16a8f36d4129` en `codex/cu10-studio-section-navigation`.
 - CI/PR/F14: pendiente.
 - La prueba usa ClassroomStudio y APIs fake; no acredita navegación visual en viewport real.
 - Producción autenticada: NO COMPROBADA. El runtime Ego Lite actual no enumeró Space 44/Profile 3; no se abrió un perfil o Space sustituto.
