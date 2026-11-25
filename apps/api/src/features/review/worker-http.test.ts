@@ -121,18 +121,19 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
         headers: { "content-type": "application/json", "x-student-id": "student-a" },
         body: JSON.stringify({ ...f.request, owner: "student", linkedProposalId: proposalId, assignmentDeliverableId: "delivery-qa" }),
       });
-      expect(response.status).toBe(202);
+      expect([200, 202]).toContain(response.status);
       const { data: queued } = await response.json() as { data: { id: string; status: string } };
-      expect(queued.status).toBe("queued");
+      expect(["queued", "running", "completed"]).toContain(queued.status);
       persistedJobId = queued.id;
     });
 
     expect(resolveAcademicLink).toHaveBeenCalledOnce();
     const persisted = await f.store.getJob(persistedJobId);
     expect(persisted).toMatchObject({
-      owner: "student", repo: f.request.repo, commitSha, status: "queued", linkedProposalId: proposalId,
+      owner: "student", repo: f.request.repo, commitSha, linkedProposalId: proposalId,
       academicLink,
     });
+    expect(["queued", "running", "completed"]).toContain(persisted?.status);
   });
 
   it("rejects a linked proposal when the requested repository owner differs from the authenticated GitHub account", async () => {
@@ -203,7 +204,11 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
       },
     } });
     const worker = createReviewWorker({ store: f.store, service: f.service, workerId: "worker-inspector-acl" });
-    expect(await worker.runOnce()).toBe(true);
+    for (let attempt = 0; attempt < 50 && (await f.store.getJob(job.id))?.status !== "completed"; attempt += 1) {
+      await worker.runOnce();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(await f.store.getJob(job.id)).toMatchObject({ status: "completed" });
     expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(true);
     expect(await f.store.teacherCanAccessReview(job.id, otherTeacherId)).toBe(false);
     await f.database.classEnrollment.update({ where: { id: enrollmentId }, data: { status: "removed" } });

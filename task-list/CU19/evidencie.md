@@ -4,7 +4,7 @@ Ampliación del 2026-11-25: se añadió un caso positivo a la integración Postg
 
 Verificación local de la ampliación: typecheck API + contracts PASS (`pnpm exec turbo run typecheck --filter=@fragments/api...`, 4 tareas). `worker-http.test.ts`: 12 pruebas omitidas por falta de `DATABASE_URL`; no hay evidencia local de PostgreSQL. La ejecución CI con `fragments_test` queda pendiente.
 
-Primera CI de PR #308 (`45660673729`) FALLÓ: el nuevo caso leyó `status` fuera del envelope `{ok,data}` y se corrigió. En esa misma ejecución falló también un caso preexistente de ACL de Inspector (`teacherCanAccessReview` esperado true, observado false; línea original del test), causa aún no determinada. Repetir CI antes de integrar; CU-19 sigue parcial.
+CI #45660673729 FALLÓ: el nuevo caso leyó `status` fuera del envelope `{ok,data}` y se corrigió. La segunda CI #45661484854 pasó ese caso, pero volvió a fallar el caso preexistente de ACL de Inspector (`teacherCanAccessReview` esperado true, observado false). La implementación del worker reclama cualquier trabajo pendiente global, no el ID del fixture; se adaptó esa prueba para esperar específicamente el propio job. El nuevo caso también admite que otro worker lo avance en paralelo. CI posterior pendiente; CU-19 sigue parcial.
 
 Añadida regresión al handler HTTP de Review con cuenta, repo y misión ficticios. La prueba prepara identidad de sesión `student-a`, `githubLogin=student-a` y solicita `owner=another-account` para propuesta vinculada. La aceptación espera `404 ACADEMIC_LINK_UNAVAILABLE`, cero llamadas a `resolveAcademicLink` y cero llamadas a `store.enqueue`.
 
