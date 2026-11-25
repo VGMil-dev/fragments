@@ -561,6 +561,7 @@ export const StudentSubmissionSchema = z.object({
   label: nonEmptyText.max(200),
   score: z.number().min(0).max(100),
   rubricVersion: nonEmptyText.max(120),
+  commitSha: z.string().regex(/^[a-f0-9]{40}$/).optional(),
   createdAt: z.iso.datetime(),
 }).strict();
 export const StudentSubmissionsResponseSchema = z.array(StudentSubmissionSchema).max(200);
