@@ -26,3 +26,13 @@ El historial fake común se actualizó a disponible. Las regresiones de error co
 - No se ejecutaron llamadas IA ni escrituras de producción.
 
 La tarea F18.B.7 no se marca completa hasta desplegar por F14 cuando el bloqueo externo se resuelva y verificar el resultado en Ego Lite autorizado.
+
+## Corrección de continuidad Mentor · PR #301
+
+La revisión de la API comprobó que los borradores sin evaluación Mentor no necesitan el historial de entregas para reanudar en Mentor. F18.B.7 consulta ahora ese historial solo tras confirmar evaluación propia; si esta consulta sí requerida falla, conserva Mis proyectos y muestra Reintentar.
+
+- Commit: `7eea37ceccd57c0e67d94b1e1ca95892cb7e863f`.
+- PR #301 merge normal en `038be1f2df8afa55de4b140ef992f3f7e7c826a7`.
+- CI #45653052899 SUCCESS.
+- Prueba focal 21/21; suite web 333/333; typecheck/build/diff-check PASS.
+- Este commit tampoco está desplegado. F14 v0.5.85 sigue bloqueado en GitHub HTTP 500; Ego Lite NO COMPROBADO.
