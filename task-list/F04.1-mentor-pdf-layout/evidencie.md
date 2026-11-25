@@ -27,7 +27,7 @@ Estado: implementado y desplegado; verificación funcional del PDF en producció
 - La corrección codifica los caracteres Latin-1 y el conjunto especial Windows-1252 como escapes octales PDF y declara `/WinAnsiEncoding` para Helvetica. Caracteres fuera del repertorio de la fuente siguen degradándose a `?`.
 - `pnpm exec vitest run apps/api/src/adapters/ai/pdf-renderer.test.ts apps/api/src/features/mentor/service.test.ts` — 2 archivos, 13/13 PASS. `pnpm --filter @fragments/api typecheck` PASS. `git diff --check` PASS.
 - Un intento adicional de inspección con `pdfinfo` no pudo generar el archivo temporal de prueba porque `tsx` no resolvió desde la raíz; el segundo intento de script temporal fue rechazado por la política del host. No se declara esa verificación de parser como PASS; el test automatizado verifica los objetos y el texto escapado.
-- Sin acceso autenticado de Ego Lite en Space 80, la descarga post-fix en producción sigue **NO COMPROBADA**. Sin despliegue posterior de este cambio, los acentos de producción también siguen **NO COMPROBADOS**. No hubo llamadas IA ni escrituras productivas.
+- Al registrar la prueba local, la descarga autenticada post-fix seguía **NO COMPROBADA** porque Ego Lite no exponía Space 80. Luego se integró y desplegó el fix como v0.5.90; la legibilidad de un PDF descargado en la sesión autenticada continúa **NO COMPROBADA**. No hubo llamadas IA ni escrituras académicas productivas.
 - Commit de implementación: `f8551b8` (`fix(F04.1): preserve Spanish text in mentor PDFs`); commit documental con la referencia: `5cbe474`.
 
 ## Integración y despliegue F14 · v0.5.90 · 2026-11-25
