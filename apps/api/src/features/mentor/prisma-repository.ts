@@ -71,7 +71,11 @@ export function createPrismaMentorRepository(database: PrismaClient) {
       ]);
       const rows = [
         ...mentorSubmissions.map((row) => { const snapshot = proposalObject(row.snapshotJson); const proposal = proposalObject(snapshot.proposal); return { id: row.id, kind: row.kind, sourceId: row.sourceId, label: typeof proposal.title === "string" ? proposal.title : "Proyecto Mentor", score: row.score, rubricVersion: row.rubricVersion, createdAt: row.createdAt.toISOString() }; }),
-        ...reviewSubmissions.map((row) => ({ id: row.id, kind: row.kind, sourceId: row.sourceId, label: reviewLabels.get(row.sourceId) ?? "Review", score: row.score, rubricVersion: row.rubricVersion, createdAt: row.createdAt.toISOString() })),
+        ...reviewSubmissions.map((row) => {
+          const snapshot = proposalObject(row.snapshotJson);
+          const commitSha = typeof snapshot.commitSha === "string" && /^[a-f0-9]{40}$/.test(snapshot.commitSha) ? snapshot.commitSha : undefined;
+          return { id: row.id, kind: row.kind, sourceId: row.sourceId, label: reviewLabels.get(row.sourceId) ?? "Review", score: row.score, rubricVersion: row.rubricVersion, ...(commitSha ? { commitSha } : {}), createdAt: row.createdAt.toISOString() };
+        }),
       ].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id)).slice(0, 200);
       return StudentSubmissionsResponseSchema.parse(rows);
     },

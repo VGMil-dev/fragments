@@ -96,6 +96,26 @@ afterEach(() => {
 });
 
 describe("student mission to Mentor flow", () => {
+  it("shows each saved Review commit and rubric in the delivery history", async () => {
+    window.history.replaceState({}, "", "/student/submissions");
+    const olderSha = "a".repeat(40);
+    const newerSha = "b".repeat(40);
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [
+      { id: "review-new", kind: "review", sourceId: "job-new", label: "qa-student/demo", score: 82, rubricVersion: "mission-v2-rubric", commitSha: newerSha, createdAt: "2026-11-25T12:00:00.000Z" },
+      { id: "review-old", kind: "review", sourceId: "job-old", label: "qa-student/demo", score: 71, rubricVersion: "mission-v1-rubric", commitSha: olderSha, createdAt: "2026-11-24T12:00:00.000Z" },
+    ] });
+
+    await act(async () => root?.render(<App />));
+
+    const rows = [...(container?.querySelectorAll<HTMLLIElement>(".student-submission-list li") ?? [])];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.textContent).toContain(`Commit: ${newerSha}`);
+    expect(rows[0]?.textContent).toContain("Rúbrica: mission-v2-rubric");
+    expect(rows[1]?.textContent).toContain(`Commit: ${olderSha}`);
+    expect(rows[1]?.textContent).toContain("Rúbrica: mission-v1-rubric");
+    expect(rows[0]?.querySelector("code")?.textContent).toBe(newerSha);
+  });
+
   it("starts the only published classroom mission directly from the Dashboard with its pinned context and skills", async () => {
     window.history.replaceState({}, "", "/student/dashboard");
     mocks.studentApi.getMyClassrooms.mockResolvedValue({ ok: true, data: [otherClassroom, classroom] });

@@ -67,6 +67,7 @@
 .student-submission-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .35rem 1rem; padding: 1rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-control); background: var(--f16-surface-raised); }
 .student-submission-list li > small { grid-column: 1 / -1; color: var(--f16-text-secondary); }
 .student-submission-list li span small { display: block; margin-top: .3rem; color: var(--f16-text-secondary); }
+.student-submission-list code { overflow-wrap: anywhere; }
 .student-workspace__content { grid-column: 2; width: min(100% - 2rem, 1200px); margin: 2rem auto 0; }
 .student-workspace__content:focus { outline: 2px solid var(--f16-focus); outline-offset: 4px; border-radius: 4px; }
 .student-workspace__content .student-screen { width: 100%; }
