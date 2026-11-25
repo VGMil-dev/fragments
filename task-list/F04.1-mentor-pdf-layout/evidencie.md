@@ -36,3 +36,6 @@ Estado: implementado y desplegado; verificación funcional del PDF en producció
 - Ego Lite `listTaskSpaces()` no encontró el Space 80/Profile 5 previamente autorizado. La skill indica detenerse y recuperar ese mismo espacio; no se abrió otro perfil/space.
 - Por lo anterior, el PDF propio posterior al fix no se descargó ni abrió. Defecto histórico de v0.5.78: confirmado FAIL, corregido y desplegado. PDF post-fix en producción/CU-29: NO COMPROBADO. F04.1 permanece abierta hasta la revalidación E2E con la sesión autorizada.
 - `ego-browser` v2.2.1 y skill PDF fueron consultadas/aplicadas para la inspección inicial; no se pudo iniciar la ronda post-deploy por falta del Space autorizado.
+
+
+- Commit de actualización de evidencia y TASKS.md: `0c0c457b0036e03e7473569dad1e3da3ceafadb1` (rama `codex/cu29-pdf-release-evidence`).
