@@ -260,6 +260,48 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
   });
 
+  it("keeps each mission rubric isolated when another mission publishes a new version", async () => {
+    const assignments = createAssignmentRepository(database!);
+    const rubricA = { title: "Rúbrica A", criteria: [{ id: "criterion-a", title: "Evidencia A", description: "Evidencia propia de la misión A.", weight: 100 }] };
+    const rubricB = { title: "Rúbrica B", criteria: [{ id: "criterion-b", title: "Evidencia B", description: "Evidencia propia de la misión B.", weight: 100 }] };
+    const missionA = await assignments.create(teacherId, classroomId, {
+      title: "Misión A", instructions: "Resuelve el primer objetivo.", objectives: ["Demostrar A"],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric: rubricA,
+      deliverables: missionDeliverables.map((item) => ({ ...item, criterionIds: ["criterion-a"] })),
+    });
+    const missionB = await assignments.create(teacherId, classroomId, {
+      title: "Misión B", instructions: "Resuelve el segundo objetivo.", objectives: ["Demostrar B"],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric: rubricB,
+      deliverables: missionDeliverables.map((item) => ({ ...item, criterionIds: ["criterion-b"] })),
+    });
+    if (!missionA || "kind" in missionA || !missionB || "kind" in missionB) throw new Error("No se crearon las dos misiones fixture.");
+
+    const publishedA = await assignments.publish(teacherId, classroomId, missionA.id, 1);
+    const publishedB = await assignments.publish(teacherId, classroomId, missionB.id, 1);
+    expect(publishedA.kind).toBe("ok");
+    expect(publishedB.kind).toBe("ok");
+    if (publishedA.kind !== "ok" || publishedB.kind !== "ok") throw new Error("No se publicaron las dos misiones fixture.");
+    const versionA1 = publishedA.assignment.versions.find((version) => version.version === 1)!;
+    const versionB1 = publishedB.assignment.versions.find((version) => version.version === 1)!;
+
+    const editA = await assignments.updateDraft(teacherId, classroomId, missionA.id, 2, {
+      title: "Misión A revisada", instructions: "Resuelve el objetivo A con otra evidencia.", objectives: ["Demostrar A revisada"],
+      requiredSkillIds: [skillId], optionalSkillIds: [],
+      missionRubric: { title: "Rúbrica A v2", criteria: [{ id: "criterion-a-v2", title: "Evidencia A v2", description: "Nueva evidencia propia de la misión A.", weight: 100 }] },
+      deliverables: missionDeliverables.map((item) => ({ ...item, criterionIds: ["criterion-a-v2"] })),
+    });
+    expect(editA.kind).toBe("ok");
+    const publishedA2 = await assignments.publish(teacherId, classroomId, missionA.id, 3);
+    expect(publishedA2.kind).toBe("ok");
+    if (publishedA2.kind !== "ok") throw new Error("No se publicó la versión 2 de la misión A fixture.");
+
+    const studentMissions = await assignments.listStudent(studentId, classroomId);
+    expect(studentMissions?.find((item) => item.id === versionB1.id)?.missionRubric).toEqual(rubricB);
+    expect(studentMissions?.find((item) => item.assignmentId === missionA.id && item.version === 2)?.missionRubric).toMatchObject({ title: "Rúbrica A v2" });
+    expect((await database!.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: versionA1.id } })).snapshotJson).toMatchObject({ missionRubric: rubricA });
+    expect((await database!.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: versionB1.id } })).snapshotJson).toMatchObject({ missionRubric: rubricB });
+  });
+
   it("persists proposal, progress, and final deliveries for one project and exposes all Reviews to Trainer", async () => {
     const db = database!;
     const threeStageDeliverables = [
