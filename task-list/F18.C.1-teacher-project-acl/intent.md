@@ -6,11 +6,11 @@ Owner: PLANNER
 
 La vista docente permite consultar el historial completo de propuestas de cualquier estudiante GitHub y enumera propuestas históricas sin propietario. Esto puede exponer borradores personales y contenido heredado a docentes sin relación académica autorizada.
 
-Acotar el seguimiento a las propuestas ligadas a versiones publicadas de misiones en aulas activas propiedad del docente, con matrícula activa del estudiante. Mantener propuestas anónimas privadas hasta que su titular las reclame.
+Acotar el seguimiento a estudiantes matriculados en aulas activas propias y a las propuestas ligadas a versiones publicadas de misiones de esas aulas. No filtrar actividad privada de cuentas ajenas; separar el selector de identidades verificadas para asignación docente. Mantener propuestas anónimas privadas hasta que su titular las reclame y limitar la retirada de publicaciones a docentes autorizados por aula/matrícula.
 
 ## No objetivos
 
-- No cambiar contratos compartidos ni el flujo de asignar identidades GitHub verificadas.
+- No reescribir membresías ni cambiar la identidad GitHub verificada usada por asignación directa.
 - No modificar membresías, proyectos, evaluaciones, ni datos productivos.
 - No alterar la galería de publicaciones académicas elegibles.
 - No ejecutar evaluaciones IA ni hacer despliegues fuera de F14.

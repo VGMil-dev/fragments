@@ -1,6 +1,6 @@
 import {
   AcademicGalleryDetailSchema, AcademicGalleryEntrySchema, AcademicGalleryPageSchema,
-  CreateProposalRequestSchema, TeacherProjectsResponseSchema,
+  CreateProposalRequestSchema, TeacherProjectsResponseSchema, TeacherStudentIdentityPageSchema,
   TeacherStudentsPageSchema,
 } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
@@ -94,6 +94,16 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
       }));
       return TeacherStudentsPageSchema.parse({ items: items.filter(Boolean), nextOffset: rows.length > safeLimit ? safeOffset + safeLimit : null });
     },
+    async listAssignableStudentIdentities(offset = 0, limit = 20) {
+      const safeOffset = Math.max(0, Math.trunc(offset)), safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+      const rows = await database.user.findMany({ where: studentWhere, include: { accounts: { where: { providerId: "github" }, take: 1 } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], skip: safeOffset, take: safeLimit + 1 });
+      const items = rows.slice(0, safeLimit).flatMap((row) => {
+        const login = row.githubLogin;
+        if (!login || !/^[A-Za-z0-9-]{1,39}$/.test(login)) return [];
+        return [{ id: row.id, githubLogin: login, avatarUrl: avatar(row.image), profileUrl: `https://github.com/${login}`, registeredAt: row.createdAt.toISOString() }];
+      });
+      return TeacherStudentIdentityPageSchema.parse({ items, nextOffset: rows.length > safeLimit ? safeOffset + safeLimit : null });
+    },
     async listStudentProjects(teacherId: string, userId: string) {
       const hasAuthorizedClassroom = await database.classroom.findFirst({ where: {
         teacherId, status: "active", enrollments: { some: { studentId: userId, status: "active" } },
@@ -113,6 +123,8 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
     },
     async withdrawProject(projectId: string, teacherId: string, reason: string, now = new Date()) {
       return database.$transaction(async tx => {
+        const proposal = await tx.proposal.findFirst({ where: { id: projectId }, select: { ownerUserId: true } });
+        if (!proposal?.ownerUserId || !await tx.proposal.findFirst({ where: { id: projectId, ...teacherProjectWhere(teacherId, proposal.ownerUserId) }, select: { id: true } })) return false;
         if (!await tx.mentorAcademicPublication.findFirst({ where: { proposalId: projectId }, select: { proposalId: true } })) return false;
         try { await tx.mentorAcademicProjectModeration.create({ data: { proposalId: projectId, withdrawnBy: teacherId, reason, withdrawnAt: now } }); return true; }
         catch (error) { if ((error as { code?: string }).code === "P2002") return false; throw error; }

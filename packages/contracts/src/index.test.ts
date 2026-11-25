@@ -38,6 +38,7 @@ import {
   ReviewResponseSchema,
   ReviewQueuedResponseSchema,
   TeacherClassroomReviewsResponseSchema,
+  TeacherStudentIdentityPageSchema,
   RepositorySnapshotSchema,
   SubmissionSnapshotSchema,
   VerifySubmissionResponseSchema,
@@ -87,6 +88,12 @@ const analysis = {
 };
 
 describe("shared API contracts", () => {
+  it("validates assignment identities without private project counts", () => {
+    const identity = { id: "student-1", githubLogin: "fixture-student", avatarUrl: null, profileUrl: "https://github.com/fixture-student", registeredAt: now };
+    expect(TeacherStudentIdentityPageSchema.safeParse({ items: [identity], nextOffset: null }).success).toBe(true);
+    expect(TeacherStudentIdentityPageSchema.safeParse({ items: [{ ...identity, projectCount: 4 }], nextOffset: null }).success).toBe(false);
+  });
+
   it("keeps mission required and optional skills disjoint and snapshots published versions", () => {
     const rubric = { title: "Rúbrica de misión", criteria: [{ id: "criterion-a", title: "Navegación", description: "La acción lleva a la pantalla esperada.", weight: 100 }] };
     const deliverables = [

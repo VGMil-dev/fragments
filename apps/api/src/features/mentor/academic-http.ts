@@ -9,6 +9,7 @@ import {
   MeResponseSchema,
   OwnedProposalsResponseSchema,
   StudentMeSchema,
+  TeacherStudentIdentityPageSchema,
   TeacherProjectsResponseSchema,
   TeacherStudentsPageSchema,
 } from "@fragments/contracts";
@@ -93,6 +94,12 @@ export function createAcademicHttp(database: PrismaClient, auth?: FragmentsAuthS
         const page = readPage(url.searchParams);
         if (!page) { sendError(response, 400, "INVALID_PAGINATION", "Revisa los límites de la página solicitada."); return "handled"; }
         sendJson(response, 200, { ok: true, data: TeacherStudentsPageSchema.parse(await academic.listStudents(teacherId, page.offset, page.limit)) });
+        return "handled";
+      }
+      if (request.method === "GET" && url.pathname === "/api/teacher/student-identities") {
+        const page = readPage(url.searchParams);
+        if (!page) { sendError(response, 400, "INVALID_PAGINATION", "Revisa los límites de la página solicitada."); return "handled"; }
+        sendJson(response, 200, { ok: true, data: TeacherStudentIdentityPageSchema.parse(await academic.listAssignableStudentIdentities(page.offset, page.limit)) });
         return "handled";
       }
       const studentProjects = request.method === "GET" && url.pathname.match(/^\/api\/teacher\/students\/([A-Za-z0-9_-]{1,100})\/projects$/);
