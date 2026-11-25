@@ -105,6 +105,50 @@ describe("TrainerScreen", () => {
     }
   });
 
+  it("opens Trainer on the requested completed Review instead of choosing another one", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const reviews = [
+      { id: "review-a", owner: "student", repo: "project-a", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z" },
+      { id: "review-b", owner: "student", repo: "project-b", commitSha: "b".repeat(40), updatedAt: "2026-11-02T00:00:00Z" },
+    ];
+    const history = vi.fn(async (reviewId: string) => ({ ok: true as const, data: [{ id: `attempt-${reviewId}`, reviewId, challengeId: "challenge-1", feature: `Historial ${reviewId}`, status: "completed" as const, hintsUsed: 0, attemptedAt: "2026-11-02T01:00:00Z" }] }));
+    const api = { reviews: async () => ({ ok: true, data: reviews }), history } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} initialReviewId="review-b" />));
+      expect(container.querySelector<HTMLSelectElement>("#trainer-review")?.value).toBe("review-b");
+      expect(container.querySelector(".trainer-review-source")?.textContent).toContain("student/project-b");
+      expect(history).toHaveBeenCalledWith("review-b");
+      expect(container.querySelector(".trainer-history__list")?.textContent).toContain("Historial review-b");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it("does not silently switch when the requested Review is unavailable", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const reviews = [
+      { id: "review-a", owner: "student", repo: "project-a", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z" },
+      { id: "review-b", owner: "student", repo: "project-b", commitSha: "b".repeat(40), updatedAt: "2026-11-02T00:00:00Z" },
+    ];
+    const history = vi.fn(async () => ({ ok: true as const, data: [] }));
+    const api = { reviews: async () => ({ ok: true, data: reviews }), history } as never;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<TrainerScreen api={api} initialReviewId="missing-review" />));
+      expect(container.querySelector<HTMLSelectElement>("#trainer-review")?.value).toBe("");
+      expect(container.textContent).toContain("No encontramos esa Review entre tus análisis completados");
+      expect(history).not.toHaveBeenCalled();
+      expect(container.querySelector(".trainer-review-source")).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
   it("switches between labelled fake Reviews without mixing their source, context, history or challenge", async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const fakeReviewA = { id: "fake-review-a", owner: "fake-student", repo: "fake-project-a", commitSha: "a".repeat(40), updatedAt: "2026-11-01T00:00:00Z",

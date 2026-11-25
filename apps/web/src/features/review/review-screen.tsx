@@ -24,7 +24,7 @@ export interface ReviewScreenProps {
   onGenerateSubmission: (request: CreateReviewSubmissionRequest) => Promise<ApiResult<ReviewSubmissionResponse>>;
   onPdf: (submissionId: string) => Promise<ApiResult<Blob>>;
   onBack: () => void;
-  onOpenTrainer?: () => void;
+  onOpenTrainer?: (reviewId?: string) => void;
   mode?: DataMode;
   linkedProposals?: ProposalDraftResponse[];
   initialProposalId?: string;
@@ -297,7 +297,7 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
             <button className="button button--primary" type="button" disabled={submission?.status === "loading"} onClick={() => void generateSubmission(currentReview.id)}>
               {submission?.status === "loading" ? "Preparando entrega…" : "Generar entrega"}
             </button>
-            <a className="button button--light" href="/student/trainer" onClick={onOpenTrainer ? (event) => { event.preventDefault(); onOpenTrainer(); } : undefined}>Practicar en Trainer</a>
+            <a className="button button--light" href={`/student/trainer?reviewId=${encodeURIComponent(currentReview.id)}`} onClick={onOpenTrainer ? (event) => { event.preventDefault(); onOpenTrainer(currentReview.id); } : undefined}>Practicar en Trainer</a>
           </div>
         ) : null}
       </section>

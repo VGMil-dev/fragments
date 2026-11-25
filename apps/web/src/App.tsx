@@ -478,11 +478,11 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
             linkedProposals={ownedProposals.filter((proposal) => Boolean(proposal.assignmentVersionId && proposal.assignmentContext?.assignmentVersionId === proposal.assignmentVersionId))}
             initialProposalId={currentProposal?.id ?? ""}
             onLoadDeliveryHistory={loadMissionDeliveryHistory}
-            onOpenTrainer={() => navigate("/student/trainer")}
+            onOpenTrainer={(reviewId) => navigate(reviewId ? `/student/trainer?reviewId=${encodeURIComponent(reviewId)}` : "/student/trainer")}
             onBack={() => { setSelectedAssignment(undefined); navigate(currentProposal ? `/student/mentor?proposalId=${encodeURIComponent(currentProposal.id)}` : "/student/mentor"); }}
           />
         ) : null}
-        {path === "/student/trainer" ? <TrainerScreen api={trainerApi} onStartReview={() => navigate("/student/review")} /> : null}
+        {path === "/student/trainer" ? <TrainerScreen api={trainerApi} initialReviewId={new URLSearchParams(search).get("reviewId") ?? ""} onStartReview={() => navigate("/student/review")} /> : null}
       </div>
       <footer className="student-workspace__footer"><BuildVersion /></footer>
     </div>

@@ -10,9 +10,9 @@ type TrainerAttemptRequest = { reviewId: string; challengeId: string; status: Tr
 const statusLabels: Record<TrainerStatus, string> = { pending: "Pendiente", in_progress: "En progreso", completed: "Completado por ti", need_more: "Necesito practicar más" };
 const categoryLabels = { new: "Nuevo", pending: "Pendiente", review: "Repaso" } as const;
 
-export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?: () => void }) {
+export function TrainerScreen({ api, onStartReview, initialReviewId = "" }: { api: Api; onStartReview?: () => void; initialReviewId?: string }) {
   const [reviews, setReviews] = useState<TrainerReview[]>([]);
-  const [selectedReview, setSelectedReview] = useState("");
+  const [selectedReview, setSelectedReview] = useState(initialReviewId);
   const [history, setHistory] = useState<TrainerHistoryItem[]>([]);
   const [historyState, setHistoryState] = useState<HistoryState>("loading");
   const [historyError, setHistoryError] = useState("");
@@ -45,7 +45,13 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
       try {
         const result = await api.reviews();
         if (!active) return;
-        if (result.ok) { setReviews(result.data); setSelectedReview((current) => current || result.data[0]?.id || ""); }
+        if (result.ok) {
+          setReviews(result.data);
+          setSelectedReview((current) => {
+            if (initialReviewId) return result.data.some((item) => item.id === initialReviewId) ? initialReviewId : "";
+            return result.data.some((item) => item.id === current) ? current : result.data[0]?.id || "";
+          });
+        }
         else { setMessage(result.error.message); setLoadFailed(true); }
       } catch {
         if (!active) return;
@@ -55,10 +61,11 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         if (active) setLoading(false);
       }
     }
-  }, [api, loadAttempt]);
+  }, [api, initialReviewId, loadAttempt]);
 
   useEffect(() => {
     if (!selectedReview) { setHistory([]); setHistoryState("ready"); setHistoryError(""); return; }
+    if (loading || !reviews.some((item) => item.id === selectedReview)) return;
     let active = true;
     setHistory([]);
     setHistoryState("loading");
@@ -82,7 +89,7 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         setHistoryState("error");
       }
     }
-  }, [api, selectedReview, historyAttempt]);
+  }, [api, historyAttempt, loading, reviews, selectedReview]);
 
   async function draw() {
     if (!selectedReview || drawing) return;
@@ -174,9 +181,11 @@ export function TrainerScreen({ api, onStartReview }: { api: Api; onStartReview?
         <label htmlFor="trainer-review">Elige el análisis que quieres practicar</label>
         <div className="trainer-controls__row">
           <select id="trainer-review" value={selectedReview} onChange={(event) => { setSelectedReview(event.target.value); setChallenge(null); setCategory(null); setBankSize(null); setRecordedChallengeId(null); setPendingRecord(null); setRecordError(""); setDrawError(""); setMessage(""); setHistory([]); setHistoryState("loading"); setHistoryError(""); }} disabled={loading || drawing || recording || Boolean(pendingRecord)}>
+            {!selectedReview ? <option value="">Selecciona un análisis</option> : null}
             {reviews.map((item) => <option key={item.id} value={item.id}>{item.owner}/{item.repo} · {item.commitSha.slice(0, 7)}</option>)}
           </select>
         </div>
+        {initialReviewId && !reviews.some((item) => item.id === initialReviewId) && !selectedReview ? <p className="trainer-message" role="alert">No encontramos esa Review entre tus análisis completados. Elige otro análisis de forma manual.</p> : null}
         {review ? <div className="trainer-review-source" aria-label="Origen de la práctica">
           <p><span>Repositorio</span><code>{review.owner}/{review.repo}</code></p>
           <p><span>Commit analizado</span><code>{review.commitSha}</code></p>
