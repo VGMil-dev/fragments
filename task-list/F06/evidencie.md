@@ -109,3 +109,11 @@ Verificación fresca después del merge y cambios:
 - `pnpm exec turbo test --force` — salida 0; contratos 18/18 y API 78/78. Se observó un log genérico no fatal de validación de esquema al bloquear signup; la inspección del plan tras migración dio 0 pendientes, 0 índices pendientes y 0 problemas.
 - `pnpm exec turbo typecheck --force`, `pnpm exec turbo build --force`, `pnpm exec turbo lint --force`, `git diff --check` — salida 0.
 - Criterios F06 completos; tarea cerrada en `task-list/TASKS.md`.
+
+## Revalidación de aislamiento por aula — PR #293 / v0.5.83 · 2026-11-25
+
+- PR [#293](https://github.com/VGMil-dev/fragments/pull/293), merge SHA `c1dda89e31038682d45bbbcde468075689886f11`, agrega autorización por aula activa y matrícula del estudiante al acceso docente a Reviews de Inspector. Un Review no completado o sin contexto académico queda inaccesible; la respuesta no revela si pertenece a otra aula.
+- CI #45636940024 pasó la integración PostgreSQL: docente titular permitido, docente ajeno denegado y matrícula retirada denegada. La suite completa local de API informó 203 passed y 76 skipped; las pruebas que requieren PostgreSQL se ejecutaron en CI contra base desechable. Typecheck/build API pasaron; UI no cambió.
+- F14 run [45638308548](https://github.com/VGMil-dev/fragments/actions/runs/45638308548) completó verify-build, ARM64, attest-package y publish-approved-release. El aplicador normal registró release `458261137`, `v0.5.83`, `deployed`, SHA exacto, finalizada a las 14:58:15 UTC; backup con integridad `restored_to_temporary_database`. API/web reportaron healthy en la imagen del SHA; health público `ok/database=ready`.
+- Preflight/postflight de solo lectura: `/dev/sda1` con 108 GB libres (45% usado), inodos 10%; no se hizo limpieza Docker. Imágenes 77.13 GB (65.13 GB reclamables) y build cache 9.056 GB (7.871 GB reclamables). Se mantuvieron los servicios vecinos.
+- La defensa Inspector autenticada con una Review real queda NO COMPROBADA: `listTaskSpaces()` no encontró el Space 44 docente autorizado. No se creó espacio sustituto, no se usó sesión alterna y no se modificaron recursos académicos.
