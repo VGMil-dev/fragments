@@ -16,6 +16,7 @@ import { createPrismaReviewStore } from "../review/prisma-store.js";
 import { createReviewWorker } from "../review/worker.js";
 import { createTrainerRepository } from "../trainer/repository.js";
 import { createTrainerService } from "../trainer/service.js";
+import { createClassroomRepository } from "../classroom/repository.js";
 import { cleanupReviewFixtureRows } from "../../../test-support/fragments-test-database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -258,6 +259,46 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
     expect(evaluation.mentorContextVersion).toBe(recovered!.assignmentContext!.mentorContext.version);
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
+  });
+
+  it("keeps published mission skill snapshots after classroom disable and skill archival", async () => {
+    const classrooms = createClassroomRepository(database!);
+    const assignments = createAssignmentRepository(database!);
+    const mission = await assignments.create(teacherId, classroomId, {
+      title: "Misión con habilidad", instructions: "Demuestra navegación en una app.", objectives: ["Conectar dos pantallas"],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric,
+      deliverables: missionDeliverables,
+    });
+    expect(mission).not.toBeNull();
+    if (!mission || "kind" in mission) throw new Error("No se creó la misión fixture.");
+    const published = await assignments.publish(teacherId, classroomId, mission.id, 1);
+    expect(published.kind).toBe("ok");
+    if (published.kind !== "ok") throw new Error("No se publicó la misión fixture.");
+    const publishedVersion = published.assignment.versions.find((version) => version.version === 1)!;
+
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).toContain("Navegación");
+    expect((await classrooms.setClassroomSkill(teacherId, classroomId, skillId, false)).kind).toBe("ok");
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).not.toContain("Navegación");
+    const afterDisable = await assignments.listStudent(studentId, classroomId);
+    expect(afterDisable?.find((entry) => entry.id === publishedVersion.id)?.requiredSkills).toEqual([{ id: skillId, name: "Navegación" }]);
+
+    expect((await classrooms.setClassroomSkill(teacherId, classroomId, skillId, true)).kind).toBe("ok");
+    const renamedAndArchived = await classrooms.updateSkill(teacherId, skillId, { name: "Navegación archivada", archived: true });
+    expect(renamedAndArchived?.archived).toBe(true);
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).not.toContain("Navegación archivada");
+    const afterArchive = await assignments.listStudent(studentId, classroomId);
+    expect(afterArchive?.find((entry) => entry.id === publishedVersion.id)?.requiredSkills).toEqual([{ id: skillId, name: "Navegación" }]);
+    expect(afterArchive?.find((entry) => entry.id === publishedVersion.id)?.mentorContext.config.requirements).toContain("Habilidad requerida: Navegación");
+
+    const invalidNewMission = await assignments.create(teacherId, classroomId, {
+      title: "Misión posterior", instructions: "Elige una habilidad vigente.", objectives: ["Comprobar disponibilidad"],
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric,
+      deliverables: missionDeliverables,
+    });
+    expect(invalidNewMission).toEqual({ kind: "invalid_skills" });
+    expect((await database!.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: publishedVersion.id } })).snapshotJson).toMatchObject({
+      requiredSkills: [{ id: skillId, name: "Navegación" }],
+    });
   });
 
   it("keeps each mission rubric isolated when another mission publishes a new version", async () => {
