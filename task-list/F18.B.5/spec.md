@@ -15,3 +15,5 @@
 - Prueba del flujo App que confirma el `reviewId` en la URL y regresión existente de Trainer que confirma que se preselecciona la Review solicitada.
 - Suite web, typecheck, build y `git diff --check`.
 - Sin escrituras o llamadas a producción; datos fake locales etiquetados.
+
+Despliegue: integrar por PR y publicar solo con release anotada F14. La release puede probar persistencia del flujo operacional, pero no convierte pruebas fake en evidencia de Review real/IA ni sustituye la validación autenticada Ego Lite.
