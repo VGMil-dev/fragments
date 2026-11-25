@@ -13,6 +13,7 @@ Estado: cobertura automatizada ampliada; falta CI PostgreSQL desechable y verifi
 
 ## Pendiente de verificación
 
+- Commit de pruebas: `ffe5878ed95a0ecc1b3c17424ab59adb7ba1caf3` (`test(CU-13): valida tres etapas de una mision`).
 - Ejecutar la prueba PostgreSQL con DB desechable en CI antes de integrar. Resultados: PENDIENTE.
 - CU-13 producción/Ego Lite autenticada permanece NO COMPROBADA; no usar Review IA real. Los Spaces 44/80 no aparecen disponibles en el runtime.
 - El comportamiento evaluado es con proveedores `fake`; calidad de evaluación IA real continúa NO COMPROBADA.
