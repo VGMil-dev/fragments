@@ -210,13 +210,13 @@ describe("AssignmentsPanel", () => {
     const onStartProposal = vi.fn();
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[linked]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />);
 
-    expect(html).toContain("Abrir propuesta vinculada");
+    expect(html).toContain("Continuar misión");
     expect(html).not.toContain("Iniciar propuesta");
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
     try {
       await act(async () => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[linked]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />));
-      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Explora tu entorno"]');
+      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Explora tu entorno"]');
       await act(async () => action?.click());
       expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(linked);
       expect(onStartProposal).not.toHaveBeenCalled();
@@ -228,12 +228,12 @@ describe("AssignmentsPanel", () => {
     const older = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-older", updatedAt: "2026-11-20T00:00:00.000Z" };
     const newer = { ...fakeProposal(studentAssignment.id), id: "fixture-proposal-newer", updatedAt: "2026-11-23T00:00:00.000Z" };
     const html = renderToStaticMarkup(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[older, newer]} proposalsLoading={false} proposalsError={false} onContinueProposal={vi.fn()} />);
-    expect(html).toContain("Abrir propuesta vinculada");
+    expect(html).toContain("Continuar misión");
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement("div"); document.body.append(container); const root = createRoot(container); const onContinueProposal = vi.fn();
     try {
       act(() => root.render(<StudentAssignmentsList assignments={[studentAssignment]} proposals={[older, newer]} proposalsLoading={false} proposalsError={false} onContinueProposal={onContinueProposal} />));
-      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Explora tu entorno"]');
+      const action = container.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Explora tu entorno"]');
       act(() => action?.click());
       expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(newer);
     } finally { act(() => root.unmount()); container.remove(); }

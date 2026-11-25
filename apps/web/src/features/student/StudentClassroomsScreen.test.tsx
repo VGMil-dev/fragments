@@ -108,8 +108,8 @@ describe("StudentClassroomsScreen", () => {
     container = document.createElement("div"); document.body.append(container); root = createRoot(container);
     await act(async () => root?.render(<StudentClassroomsScreen classrooms={[room]} requests={[]} loading={false} error={null} onRefresh={() => undefined} proposals={[fakeOwnProposal]} proposalsLoading={false} proposalsError={false} onRetryProposals={vi.fn()} onContinueProposal={onContinueProposal} onStartProposal={onStartProposal} />));
 
-    const action = container.querySelector<HTMLButtonElement>('button[aria-label="Abrir propuesta vinculada: Misión recuperada"]');
-    expect(action?.textContent).toContain("Abrir propuesta vinculada");
+    const action = container.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Misión recuperada"]');
+    expect(action?.textContent).toContain("Continuar misión");
     await act(async () => action?.click());
     expect(onContinueProposal).toHaveBeenCalledExactlyOnceWith(fakeOwnProposal);
     expect(onStartProposal).not.toHaveBeenCalled();
