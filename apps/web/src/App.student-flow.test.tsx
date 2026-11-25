@@ -114,6 +114,25 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector("[data-testid=mentor-mission-classroom]")?.textContent).toBe(classroom.id);
   });
 
+  it("starts a new published mission from Mis aulas with its exact pinned context and without an existing proposal", async () => {
+    window.history.replaceState({}, "", "/student/classrooms");
+    mocks.assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [] });
+    await act(async () => root?.render(<App />));
+
+    const start = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.getAttribute("aria-label") === "Iniciar propuesta: Aplicación móvil");
+    expect(start).toBeDefined();
+    expect(mocks.studentApi.saveProposalDraft).not.toHaveBeenCalled();
+    await act(async () => start?.click());
+
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-mission-classroom]")?.textContent).toBe(classroom.id);
+    expect(container?.querySelector("[data-testid=mentor-context]")?.textContent).toBe("7");
+    expect(container?.querySelector("[data-testid=mentor-context-theme]")?.textContent).toBe("Navegación");
+    expect(container?.querySelector("[data-testid=mentor-required-skill-ids]")?.textContent).toBe("required-navigation");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")).toBeNull();
+  });
+
   it("continues the exact proposal linked to a mission opened from Mis aulas", async () => {
     window.history.replaceState({}, "", "/student/classrooms");
     mocks.assignmentsApi.listStudent.mockResolvedValue({ ok: true, data: [mission] });
