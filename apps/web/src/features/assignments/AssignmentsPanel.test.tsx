@@ -29,7 +29,25 @@ describe("AssignmentsPanel", () => {
     expect(html).toContain("Explora tu entorno");
     expect(html).toContain("Editar borrador");
     expect(html).toContain("Publicar");
+    expect(html).toMatch(/<button type="button"[^>]*>Publicar<\/button>/);
     expect(html).toContain("Hay cambios sin publicar");
+  });
+
+  it("explains the invalid mission rubric total and keeps publication disabled", () => {
+    const invalidRubricAssignment = {
+      ...assignment,
+      draft: {
+        ...assignment.draft!,
+        missionRubric: {
+          ...assignment.draft!.missionRubric!,
+          criteria: assignment.draft!.missionRubric!.criteria.map((criterion) => ({ ...criterion, weight: 99 })),
+        },
+      },
+    } as unknown as ClassroomAssignment;
+    const html = renderToStaticMarkup(<AssignmentsPanel assignments={[invalidRubricAssignment]} skills={[skill]} onCreate={vi.fn()} onUpdate={vi.fn()} onPublish={vi.fn()} />);
+
+    expect(html).toMatch(/<button type="button"[^>]*disabled=""[^>]*>Publicar<\/button>/);
+    expect(html).toContain("La rúbrica suma 99/100; ajusta los pesos para llegar a 100 antes de publicar.");
   });
 
   it("blocks mission authoring when the active API does not advertise the new contract", () => {

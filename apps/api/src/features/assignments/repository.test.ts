@@ -92,6 +92,23 @@ describe("assignment repository", () => {
     expect(state.assignment.publishedVersion).toBeNull();
   });
 
+  it("does not publish a mission when its rubric weights do not sum to 100", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const invalidRubricDraft = {
+      ...draft,
+      missionRubric: { ...missionRubric, criteria: [{ ...missionRubric.criteria[0]!, weight: 99 }] },
+    };
+    const created = await repository.create("fixture-teacher", "fixture-class", invalidRubricDraft);
+    if (!created || "kind" in created) throw new Error("Expected the invalid rubric draft to remain editable.");
+
+    const result = await repository.publish("fixture-teacher", "fixture-class", created.id, created.draftVersion);
+
+    expect(result).toEqual({ kind: "incomplete_assignment" });
+    expect(state.versions).toHaveLength(0);
+    expect(state.assignment.publishedVersion).toBeNull();
+  });
+
   it("does not replace an existing draft when its skills are unavailable", async () => {
     const { state, database } = memoryDb();
     const repository = createAssignmentRepository(database);
