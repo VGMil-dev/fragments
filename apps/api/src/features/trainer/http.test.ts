@@ -13,11 +13,16 @@ const describePostgres = databaseUrl ? describe : describe.skip;
 describePostgres("Trainer HTTP — PostgreSQL integration", () => {
   let server: ReturnType<typeof createApiServer> | undefined;
   let db: PrismaClient | undefined;
+  let safeTestDatabase = false;
   const reviewId = `review-${randomUUID()}`;
-  afterEach(async () => { if (server) await new Promise<void>((resolve) => server!.close(() => resolve())); if (db) { await db.trainerSession.deleteMany({ where: { attempts: { some: { reviewId } } } }); await db.trainerBank.deleteMany({ where: { reviewId } }); await db.$disconnect(); } server = undefined; db = undefined; });
+  afterEach(async () => { if (server) await new Promise<void>((resolve) => server!.close(() => resolve())); if (db) { if (safeTestDatabase) { await db.trainerSession.deleteMany({ where: { attempts: { some: { reviewId } } } }); await db.trainerBank.deleteMany({ where: { reviewId } }); } await db.$disconnect(); } server = undefined; db = undefined; });
 
   it("keeps hints public-only and scopes attempts to the HttpOnly browser session", async () => {
+    safeTestDatabase = false;
     db = openDatabase(databaseUrl!); await db.$connect();
+    const [{ currentDatabase }] = await db.$queryRaw<Array<{ currentDatabase: string }>>`SELECT current_database() AS "currentDatabase"`;
+    if (currentDatabase !== "fragments_test") throw new Error("Trainer HTTP integration tests require fragments_test.");
+    safeTestDatabase = true;
     const sha = "d".repeat(40);
     const snapshotBody = { owner: "classroom", repo: "demo", commitSha: sha, files: [{ path: "src/x.ts", content: "const x = 1;\n", sha: "e".repeat(40) }] };
     const digest = await digestSnapshot(snapshotBody);
