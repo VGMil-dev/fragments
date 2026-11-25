@@ -1,6 +1,6 @@
 # Evidencia CU-13 — configuración de entregas
 
-Estado: cobertura automatizada ampliada; falta CI PostgreSQL desechable y verificación post-release autenticada. F18.B ya soporta snapshots de entregas y continuidad Review; la matriz Notion marca CU-13 parcial por falta de recorrido Ego Lite integral.
+Estado: cobertura automatizada de tres entregas PASS en CI; la matriz Notion mantiene CU-13 PARCIAL por falta del recorrido UI autenticado en producción.
 
 ## Implementación y pruebas locales
 
@@ -11,11 +11,16 @@ Estado: cobertura automatizada ampliada; falta CI PostgreSQL desechable y verifi
 - Revisión independiente estática: CLEAN; confirmó snapshot de tres etapas, continuidad, proyecto/repositorio común y exclusión de hallazgos privados. El revisor no ejecutó tests.
 - Este incremento solo amplía pruebas de código ya desplegado; no cambia comportamiento runtime, esquema, contratos ni prompts. No requiere release nueva.
 
+## Integración
+
+- Commit de pruebas `ffe5878ed95a0ecc1b3c17424ab59adb7ba1caf3`; PR #314 merge normal en `12df6f599e6a4037a290796661694dacd8d9160d`.
+- CI #45683751479 SUCCESS. La suite `academic-flow.integration.test.ts` pasó con PostgreSQL desechable (4 casos); API 72 archivos/283 pruebas PASS; web 57/336, contratos 33/33; typecheck, lint y build PASS.
+- La rama solo añadió tests y evidencia; no hubo cambio de comportamiento runtime ni nueva tag. El runtime permanece en `v0.5.88` (bundle/SHA/health verificados en `task-list/CU12/evidencie.md`).
+
 ## Pendiente de verificación
 
 - Commit de pruebas: `ffe5878ed95a0ecc1b3c17424ab59adb7ba1caf3` (`test(CU-13): valida tres etapas de una mision`).
-- Ejecutar la prueba PostgreSQL con DB desechable en CI antes de integrar. Resultados: PENDIENTE.
-- CU-13 producción/Ego Lite autenticada permanece NO COMPROBADA; no usar Review IA real. Los Spaces 44/80 no aparecen disponibles en el runtime.
+- CU-13 producción/Ego Lite autenticada permanece NO COMPROBADA; no se verificó interacción docente para crear/publicar la misión ni lectura autenticada estudiante post-release. Los Spaces 44/80 no aparecen disponibles en el runtime.
 - El comportamiento evaluado es con proveedores `fake`; calidad de evaluación IA real continúa NO COMPROBADA.
 
 ## Límites conocidos
