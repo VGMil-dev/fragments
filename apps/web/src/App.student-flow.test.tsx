@@ -220,7 +220,7 @@ describe("student mission to Mentor flow", () => {
     expect(container?.querySelector('[role="alert"] button')?.textContent).toBe("Reintentar");
   });
 
-  it("does not assume a linked mission is at Mentor when delivery history fails", async () => {
+  it("continues to Mentor without querying delivery history when no Mentor evaluation exists", async () => {
     window.history.replaceState({}, "", "/student/projects");
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{ id: "project-linked", version: 1, proposal: { title: "Proyecto vinculado" }, assignmentVersionId: mission.id }] });
     mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [] });
@@ -228,6 +228,21 @@ describe("student mission to Mentor flow", () => {
 
     await act(async () => root?.render(<App />));
     const continueButton = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Proyecto vinculado"]');
+    await act(async () => continueButton?.click());
+
+    expect(mocks.studentApi.getMissionDeliveryHistory).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/student/mentor");
+    expect(container?.querySelector("[data-testid=mentor-proposal]")?.textContent).toContain("project-linked");
+  });
+
+  it("does not continue to Review when an evaluated mission's delivery history fails", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{ id: "project-reviewed", version: 1, proposal: { title: "Proyecto evaluado" }, assignmentVersionId: mission.id }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "project-reviewed" }] });
+    mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: false, error: { code: "TEMPORARY_UNAVAILABLE", message: "Unavailable" } });
+
+    await act(async () => root?.render(<App />));
+    const continueButton = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Proyecto evaluado"]');
     await act(async () => continueButton?.click());
 
     expect(window.location.pathname).toBe("/student/projects");
