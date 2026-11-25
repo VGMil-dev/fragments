@@ -1,22 +1,28 @@
 # Evidencia F18.B.7
 
-Estado: implementación local verificada; integración y despliegue pendientes.
+Estado: implementado e integrado; producción pendiente de la ruta F14.
 
 ## Comportamiento y pruebas
 
-- Añadida prueba de recorrido desde Mis proyectos con propuesta propia vinculada a misión, evaluación Mentor persistida e historial final completo. Aserciones verifican consultas al API, ruta Trainer y el `reviewId` final.
-- Añadidas regresiones para respuesta fallida de entregas y para historial de misión no disponible; ambas comprueban que no se navega a una etapa asumida y se presenta reintento/error.
-- Prueba focal: `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx` — 20/20 PASS.
-- Suite web: `pnpm --filter @fragments/web test` — 57 archivos, 332/332 PASS.
-- `pnpm --filter @fragments/web typecheck` — PASS.
-- `pnpm --filter @fragments/web build` — PASS; persisten avisos del bundle >500 kB y directivas `use client` en lucide-react.
-- `git diff --check` — PASS.
+- «Continuar» en Mis proyectos consulta las evaluaciones Mentor propias y el historial de Review cuando la propuesta está ligada a una misión; dirige a Mentor, Review o Trainer según el estado persistido.
+- Si una consulta requerida no responde correctamente, conserva Mis proyectos, explica que no pudo verificar el estado y permite reintentar.
+- Regresión hacia Trainer comprueba el `reviewId` final persistido. Dos regresiones de error verifican entregas/historial no disponibles.
+- Prueba focal `pnpm --filter @fragments/web exec vitest run src/App.student-flow.test.tsx`: 20/20 PASS.
+- Suite web `pnpm --filter @fragments/web test`: 57 archivos, 332/332 PASS.
+- `pnpm --filter @fragments/web typecheck`: PASS.
+- `pnpm --filter @fragments/web build`: PASS; permanecen avisos del bundle >500 kB y directivas `use client` en lucide-react.
+- `git diff --check`: PASS.
 
-El mock común de historial se cambió a un historial fake disponible. Las regresiones de error configuran respuestas fallidas explícitas, para que los flujos de éxito no dependan de un estado simulado inaccesible.
+El historial fake común se actualizó a disponible. Las regresiones de error configuran respuestas fallidas de forma explícita.
 
-## Límites
+## Integración y límites
 
-- No se hicieron llamadas IA, escrituras productivas ni pruebas autenticadas con Ego Lite.
-- Los Spaces estudiantil/docente autorizados previamente no están disponibles en la enumeración actual; la navegación real en QA/producción permanece NO COMPROBADA.
-- F14 está bloqueado al publicar v0.5.85 por HTTP 500 de GitHub en creación de release. No se creó tag adicional ni se omitieron controles. Este cambio tampoco está desplegado.
-- Commit, CI y PR se añadirán tras integración normal. La tarea no se marca completa hasta verificar el proceso acordado.
+- Commit de implementación: `bced45c10ad93ca3a88650c3d09d9a267422df0c`.
+- PR [#299](https://github.com/VGMil-dev/fragments/pull/299), integrado por merge normal en `f9f78c77817d7122bfc3b77ca504522a56409abd`.
+- CI [#45651545958](https://github.com/VGMil-dev/fragments/actions/runs/45651545958): SUCCESS.
+- CI confirma build y pruebas, incluidos servicios PostgreSQL efímeros; no equivale a navegación autenticada real.
+- F14 v0.5.85 sigue bloqueado durante publicación por HTTP 500 de GitHub al crear el release; no se creó otra tag ni se eludieron controles. Esta implementación no está desplegada.
+- Ego Lite autenticado, uso de un Review real y recorrido productivo: NO COMPROBADOS. Los Spaces autorizados previamente no aparecen en la enumeración actual.
+- No se ejecutaron llamadas IA ni escrituras de producción.
+
+La tarea F18.B.7 no se marca completa hasta desplegar por F14 cuando el bloqueo externo se resuelva y verificar el resultado en Ego Lite autorizado.
