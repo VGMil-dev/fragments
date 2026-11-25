@@ -465,3 +465,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - `/dev/sda1`: 89 GB libres, 55 % usado; inodos 12 %. Se conservan imágenes de `v0.5.88` y `v0.5.87` para rollback; no se ejerció rollback. Sin cambio de gates, secretos, servicios o datos académicos.
 - El HTML público sirve `/assets/index-kRRtjVZJ.js` (675,213 bytes); lectura directa confirmó dentro del bundle `v0.5.89` y el SHA exacto `fd91e02ba7d877d7f492ee64a6bd12d9d1024974`.
 - Ego Lite autenticado post-release NO COMPROBADO porque Spaces autorizados 44/80 no aparecen en el runtime actual. Esto verifica aplicación operativa de la release, no estabilidad general ni piloto académico.
+
+## Release automática v0.5.92 · CU-33 navegación admin · 2026-11-25
+
+- PR #327 integrada mediante merge normal en `main`, SHA `d513d2283d5091fffa6c27a63206f37a209a6da5`; CI #45706974889 SUCCESS. Tag anotada `v0.5.92` fijada al SHA exacto de main.
+- F14 run #45707727984 pasó `verify-build`, `attest-package` y `publish-approved-release`. Publicó GitHub Release ID `458690137` con paquete de imágenes, manifest y atestación.
+- El poller y aplicador F14 normales registraron el release ID `458690137`, tag/SHA exactos y estado `deployed`. Backup `fragments-prod-2026-11-25T21-58-25-758Z.dump`, 98,409 bytes, SHA-256 `768fbf3a30fc605c5265494d32e0388a0b37d989663c22e3e95a1f35b108180e`, `restored_to_temporary_database`.
+- API/web Fragments `Up (healthy)` en imágenes `sha-d513d2283d5091fffa6c27a63206f37a209a6da5`. `/health` HTTP 200 `ok/database=ready`; bundle `/assets/index-Bwomdy0w.js` confirma `v0.5.92` y SHA exacto. No se efectuó operación manual, migración de datos ni limpieza Docker.
+- F14 timer, apply path y cloudflared activos; apply service inactivo al finalizar; `systemctl --failed` vacío. PostgreSQL, Tymeslot, ImagenEC, Pits y contenedores de QA `healthy`.
+- `/dev/sda1`: 77 GB disponibles de 193 GB, 61 % usado; inodos 13 %. Docker reportó 110.5 GB en imágenes, 98.47 GB reclaimable y 9.056 GB de build cache; no se eliminó ningún artefacto. Imágenes API/web anteriores `v0.5.91` y `v0.5.90` permanecen disponibles para rollback; no se ejecutó rollback.
+- UI autenticada post-release NO COMPROBADA porque Ego Lite no expuso en este runtime los Spaces autorizados. La evidencia del bundle y servicios no sustituye esa prueba ni declara estabilidad para piloto.
