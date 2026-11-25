@@ -1,6 +1,6 @@
 # CU-23 — Evidencia
 
-Estado: implementación local; pruebas sin DB completas. Pendiente integración normal y despliegue F14.
+Estado: código integrado en commit local `75588c46f08cae84f2eac1f444659468df27fb56`; publicación PR/CI, integración normal y despliegue F14 pendientes.
 
 ## Hallazgo
 
@@ -18,5 +18,7 @@ Estado: implementación local; pruebas sin DB completas. Pendiente integración 
 
 ## Verificación y despliegue
 
-- Pendiente: build/lint restantes, PR/CI (incluida ejecución PostgreSQL efímera), integración normal y F14.
+- Build `pnpm build` PASS (web Vite, API tsc y Prisma client); se mantienen advertencias existentes del bundle >500 kB y directivas `use client` de lucide.
+- Lint `pnpm lint` PASS (solo contracts expone script de lint). Typecheck `pnpm typecheck` PASS. Diff check PASS.
+- Pendiente: PR/CI (incluida ejecución PostgreSQL efímera), integración normal y F14.
 - Pendiente: revisión Ego Lite autenticada del historial en producción; si los Spaces autorizados no están disponibles, registrar NO COMPROBADO sin crear otro.
