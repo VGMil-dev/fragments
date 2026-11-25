@@ -76,7 +76,7 @@ beforeEach(() => {
   mocks.studentApi.getMyClassroomSkills.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [] });
   mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [] });
-  mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: false, error: { code: "NOT_FOUND", message: "No history" } });
+  mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: true, data: { proposalId: "qa-proposal", assignmentVersionId: "mission-v1", nextDeliverableId: "delivery-1", deliveries: [] } });
   mocks.studentApi.getGallery.mockResolvedValue({ ok: true, data: { items: [], nextOffset: null } });
   mocks.studentApi.getMentorContext.mockResolvedValue({ ok: true, data: { version: 2 } });
   mocks.studentApi.saveProposalDraft.mockResolvedValue({ ok: true, data: { id: "proposal-1", version: 1, proposal: { title: "Borrador de misión" } } });
@@ -180,6 +180,58 @@ describe("student mission to Mentor flow", () => {
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/trainer");
     expect(window.location.search).toBe("?reviewId=final-delivery-review");
+  });
+
+  it("continues a saved project from Mis proyectos according to its persisted academic state", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{
+      id: "project-own", version: 3, proposal: { title: "Navegación Expo" }, assignmentVersionId: mission.id,
+      assignmentContext: { assignmentVersionId: mission.id, requiredSkills: [], mentorContext: { version: 7, config: { theme: "Navegación" } } },
+    }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "project-own" }] });
+    mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: true, data: {
+      proposalId: "project-own", assignmentVersionId: mission.id, nextDeliverableId: null,
+      deliveries: [{ deliverable: { id: "final-delivery", order: 1, title: "Entrega final", type: "final", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [
+        { reviewId: "final-review-own", commitSha: "c".repeat(40), status: "completed", createdAt: "2026-11-25T10:00:00.000Z", updatedAt: "2026-11-25T10:15:00.000Z" },
+      ] }],
+    } });
+
+    await act(async () => root?.render(<App />));
+    const continueButton = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Navegación Expo"]');
+    await act(async () => continueButton?.click());
+
+    expect(mocks.studentApi.getMySubmissions).toHaveBeenCalledOnce();
+    expect(mocks.studentApi.getMissionDeliveryHistory).toHaveBeenCalledWith("project-own");
+    expect(window.location.pathname).toBe("/student/trainer");
+    expect(window.location.search).toBe("?reviewId=final-review-own");
+  });
+
+  it("stays in Mis proyectos when the evaluation history cannot be read", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{ id: "project-unlinked", version: 1, proposal: { title: "Proyecto propio" } }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: false, error: { code: "TEMPORARY_UNAVAILABLE", message: "Unavailable" } });
+
+    await act(async () => root?.render(<App />));
+    const continueButton = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Proyecto propio"]');
+    await act(async () => continueButton?.click());
+
+    expect(window.location.pathname).toBe("/student/projects");
+    expect(container?.querySelector('[role="alert"]')?.textContent).toContain("No pudimos confirmar el estado guardado de tu proyecto");
+    expect(container?.querySelector('[role="alert"] button')?.textContent).toBe("Reintentar");
+  });
+
+  it("does not assume a linked mission is at Mentor when delivery history fails", async () => {
+    window.history.replaceState({}, "", "/student/projects");
+    mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [{ id: "project-linked", version: 1, proposal: { title: "Proyecto vinculado" }, assignmentVersionId: mission.id }] });
+    mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [] });
+    mocks.studentApi.getMissionDeliveryHistory.mockResolvedValue({ ok: false, error: { code: "TEMPORARY_UNAVAILABLE", message: "Unavailable" } });
+
+    await act(async () => root?.render(<App />));
+    const continueButton = container?.querySelector<HTMLButtonElement>('.student-project-list button[aria-label="Continuar propuesta: Proyecto vinculado"]');
+    await act(async () => continueButton?.click());
+
+    expect(window.location.pathname).toBe("/student/projects");
+    expect(container?.querySelector('[role="alert"]')?.textContent).toContain("No pudimos confirmar el estado guardado de tu proyecto");
   });
 
   it("waits for owned proposals before allowing a new classroom proposal", async () => {

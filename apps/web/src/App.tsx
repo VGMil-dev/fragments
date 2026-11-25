@@ -82,6 +82,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
   const [submissionDownloadError, setSubmissionDownloadError] = useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<ProposalDraftResponse | undefined>();
   const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | undefined>();
+  const [proposalContinuation, setProposalContinuation] = useState<{ proposal: ProposalDraftResponse; status: "loading" | "error" } | null>(null);
   const requestedProposalId = ["/student/mentor", "/student/review"].includes(path)
     ? new URLSearchParams(search).get("proposalId")
     : null;
@@ -287,17 +288,24 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
     navigate(missionContinuationUrl(proposal.id, continuation));
   }, [navigate]);
   const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
+    if (proposalContinuation?.status === "loading") return;
+    setProposalContinuation({ proposal, status: "loading" });
     const [submissionsResult, historyResult] = await Promise.allSettled([
       studentApi.getMySubmissions(),
       proposal.assignmentVersionId ? studentApi.getMissionDeliveryHistory(proposal.id) : Promise.resolve(null),
     ]);
-    const mentorEvaluationExists = submissionsResult.status === "fulfilled"
-      && submissionsResult.value.ok
-      && submissionsResult.value.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
-    const history = historyResult.status === "fulfilled" && historyResult.value?.ok ? historyResult.value.data : undefined;
+    const submissions = submissionsResult.status === "fulfilled" ? submissionsResult.value : undefined;
+    const historyResponse = historyResult.status === "fulfilled" ? historyResult.value : undefined;
+    if (!submissions?.ok || (proposal.assignmentVersionId && (!historyResponse || !historyResponse.ok))) {
+      setProposalContinuation({ proposal, status: "error" });
+      return;
+    }
+    const mentorEvaluationExists = submissions.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
+    const history = historyResponse?.ok ? historyResponse.data : undefined;
     const continuation = missionContinuationDestination(mentorEvaluationExists, history);
+    setProposalContinuation(null);
     openProposal(proposal, continuation);
-  }, [openProposal]);
+  }, [openProposal, proposalContinuation]);
 
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
   if (!student) return <main className="student-screen"><p role="status">Comprobando el acceso con GitHub…</p></main>;
@@ -334,6 +342,8 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
         <div className="student-workspace__account">{student ? <>{student.profileUrl && student.githubLogin ? <a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a> : <span>Cuenta GitHub</span>}<button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
       </header>
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
+        {proposalContinuation?.status === "loading" ? <p role="status">Consultando el estado guardado de tu proyecto…</p> : null}
+        {proposalContinuation?.status === "error" ? <div role="alert"><p>No pudimos confirmar el estado guardado de tu proyecto. No abrimos otra etapa. Inténtalo de nuevo.</p><button type="button" onClick={() => void continueProposal(proposalContinuation.proposal)}>Reintentar</button></div> : null}
         {path === "/student/dashboard" ? <StudentDashboard
           student={student}
           classrooms={myClassrooms}
@@ -386,7 +396,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
                   </ul> : missionContext ? <p>Esta misión no fijó habilidades requeridas.</p> : <p>El contexto fijado para esta misión no está disponible.</p>}
                 </details> : null}
               </div>
-              <button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} onClick={() => openProposal(item)}>Continuar</button>
+              <button type="button" aria-label={`Continuar propuesta: ${item.proposal.title || "Borrador sin título"}`} disabled={proposalContinuation?.status === "loading"} onClick={() => void continueProposal(item)}>Continuar</button>
             </li>;
           })}</ul> : <p>Aún no tienes propuestas guardadas.</p>}
           <button className="button button--primary" type="button" onClick={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Crear una propuesta</button>
