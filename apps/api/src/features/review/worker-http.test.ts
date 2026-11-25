@@ -260,10 +260,10 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
       ]);
       expect(retried.map((response) => response.status)).toEqual([202, 202]);
       const results = await Promise.all(retried.map((response) => response.json()));
-      expect(results).toEqual([
-        expect.objectContaining({ ok: true, data: { id: job.id, status: "queued" } }),
-        expect.objectContaining({ ok: true, data: { id: job.id, status: "queued" } }),
-      ]);
+      expect(results).toHaveLength(2);
+      for (const result of results) {
+        expect(result).toMatchObject({ ok: true, data: { id: job.id, status: "queued" } });
+      }
     });
 
     expect(await f.store.getAttemptHistory(job.id)).toMatchObject([
