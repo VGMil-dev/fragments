@@ -4,6 +4,8 @@
 
 Se añadió a `apps/web/src/App.student-flow.test.tsx` un caso que integra la pantalla Mis aulas con la ruta de Mentor para una misión publicada sin propuesta propia. Comprueba el aula, tema, versión de contexto y habilidad requerida; también confirma que no se llama a `saveProposalDraft` automáticamente.
 
+Commit verificado: `b7eae279de7b5f66a13e9184eb13965df8354074`.
+
 ## Verificación local
 
 - `pnpm --filter @fragments/web test -- src/App.student-flow.test.tsx` → Vitest reportó suite web completa: **57 archivos, 337 pruebas PASS**. La suite confirma el recorrido con fixtures; el proveedor y las APIs son fake.
