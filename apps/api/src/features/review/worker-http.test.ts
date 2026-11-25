@@ -254,17 +254,28 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
     const handler = createReviewHttp({ store: f.store, service: f.service, resolveContext: async () => f.context });
 
     await serve(handler, async (baseUrl) => {
-      const retried = await fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" });
-      expect(retried.status).toBe(202);
-      expect(await retried.json()).toMatchObject({ ok: true, data: { id: job.id, status: "queued" } });
+      const retried = await Promise.all([
+        fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" }),
+        fetch(`${baseUrl}/api/reviews/${job.id}/retry`, { method: "POST" }),
+      ]);
+      expect(retried.map((response) => response.status)).toEqual([202, 202]);
+      const results = await Promise.all(retried.map((response) => response.json()));
+      expect(results).toHaveLength(2);
+      for (const result of results) {
+        expect(result).toMatchObject({ ok: true, data: { id: job.id, status: "queued" } });
+      }
     });
 
+    expect(await f.store.getAttemptHistory(job.id)).toMatchObject([
+      { attempt: 1, finalStatus: "failed", errorCode: "GITHUB_RATE_LIMITED" },
+    ]);
     await createReviewWorker({ store: f.store, service: f.service, workerId: "worker-retry" }).runOnce();
     expect(await f.store.getJob(job.id)).toMatchObject({ id: job.id, status: "completed" });
     expect(await f.store.getAttemptHistory(job.id)).toMatchObject([
       { attempt: 1, finalStatus: "failed", errorCode: "GITHUB_RATE_LIMITED" },
       { attempt: 2, finalStatus: "completed", errorCode: null },
     ]);
+    expect(await f.store.getAttemptHistory(job.id)).toHaveLength(2);
   });
 
   it("emits normalized diagnostics without exception text", async () => {
