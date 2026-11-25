@@ -126,7 +126,7 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
     expect(await worker.runOnce()).toBe(true);
     expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(true);
     expect(await f.store.teacherCanAccessReview(job.id, otherTeacherId)).toBe(false);
-    await f.database.classEnrollment.update({ where: { id: enrollmentId }, data: { status: "withdrawn" } });
+    await f.database.classEnrollment.update({ where: { id: enrollmentId }, data: { status: "removed" } });
     expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(false);
   });
 
