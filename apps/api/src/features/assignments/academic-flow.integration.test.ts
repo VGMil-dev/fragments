@@ -16,6 +16,9 @@ import { createPrismaReviewStore } from "../review/prisma-store.js";
 import { createReviewWorker } from "../review/worker.js";
 import { createTrainerRepository } from "../trainer/repository.js";
 import { createTrainerService } from "../trainer/service.js";
+import { createInspectorReviewAdapter } from "../inspector/review-adapter.js";
+import { createInspectorRepository } from "../inspector/repository.js";
+import { createInspectorService } from "../inspector/service.js";
 import { createClassroomRepository } from "../classroom/repository.js";
 import { cleanupReviewFixtureRows } from "../../../test-support/fragments-test-database.js";
 
@@ -428,6 +431,31 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       } },
       store: trainerStore,
     });
+    const inspectorReviews = createInspectorReviewAdapter({
+      reviews: {
+        getById: reviewStore.getById,
+        getLatestCommit: reviewStore.getLatestCommit,
+        teacherCanAccessReview: reviewStore.teacherCanAccessReview,
+      },
+      repository: { async getCommitSnapshot(input) {
+        const snapshot = { ...snapshotBody, commitSha: input.commitSha };
+        return { ...snapshot, digest: await digestSnapshot(snapshot) };
+      } },
+    });
+    const inspectorService = createInspectorService({
+      reviews: inspectorReviews,
+      provider: { async createChallenge(input) {
+        return {
+          precondition: "La navegación conserva dos destinos.",
+          mutation: `Cambia temporalmente la navegación en ${input.evidence.path}.`,
+          demonstration: "Verifica el resultado en las dos rutas.",
+          restoration: "Restaura el comportamiento de la navegación.",
+          estimatedMinutes: 8,
+          teacherHint: "Guía privada: comprueba el conteo de rutas.",
+        };
+      } },
+      store: createInspectorRepository(db),
+    });
     const auth = {
       async userId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-user"] ?? null; },
       async teacherId(request: { headers: Record<string, string | undefined> }) { return request.headers["x-fixture-role"] === "teacher" ? request.headers["x-fixture-user"] ?? null : null; },
@@ -450,6 +478,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
           evaluatorVersion: "fake-offline-v1", studentId, githubLogin: owner }),
       },
       trainer: { service: trainerService, store: trainerStore },
+      inspector: inspectorService,
     });
     const server = createServer(handler);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -527,6 +556,24 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       await expect(worker.runOnce()).resolves.toBe(true);
       await expect(reviewStore.getJob(finalDelivery.data.id)).resolves.toMatchObject({ id: finalDelivery.data.id, status: "completed" });
 
+      const inspectorHeaders = { "x-fixture-user": teacherId, "x-fixture-role": "teacher", "content-type": "application/json" };
+      const inspectorCreate = await fetch(`${base}/api/inspector/${finalDelivery.data.id}/challenges`, { method: "POST",
+        headers: { ...inspectorHeaders, "idempotency-key": "7f99ccab-7a74-4c7e-bf93-a98dd2c86fb7" } });
+      expect(inspectorCreate.status).toBe(201);
+      const inspectorCreated = await inspectorCreate.json() as { data: { id: string; reviewId: string; commitSha: string; status: string; challenge: { sourceEvidence: Array<{ path: string }>; teacherHint: string } } };
+      expect(inspectorCreated.data).toMatchObject({ reviewId: finalDelivery.data.id, commitSha: finalCommitSha, status: "pending",
+        challenge: { sourceEvidence: [{ path: "src/navigation.ts" }], teacherHint: "Guía privada: comprueba el conteo de rutas." } });
+      const assignDefense = await fetch(`${base}/api/inspector/challenges/${inspectorCreated.data.id}/assign`, { method: "POST", headers: inspectorHeaders, body: "{}" });
+      expect(assignDefense.status).toBe(200);
+      const defense = await fetch(`${base}/api/inspector/challenges/${inspectorCreated.data.id}/record`, { method: "POST", headers: inspectorHeaders,
+        body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, notes: "El docente observó la mutación y confirmó la restauración." }) });
+      expect(defense.status).toBe(200);
+      const inspectorListed = await fetch(`${base}/api/inspector/${finalDelivery.data.id}/challenges`, { headers: inspectorHeaders });
+      const inspectorRecords = await inspectorListed.json() as { data: Array<{ status: string; commitSha: string; challenge: { teacherHint?: string }; defense?: { restorationConfirmed: boolean } }> };
+      expect(inspectorRecords.data).toMatchObject([{ status: "completed", commitSha: finalCommitSha,
+        challenge: { teacherHint: "Guía privada: comprueba el conteo de rutas." }, defense: { restorationConfirmed: true } }]);
+      expect(await db.inspectorChallenge.count({ where: { reviewId: finalDelivery.data.id, commitSha: finalCommitSha, status: "completed" } })).toBe(1);
+
       const finalHistoryResponse = await fetch(historyUrl, { headers });
       expect(finalHistoryResponse.status).toBe(200);
       const finalHistory = await finalHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
@@ -578,6 +625,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
+      if (reviewJobIds.length) await db.inspectorChallenge.deleteMany({ where: { reviewId: { in: reviewJobIds } } });
       if (trainerSessionHashes.size) await db.trainerSession.deleteMany({ where: { sessionHash: { in: [...trainerSessionHashes] } } });
       if (reviewJobIds.length) await cleanupReviewFixtureRows(db, databaseUrl!, reviewJobIds);
     }
