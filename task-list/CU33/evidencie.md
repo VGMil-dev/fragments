@@ -34,5 +34,8 @@ Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewSc
 - Suite web: `pnpm --filter @fragments/web test` — 58 archivos, 340/340 PASS.
 - Typecheck: `pnpm --filter @fragments/web typecheck` — PASS.
 - Build: `pnpm --filter @fragments/web build` — PASS. Permanecen los avisos conocidos de chunk >500 kB y directivas `use client` de lucide-react.
-- Producción/Ego Lite: NO COMPROBADO en esta ampliación; no se sustituyeron los perfiles ni se modificó la autenticación. Despliegue F14 pendiente de PR/CI.
-- Commit de código, PR, SHA de integración y release: pendientes.
+- Commit de código: `dc355243baa84bbde4ece9663bbeea9420facd89`.
+- PR #327 merge normal en SHA `d513d2283d5091fffa6c27a63206f37a209a6da5`; CI run `45706974889` SUCCESS. La release F14 `v0.5.92`, run `45707727984`, completó verify-build, attest-package y publish-approved-release; tag anotada apuntó al SHA exacto. GitHub Release `458690137`.
+- Aplicación productiva normal comprobada por ledger F14: estado `deployed`, tag/SHA exactos. Backup `fragments-prod-2026-11-25T21-58-25-758Z.dump`, 98,409 bytes, SHA-256 `768fbf3a30fc605c5265494d32e0388a0b37d989663c22e3e95a1f35b108180e`, integridad `restored_to_temporary_database`.
+- API/web Fragments healthy en `sha-d513d2283d5091fffa6c27a63206f37a209a6da5`; `/health` HTTP 200 `ok/database=ready`; bundle `/assets/index-Bwomdy0w.js` HTTP 200 con versión y SHA exactos. Poll timer, apply path y cloudflared activos; apply inactivo; `systemctl --failed` vacío. PostgreSQL, servicios vecinos y contenedores de prueba reportaron healthy. `/dev/sda1`: 77 GB libres (61 % usado), inodos 13 %. Imágenes de API/web de v0.5.91 y v0.5.90 conservadas; no hubo limpieza ni rollback.
+- Ego Lite autenticado post-release: NO COMPROBADO. El runtime Ego Lite enumeró solo Spaces 0 y 3; Space 80 no estaba disponible. No se abrió un Space sustituto ni se alteraron cuentas. El cambio se verificó con APIs fake/CI y evidencia pública/técnica del release.

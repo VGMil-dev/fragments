@@ -92,3 +92,8 @@ F21 — Release v0.5.4 y recuperación F14 (21-nov-2026)
 - QA Ego Lite guardado en `F21_EVIDENCIAS` incluye docente, estudiante, aula/matrícula y Mentor/Review/Trainer/Inspector. OAuth GitHub real e IA pagada no probados.
 - Incidente operativo: el primer apply dejó `rejected/unknown_error`; después ejecuté accidentalmente la función F14 real con ledger temporal al intentar un preflight. El release aprobado fue desplegado; informé la discrepancia y reconcilié por la ruta oficial `deploying` de F14, que revalidó procedencia y solo observó el estado sin migrar ni recrear contenedores. El rechazo original permanece en `previousAttempt`. Registro detallado en `F21_EVIDENCIAS/20-f14-recuperacion.txt`.
 - No quedan pendientes técnicos F21. SHA de cierre desplegado: `0d016e75ce9a56e01c66925f58d9dc3ab90a19f3`.
+
+## Verificación de continuidad PostgreSQL · v0.5.92 · 2026-11-25
+
+- CU-33 fue desplegado por F14 sin cambios de esquema ni datos académicos. El ledger registra release `458690137` `deployed`; el backup PostgreSQL `fragments-prod-2026-11-25T21-58-25-758Z.dump` (98,409 bytes, SHA-256 `768fbf3a30fc605c5265494d32e0388a0b37d989663c22e3e95a1f35b108180e`) pasó `restored_to_temporary_database`.
+- API/web y PostgreSQL quedaron saludables; `/health` reporta `ok/database=ready`. No se reinició PostgreSQL ni se consultaron o modificaron filas de negocio.
