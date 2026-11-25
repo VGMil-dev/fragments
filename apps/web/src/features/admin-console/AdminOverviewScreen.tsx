@@ -63,7 +63,7 @@ export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsA
         {loading ? "Actualizando…" : diagnostics.status === "error" || queue.status === "error" ? "Reintentar resumen" : "Actualizar resumen"}
       </button>
     </header>
-    {adminAccessDenied ? null : <AdminConsoleNavigation current="overview" />}
+    <AdminConsoleNavigation current="overview" accessDenied={adminAccessDenied} />
 
     {loading ? <p className="admin-overview__loading" role="status" aria-live="polite">Cargando el resumen de administración…</p> : null}
 

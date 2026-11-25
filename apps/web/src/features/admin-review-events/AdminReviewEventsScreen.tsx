@@ -33,7 +33,7 @@ export function AdminReviewEventsScreen({ api }: { api: AdminReviewEventsApi }) 
       <p className="admin-review-events__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-review-events-title">Eventos operativos de Review</h1>
       <p>Intentos del worker y etapas de Review con resultado, duración y correlación. No se muestran prompts, código de repositorios ni datos personales.</p>
-      <AdminConsoleNavigation current="review-events" />
+      <AdminConsoleNavigation current="review-events" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
     </header>
     <p className="admin-review-events__retention">El buffer guarda como máximo 100 eventos desde el último inicio de API; la vista devuelve hasta 50 y se pierde al reiniciar el proceso.</p>

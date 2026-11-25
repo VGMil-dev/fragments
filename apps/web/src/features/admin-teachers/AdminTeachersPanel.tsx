@@ -47,7 +47,7 @@ export function AdminTeachersPanel({ api }: { api: AdminTeachersApi }) {
       <p className="admin-teachers__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-teachers-title">Cuentas docentes</h1>
       <p>Directorio de cuentas con rol docente. Esta vista es de solo lectura y no muestra sesiones ni credenciales.</p>
-      <AdminConsoleNavigation current="teachers" />
+      <AdminConsoleNavigation current="teachers" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
       <button type="button" onClick={refresh} disabled={state.status === "loading"}>
         {state.status === "loading" ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}
       </button>

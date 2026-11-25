@@ -35,7 +35,7 @@ export function AdminTrainerEventsScreen({ api }: { api: AdminTrainerEventsApi }
     <header className="admin-trainer-events__header">
       <p className="admin-trainer-events__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-trainer-events-title">Eventos operativos de Trainer</h1>
-      <AdminConsoleNavigation current="trainer-events" />
+      <AdminConsoleNavigation current="trainer-events" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
       <p>Consulta los resultados técnicos del registro de intentos. La vista solo representa campos operativos redactados.</p>
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>
         {busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}
