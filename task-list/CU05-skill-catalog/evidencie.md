@@ -11,6 +11,7 @@ Estado: cobertura ampliada; CI PostgreSQL pendiente.
 
 ## Verificación local
 
+- Commit del test y guardas: `7f6d1c0` (`test(cu05): cubre catalogo docente de habilidades`).
 - `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx` — 8/8 PASS.
 - `pnpm --filter @fragments/api typecheck` — PASS.
 - Integración PostgreSQL local — omitida por ausencia de `DATABASE_URL`; Docker Desktop no está disponible. Ejecutar en CI aislado antes de completar.
