@@ -150,6 +150,36 @@ describe("ClassroomStudio", () => {
     expect(navigate).toHaveBeenCalledWith("/teacher/skills");
   });
 
+  it("offers contextual links to the classroom data, students, skills, missions, and rubrics", async () => {
+    const classroom = {
+      id: "fixture-classroom-sections", title: "Aula de prueba", subject: "Programación", groupLabel: "G1",
+      period: null, context: null, status: "active" as const,
+      createdAt: "2026-11-20T00:00:00.000Z", updatedAt: "2026-11-20T00:00:00.000Z",
+    };
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [classroom], nextOffset: null } });
+    classroomApi.get.mockResolvedValue({ ok: true, data: classroom });
+    classroomApi.enrollments.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.classroomSkills.mockResolvedValue({ ok: true, data: [] });
+    classroomApi.students.mockResolvedValue({ ok: true, data: { items: [] } });
+    assignmentsApi.listTeacher.mockResolvedValue({ ok: true, data: [] });
+    const navigate = vi.fn();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path={`/teacher/classrooms/${classroom.id}`} navigate={navigate} />));
+
+    const nav = container.querySelector<HTMLDivElement>('[aria-label="Secciones del aula"]');
+    expect(nav).not.toBeNull();
+    const targets = ["classroom-data", "classroom-students", "classroom-skills", "classroom-missions"];
+    for (const target of targets) {
+      expect(nav!.querySelector(`a[href="#${target}"]`)).not.toBeNull();
+      expect(container.querySelector(`#${target}`)).not.toBeNull();
+      expect(container.querySelector<HTMLElement>(`#${target}`)?.tabIndex).toBe(-1);
+    }
+    expect(nav?.querySelector('a[href="#classroom-missions"]')?.textContent).toContain("Misiones y rúbricas");
+  });
+
   it("keeps archived classroom skills visible and links to the catalog when all are archived", async () => {
     const classroom = {
       id: "fixture-classroom-archived-skills", title: "Aula de prueba", subject: "Programación", groupLabel: "G1",

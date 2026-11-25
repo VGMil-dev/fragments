@@ -2,7 +2,7 @@
 
 ## Estado
 
-Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewScreen.tsx` y `apps/web/src/features/admin-ai-diagnostics/AdminAiDiagnosticsScreen.tsx`; no mezcla el ocultamiento de navegación con el control de autorización backend. Cuando una lectura en esas pantallas devuelve `AUTH_REQUIRED`/`FORBIDDEN`, omiten el nav administrativo. Errores genéricos conservan el nav y el botón de reintento. Las otras pantallas admin aún no forman parte de este incremento.
+Corrección inicial en `apps/web/src/features/admin-console/AdminOverviewScreen.tsx` y `apps/web/src/features/admin-ai-diagnostics/AdminAiDiagnosticsScreen.tsx`, ampliada después a las diez rutas de administración. `AdminConsoleNavigation` oculta la navegación ante `AUTH_REQUIRED`/`FORBIDDEN`; errores recuperables conservan navegación y reintento. La autorización backend no cambió.
 
 ## TDD
 
@@ -16,7 +16,7 @@ Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewSc
 - `git diff --check` — PASS tras todos los cambios.
 - Commit de implementación: `c23b1f45a859e7dd889b502f6a0f3f29ca0e3c4d`.
 - CI del PR #310: run `45671152783`, job `verify` — SUCCESS (todos los pasos y limpieza PASS).
-- Revisión independiente formal: pendiente.
+- Revisión independiente formal del incremento inicial: pendiente.
 
 ## Integración y producción
 
@@ -39,3 +39,5 @@ Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewSc
 - Aplicación productiva normal comprobada por ledger F14: estado `deployed`, tag/SHA exactos. Backup `fragments-prod-2026-11-25T21-58-25-758Z.dump`, 98,409 bytes, SHA-256 `768fbf3a30fc605c5265494d32e0388a0b37d989663c22e3e95a1f35b108180e`, integridad `restored_to_temporary_database`.
 - API/web Fragments healthy en `sha-d513d2283d5091fffa6c27a63206f37a209a6da5`; `/health` HTTP 200 `ok/database=ready`; bundle `/assets/index-Bwomdy0w.js` HTTP 200 con versión y SHA exactos. Poll timer, apply path y cloudflared activos; apply inactivo; `systemctl --failed` vacío. PostgreSQL, servicios vecinos y contenedores de prueba reportaron healthy. `/dev/sda1`: 77 GB libres (61 % usado), inodos 13 %. Imágenes de API/web de v0.5.91 y v0.5.90 conservadas; no hubo limpieza ni rollback.
 - Ego Lite autenticado post-release: NO COMPROBADO. El runtime Ego Lite enumeró solo Spaces 0 y 3; Space 80 no estaba disponible. No se abrió un Space sustituto ni se alteraron cuentas. El cambio se verificó con APIs fake/CI y evidencia pública/técnica del release.
+- El cierre documental se integró por PR #328, CI #45711180421 SUCCESS, merge SHA `47550c63f14bc238b19a6c01a8f3d772cb13b67a`.
+- Revisión actual de Ego Lite: solo Spaces 0 y 3 enumerados; los Spaces autorizados 44 (docente) y 80 (estudiante) no estaban disponibles. No se reclamó ni abrió un reemplazo.

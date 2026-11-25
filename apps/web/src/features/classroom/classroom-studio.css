@@ -60,6 +60,10 @@
 .cs-skill p { margin: .35rem 0 0; color: var(--f16-text-secondary); }
 .cs-skill .cs-status { margin-left: .6rem; vertical-align: middle; }
 .cs-back { display: inline-flex; align-items: center; gap: .45rem; min-height: 44px; color: var(--f16-info) !important; text-decoration: none; margin: -1rem 0 1rem; }
+.cs-section-nav { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1rem; padding: .4rem; border: 1px solid var(--f16-border); border-radius: var(--f16-radius-card); background: var(--f16-night); }
+.cs-section-nav a { min-height: 44px; display: inline-flex; align-items: center; padding: .55rem .8rem; border-radius: var(--f16-radius-control); color: var(--f16-text-secondary); text-decoration: none; }
+.cs-section-nav a:hover, .cs-section-nav a:focus-visible { color: var(--f16-lime); background: var(--f16-surface); }
+#classroom-data, #classroom-students, #classroom-skills, #classroom-missions { scroll-margin-top: 8rem; }
 .cs-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1rem; }
 .cs-detail-grid > .cs-panel:first-child { grid-row: span 2; }
 .cs-panel-heading { align-items: center; margin-bottom: .5rem; }
