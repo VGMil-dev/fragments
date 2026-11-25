@@ -53,3 +53,13 @@ Estado: IMPLEMENTACIÓN INTEGRADA Y v0.5.68 DESPLEGADA; pruebas autenticadas pos
 ## Promoción administrativa solicitada, fuera de este incremento
 
 El propietario autorizó promover `vgmiltonisaac@gmail.com` a admin conservando `isTeacher=true`. La investigación está pendiente de mecanismo autorizado disponible; no hay un endpoint público para autoasignar admin y no se usó escritura SQL/manual ni el bootstrap docente local. No cambiar rol ni tocar producción como parte de F18.B.3.
+
+## Entregas publicadas visibles en Mentor — v0.5.78
+
+- Implementación: PR #284, merge normal `4e61e03868984546f8ab572a61d8ef93b838dd66`. Mentor muestra las entregas de la versión vinculada en orden, con tipo, requisitos, fecha opcional y criterios aplicables. Al reabrir una propuesta existente, recupera la misión publicada desde las aulas propias.
+- Pruebas locales: `pnpm --filter @fragments/web test` — 56 archivos / 317 pruebas PASS; `pnpm --filter @fragments/web typecheck` PASS; `pnpm --filter @fragments/web build` PASS (persisten avisos conocidos de chunk >500 kB y directivas `use client` de Lucide); `git diff --check` PASS.
+- CI PR #284, run `45547533036`: SUCCESS. Incluyó PostgreSQL desechable, suite del monorepo y verificaciones de backup/restore.
+- Release F14 `v0.5.78`, run `45547857600`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. La tag anotada apunta al merge `4e61e03868984546f8ab572a61d8ef93b838dd66`.
+- Producción: `/health` = `ok/ready`, database `ready`. Ego Lite Space 80/Profile 5 mostró el build `v0.5.78`/SHA abreviado `4e61e03`; la propuesta propia reabierta conservó el mismo `proposalId`, el contexto académico y las dos entregas exactas de su misión v1. Captura auténtica `C:\Users\vgmil\ego\fragments-cases-20261125\student-CU15-deliveries-v0.5.78-full.png`, SHA-256 `6E0190B172A4A47F5D37A59F43F079A3DA7CACDE763F18085D0A3CC9828AD014`.
+- No se ejecutó Mentor ni Review con IA real. Los dos Review de commits distintos siguen verificados únicamente con proveedor fake en CI; resultados semánticos de IA real continúan NO COMPROBADOS. No se cambió el snapshot docente ni se guardó una modificación adicional en producción.
+- Notion CU-15 recibió la revalidación v0.5.78 y el enlace a la evidencia; la comprobación cubre la visualización/resume, no el ciclo de evaluación IA pagada.
