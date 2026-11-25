@@ -29,6 +29,7 @@
 ## Estado de publicación
 
 - Rama: `codex/f18-c1-teacher-project-acl`.
+- Commit de implementación y evidencias iniciales: `8eef145952165602b7b6d741d571f75637d1b9fd`.
 - PR, CI, merge y F14: pendientes. El control vigente se conserva; no se creó tag ni se desplegó.
 - Producción continúa en v0.5.75, donde la corrección no está disponible; CU-30 sigue FAIL provisional hasta release F14 y revalidación segura.
 - Sin escrituras productivas, llamadas IA, captura de datos de terceros ni operación sobre contenedores de otras tareas.
