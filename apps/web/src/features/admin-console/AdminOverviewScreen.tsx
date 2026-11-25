@@ -15,7 +15,7 @@ const familyLabels: Record<DiagnosticRouteFamily, string> = {
   health: "Salud", auth: "Autenticación", classrooms: "Aulas", assignments: "Misiones",
   mentor: "Mentor", review: "Review", trainer: "Trainer", inspector: "Inspector",
   "admin.diagnostics": "Diagnósticos admin", "admin.requests": "Solicitudes admin",
-  "admin.queue": "Cola admin", "admin.audit_log": "Registro admin", other: "Otra ruta",
+  "admin.queue": "Cola admin", "admin.audit_log": "Registro admin", "admin.ai_diagnostics": "Diagnóstico IA admin", other: "Otra ruta",
 };
 
 export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsApi: AdminDiagnosticsApi; queueApi: AdminQueueApi }) {

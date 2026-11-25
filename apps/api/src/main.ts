@@ -129,7 +129,13 @@ const review = {
   },
 };
 
-const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog, trainerOperationalLog });
+const server = createApiServer(database, { mentor, inspector, ...(auth ? { auth } : {}), review, trainer: { service: trainer, store: trainerStore }, reviewOperationalLog, mentorOperationalLog, trainerOperationalLog, aiDiagnostics: {
+  apiKeyConfigured: config.aiGatewayKeyConfigured,
+  ...(config.aiGatewayModel ? { model: config.aiGatewayModel } : {}),
+  ...(config.aiGatewayProviderOnly ? { providerOnly: config.aiGatewayProviderOnly } : {}),
+  ...(rates ? { inputUsdPerMillion: rates.inputUsdPerMillion, outputUsdPerMillion: rates.outputUsdPerMillion } : {}),
+  readLedger: () => ledger.summary(),
+} });
 server.listen(config.port, "0.0.0.0", () => {
   process.stdout.write(`Fragments API escuchando en puerto ${config.port}\n`);
 });

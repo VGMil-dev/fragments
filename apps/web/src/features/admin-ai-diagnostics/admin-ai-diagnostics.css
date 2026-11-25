@@ -1,0 +1,11 @@
+.admin-ai-diagnostics { width: min(100% - 2rem, 76rem); margin: clamp(1.25rem, 4vw, 3rem) auto; color: var(--f16-text-primary); }
+.admin-ai-diagnostics header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--f16-border); }
+.admin-ai-diagnostics__eyebrow { color: var(--f16-lime); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+.admin-ai-diagnostics h1 { margin: .35rem 0 .65rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
+.admin-ai-diagnostics section { margin-block: 1rem; padding: 1.25rem; border: 1px solid var(--f16-border); border-radius: .85rem; background: var(--f16-surface); }
+.admin-ai-diagnostics dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
+.admin-ai-diagnostics dl div { min-width: 0; }
+.admin-ai-diagnostics dt { color: var(--f16-text-secondary); font-size: .85rem; }
+.admin-ai-diagnostics dd { margin: .25rem 0 0; overflow-wrap: anywhere; font-weight: 700; }
+.admin-ai-diagnostics button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--f16-border); border-radius: .7rem; color: var(--f16-text-primary); background: var(--f16-surface); font-weight: 700; cursor: pointer; }
+.admin-ai-diagnostics button:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
