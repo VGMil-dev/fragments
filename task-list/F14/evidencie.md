@@ -455,3 +455,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - Ego Lite docente Space 44/Profile 3 verificó el artefacto servido: `/assets/index-CRG6D7Lj.js` incluye `v0.5.75` y el SHA completo; `/health` respondió HTTP 200 con `status=ok`, `database=ready`. El enlace Habilidades apareció en desktop y en menú móvil a 390×844; `/teacher/skills` cargó Catálogo de habilidades. Sin escrituras ni reinicio/deploy manual.
 - Se conservó el viewport original 1908×944/DPR2 y la pestaña del Space 44. El Space 80 no fue abierto.
 - No se inspeccionó la fila del ledger ni el hash de backup de esta release; rollback productivo no fue ejercido. La comprobación de UI confirma el release servido, no sustituye esas evidencias operativas.
+
+## Release v0.5.89 · CU-20 CTA «Continuar misión» · 2026-11-25
+
+- PR #316 se integró mediante merge normal en `main`, SHA `fd91e02ba7d877d7f492ee64a6bd12d9d1024974`; CI `45685906693` SUCCESS. La tag anotada `v0.5.89` apunta al merge exacto.
+- F14 run `45686422248` completó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. El poller/aplicador normales registraron `release_deployed`; el ledger marca `v0.5.89`/SHA exactos como `deployed`.
+- Backup `fragments-prod-2026-11-25T19-41-09-704Z.dump`, 98,409 bytes, SHA-256 `d916f87dc800741ac44e888c42bfa26e8b76ac2bf59d484d3891acac2cd2fec5`, integridad `restored_to_temporary_database`.
+- API y web `Up (healthy)` sobre `sha-fd91e02ba7d877d7f492ee64a6bd12d9d1024974`; `/health` HTTP 200 `ok/database=ready`. Hubo HTTP 502 transitorio durante sustitución y la aplicación se recuperó normalmente; no se intervino el aplicador. Poll timer, apply path y cloudflared activos; `systemctl --failed` vacío. Tymeslot, ImagenEC, PostgreSQL, Pits y sus contenedores de prueba permanecieron sanos.
+- `/dev/sda1`: 89 GB libres, 55 % usado; inodos 12 %. Se conservan imágenes de `v0.5.88` y `v0.5.87` para rollback; no se ejerció rollback. Sin cambio de gates, secretos, servicios o datos académicos.
+- El bundle público encontrado es `/assets/index-kRRtjVZJ.js`; no se confirmó dentro del contenido el texto de versión/SHA (NO COMPROBADO). Versión/SHA sí quedaron verificados mediante ledger y etiquetas de imágenes activas.
+- Ego Lite autenticado post-release NO COMPROBADO porque Spaces autorizados 44/80 no aparecen en el runtime actual. Esto verifica aplicación operativa de la release, no estabilidad general ni piloto académico.
