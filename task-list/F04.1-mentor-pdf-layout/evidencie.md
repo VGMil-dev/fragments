@@ -1,47 +1,41 @@
-# F04.1 — Evidencia
+# F04.1 — Evidencia: PDF Mentor sin pérdida de texto
 
-Estado: en desarrollo.
+Estado: implementado y desplegado; verificación funcional del PDF en producción pendiente.
 
-## Observación productiva previa
+## Hallazgo inicial
 
-- 2026-11-25, `v0.5.78`, SHA `4e61e03868984546f8ab572a61d8ef93b838dd66`, Ego Lite Space 80/Profile 5. Se descargó una entrega Mentor propia desde Mis entregas, sin generar evaluación.
-- El visor PDF de Ego Lite mostró duplicados los prefijos de los campos largos y omitió el texto restante. Una lectura autenticada de propuestas confirmó que los campos fuente eran de una sola línea y no repetían el texto.
-- Causa localizada en `apps/api/src/features/mentor/local-fakes.ts`: tras dividir el texto, `wrapPdfLine` añadía `normalized.slice(0, 88)` en vez del fragmento restante.
-- Evidencia de navegador, recortada para excluir el código de verificación: `FRAGMENTS_EVIDENCIAS_FINAL/CU29-pdf-layout-defect-crop.png`; SHA-256 `6353CC7E6C0E5621B4C1E257000802521737E6122CA374C485B1B990282BBC6B`.
-- Se excluyó el PDF original del paquete porque contiene un código de verificación. No se modificó la entrega ni se hizo una llamada IA.
+- 2026-11-25, producción `v0.5.78`, SHA `4e61e03868984546f8ab572a61d8ef93b838dd66`, Ego Lite estudiante Space 80/Profile 5. Se descargó una entrega Mentor propia desde Mis entregas sin generar evaluación nueva.
+- El visor PDF Ego Lite mostró repetidos los prefijos de problema, solución, objetivo, resultado y alcance, omitiendo los sufijos. GET autenticado a propuestas confirmó valores fuente de una sola línea, sin repetición.
+- Causa en `apps/api/src/features/mentor/local-fakes.ts`: `wrapPdfLine` partía el texto en bloques de 88, pero volvía a añadir el prefijo en vez del resto.
+- Captura Ego Lite auténtica, recortada para excluir el código de verificación: `FRAGMENTS_EVIDENCIAS_FINAL/CU29-pdf-layout-defect-crop.png`, SHA-256 `6353CC7E6C0E5621B4C1E257000802521737E6122CA374C485B1B990282BBC6B`. El PDF original no se conserva en el paquete porque contiene dicho código.
+- No se modificaron datos productivos ni se hizo llamada IA.
 
-## Skills
+## Implementación y pruebas locales
 
-- `ego-browser` v2.2.1: aplicada para descarga auténtica y observación de la entrega propia.
-- Skill `pdf`: aplicada para inspección visual independiente con visor PDF Ego Lite y render Poppler. Poppler carece de algunas fuentes; la repetición también apareció en el visor PDF de Ego Lite, por lo que no se atribuye a Poppler.
-- `test-driven-development`: aplicar ciclo rojo-verde al añadir regresión local. No se encontró SKILL.md local en el catálogo disponible; no se instaló.
-- `verification-before-completion`: registrar comandos frescos, CI y limitaciones antes de completar. No se encontró SKILL.md local; no se instaló.
+- Regresión primero en rojo: un campo de 113 caracteres debe preservar una sola vez el bloque inicial de 88 y el sufijo de 25. Resultado inicial: 1 fail / 8 pass, reprodujo el prefijo repetido.
+- `wrapPdfLine` recorre offsets de 88 caracteres y conserva cada fragmento restante, incluido campo vacío.
+- Regresiones de 113, 89, 176 y 177 caracteres: `pnpm exec vitest run apps/api/src/features/mentor/service.test.ts` — 12/12 PASS.
+- Preparación limpia del checkout: `pnpm --filter @fragments/contracts build` PASS y `pnpm --filter @fragments/api prisma:generate` PASS; solo generación local desde esquemas existentes.
+- `pnpm --filter @fragments/api typecheck` PASS.
+- `pnpm --filter @fragments/api test` — 52 archivos PASS, 20 omitidos; 202 tests PASS, 75 omitidos (277 total). No se usaron credenciales, PostgreSQL productivo ni proveedores de IA; pruebas con evaluator fake.
+- `git diff --check` PASS.
 
-## Código y verificación
+## PR y release F14
 
-Pendiente.
+- PR #287 merge normal. PR head `63cacfe1fbe45db142cc956e00ef3c921f179eb2`; merge `0894f9b63ab24d2bc4a1e117dd496de75bf1f6fe`.
+- CI PR `verify` run `45616928943` PASS.
+- Tag anotada `v0.5.79` apunta exactamente al merge SHA. F14 `45617644487`: verify-build, attest-package y publish-approved-release SUCCESS.
+- Preflight de solo lectura, 12:54 UTC: producción `v0.5.78`, API/web healthy, `/health ok/ready`, raíz 118 GB libres (39 %), inodos 9 %, timer activo; imagen activa preservada como rollback. No se limpiaron imágenes/cache.
+- Poller normal recogió release ID `458113599` a las 12:59:31 UTC. El aplicador F14 finalizó `release_deployed` a las 13:01:26 UTC, `Result=success`, `ExecMainStatus=0`.
+- Ledger read-only: tag `v0.5.79`, commit exacto, estado `deployed`; backup 98,065 bytes, SHA-256 `c2ee6b5b01ac3996424522c2f0b6a0637c03848c0d0ba29cf1793f88b79f6bcd`, integridad `restored_to_temporary_database`.
+- SSH read-only confirma API/web `Up (healthy)` en SHA exacto; `/health` HTTP 200 `ok/database=ready`; `/assets/index-pCsfTCJQ.js` incluye versión y SHA exactos; imágenes de v0.5.78 disponibles para rollback; raíz 116 GB libres (41 %), inodos 9 %; servicios vecinos healthy; `systemctl --failed` vacío.
+- No se solicitó aprobación humana, deploy/reinicio manual, migración, limpieza o evaluación IA.
 
-## Integración
+## Límite pendiente
 
-Pendiente PR, revisión/CI y decisión F14. No se publicará tag sin los controles aprobados.
+- Ego Lite `listTaskSpaces()` no encontró el Space 80/Profile 5 previamente autorizado. La skill indica detenerse y recuperar ese mismo espacio; no se abrió otro perfil/space.
+- Por lo anterior, el PDF propio posterior al fix no se descargó ni abrió. Defecto histórico de v0.5.78: confirmado FAIL, corregido y desplegado. PDF post-fix en producción/CU-29: NO COMPROBADO. F04.1 permanece abierta hasta la revalidación E2E con la sesión autorizada.
+- `ego-browser` v2.2.1 y skill PDF fueron consultadas/aplicadas para la inspección inicial; no se pudo iniciar la ronda post-deploy por falta del Space autorizado.
 
-## Código y verificación local
 
-- Regresión añadida en `apps/api/src/features/mentor/service.test.ts`: una propuesta con campo de 113 caracteres debe contener una sola vez el bloque inicial de 88 y el sufijo de 25.
-- Ciclo rojo: `pnpm --filter @fragments/contracts build`; `pnpm exec vitest run apps/api/src/features/mentor/service.test.ts` produjo 1 fallo / 8 pass: bloque inicial repetido (observación que reproduce el bug).
-- Corrección: `wrapPdfLine` ahora recorre el texto en offsets de 88 y conserva el sufijo, incluyendo valores vacíos.
-- Verde focal: `pnpm exec vitest run apps/api/src/features/mentor/service.test.ts` — 1 archivo, 12/12 pass (casos 113, 89, 176 y 177 caracteres).
-- Preparación local: `pnpm --filter @fragments/contracts build` — PASS; `pnpm --filter @fragments/api prisma:generate` — PASS (solo genera el cliente desde el esquema del repo).
-- Tipos: `pnpm --filter @fragments/api typecheck` — PASS.
-- Suite API: primer intento en checkout limpio falló al cargar 46 suites por artefactos Contracts/Prisma aún no generados; después de generar Contracts y Prisma, `pnpm --filter @fragments/api test` — 52 archivos PASS, 20 omitidos; 202 tests PASS, 75 omitidos, 277 total.
-- No se conectó a PostgreSQL, IA, GitHub externo del producto ni producción durante estas pruebas; el test usa el `fakeEvaluator` y renderer local.
-
-## Estado de aceptación
-
-- Reproducción productiva: FAIL confirmado en `v0.5.78`, evidencia descrita arriba.
-- Código + regresión local: PASS.
-- CI/PR, release F14, versión productiva y descarga/render del PDF corregido con Ego Lite: NO COMPROBADOS; no marcar CU-29 como resuelto hasta completar esas verificaciones.
-
-## Integración
-
-Commit de regresiones/documentación: `8ee42c67804fd48d447c16fd703f92d0645c2493`. El cambio funcional de wrapping está en el commit base de este checkout `4c4013b289a2994c1375441c8fc67ca9b2cf8403` (snapshot del worktree). PR pendiente; no crear tag hasta merge y controles CI requeridos; desplegar únicamente por el flujo F14 normal.
+- Commit de actualización de evidencia y TASKS.md: `0c0c457b0036e03e7473569dad1e3da3ceafadb1` (rama `codex/cu29-pdf-release-evidence`).
