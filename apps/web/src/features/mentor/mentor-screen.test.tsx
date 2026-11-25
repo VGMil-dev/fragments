@@ -324,12 +324,17 @@ describe("MentorScreen", () => {
     mountedRoot = createRoot(mountedContainer);
     await act(async () => mountedRoot?.render(<MentorScreen {...actions} onSave={onSave} onBack={vi.fn()} />));
 
+    const title = mountedContainer.querySelector<HTMLInputElement>(".mentor-field input");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(title, "Borrador que debe permanecer tras el error");
+    await act(async () => title?.dispatchEvent(new Event("input", { bubbles: true })));
+
     const continueButton = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-form__actions button")).find((button) => button.textContent?.includes("Guardar y continuar"));
     await act(async () => continueButton?.click());
 
     expect(onSave).toHaveBeenCalledOnce();
     expect(mountedContainer.querySelector("h1")?.textContent).toBe("Tu idea toma forma");
     expect(mountedContainer.textContent).toContain("No pudimos guardar tu propuesta.");
+    expect(mountedContainer.querySelector<HTMLInputElement>(".mentor-field input")?.value).toBe("Borrador que debe permanecer tras el error");
   });
 
   it("no habilita evaluar con un borrador incompleto y mantiene la etapa pendiente", async () => {
