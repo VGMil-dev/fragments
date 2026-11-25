@@ -3,6 +3,7 @@ import { Code2, Flag, Layers3, Target, Trash2 } from "lucide-react";
 
 import type {
   ApiResult,
+  AssignmentDeliverable,
   CreateMentorSubmissionRequest,
   CreateProposalDraftRequest,
   MentorSubmissionResponse,
@@ -26,6 +27,7 @@ export interface MentorScreenProps {
   initialProposal?: ProposalDraftResponse | undefined;
   missionClassroomId?: string | null | undefined;
   requiredMissionSkills?: Array<{ id: string; name: string }>;
+  missionDeliverables?: AssignmentDeliverable[];
   initialEvaluation?: AsyncState<ProposalEvaluationResponse> | undefined;
   restoreEvaluation?: boolean;
   savedProposals: ProposalDraftResponse[];
@@ -69,7 +71,7 @@ const MENTOR_STAGES = ["Idea", "Contexto", "Habilidades", "Objetivos y alcance",
 const EMPTY_MENTOR_CONTEXT: AsyncState<MentorPublishedConfig> = { status: "empty" };
 type SkillCatalogState = { status: "loading" } | { status: "success"; data: SkillCatalogEntry[] } | { status: "error" };
 
-function MentorContextStage({ state }: { state: AsyncState<MentorPublishedConfig> }) {
+function MentorContextStage({ state, deliverables = [] }: { state: AsyncState<MentorPublishedConfig>; deliverables?: AssignmentDeliverable[] }) {
   if (state.status === "loading") {
     return <section className="mentor-context mentor-context--state" role="status" aria-live="polite" aria-busy="true">
       <h2>Cargando el contexto académico</h2>
@@ -117,6 +119,15 @@ function MentorContextStage({ state }: { state: AsyncState<MentorPublishedConfig
         <h2 id="mentor-context-objectives-title"><span aria-hidden="true">◎</span> Orientación del docente</h2>
         <p className="mentor-context__expected"><strong>Nivel esperado:</strong> {config.expectedLevel}</p>
       </section>
+      {deliverables.length > 0 ? <section className="mentor-context__card mentor-context__card--deliverables" aria-labelledby="mentor-context-deliverables-title">
+        <h2 id="mentor-context-deliverables-title"><span aria-hidden="true">▤</span> Entregas del proyecto</h2>
+        <ol className="mentor-context__deliverables">{deliverables.map((deliverable) => <li key={deliverable.id}>
+          <div><span className="mentor-context__deliverable-order">{deliverable.order}</span><h3>{deliverable.title}</h3><span className="mentor-context__deliverable-type">{deliverable.type === "proposal" ? "Propuesta" : deliverable.type === "progress" ? "Avance" : "Final"}</span></div>
+          <ul>{deliverable.requirements.map((requirement, index) => <li key={`${deliverable.id}-${index}`}>{requirement}</li>)}</ul>
+          {deliverable.dueDate ? <p>Fecha sugerida: <time dateTime={deliverable.dueDate}>{deliverable.dueDate}</time></p> : null}
+          <p className="mentor-context__deliverable-criteria">Criterios: {deliverable.criterionIds.map((id) => config.criteria.find((criterion) => criterion.id === id)?.title).filter(Boolean).join(", ") || "sin criterios asociados"}</p>
+        </li>)}</ol>
+      </section> : null}
     </div>
     <p className="mentor-context__readonly">Información de solo lectura definida por tu docente.</p>
   </section>;
@@ -217,6 +228,7 @@ export function MentorScreen({
   onBack,
   mode = "real",
   contextState = EMPTY_MENTOR_CONTEXT,
+  missionDeliverables = [],
 }: MentorScreenProps) {
   const [fields, setFields] = useState<ProposalDraftFields>(() => initialProposal ? fieldsFromProposal(initialProposal) : EMPTY_DRAFT);
   const [technologyIds, setTechnologyIds] = useState<string[]>(() => initialProposal?.proposal.technologyIds ?? []);
@@ -606,7 +618,7 @@ export function MentorScreen({
       <div className="mentor-stage-content">
 
       <form id="mentor-proposal-form" className={`mentor-form${activeStage === 1 ? " mentor-form--context" : ""}${activeStage === 4 ? " mentor-form--evaluation" : ""}`} onSubmit={(event) => void saveProposal(event)} noValidate>
-        {activeStage === 1 ? <MentorContextStage state={contextState} /> : null}
+        {activeStage === 1 ? <MentorContextStage state={contextState} deliverables={missionDeliverables} /> : null}
         {activeStage === 0 ? <><label className="mentor-field mentor-field--wide">
           <span>Título de la propuesta <b aria-hidden="true">*</b></span>
           <input ref={titleInput} value={fields.title} placeholder="Ej. Huerto escolar inteligente" maxLength={160} disabled={formBusy} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "mentor-title-error" : undefined} />

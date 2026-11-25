@@ -155,7 +155,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
   }, [path, student, classroomsReload, navigate]);
 
   useEffect(() => {
-    if (path !== "/student/dashboard" || !student) return;
+    if (!(path === "/student/dashboard" || path === "/student/mentor") || !student) return;
     if (classroomsLoading || classroomsError) {
       setDashboardMissions([]);
       setDashboardMissionsLoading(false);
@@ -420,6 +420,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
               key={currentProposal?.id ?? selectedAssignment?.id ?? "new-proposal"}
               initialProposal={currentProposal ? proposalForMentor(currentProposal) : undefined}
               missionClassroomId={!currentProposal ? selectedAssignment?.classroomId : undefined}
+              missionDeliverables={(selectedAssignment ?? dashboardMissions.find((mission) => mission.id === currentProposal?.assignmentVersionId))?.deliverables ?? []}
               requiredMissionSkills={requiredMissionSkills}
               restoreEvaluation={Boolean(currentProposal)}
               contextState={mentorContext}
