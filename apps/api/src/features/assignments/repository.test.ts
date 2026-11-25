@@ -72,6 +72,20 @@ describe("assignment repository", () => {
     expect((state.versions[1].snapshotJson as any).deliverables[1].title).toBe("Avance v2");
   });
 
+  it("preserves proposal, progress, and final delivery details in the published mission snapshot", async () => {
+    const { state, database } = memoryDb();
+    const repository = createAssignmentRepository(database);
+    const threeDeliveries = [...deliverables, {
+      id: "delivery-final", order: 3, title: "Informe final", type: "final" as const,
+      requirements: ["Incluye evidencia de la solución."], dueDate: "2026-12-20", criterionIds: ["criterion-observation"],
+    }];
+    const created = await repository.create("fixture-teacher", "fixture-class", { ...draft, deliverables: threeDeliveries });
+    expect(created?.draftVersion).toBe(1);
+    const published = await repository.publish("fixture-teacher", "fixture-class", created!.id, 1);
+    expect(published.kind).toBe("ok");
+    expect((state.versions[0]?.snapshotJson as any).deliverables).toEqual(threeDeliveries);
+  });
+
   it("rejects unavailable skills before persisting a draft", async () => {
     const { state, database } = memoryDb();
     const repository = createAssignmentRepository(database);

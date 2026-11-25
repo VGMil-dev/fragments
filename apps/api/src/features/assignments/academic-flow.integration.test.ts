@@ -260,17 +260,23 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
   });
 
-  it("persists two ordered fake Reviews for one mission project and exposes both to Trainer", async () => {
+  it("persists proposal, progress, and final deliveries for one project and exposes all Reviews to Trainer", async () => {
     const db = database!;
+    const threeStageDeliverables = [
+      { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Describe el recorrido que resolverás."], dueDate: null, criterionIds: ["criterion-navigation"] },
+      { id: "delivery-progress", order: 2, title: "Avance", type: "progress" as const, requirements: ["Muestra la primera navegación implementada."], dueDate: null, criterionIds: ["criterion-navigation"] },
+      { id: "delivery-final", order: 3, title: "Cierre", type: "final" as const, requirements: ["Incluye evidencia de las dos pantallas."], dueDate: "2026-12-20", criterionIds: ["criterion-navigation"] },
+    ];
     const assignments = createAssignmentRepository(db);
     const created = await assignments.create(teacherId, classroomId, {
       title: "Misión integrada", instructions: "Demuestra una navegación verificable.", objectives: ["Conectar dos vistas"],
-      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: missionDeliverables,
+      requiredSkillIds: [skillId], optionalSkillIds: [], missionRubric, deliverables: threeStageDeliverables,
     });
     if (!created || "kind" in created) throw new Error("No se creó la misión fixture.");
     const published = await assignments.publish(teacherId, classroomId, created.id, 1);
     if (published.kind !== "ok") throw new Error("No se publicó la misión fixture.");
     const mission = published.assignment.versions.find((version) => version.version === 1)!;
+    expect(mission.deliverables).toEqual(threeStageDeliverables);
 
     const mentorRepository = createPrismaMentorRepository(db);
     const proposal = await mentorRepository.createProposalDraftByUser({
@@ -284,6 +290,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     const repo = `academic-flow-${namespace}`;
     const commitSha = "f".repeat(40);
     const followupCommitSha = "a".repeat(40);
+    const finalCommitSha = "b".repeat(40);
     const reviewJobIds: string[] = [];
     let activeReviewJobId: string | undefined;
     const snapshotBody = { owner, repo, commitSha, files: [{ path: "src/navigation.ts", content: "export const routeCount = 2;\n", sha: "e".repeat(40) }] };
@@ -392,7 +399,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       expect(firstDeliveryHistoryResponse.status).toBe(200);
       const firstDeliveryHistory = await firstDeliveryHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
       expect(firstDeliveryHistory.data.nextDeliverableId).toBe("delivery-progress");
-      expect(firstDeliveryHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "not_started"]);
+      expect(firstDeliveryHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "not_started", "not_started"]);
       expect(firstDeliveryHistory.data.deliveries[0]?.attempts).toEqual([expect.objectContaining({ commitSha })]);
 
       const nextDeliveryResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { ...headers, "content-type": "application/json" },
@@ -408,21 +415,39 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       const completeHistoryResponse = await fetch(historyUrl, { headers });
       expect(completeHistoryResponse.status).toBe(200);
       const completeHistory = await completeHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
-      expect(completeHistory.data.nextDeliverableId).toBeNull();
-      expect(completeHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "completed"]);
-      expect(completeHistory.data.deliveries.map((delivery) => delivery.attempts[0]?.commitSha)).toEqual([commitSha, followupCommitSha]);
+      expect(completeHistory.data.nextDeliverableId).toBe("delivery-final");
+      expect(completeHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "completed", "not_started"]);
+      expect(completeHistory.data.deliveries.slice(0, 2).map((delivery) => delivery.attempts[0]?.commitSha)).toEqual([commitSha, followupCommitSha]);
       expect(completeHistory.data.deliveries[0]?.attempts[0]?.commitSha).not.toBe(completeHistory.data.deliveries[1]?.attempts[0]?.commitSha);
       expect(JSON.stringify(completeHistory)).not.toMatch(/findings|score|analysis|studentId/);
+
+      const finalDeliveryResponse = await fetch(`${base}/api/reviews`, { method: "POST", headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ owner, repo, commitSha: finalCommitSha, linkedProposalId: proposal.id, assignmentDeliverableId: "delivery-final" }) });
+      expect(finalDeliveryResponse.status).toBe(202);
+      const finalDelivery = await finalDeliveryResponse.json() as { data: { id: string; status: string } };
+      reviewJobIds.push(finalDelivery.data.id);
+      activeReviewJobId = finalDelivery.data.id;
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(reviewStore.getJob(finalDelivery.data.id)).resolves.toMatchObject({ id: finalDelivery.data.id, status: "completed" });
+
+      const finalHistoryResponse = await fetch(historyUrl, { headers });
+      expect(finalHistoryResponse.status).toBe(200);
+      const finalHistory = await finalHistoryResponse.json() as { data: { nextDeliverableId: string | null; deliveries: Array<{ status: string; attempts: Array<{ commitSha: string }> }> } };
+      expect(finalHistory.data.nextDeliverableId).toBeNull();
+      expect(finalHistory.data.deliveries.map((delivery) => delivery.status)).toEqual(["completed", "completed", "completed"]);
+      expect(finalHistory.data.deliveries.map((delivery) => delivery.attempts[0]?.commitSha)).toEqual([commitSha, followupCommitSha, finalCommitSha]);
+      expect(JSON.stringify(finalHistory)).not.toMatch(/findings|score|analysis|studentId/);
 
       const trainerResponse = await fetch(`${base}/api/trainer/reviews`, { headers });
       expect(trainerResponse.status).toBe(200);
       const trainer = await trainerResponse.json() as { data: Array<Record<string, unknown>> };
-      expect(trainer.data).toHaveLength(2);
+      expect(trainer.data).toHaveLength(3);
       expect(trainer.data).toContainEqual(expect.objectContaining({ id: queued.data.id, owner, repo, commitSha, academicContext: {
         missionTitle: "Misión integrada", missionVersion: 1, mentorContextVersion: mission.mentorContextVersion,
         classroomTitle: "Aula fixture", requiredSkills: ["Navegación"],
       } }));
       expect(trainer.data).toContainEqual(expect.objectContaining({ id: nextDelivery.data.id, commitSha: followupCommitSha }));
+      expect(trainer.data).toContainEqual(expect.objectContaining({ id: finalDelivery.data.id, commitSha: finalCommitSha }));
       expect(JSON.stringify(trainer.data)).not.toMatch(/studentId|proposalId|assignmentVersionId|classroomId|score|findings/);
     } finally {
       server.closeAllConnections();
