@@ -1,45 +1,43 @@
-# Evidencia F18.C.1 — implementación local validada, despliegue pendiente
+# Evidencia F18.C.1 — ACL corregida; PR y producción pendientes
 
 ## Hallazgo productivo inicial
 
-- Observación Ego Lite docente Space 44/Profile 3 en producción v0.5.75: `/teacher/students` mostró el directorio global de identidades GitHub. No se seleccionó ni abrió ninguna identidad ajena.
-- Inspección del código v0.5.75: el endpoint de proyectos no comprobaba aula/matrícula y devolvía propuestas personales; el endpoint `/api/teacher/historical-projects` enumeraba propuestas sin propietario. No se llamó a esos endpoints en producción.
-- F18 exige seguimiento por aula y matrícula; F15 conserva las propuestas anónimas privadas hasta su reclamo.
+- Ego Lite docente Space 44/Profile 3 en v0.5.75 mostró un directorio global en `/teacher/students`. No se seleccionó ni abrió ninguna identidad ajena.
+- Inspección estática: el endpoint de proyectos no validaba aula/matrícula y devolvía propuestas personales; el endpoint histórico enumeraba propuestas sin propietario. No se llamaron esos endpoints en producción.
+- F18 exige seguimiento por aula y matrícula. F15 conserva proyectos anónimos privados hasta que su titular los reclame.
 
-## Implementación
+## Implementación local
 
-- `/api/teacher/students` limita el directorio a estudiantes GitHub con matrícula activa en un aula activa del docente autenticado.
-- `projectCount` y `/api/teacher/students/:id/projects` cuentan/devuelven solo propuestas ligadas a una versión publicada de misión en un aula activa propia con matrícula activa.
-- La consulta de estudiante no relacionado responde 404 genérico. El borrador sin misión publicada, los proyectos de otra aula y el estudiante sin matrícula no aparecen.
-- Se retiraron el endpoint y la sección de proyectos anónimos sin propietario. No se alteraron contratos, migraciones, identidades ni datos productivos.
+- `/api/teacher/students` (roster) limita perfiles a matrículas activas en aulas activas propias; `projectCount` y `/api/teacher/students/:id/projects` solo consideran proyectos ligados a misiones publicadas de esas aulas.
+- Se excluyen borradores personales, aulas de otros docentes, aula archivada, matrículas retiradas, misiones draft y propuestas históricas anónimas. El acceso sin relación responde 404 genérico.
+- La revisión independiente encontró que retirar una publicación aún carecía de ACL. Se corrigió `withdrawProject`: vuelve a verificar propietario, misión publicada, aula activa y matrícula activa dentro de la transacción. Una prueba HTTP confirma que teacher B recibe negativa sin moderación y teacher A sí puede retirar.
+- Para preservar la asignación directa F18/CU-08, Classroom Studio usa `/api/teacher/student-identities`, que lista solo identidad GitHub verificada y no entrega `projectCount`. No se reescribieron membresías.
+- Se añadió DTO compartido estricto para identidad asignable; sin migración ni cambio de datos.
 
-## Pruebas y build
+## Pruebas
 
-- TDD: la primera prueba de integración reprodujo el defecto: el endpoint devolvía tres propuestas en lugar de solo la misión vinculada.
-- PostgreSQL efímero creado para esta ejecución; migraciones aplicadas al DB local `fragments_test`. La prueba comprueba `current_database()` antes de insertar y borra únicamente sus fixtures con namespace UUID.
-- `pnpm --filter @fragments/api exec vitest run src/features/mentor/teacher-project-acl.integration.test.ts src/features/mentor/http.test.ts src/features/mentor/skills-http.test.ts --reporter=dot` — 3 archivos, 14/14 pruebas PASS.
-- `pnpm --filter @fragments/api test` — 71 archivos PASS, 271/271 pruebas, con PostgreSQL efímero `fragments_test` y las migraciones existentes.
-- `pnpm --filter @fragments/api typecheck` — PASS.
-- `pnpm --filter @fragments/web typecheck` — PASS.
-- `pnpm --filter @fragments/api build` — PASS.
-- `pnpm --filter @fragments/web test` — 54 archivos, 311/311 pruebas PASS.
-- `pnpm --filter @fragments/web build` — PASS; mantiene avisos preexistentes de chunks >500 kB y directivas `use client` de lucide-react.
-- `git diff --check` — PASS.
+- TDD: la primera regresión mostró las tres propuestas expuestas a teacher A. La nueva aserción de retirada falló antes del control ACL; la nueva ruta de identidades falló inicialmente al no existir.
+- PostgreSQL efímero `fragments_test`, guardas host/database y fixtures sintéticos con namespace UUID; limpieza solo de filas creadas por esta prueba.
+- `pnpm --filter @fragments/api test` — 71 archivos, 271/271 PASS.
+- Integración ACL final en PostgreSQL — 1/1 PASS; `http.test.ts` ejecutado por separado — 12/12 PASS; `skills-http.test.ts` pasó en la corrida focal. Una ejecución de los tres archivos juntos tuvo un fallo transitorio en la evaluación fake de `http.test.ts`; no se reprodujo al ejecutar esa suite sola ni en la suite completa final.
+- `pnpm --filter @fragments/web test` — 54 archivos, 311/311 PASS.
+- `pnpm --filter @fragments/web exec vitest run src/features/classroom/ClassroomStudio.test.tsx` — 6/6 PASS.
+- `pnpm --filter @fragments/contracts test` — 33/33 PASS.
+- `pnpm --filter @fragments/contracts build`, API/web typecheck, API/web build y `git diff --check` — PASS.
+- Revisión estática independiente: el hallazgo P1 quedó resuelto; confirma filtros de roster/propuestas/retirada y la separación del selector de identidades. Sin issues restantes reportados.
+- Los builds web conservan avisos de chunks >500 kB y directivas `use client` de lucide-react.
 
-## Estado de publicación
+## Publicación
 
 - Rama: `codex/f18-c1-teacher-project-acl`.
-- Commit de implementación y evidencias iniciales: `8eef145952165602b7b6d741d571f75637d1b9fd`.
-- Rama sincronizada sin conflictos con `origin/main` `8239c1bc7a7448e792f19974215712b304dc28b6`; merge commit `d06248e30390e3730035b4ee872a976888d94a69`.
-- Tras el merge, focal ACL/HTTP/habilidades: 3 archivos, 14/14 PASS en PostgreSQL efímero.
-- Suite API completa post-merge: 70/71 archivos, 270/271 pruebas PASS; falla `review/worker-http.test.ts` en “requires a student session…” al buscar un análisis ausente durante `createPdf`. La prueba pasa aislada (1/1, 8 omitidas); el fallo aparece al correr el conjunto completo. No toca archivos F18.C.1 y queda documentado para CI/revisión.
-- PR, CI, merge final y F14: pendientes. El control vigente se conserva; no se creó tag ni se desplegó.
-- Producción continúa en v0.5.75, donde la corrección no está disponible; CU-30 sigue FAIL provisional hasta release F14 y revalidación segura.
-- Sin escrituras productivas, llamadas IA, captura de datos de terceros ni operación sobre contenedores de otras tareas.
+- Commits: implementación inicial `8eef145952165602b7b6d741d571f75637d1b9fd`; merge normal de main `d06248e30390e3730035b4ee872a976888d94a69`; seguimiento ACL/retiro/identidades `72901688389ea290ee92f90c5a03ab6ea9825122`.
+- PR #279 está abierta. Su CI `45525832207` pasó antes del commit de seguimiento; requiere publicar `7290168` y esperar una nueva ejecución CI.
+- Sin merge final, tag ni F14. Producción continúa en v0.5.75, donde CU-30 permanece FAIL provisional.
+- Sin escrituras productivas, evaluación IA, interacción con terceros ni cambios de infraestructura.
 
 ## Pendientes de aceptación
 
-- Abrir PR, obtener revisiones y checks requeridos, integrar por protecciones normales.
-- Publicar release legítima por F14, revisar versión/SHA/health y observar el ledger.
-- Revalidar con Ego Lite Space 44 (perfil docente ya autorizado): lista de identidades vinculadas propia, proyecto publicado solo de aula propia y estado vacío/no exposición a otro docente; no seleccionar estudiantes terceros.
-- Actualizar CU-30 en matriz de Notion con separación QA/producción. Hasta entonces, la mejora está verificada solo en integración aislada.
+- Subir el seguimiento a PR #279 y esperar CI/protecciones normales.
+- Integrar mediante PR; después publicar release legítima F14 conservando backups, rollback y ledger.
+- Revalidar versión/SHA/health y el feed docente con Ego Lite Space 44: roster sin identidades ajenas, seguimiento solo de proyectos de aula propia. Verificar también el selector de asignación solo en recursos QA propios y sin asignar a nadie.
+- Actualizar CU-30 en la matriz Notion tras observar la versión desplegada. Hasta entonces el cambio está verificado en QA aislado únicamente.
