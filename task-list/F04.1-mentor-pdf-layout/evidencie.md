@@ -20,6 +20,15 @@ Estado: implementado y desplegado; verificación funcional del PDF en producció
 - `pnpm --filter @fragments/api test` — 52 archivos PASS, 20 omitidos; 202 tests PASS, 75 omitidos (277 total). No se usaron credenciales, PostgreSQL productivo ni proveedores de IA; pruebas con evaluator fake.
 - `git diff --check` PASS.
 
+## Regresión adicional: codificación del español · 2026-11-25
+
+- Se inspeccionó el renderer de producción `apps/api/src/adapters/ai/pdf-renderer.ts`: reemplazaba todos los caracteres no ASCII por `?` y declaraba Helvetica sin codificación explícita. Esto podía degradar tildes y eñes del contenido PDF aunque el arreglo de líneas largas estuviera desplegado.
+- TDD: se añadió primero `apps/api/src/adapters/ai/pdf-renderer.test.ts`; la prueba falló mostrando `Soluci?n: programaci?n, ni?ez y acci?n.` y ausencia de `/Encoding /WinAnsiEncoding`.
+- La corrección codifica los caracteres Latin-1 y el conjunto especial Windows-1252 como escapes octales PDF y declara `/WinAnsiEncoding` para Helvetica. Caracteres fuera del repertorio de la fuente siguen degradándose a `?`.
+- `pnpm exec vitest run apps/api/src/adapters/ai/pdf-renderer.test.ts apps/api/src/features/mentor/service.test.ts` — 2 archivos, 13/13 PASS. `pnpm --filter @fragments/api typecheck` PASS. `git diff --check` PASS.
+- Un intento adicional de inspección con `pdfinfo` no pudo generar el archivo temporal de prueba porque `tsx` no resolvió desde la raíz; el segundo intento de script temporal fue rechazado por la política del host. No se declara esa verificación de parser como PASS; el test automatizado verifica los objetos y el texto escapado.
+- Sin acceso autenticado de Ego Lite en Space 80, la descarga post-fix en producción sigue **NO COMPROBADA**. Sin despliegue posterior de este cambio, los acentos de producción también siguen **NO COMPROBADOS**. No hubo llamadas IA ni escrituras productivas.
+
 ## PR y release F14
 
 - PR #287 merge normal. PR head `63cacfe1fbe45db142cc956e00ef3c921f179eb2`; merge `0894f9b63ab24d2bc4a1e117dd496de75bf1f6fe`.
