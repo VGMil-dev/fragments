@@ -56,6 +56,17 @@ describe("AdminOverviewScreen", () => {
     expect(view.textContent).toContain("2026");
   });
 
+  it("hides administration navigation when the current account is unauthorized", async () => {
+    const view = await render(
+      { list: vi.fn().mockResolvedValue({ ok: false, error: { code: "FORBIDDEN", message: "private" } }) },
+      { read: vi.fn().mockResolvedValue({ ok: false, error: { code: "FORBIDDEN", message: "private" } }) },
+    );
+
+    expect(view.querySelector('nav[aria-label="Herramientas de administración"]')).toBeNull();
+    expect(view.textContent).toContain("Esta cuenta no tiene permisos de administración");
+    expect(view.textContent).not.toContain("private");
+  });
+
   it("renders loading state and independent 401, 403, and generic errors", async () => {
     let resolveDiagnostics!: (value: Awaited<ReturnType<AdminDiagnosticsApi["list"]>>) => void;
     let resolveQueue!: (value: Awaited<ReturnType<AdminQueueApi["read"]>>) => void;
@@ -79,6 +90,7 @@ describe("AdminOverviewScreen", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("No pudimos cargar los diagnósticos");
     expect(container.textContent).toContain("No se pudo cargar el estado de la cola");
     expect(container.textContent).not.toContain("fake private");
+    expect(container.querySelector('nav[aria-label="Herramientas de administración"]')).not.toBeNull();
     expect(retry).not.toBeNull();
   });
 

@@ -13,8 +13,9 @@ export function AdminAiDiagnosticsScreen({ api }: { api: AdminAiDiagnosticsApi }
     void api.read().then((result) => { if (active) setState(result.ok ? { status: "ready", data: result.data } : { status: "error", code: result.error.code }); });
     return () => { active = false; };
   }, [api, reload]);
+  const adminAccessDenied = state.status === "error" && (state.code === "AUTH_REQUIRED" || state.code === "FORBIDDEN");
   return <main className="admin-ai-diagnostics" aria-labelledby="admin-ai-diagnostics-title" aria-busy={state.status === "loading"}>
-    <header><p className="admin-ai-diagnostics__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p><h1 id="admin-ai-diagnostics-title">Configuración y presupuesto IA</h1><p>Lectura de configuración efectiva y costos agregados registrados. Esta vista no ejecuta evaluaciones.</p><AdminConsoleNavigation current="ai-diagnostics" /><button type="button" onClick={() => setReload((value) => value + 1)} disabled={state.status === "loading"}>{state.status === "loading" ? "Cargando…" : "Actualizar"}</button></header>
+    <header><p className="admin-ai-diagnostics__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p><h1 id="admin-ai-diagnostics-title">Configuración y presupuesto IA</h1><p>Lectura de configuración efectiva y costos agregados registrados. Esta vista no ejecuta evaluaciones.</p>{adminAccessDenied ? null : <AdminConsoleNavigation current="ai-diagnostics" />}<button type="button" onClick={() => setReload((value) => value + 1)} disabled={state.status === "loading"}>{state.status === "loading" ? "Cargando…" : "Actualizar"}</button></header>
     {state.status === "loading" ? <p role="status">Cargando diagnóstico IA…</p> : null}
     {state.status === "error" ? <section role="alert"><p>{state.code === "AUTH_REQUIRED" ? "Inicia sesión con una cuenta administradora." : state.code === "FORBIDDEN" ? "Esta cuenta no tiene permisos de administración." : "No se pudo consultar el diagnóstico; los importes no se muestran como cero."}</p><button type="button" onClick={() => setReload((value) => value + 1)}>Reintentar</button></section> : null}
     {state.status === "ready" ? <>
