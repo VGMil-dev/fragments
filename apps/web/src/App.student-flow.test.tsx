@@ -45,10 +45,10 @@ vi.mock("./features/mentor", () => ({
   ),
 }));
 vi.mock("./features/review", () => ({
-  ReviewScreen: ({ onBack, onOpenTrainer, linkedProposals, initialProposalId }: { onBack: () => void; onOpenTrainer?: () => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }>; initialProposalId?: string }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><p data-testid="review-initial-proposal">{initialProposalId}</p><button type="button" onClick={onBack}>Volver desde Review</button><button type="button" data-testid="review-to-trainer" onClick={onOpenTrainer}>Continuar en Trainer</button></section>,
+  ReviewScreen: ({ onBack, onOpenTrainer, linkedProposals, initialProposalId }: { onBack: () => void; onOpenTrainer?: (reviewId?: string) => void; linkedProposals?: Array<{ id: string; proposal: { title: string } }>; initialProposalId?: string }) => <section><p data-testid="review-linked-proposals">{linkedProposals?.map((item) => `${item.id}:${item.proposal.title}`).join(",")}</p><p data-testid="review-initial-proposal">{initialProposalId}</p><button type="button" onClick={onBack}>Volver desde Review</button><button type="button" data-testid="review-to-trainer" onClick={() => onOpenTrainer?.("review-42")}>Continuar en Trainer</button></section>,
 }));
 vi.mock("./features/trainer", () => ({
-  TrainerScreen: ({ onStartReview }: { onStartReview?: () => void }) => <section><button type="button" data-testid="trainer-to-review" onClick={onStartReview}>Empezar en Review</button></section>,
+  TrainerScreen: ({ onStartReview, initialReviewId }: { onStartReview?: () => void; initialReviewId?: string }) => <section><p data-testid="trainer-review-id">{initialReviewId}</p><button type="button" data-testid="trainer-to-review" onClick={onStartReview}>Empezar en Review</button></section>,
 }));
 
 import { App } from "./App";
@@ -219,6 +219,8 @@ describe("student mission to Mentor flow", () => {
 
     await act(async () => container?.querySelector<HTMLButtonElement>("[data-testid=review-to-trainer]")?.click());
     expect(window.location.pathname).toBe("/student/trainer");
+    expect(window.location.search).toBe("?reviewId=review-42");
+    expect(container?.querySelector("[data-testid=trainer-review-id]")?.textContent).toBe("review-42");
     expect(container?.querySelector("[data-testid=trainer-to-review]")).not.toBeNull();
   });
 
