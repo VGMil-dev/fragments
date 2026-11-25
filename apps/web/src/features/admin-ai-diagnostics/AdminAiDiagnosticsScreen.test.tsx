@@ -28,5 +28,13 @@ describe("AdminAiDiagnosticsScreen", () => {
     await act(async () => root?.render(<AdminAiDiagnosticsScreen api={{ read: vi.fn().mockResolvedValue({ ok: false, error: { code: "AI_LEDGER_UNAVAILABLE", message: "secret fixture" } }) }} />));
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("no se muestran como cero");
     expect(container.textContent).not.toContain("secret fixture");
+    expect(container.querySelector('[aria-label="Herramientas de administración"]')).not.toBeNull();
+  });
+
+  it("hides admin navigation after an authorization denial", async () => {
+    container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+    await act(async () => root?.render(<AdminAiDiagnosticsScreen api={{ read: vi.fn().mockResolvedValue({ ok: false, error: { code: "FORBIDDEN", message: "forbidden" } }) }} />));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("no tiene permisos de administración");
+    expect(container.querySelector('[aria-label="Herramientas de administración"]')).toBeNull();
   });
 });

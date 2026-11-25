@@ -40,6 +40,7 @@ export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsA
   }, [diagnosticsApi, queueApi, reload]);
 
   const events = diagnostics.status === "ready" ? diagnostics.data : [];
+  const adminAccessDenied = [diagnostics, queue].some((state) => state.status === "error" && state.reason !== "OTHER");
   const byFamily = new Map<DiagnosticRouteFamily, { count: number; serverErrors: number }>();
   for (const event of events) {
     const current = byFamily.get(event.routeFamily) ?? { count: 0, serverErrors: 0 };
@@ -62,7 +63,7 @@ export function AdminOverviewScreen({ diagnosticsApi, queueApi }: { diagnosticsA
         {loading ? "Actualizando…" : diagnostics.status === "error" || queue.status === "error" ? "Reintentar resumen" : "Actualizar resumen"}
       </button>
     </header>
-    <AdminConsoleNavigation current="overview" />
+    {adminAccessDenied ? null : <AdminConsoleNavigation current="overview" />}
 
     {loading ? <p className="admin-overview__loading" role="status" aria-live="polite">Cargando el resumen de administración…</p> : null}
 
