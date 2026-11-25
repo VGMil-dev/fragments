@@ -142,6 +142,19 @@ describe("Mentor service", () => {
     expect(pdfCalls).toBe(1);
   });
 
+  it("preserves the tail of long proposal fields in the PDF", async () => {
+    const longProblem = `${"A".repeat(88)}${"B".repeat(25)}`;
+    const detailedProposal = { ...proposal, problem: longProblem };
+    const service = createMentorService({ evaluator: fakeEvaluator, pdf: createMinimalPdfRenderer() });
+    const evaluation = await service.evaluate(detailedProposal);
+    const submission = await service.createSubmission({ sourceId: "proposal-long-field", proposal: detailedProposal, evaluation });
+
+    const pdf = new TextDecoder().decode(await service.renderPdf(submission));
+
+    expect(pdf.match(/A{88}/g)).toHaveLength(1);
+    expect(pdf.match(/B{25}/g)).toHaveLength(1);
+  });
+
   it("refuses to render when the snapshot JSON no longer matches its hash", async () => {
     const service = createMentorService({ evaluator: fakeEvaluator, pdf: fakePdf });
     const evaluation = await service.evaluate(proposal);
