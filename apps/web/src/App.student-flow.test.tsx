@@ -170,13 +170,16 @@ describe("student mission to Mentor flow", () => {
       proposalId: "completed-mission-proposal", assignmentVersionId: mission.id, nextDeliverableId: null,
       deliveries: [
         { deliverable: { id: "delivery-1", order: 1, title: "Propuesta", type: "proposal", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [] },
-        { deliverable: { id: "delivery-2", order: 2, title: "Avance", type: "progress", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [] },
+        { deliverable: { id: "delivery-2", order: 2, title: "Avance", type: "progress", requirements: [], dueDate: null, criterionIds: [] }, status: "completed", attempts: [{
+          reviewId: "final-delivery-review", commitSha: "c".repeat(40), status: "completed", createdAt: "2026-11-25T10:00:00.000Z", updatedAt: "2026-11-25T10:00:00.000Z",
+        }] },
       ],
     } });
     await act(async () => root?.render(<App />));
     const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/trainer");
+    expect(window.location.search).toBe("?reviewId=final-delivery-review");
   });
 
   it("waits for owned proposals before allowing a new classroom proposal", async () => {

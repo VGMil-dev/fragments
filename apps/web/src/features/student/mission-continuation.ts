@@ -1,10 +1,24 @@
 import type { MissionDeliveryHistory } from "@fragments/contracts";
 
-export type MissionContinuationDestination = "/student/mentor" | "/student/review" | "/student/trainer";
+export type MissionContinuation =
+  | { destination: "/student/mentor" }
+  | { destination: "/student/review" }
+  | { destination: "/student/trainer"; reviewId: string };
 
-export function missionContinuationDestination(hasMentorEvaluation: boolean, history?: MissionDeliveryHistory): MissionContinuationDestination {
-  if (!hasMentorEvaluation) return "/student/mentor";
+export function missionContinuationUrl(proposalId: string, continuation: MissionContinuation): string {
+  if (continuation.destination === "/student/trainer") {
+    return `${continuation.destination}?reviewId=${encodeURIComponent(continuation.reviewId)}`;
+  }
+  return `${continuation.destination}?proposalId=${encodeURIComponent(proposalId)}`;
+}
+
+export function missionContinuationDestination(hasMentorEvaluation: boolean, history?: MissionDeliveryHistory): MissionContinuation {
+  if (!hasMentorEvaluation) return { destination: "/student/mentor" };
   if (history && history.deliveries.length > 0 && history.nextDeliverableId === null
-    && history.deliveries.every((delivery) => delivery.status === "completed")) return "/student/trainer";
-  return "/student/review";
+    && history.deliveries.every((delivery) => delivery.status === "completed")) {
+    const finalDelivery = history.deliveries[history.deliveries.length - 1];
+    const finalReview = finalDelivery?.attempts.slice().reverse().find((attempt) => attempt.status === "completed");
+    if (finalReview) return { destination: "/student/trainer", reviewId: finalReview.reviewId };
+  }
+  return { destination: "/student/review" };
 }
