@@ -1,6 +1,6 @@
 # Evidencia F18.B.6
 
-Estado: implementación local; integración PR y release F14 pendientes.
+Estado: implementado e integrado; F14 no pudo publicar la release por un error HTTP 500 de GitHub. Producción aún no actualizada.
 
 ## Defecto comprobado
 
@@ -18,4 +18,12 @@ F18.B.5 recorría los intentos en orden inverso al de creación. Como `listMissi
 
 Commit de código: `c6a62058376b71e202c4942ff28c044f02476900` (`fix(F18.B.6): elige la Review finalizada mas reciente`).
 
-No se probó con usuario/sesión productiva ni se llamó IA. Ego Lite post-release sigue pendiente por ausencia de Spaces autorizados 44/80; release productiva pendiente.
+## Integración y F14
+
+- PR [#297](https://github.com/VGMil-dev/fragments/pull/297) integrado mediante merge normal `7e376186a6c7d0171efd001bf0f6a2cc4442972a`; CI [#45648476663](https://github.com/VGMil-dev/fragments/actions/runs/45648476663) SUCCESS.
+- Tag anotada `v0.5.85`, tag object `6a14a2a107276e158680ce3ba6411bb347123c49`, apunta al merge SHA exacto.
+- F14 run [#45649110294](https://github.com/VGMil-dev/fragments/actions/runs/45649110294): `verify-build` y `attest-package` SUCCESS; `publish-approved-release` FAILED cuando GitHub respondió HTTP 500 al endpoint de creación de release. No hay release existente para la tag (consulta por tag respondió 404).
+- Dos intentos de reejecutar solo el job fallido también devolvieron HTTP 500 en la API de GitHub. No se creó otra tag ni se modificó el workflow.
+- Producción continúa en `v0.5.84`; la corrección F18.B.6 no se ha desplegado. F14 normal, Ego Lite y validación productiva quedan pendientes. No se usó un mecanismo manual para crear la release.
+
+No se probó con usuario/sesión productiva ni se llamó IA. Ego Lite post-release sigue pendiente por ausencia de Spaces autorizados 44/80.
