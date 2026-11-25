@@ -290,17 +290,26 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
   const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
     if (proposalContinuation?.status === "loading") return;
     setProposalContinuation({ proposal, status: "loading" });
-    const [submissionsResult, historyResult] = await Promise.allSettled([
-      studentApi.getMySubmissions(),
-      proposal.assignmentVersionId ? studentApi.getMissionDeliveryHistory(proposal.id) : Promise.resolve(null),
-    ]);
-    const submissions = submissionsResult.status === "fulfilled" ? submissionsResult.value : undefined;
-    const historyResponse = historyResult.status === "fulfilled" ? historyResult.value : undefined;
-    if (!submissions?.ok || (proposal.assignmentVersionId && (!historyResponse || !historyResponse.ok))) {
+    const submissionsResult = await Promise.allSettled([studentApi.getMySubmissions()]);
+    const submissions = submissionsResult[0].status === "fulfilled" ? submissionsResult[0].value : undefined;
+    if (!submissions?.ok) {
       setProposalContinuation({ proposal, status: "error" });
       return;
     }
     const mentorEvaluationExists = submissions.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
+    if (!mentorEvaluationExists) {
+      setProposalContinuation(null);
+      openProposal(proposal);
+      return;
+    }
+    const historyResult = proposal.assignmentVersionId
+      ? await Promise.allSettled([studentApi.getMissionDeliveryHistory(proposal.id)])
+      : null;
+    const historyResponse = historyResult?.[0]?.status === "fulfilled" ? historyResult[0].value : null;
+    if (proposal.assignmentVersionId && (!historyResponse || !historyResponse.ok)) {
+      setProposalContinuation({ proposal, status: "error" });
+      return;
+    }
     const history = historyResponse?.ok ? historyResponse.data : undefined;
     const continuation = missionContinuationDestination(mentorEvaluationExists, history);
     setProposalContinuation(null);
