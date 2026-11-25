@@ -24,3 +24,24 @@ Pendiente.
 ## Integración
 
 Pendiente PR, revisión/CI y decisión F14. No se publicará tag sin los controles aprobados.
+
+## Código y verificación local
+
+- Regresión añadida en `apps/api/src/features/mentor/service.test.ts`: una propuesta con campo de 113 caracteres debe contener una sola vez el bloque inicial de 88 y el sufijo de 25.
+- Ciclo rojo: `pnpm --filter @fragments/contracts build`; `pnpm exec vitest run apps/api/src/features/mentor/service.test.ts` produjo 1 fallo / 8 pass: bloque inicial repetido (observación que reproduce el bug).
+- Corrección: `wrapPdfLine` ahora recorre el texto en offsets de 88 y conserva el sufijo, incluyendo valores vacíos.
+- Verde focal: `pnpm exec vitest run apps/api/src/features/mentor/service.test.ts` — 1 archivo, 12/12 pass (casos 113, 89, 176 y 177 caracteres).
+- Preparación local: `pnpm --filter @fragments/contracts build` — PASS; `pnpm --filter @fragments/api prisma:generate` — PASS (solo genera el cliente desde el esquema del repo).
+- Tipos: `pnpm --filter @fragments/api typecheck` — PASS.
+- Suite API: primer intento en checkout limpio falló al cargar 46 suites por artefactos Contracts/Prisma aún no generados; después de generar Contracts y Prisma, `pnpm --filter @fragments/api test` — 52 archivos PASS, 20 omitidos; 202 tests PASS, 75 omitidos, 277 total.
+- No se conectó a PostgreSQL, IA, GitHub externo del producto ni producción durante estas pruebas; el test usa el `fakeEvaluator` y renderer local.
+
+## Estado de aceptación
+
+- Reproducción productiva: FAIL confirmado en `v0.5.78`, evidencia descrita arriba.
+- Código + regresión local: PASS.
+- CI/PR, release F14, versión productiva y descarga/render del PDF corregido con Ego Lite: NO COMPROBADOS; no marcar CU-29 como resuelto hasta completar esas verificaciones.
+
+## Integración
+
+PR pendiente. No crear tag hasta merge y controles CI requeridos; desplegar únicamente por el flujo F14 normal.
