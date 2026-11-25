@@ -1,5 +1,9 @@
 # Evidencia CU-19 — en progreso
 
+Ampliación del 2026-11-25: se añadió un caso positivo a la integración PostgreSQL. Simula el mismo `githubLogin`/`owner`, recibe una propuesta y entrega propias, espera HTTP 202 y comprueba que el trabajo encolado persiste el SHA y el contexto académico enlazado. La evaluación no se ejecuta; el proveedor IA de la fixture permanece fake y no se hacen llamadas externas.
+
+Verificación local de la ampliación: typecheck API + contracts PASS (`pnpm exec turbo run typecheck --filter=@fragments/api...`, 4 tareas). `worker-http.test.ts`: 12 pruebas omitidas por falta de `DATABASE_URL`; no hay evidencia local de PostgreSQL. La ejecución CI con `fragments_test` queda pendiente.
+
 Añadida regresión al handler HTTP de Review con cuenta, repo y misión ficticios. La prueba prepara identidad de sesión `student-a`, `githubLogin=student-a` y solicita `owner=another-account` para propuesta vinculada. La aceptación espera `404 ACADEMIC_LINK_UNAVAILABLE`, cero llamadas a `resolveAcademicLink` y cero llamadas a `store.enqueue`.
 
 La prueba está en `apps/api/src/features/review/worker-http.test.ts` dentro de suite PostgreSQL. Ejecución local del archivo: 1 suite, 11 pruebas SKIPPED porque no hay `DATABASE_URL`; Docker no está disponible (daemon `dockerDesktopLinuxEngine` no responde). No se afirma que la prueba pasó localmente. CI de PR requerido para ejecutar en base efímera `fragments_test`.
