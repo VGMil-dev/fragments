@@ -474,4 +474,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - API/web Fragments `Up (healthy)` en imágenes `sha-d513d2283d5091fffa6c27a63206f37a209a6da5`. `/health` HTTP 200 `ok/database=ready`; bundle `/assets/index-Bwomdy0w.js` confirma `v0.5.92` y SHA exacto. No se efectuó operación manual, migración de datos ni limpieza Docker.
 - F14 timer, apply path y cloudflared activos; apply service inactivo al finalizar; `systemctl --failed` vacío. PostgreSQL, Tymeslot, ImagenEC, Pits y contenedores de QA `healthy`.
 - `/dev/sda1`: 77 GB disponibles de 193 GB, 61 % usado; inodos 13 %. Docker reportó 110.5 GB en imágenes, 98.47 GB reclaimable y 9.056 GB de build cache; no se eliminó ningún artefacto. Imágenes API/web anteriores `v0.5.91` y `v0.5.90` permanecen disponibles para rollback; no se ejecutó rollback.
+
+## Release automática v0.5.93 · CU-10 Classroom Studio · 2026-11-25
+
+- PR #329 merge normal en `main`, SHA `cbae7e6ef086435072ba7fdd64d444fae153c461`; CI #45712711075 SUCCESS. Tag anotada `v0.5.93` apuntó a ese SHA exacto; F14 run #45713111672 completó verify-build, attest-package y publish-approved-release SUCCESS. GitHub Release #458719215.
+- El timer F14 recogió el paquete y el agente aplicó la release por la ruta normal. Ledger: `v0.5.93`, SHA exacto, release #458719215, `deployed`; backup `fragments-prod-2026-11-25T22-35-49-187Z.dump`, 98,409 bytes, SHA-256 `b5a104e74059210e1d039d3c624c3437f6547b4d0bca725a1b9a489648d5d312`, `restored_to_temporary_database`.
+- API/web Fragments corren imágenes `sha-cbae7e6ef086435072ba7fdd64d444fae153c461` y están `healthy`; `/health` público HTTP 200 `ok/database=ready`. El bundle público `/assets/index-C2-ST2lh.js`, con `Cache-Control: no-cache`, contiene `v0.5.93` y SHA exactos.
+- Timer F14, apply.path y cloudflared activos; apply service finalizó inactivo con `Result=success`, `ExecMainStatus=0`; `systemctl --failed` vacío. Tymeslot, PostgreSQL, ImagenEC, Pits y contenedores QA continúan arriba/healthy donde reportan healthcheck.
+- `/dev/sda1`: 75 GB libres de 193 GB (62 % usado); inodos 14 %. Docker reportó 113.1 GB en imágenes, 101.1 GB reclaimable y 9.056 GB de build cache; no se ejecutó limpieza. Imágenes API/web de `v0.5.92` y `v0.5.91` permanecen disponibles para rollback; no se ejerció rollback.
+- Sin migración/escritura de datos académicos. Ego Lite autenticado y presentación visual de las anclas NO COMPROBADOS: Spaces 44/80 autorizados no aparecen en el runtime; no se abrió un Space sustituto.
 - UI autenticada post-release NO COMPROBADA porque Ego Lite no expuso en este runtime los Spaces autorizados. La evidencia del bundle y servicios no sustituye esa prueba ni declara estabilidad para piloto.

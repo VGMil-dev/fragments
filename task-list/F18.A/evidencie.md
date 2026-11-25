@@ -105,3 +105,10 @@
 - El release de producción no incluye bases temporales ni archivos del harness.
 - Evidencia final regenerada: `Fragments_F18A_Final_Evidence.zip` tiene 22 entradas (20 PNG, informe, manifest); SHA-256 `84C3E888C5C38C4EF151DD93BD1B3C26AE5BFA3653DFE50CEBFB96C86B1FC48E`. Manifiesto lista 21 archivos (capturas e informe), todos los hashes coinciden; dimensiones detectadas: 17 imágenes 1440×1000 y 3 imágenes 390×1000. No incluye datos locales ni secretos.
 - Se actualizó Notion: proyecto Fragments, fichas F18/F17 y contrato/Atlas (actualizados en la integración inicial). Los tres registros operativos reflejan v0.5.1 y aceptación parcial.
+
+## CU-10 · Navegación contextual del aula · 2026-11-25
+
+- La navegación vertical previa requería recorrer una página larga para volver entre datos, miembros, habilidades y misiones/rúbricas. Se agregaron cuatro anclas nativas dentro del mismo detalle de aula, con destino enfocable, scroll-margin y alturas mínimas de 44 px; no se cambian API ni entidades.
+- Commit de código `0ec008a42921966ad50cb555461e16a8f36d4129`; PR #329 merge normal en `cbae7e6ef086435072ba7fdd64d444fae153c461`; CI #45712711075 SUCCESS. Test TDD rojo confirmó nav ausente; verde focal ClassroomStudio 7/7. Suite web 58 archivos/341 pruebas; typecheck, build y diff-check PASS.
+- F14 v0.5.93/run #45713111672 SUCCESS. Ledger release #458719215 `deployed`; backup hash verificado e íntegro. API/web healthy, health 200/ready, bundle público confirma versión/SHA exactos. Servicios F14 activos; disco 75 GB libres/inodos 14 %; imágenes v0.5.92 y .91 conservadas. Sin rollback, limpieza ni cambios de datos.
+- La evidencia automatizada usa APIs fake. Presentación visual, navegación autenticada en escritorio/móvil y teclado en Ego Lite quedan NO COMPROBADAS porque Space 44/Profile 3 no aparece en el runtime actual. F18.A continúa parcial.
