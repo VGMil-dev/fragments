@@ -6,12 +6,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const { classroomApi, assignmentsApi } = vi.hoisted(() => ({
   classroomApi: {
     list: vi.fn(),
+    listSkills: vi.fn(),
     get: vi.fn(),
     enrollments: vi.fn(),
     classroomSkills: vi.fn(),
     students: vi.fn(),
     create: vi.fn(),
+    createSkill: vi.fn(),
     update: vi.fn(),
+    updateSkill: vi.fn(),
+    archiveSkill: vi.fn(),
   },
   assignmentsApi: { listTeacher: vi.fn(), missionPlanCapability: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn() },
 }));
@@ -32,12 +36,16 @@ afterEach(() => {
   container?.remove();
   container = undefined;
   classroomApi.list.mockReset();
+  classroomApi.listSkills.mockReset();
   classroomApi.get.mockReset();
   classroomApi.enrollments.mockReset();
   classroomApi.classroomSkills.mockReset();
   classroomApi.students.mockReset();
   classroomApi.update.mockReset();
   classroomApi.create.mockReset();
+  classroomApi.createSkill.mockReset();
+  classroomApi.updateSkill.mockReset();
+  classroomApi.archiveSkill.mockReset();
   assignmentsApi.listTeacher.mockReset();
   assignmentsApi.missionPlanCapability.mockReset();
   assignmentsApi.create.mockReset();
@@ -48,6 +56,56 @@ afterEach(() => {
 });
 
 describe("ClassroomStudio", () => {
+  it("creates, searches, and edits a skill from the teacher catalog", async () => {
+    const createdSkill = { id: "fixture-skill-navigation", name: "Navegación", description: "Diseña recorridos claros.", archived: false, createdAt: "2026-11-25T12:00:00.000Z", updatedAt: "2026-11-25T12:00:00.000Z" };
+    const otherSkill = { id: "fixture-skill-accessibility", name: "Accesibilidad", description: "Prueba contraste y teclado.", archived: false, createdAt: "2026-11-25T12:00:00.000Z", updatedAt: "2026-11-25T12:00:00.000Z" };
+    const updatedSkill = { ...createdSkill, name: "Navegación verificada", description: "Demuestra el recorrido entre pantallas." };
+    classroomApi.list.mockResolvedValue({ ok: true, data: { items: [], nextOffset: null } });
+    classroomApi.listSkills
+      .mockResolvedValueOnce({ ok: true, data: [] })
+      .mockResolvedValueOnce({ ok: true, data: [createdSkill, otherSkill] })
+      .mockResolvedValueOnce({ ok: true, data: [updatedSkill, otherSkill] });
+    classroomApi.createSkill.mockResolvedValue({ ok: true, data: createdSkill });
+    classroomApi.updateSkill.mockResolvedValue({ ok: true, data: updatedSkill });
+    const setValue = (element: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set;
+      setter?.call(element, value);
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => root?.render(<ClassroomStudio path="/teacher/skills" navigate={vi.fn()} />));
+    const createForm = container.querySelector<HTMLFormElement>("form.cs-form")!;
+    const createFields = createForm.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+    await act(async () => {
+      setValue(createFields[0]!, "Navegación");
+      setValue(createFields[1]!, "Diseña recorridos claros.");
+      createForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(classroomApi.createSkill).toHaveBeenCalledWith({ name: "Navegación", description: "Diseña recorridos claros." });
+    expect(container.querySelector(".cs-list")?.textContent).toContain("Navegación");
+
+    const search = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => setValue(search, "navegación"));
+    expect(container.querySelector(".cs-list")?.textContent).toContain("Navegación");
+    expect(container.querySelector(".cs-list")?.textContent).not.toContain("Accesibilidad");
+    const editButton = [...container.querySelectorAll<HTMLButtonElement>(".cs-skill button")].find((button) => button.textContent?.includes("Editar"))!;
+    await act(async () => editButton.click());
+    const editForm = container.querySelector<HTMLFormElement>("form.cs-edit-skill")!;
+    const editFields = editForm.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+    await act(async () => {
+      setValue(editFields[0]!, "Navegación verificada");
+      setValue(editFields[1]!, "Demuestra el recorrido entre pantallas.");
+      editForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(classroomApi.updateSkill).toHaveBeenCalledWith(createdSkill.id, { name: updatedSkill.name, description: updatedSkill.description });
+    expect(container.querySelector(".cs-list")?.textContent).toContain(updatedSkill.name);
+    expect(classroomApi.listSkills).toHaveBeenCalledTimes(3);
+  });
+
   it("renders the new classroom form without treating 'new' as an aula id", async () => {
     classroomApi.list.mockResolvedValue({ ok: true, data: { items: [] } });
     classroomApi.get.mockResolvedValue({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró el aula." } });
