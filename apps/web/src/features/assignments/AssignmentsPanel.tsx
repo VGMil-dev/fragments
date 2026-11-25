@@ -179,7 +179,7 @@ export function StudentAssignmentsList({
         {proposalsLoading ? <p role="status">Espera mientras consultamos tus propuestas antes de iniciar.</p> : proposalsError ? <div role="alert"><p>No pudimos consultar tus propuestas. Para evitar duplicados, vuelve a intentarlo antes de iniciar.</p>{onRetryProposals ? <button type="button" onClick={onRetryProposals}>Reintentar propuestas</button> : null}</div> : (() => {
           const linkedProposal = recentProposals.find((proposal) => proposal.assignmentVersionId === assignment.id);
           return linkedProposal
-            ? <button type="button" aria-label={`Abrir propuesta vinculada: ${assignment.title}`} disabled={!onContinueProposal} onClick={() => onContinueProposal?.(linkedProposal)}>Abrir propuesta vinculada</button>
+            ? <button type="button" aria-label={`Continuar misión: ${assignment.title}`} disabled={!onContinueProposal} onClick={() => onContinueProposal?.(linkedProposal)}>Continuar misión</button>
             : <button type="button" aria-label={`Iniciar propuesta: ${assignment.title}`} disabled={!onStartProposal} onClick={() => onStartProposal?.(assignment)}>Iniciar propuesta</button>;
         })()}
       </article>

@@ -132,7 +132,7 @@ describe("student mission to Mentor flow", () => {
 
     await act(async () => root?.render(<App />));
 
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
     expect(linked).toBeDefined();
     await act(async () => linked?.click());
 
@@ -152,7 +152,7 @@ describe("student mission to Mentor flow", () => {
     }] });
     mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "evaluated-mission-proposal" }] });
     await act(async () => root?.render(<App />));
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/review");
     expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("evaluated-mission-proposal");
@@ -176,7 +176,7 @@ describe("student mission to Mentor flow", () => {
       ],
     } });
     await act(async () => root?.render(<App />));
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Abrir propuesta vinculada");
+    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/trainer");
     expect(window.location.search).toBe("?reviewId=final-delivery-review");
