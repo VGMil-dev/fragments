@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MissionDeliveryHistory } from "@fragments/contracts";
-import { missionContinuationDestination } from "./mission-continuation.js";
+import { missionContinuationDestination, missionContinuationUrl } from "./mission-continuation.js";
 
 const base: MissionDeliveryHistory = {
   proposalId: "proposal-1", assignmentVersionId: "mission-v1", nextDeliverableId: "delivery-2",
@@ -10,13 +10,41 @@ const base: MissionDeliveryHistory = {
   ],
 };
 
+const completed = (reviewId: string, status: "completed" | "failed" = "completed") => ({
+  reviewId,
+  commitSha: "c".repeat(40),
+  status,
+  createdAt: "2026-11-25T10:00:00.000Z",
+  updatedAt: "2026-11-25T10:00:00.000Z",
+});
+
 describe("missionContinuationDestination", () => {
-  it("keeps unevaluated proposals in Mentor", () => expect(missionContinuationDestination(false, base)).toBe("/student/mentor"));
-  it("continues in Review while an ordered delivery remains", () => expect(missionContinuationDestination(true, base)).toBe("/student/review"));
-  it("falls back to Review when delivery state is unavailable", () => expect(missionContinuationDestination(true)).toBe("/student/review"));
-  it("opens Trainer only after every published delivery has a completed Review", () => {
-    const complete = { ...base, nextDeliverableId: null, deliveries: base.deliveries.map((delivery) => ({ ...delivery, status: "completed" as const })) };
-    expect(missionContinuationDestination(true, complete)).toBe("/student/trainer");
-    expect(missionContinuationDestination(true, { ...complete, deliveries: [{ ...complete.deliveries[0]!, status: "failed" }] })).toBe("/student/review");
+  it("keeps unevaluated proposals in Mentor", () => expect(missionContinuationDestination(false, base)).toEqual({ destination: "/student/mentor" }));
+  it("continues in Review while an ordered delivery remains", () => expect(missionContinuationDestination(true, base)).toEqual({ destination: "/student/review" }));
+  it("falls back to Review when delivery state is unavailable", () => expect(missionContinuationDestination(true)).toEqual({ destination: "/student/review" }));
+  it("opens Trainer on the latest completed Review for the final delivery", () => {
+    const complete = {
+      ...base,
+      nextDeliverableId: null,
+      deliveries: base.deliveries.map((delivery, index) => ({
+        ...delivery,
+        status: "completed" as const,
+        attempts: index === 1 ? [completed("review-old"), completed("review-final"), completed("review-retry", "failed")] : [completed("review-proposal")],
+      })),
+    };
+    expect(missionContinuationDestination(true, complete)).toEqual({ destination: "/student/trainer", reviewId: "review-final" });
+  });
+  it("does not open Trainer if completed history has no completed Review ID for the final delivery", () => {
+    const complete = { ...base, nextDeliverableId: null, deliveries: base.deliveries.map((delivery) => ({ ...delivery, status: "completed" as const, attempts: [] })) };
+    expect(missionContinuationDestination(true, complete)).toEqual({ destination: "/student/review" });
+  });
+  it("keeps failed or unfinished deliveries in Review", () => {
+    expect(missionContinuationDestination(true, { ...base, nextDeliverableId: null, deliveries: [{ ...base.deliveries[0]!, status: "failed" }] })).toEqual({ destination: "/student/review" });
+  });
+  it("puts the exact final Review in Trainer's URL and the project in other destinations", () => {
+    expect(missionContinuationUrl("project / 1", { destination: "/student/trainer", reviewId: "review / final" }))
+      .toBe("/student/trainer?reviewId=review%20%2F%20final");
+    expect(missionContinuationUrl("project / 1", { destination: "/student/review" }))
+      .toBe("/student/review?proposalId=project%20%2F%201");
   });
 });

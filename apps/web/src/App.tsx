@@ -12,7 +12,7 @@ import { TrainerScreen } from "./features/trainer";
 import { createTrainerApi } from "./lib/api/trainer-api";
 import { TeacherPasswordReset } from "./features/mentor-control/TeacherPasswordReset";
 import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
-import { missionContinuationDestination } from "./features/student/mission-continuation.js";
+import { missionContinuationDestination, missionContinuationUrl, type MissionContinuation } from "./features/student/mission-continuation.js";
 import { StudentDashboard } from "./features/student/StudentDashboard";
 import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
 import { assignmentsApi } from "./features/assignments/assignments-api.js";
@@ -281,10 +281,10 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
   }, [path, student, selectedAssignment, currentProposal, requestedProposalId, routeProposal, mentorContextReload, navigate]);
 
   const loadMissionDeliveryHistory = useCallback((proposalId: string) => studentApi.getMissionDeliveryHistory(proposalId), []);
-  const openProposal = useCallback((proposal: ProposalDraftResponse, destination: "/student/mentor" | "/student/review" | "/student/trainer" = "/student/mentor") => {
+  const openProposal = useCallback((proposal: ProposalDraftResponse, continuation: MissionContinuation = { destination: "/student/mentor" }) => {
     setSelectedAssignment(undefined);
     setSelectedProposal(proposal);
-    navigate(`${destination}?proposalId=${encodeURIComponent(proposal.id)}`);
+    navigate(missionContinuationUrl(proposal.id, continuation));
   }, [navigate]);
   const continueProposal = useCallback(async (proposal: ProposalDraftResponse) => {
     const [submissionsResult, historyResult] = await Promise.allSettled([
@@ -295,7 +295,8 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
       && submissionsResult.value.ok
       && submissionsResult.value.data.some((item) => item.kind === "mentor" && item.sourceId === proposal.id);
     const history = historyResult.status === "fulfilled" && historyResult.value?.ok ? historyResult.value.data : undefined;
-    openProposal(proposal, missionContinuationDestination(mentorEvaluationExists, history));
+    const continuation = missionContinuationDestination(mentorEvaluationExists, history);
+    openProposal(proposal, continuation);
   }, [openProposal]);
 
   if (!student && authError) return <main className="student-screen"><p role="alert">No pudimos comprobar tu acceso. Inténtalo de nuevo.</p><button type="button" onClick={() => setAuthReload((value) => value + 1)}>Reintentar</button></main>;
