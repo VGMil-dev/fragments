@@ -1,4 +1,4 @@
-# Evidencia F18.C.1 — ACL corregida; PR y producción pendientes
+# Evidencia F18.C.1 — ACL integrada y desplegada; producción verificada parcialmente
 
 ## Hallazgo productivo inicial
 
@@ -30,14 +30,18 @@
 ## Publicación
 
 - Rama: `codex/f18-c1-teacher-project-acl`.
-- Commits: implementación inicial `8eef145952165602b7b6d741d571f75637d1b9fd`; merge normal de main `d06248e30390e3730035b4ee872a976888d94a69`; seguimiento ACL/retiro/identidades `72901688389ea290ee92f90c5a03ab6ea9825122`.
-- PR #279 está abierta. Su CI `45525832207` pasó antes del commit de seguimiento; requiere publicar `7290168` y esperar una nueva ejecución CI.
-- Sin merge final, tag ni F14. Producción continúa en v0.5.75, donde CU-30 permanece FAIL provisional.
-- Sin escrituras productivas, evaluación IA, interacción con terceros ni cambios de infraestructura.
+- Commits de implementación: inicial `8eef145952165602b7b6d741d571f75637d1b9fd`; seguimiento ACL/retiro/identidades `72901688389ea290ee92f90c5a03ab6ea9825122`.
+- PR #279 se integró por merge normal en `main`: `9ca3c434f6c431805c2c65077e38058f98db288d`. CI PR `45528368263` SUCCESS. Revisión estática independiente: sin issues restantes.
+- Tag anotada `v0.5.76` apunta al merge exacto. F14 run `45528999912`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; PostgreSQL disposable, backup/restore, suite, typecheck/lint/build, bundle metadata, ARM64 y Sigstore PASS.
+- Poller F14 encoló release ID `457555612`; apply normal registró `release_deployed`, imagen API/web con SHA `9ca3c434f6c431805c2c65077e38058f98db288d` y hash de backup presente en el ledger. No hubo deploy/reinicio manual.
+- Preflight solo lectura: `/dev/sda1` con 136.1 GB libres (35% usado), inodos 8%; Docker 56.7 GB imágenes y 9.056 GB cache. Sin limpieza. Tras el release: 133.5 GB libres (36% usado), inodos 9%; Fragments API/web, PostgreSQL, Pits y F14 poller/path healthy/activos. Apply inactivo tras terminar, estado esperado.
+- Durante el arranque, `/health` respondió temporalmente 502; F14 completó el healthcheck y el endpoint volvió a 200 con `database=ready`. Contenedores API/web continúan healthy en el SHA esperado.
+- Ego Lite, docente Space 44/Profile 3: bundle `index-D0TWE-e8.js` comprobado con versión y SHA exactos. `GET /api/teacher/students?offset=0&limit=20` respondió 200; la salida de auditoría se limitó a conteos (1 entrada, suma de proyectos 3). No se registró el nombre, no se seleccionó estudiante ni se abrió proyecto. No se guardó captura porque mostraría datos personales.
+- Sin escrituras de datos académicos productivos, interacción con identidades de estudiantes, evaluación IA ni modificación de infraestructura. Sesión docente conservada.
 
 ## Pendientes de aceptación
 
-- Subir el seguimiento a PR #279 y esperar CI/protecciones normales.
-- Integrar mediante PR; después publicar release legítima F14 conservando backups, rollback y ledger.
-- Revalidar versión/SHA/health y el feed docente con Ego Lite Space 44: roster sin identidades ajenas, seguimiento solo de proyectos de aula propia. Verificar también el selector de asignación solo en recursos QA propios y sin asignar a nadie.
-- Actualizar CU-30 en la matriz Notion tras observar la versión desplegada. Hasta entonces el cambio está verificado en QA aislado únicamente.
+- La autorización cruzada negativa en producción y la retirada por un segundo docente no se probaron por no disponer de una segunda identidad QA autorizada; ambas siguen NO COMPROBADAS en producción. La integración PostgreSQL prueba esos controles con fixtures aislados.
+- No se abrió el proyecto del único miembro que devolvió el roster, ni se navegó el selector de asignación; no se probaron operaciones sobre estudiantes.
+- CU-30 queda QA PASS y producción PARCIAL, no se extiende esa conclusión al recorrido académico completo ni al aislamiento ante otros docentes en producción.
+- La matriz principal de Notion fue actualizada con resultados QA/producción, SHA y referencias CI/F14.
