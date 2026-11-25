@@ -74,8 +74,24 @@ describe("ReviewScreen", () => {
     expect(html).toContain("Hallazgos devueltos · 1");
     expect(html).toContain("El punto de entrada conecta los módulos principales.");
     expect(html).toContain("src/main.ts:3–9");
-    expect(html).toContain('href="/student/trainer"');
+    expect(html).toContain('href="/student/trainer?reviewId=review-1"');
     expect(html).toContain("Practicar en Trainer");
+  });
+
+  it("passes the completed review id when opening Trainer", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    const onOpenTrainer = vi.fn();
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} initialReview={{ status: "success", data: completed }} onBack={vi.fn()} onOpenTrainer={onOpenTrainer} />));
+      await act(async () => container.querySelector<HTMLAnchorElement>('a[href^="/student/trainer"]')!.click());
+      expect(onOpenTrainer).toHaveBeenCalledWith("review-1");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
   });
 
   it("preserves semantic codes for verified, unverified, and review-needed findings", () => {
