@@ -608,6 +608,29 @@ describe("MentorScreen", () => {
     expect(mountedContainer.querySelector(".mentor-form__footer")?.textContent).toContain("Anterior");
   });
 
+  it("shows the ordered, published mission deliveries and their requirements in Mentor context", async () => {
+    mountedContainer = document.createElement("div");
+    document.body.append(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => {
+      mountedRoot?.render(<MentorScreen {...actions} onBack={vi.fn()} missionDeliverables={[
+        { id: "delivery-1", order: 1, title: "Propuesta de navegación", type: "proposal", requirements: ["Describe pantallas con datos inventados"], criterionIds: ["navigation"] },
+        { id: "delivery-2", order: 2, title: "Avance de navegación", type: "progress", requirements: ["Muestra registro, resumen y regreso"], criterionIds: ["navigation"] },
+      ]} contextState={{ status: "success", data: { version: 3, publishedAt: "2026-11-20T12:00:00.000Z", config: {
+        subject: "Programación Móvil", theme: "Expo", assignment: "Diseña un flujo.", requirements: [], expectedLevel: "Inicial", rubricTitle: "Rúbrica de misión", criteria: [{ id: "navigation", title: "Navegación", description: "Flujo claro", weight: 100 }],
+      } } }} />);
+    });
+    const contextStage = Array.from(mountedContainer.querySelectorAll<HTMLButtonElement>(".mentor-stage-nav button")).find((button) => button.textContent?.includes("Contexto"));
+    await act(async () => contextStage?.click());
+
+    const deliveryCards = Array.from(mountedContainer.querySelectorAll<HTMLElement>(".mentor-context__deliverables > li"));
+    expect(deliveryCards).toHaveLength(2);
+    expect(deliveryCards.map((card) => card.querySelector("h3")?.textContent)).toEqual(["Propuesta de navegación", "Avance de navegación"]);
+    expect(deliveryCards[0]?.textContent).toContain("Describe pantallas con datos inventados");
+    expect(deliveryCards[1]?.textContent).toContain("Muestra registro, resumen y regreso");
+    expect(deliveryCards[0]?.textContent).toContain("Criterios: Navegación");
+  });
+
   it("keeps context loading and failures distinct from personal mode", async () => {
     mountedContainer = document.createElement("div");
     document.body.append(mountedContainer);
