@@ -15,7 +15,8 @@ Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewSc
 - `pnpm --filter @fragments/web build` — PASS; Rolldown muestra advertencias existentes de chunk >500 kB y directivas `use client` de lucide-react.
 - `git diff --check` — PASS tras todos los cambios.
 - Commit de implementación: `c23b1f45a859e7dd889b502f6a0f3f29ca0e3c4d`.
-- Revisión independiente formal y CI del PR: pendientes.
+- CI del PR #310: run `45671152783`, job `verify` — SUCCESS (todos los pasos y limpieza PASS).
+- Revisión independiente formal: pendiente.
 
 ## Producción
 
