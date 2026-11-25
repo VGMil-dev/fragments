@@ -36,3 +36,9 @@ La revisión de la API comprobó que los borradores sin evaluación Mentor no ne
 - CI #45653052899 SUCCESS.
 - Prueba focal 21/21; suite web 333/333; typecheck/build/diff-check PASS.
 - Este commit tampoco está desplegado. F14 v0.5.85 sigue bloqueado en GitHub HTTP 500; Ego Lite NO COMPROBADO.
+## Producción pública · comprobación read-only 2026-11-25
+
+- `GET https://fragments.gavanti.org/health`: `ok`, `database=ready`.
+- El HTML sirve `/assets/index-B_1vZaBY.js`; el bundle contiene `v0.5.84` y el SHA previo, no incluye el marcador de estado/reintento F18.B.7.
+- La publicación F14 `v0.5.85` sigue sin release. El intento autorizado `gh run rerun 45649110294 --failed` respondió HTTP 500; no se creó tag nueva ni se abrió ruta alterna.
+- UI autenticada Ego Lite, ledger/backup/disco/servicios internos continúan NO COMPROBADOS en esta comprobación.
