@@ -213,6 +213,8 @@ describe("ReviewScreen", () => {
       });
       expect(container.textContent).toContain("Siguiente entrega");
       expect(container.textContent).toContain("Commit");
+      expect(actions.onRefresh).toHaveBeenCalledWith("review-1");
+      expect(container.textContent).toContain("84/100");
       const retry = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Reintentar esta Review"));
       expect(retry).toBeDefined();
       await act(async () => retry?.click());
