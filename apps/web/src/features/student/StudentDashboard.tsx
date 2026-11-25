@@ -95,14 +95,14 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
         ? <button type="button" className="button button--light" onClick={onRetryProposals}>Reintentar propuestas</button>
         : proposalsLoading ? null
           : continueProposal
-            ? <button type="button" className="button button--primary" aria-label={`Abrir propuesta en Mentor: ${continueProposal.proposal.title || "Propuesta sin título"}`} onClick={() => onContinueProposal(continueProposal)}>Abrir en Mentor <ArrowRight size={17} aria-hidden="true" /></button>
+            ? <button type="button" className="button button--primary" aria-label={`Continuar proyecto: ${continueProposal.proposal.title || "Propuesta sin título"}`} onClick={() => onContinueProposal(continueProposal)}>Continuar proyecto <ArrowRight size={17} aria-hidden="true" /></button>
             : missionsLoading ? null
               : missionsError
                 ? <button type="button" className="button button--light" onClick={onRetryMissions}>Reintentar misiones</button>
                 : choosingMission
                   ? <button type="button" className="button button--primary" onClick={() => onNavigate("/student/classrooms")}>Ir a Mis aulas <ArrowRight size={17} aria-hidden="true" /></button>
                   : dashboardMission
-                    ? <button type="button" className="button button--primary" aria-label={proposalForMission(dashboardMission) ? `Abrir propuesta vinculada a misión: ${dashboardMission.title}` : `Iniciar misión: ${dashboardMission.title}`} onClick={() => continueOrStartMission(dashboardMission)}>{proposalForMission(dashboardMission) ? "Abrir propuesta" : "Iniciar misión en Mentor"} <ArrowRight size={17} aria-hidden="true" /></button>
+                    ? <button type="button" className="button button--primary" aria-label={proposalForMission(dashboardMission) ? `Continuar proyecto de misión: ${dashboardMission.title}` : `Iniciar misión: ${dashboardMission.title}`} onClick={() => continueOrStartMission(dashboardMission)}>{proposalForMission(dashboardMission) ? "Continuar proyecto" : "Iniciar misión en Mentor"} <ArrowRight size={17} aria-hidden="true" /></button>
                     : <button type="button" className="button button--primary" onClick={onCreateProposal}>Crear propuesta en Mentor <ArrowRight size={17} aria-hidden="true" /></button>}
     </div>
   </section>;
@@ -139,8 +139,8 @@ export function StudentDashboard({ student, classrooms, classroomRequests, class
                   {mission.requiredSkills.length > 3 ? <li>+{mission.requiredSkills.length - 3} habilidades</li> : null}
                 </ul>
               </div> : null}
-              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Abrir propuesta vinculada a misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
-                {linkedProposal ? "Abrir propuesta" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
+              <button type="button" className="student-dashboard__mission-action student-dashboard__mission-action--secondary" aria-label={linkedProposal ? `Continuar proyecto de misión: ${mission.title}` : `Iniciar misión: ${mission.title}`} onClick={() => continueOrStartMission(mission)}>
+                {linkedProposal ? "Continuar proyecto" : "Iniciar en Mentor"} <ArrowRight size={16} aria-hidden="true" />
               </button>
             </article>
           </li>;
