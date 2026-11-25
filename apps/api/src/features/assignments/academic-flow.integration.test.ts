@@ -16,6 +16,7 @@ import { createPrismaReviewStore } from "../review/prisma-store.js";
 import { createReviewWorker } from "../review/worker.js";
 import { createTrainerRepository } from "../trainer/repository.js";
 import { createTrainerService } from "../trainer/service.js";
+import { createClassroomRepository } from "../classroom/repository.js";
 import { cleanupReviewFixtureRows } from "../../../test-support/fragments-test-database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -27,6 +28,7 @@ const studentId = `academic-flow-student-${namespace}`;
 const classroomId = `academic-flow-class-${namespace}`;
 const skillId = `academic-flow-skill-${namespace}`;
 const optionalSkillId = `academic-flow-optional-skill-${namespace}`;
+const snapshotSkillId = `academic-flow-snapshot-skill-${namespace}`;
 const missionRubric = { title: "Rúbrica de navegación", criteria: [{ id: "criterion-navigation", title: "Navegación", description: "La acción permite llegar y regresar a la pantalla esperada.", weight: 100 }] };
 const missionDeliverables = [
   { id: "delivery-proposal", order: 1, title: "Propuesta", type: "proposal" as const, requirements: ["Describe el recorrido que resolverás."], dueDate: null, criterionIds: ["criterion-navigation"] },
@@ -58,10 +60,12 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     await database.teacherSkill.createMany({ data: [
       { id: skillId, teacherId, name: "Navegación", normalizedName: namespace, createdAt: now, updatedAt: now },
       { id: optionalSkillId, teacherId, name: "Accesibilidad", normalizedName: `${namespace}-optional`, createdAt: now, updatedAt: now },
+      { id: snapshotSkillId, teacherId, name: "Habilidad snapshot", normalizedName: `${namespace}-snapshot`, createdAt: now, updatedAt: now },
     ] });
     await database.classroomSkillAvailability.createMany({ data: [
       { classroomId, teacherId, skillId, enabled: true, updatedAt: now },
       { classroomId, teacherId, skillId: optionalSkillId, enabled: true, updatedAt: now },
+      { classroomId, teacherId, skillId: snapshotSkillId, enabled: true, updatedAt: now },
     ] });
     await database.classEnrollment.create({ data: { id: `academic-flow-enrollment-${namespace}`, classroomId, studentId, status: "active", source: "teacher_assignment", requestedAt: now } });
   });
@@ -76,7 +80,7 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       await database.classEnrollment.deleteMany({ where: { classroomId } });
       await database.classroomSkillAvailability.deleteMany({ where: { classroomId } });
       await database.classroom.deleteMany({ where: { id: classroomId } });
-      await database.teacherSkill.deleteMany({ where: { id: { in: [skillId, optionalSkillId] } } });
+      await database.teacherSkill.deleteMany({ where: { id: { in: [skillId, optionalSkillId, snapshotSkillId] } } });
       await database.user.deleteMany({ where: { id: { in: [teacherId, studentId] } } });
     } finally {
       await database.$disconnect();
@@ -258,6 +262,46 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
     expect((evaluatedConfig as { requirements: string[] }).requirements).not.toContain("Habilidad optativa: Accesibilidad");
     expect(evaluation.mentorContextVersion).toBe(recovered!.assignmentContext!.mentorContext.version);
     expect(evaluation.analysis.modelId).toBe("fake/local-heuristic-v1");
+  });
+
+  it("keeps published mission skill snapshots after classroom disable and skill archival", async () => {
+    const classrooms = createClassroomRepository(database!);
+    const assignments = createAssignmentRepository(database!);
+    const mission = await assignments.create(teacherId, classroomId, {
+      title: "Misión con habilidad", instructions: "Demuestra navegación en una app.", objectives: ["Conectar dos pantallas"],
+      requiredSkillIds: [snapshotSkillId], optionalSkillIds: [], missionRubric,
+      deliverables: missionDeliverables,
+    });
+    expect(mission).not.toBeNull();
+    if (!mission || "kind" in mission) throw new Error("No se creó la misión fixture.");
+    const published = await assignments.publish(teacherId, classroomId, mission.id, 1);
+    expect(published.kind).toBe("ok");
+    if (published.kind !== "ok") throw new Error("No se publicó la misión fixture.");
+    const publishedVersion = published.assignment.versions.find((version) => version.version === 1)!;
+
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).toContain("Habilidad snapshot");
+    expect((await classrooms.setClassroomSkill(teacherId, classroomId, snapshotSkillId, false)).kind).toBe("ok");
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).not.toContain("Habilidad snapshot");
+    const afterDisable = await assignments.listStudent(studentId, classroomId);
+    expect(afterDisable?.find((entry) => entry.id === publishedVersion.id)?.requiredSkills).toEqual([{ id: snapshotSkillId, name: "Habilidad snapshot", description: null }]);
+
+    expect((await classrooms.setClassroomSkill(teacherId, classroomId, snapshotSkillId, true)).kind).toBe("ok");
+    const renamedAndArchived = await classrooms.updateSkill(teacherId, snapshotSkillId, { name: "Habilidad archivada", archived: true });
+    expect(renamedAndArchived?.archived).toBe(true);
+    expect((await classrooms.listStudentSkills(studentId, classroomId))?.map((skill) => skill.name)).not.toContain("Habilidad archivada");
+    const afterArchive = await assignments.listStudent(studentId, classroomId);
+    expect(afterArchive?.find((entry) => entry.id === publishedVersion.id)?.requiredSkills).toEqual([{ id: snapshotSkillId, name: "Habilidad snapshot", description: null }]);
+    expect(afterArchive?.find((entry) => entry.id === publishedVersion.id)?.mentorContext.config.requirements).toContain("Habilidad requerida: Habilidad snapshot");
+
+    const invalidNewMission = await assignments.create(teacherId, classroomId, {
+      title: "Misión posterior", instructions: "Elige una habilidad vigente.", objectives: ["Comprobar disponibilidad"],
+      requiredSkillIds: [snapshotSkillId], optionalSkillIds: [], missionRubric,
+      deliverables: missionDeliverables,
+    });
+    expect(invalidNewMission).toEqual({ kind: "invalid_skills" });
+    expect((await database!.classroomAssignmentVersion.findUniqueOrThrow({ where: { id: publishedVersion.id } })).snapshotJson).toMatchObject({
+      requiredSkills: [{ id: snapshotSkillId, name: "Habilidad snapshot", description: null }],
+    });
   });
 
   it("keeps each mission rubric isolated when another mission publishes a new version", async () => {
