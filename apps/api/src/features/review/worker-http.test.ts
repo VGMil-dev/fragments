@@ -89,6 +89,53 @@ async function serve(handler: (request: IncomingMessage, response: ServerRespons
 }
 
 describePostgres("Review queue worker and feature HTTP handler — PostgreSQL integration", () => {
+  it("accepts a linked review for the authenticated GitHub owner and persists its academic context", async () => {
+    const f = await fixture();
+    const proposalId = `proposal-${randomUUID()}`;
+    const academicLink = {
+      proposalId, proposalVersion: 2, proposalTitle: "App móvil de QA",
+      assignmentVersionId: "mission-version-qa", missionTitle: "Misión de navegación", missionVersion: 3,
+      mentorContextVersion: 4, classroomId: "classroom-qa", classroomTitle: "Aula QA",
+      requiredSkills: ["Navegación", "Componentes"],
+      deliverable: { id: "delivery-qa", order: 1, title: "Propuesta", type: "proposal", requirements: ["Definir alcance"], criterionIds: ["criterion-qa"] },
+    };
+    const resolveAcademicLink = vi.fn(async (studentId: string, id: string, deliverableId?: string, sha?: string) => {
+      expect(studentId).toBe("student-a");
+      expect(id).toBe(proposalId);
+      expect(deliverableId).toBe("delivery-qa");
+      expect(sha).toBe(commitSha);
+      return academicLink;
+    });
+    const handler = createReviewHttp({
+      store: f.store,
+      service: f.service,
+      resolveStudentId: async (incoming) => incoming.headers["x-student-id"] === "student-a" ? "student-a" : null,
+      resolveContext: async () => ({ ...f.context, studentId: "student-a", githubLogin: "student" }),
+      resolveAcademicLink,
+    });
+
+    let persistedJobId = "";
+    await serve(handler, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/reviews`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-student-id": "student-a" },
+        body: JSON.stringify({ ...f.request, owner: "student", linkedProposalId: proposalId, assignmentDeliverableId: "delivery-qa" }),
+      });
+      expect([200, 202]).toContain(response.status);
+      const { data: queued } = await response.json() as { data: { id: string; status: string } };
+      expect(["queued", "running", "completed"]).toContain(queued.status);
+      persistedJobId = queued.id;
+    });
+
+    expect(resolveAcademicLink).toHaveBeenCalledOnce();
+    const persisted = await f.store.getJob(persistedJobId);
+    expect(persisted).toMatchObject({
+      owner: "student", repo: f.request.repo, commitSha, linkedProposalId: proposalId,
+      academicLink,
+    });
+    expect(["queued", "running", "completed"]).toContain(persisted?.status);
+  });
+
   it("rejects a linked proposal when the requested repository owner differs from the authenticated GitHub account", async () => {
     const f = await fixture();
     const resolveAcademicLink = vi.fn(async () => ({
@@ -157,7 +204,11 @@ describePostgres("Review queue worker and feature HTTP handler — PostgreSQL in
       },
     } });
     const worker = createReviewWorker({ store: f.store, service: f.service, workerId: "worker-inspector-acl" });
-    expect(await worker.runOnce()).toBe(true);
+    for (let attempt = 0; attempt < 50 && (await f.store.getJob(job.id))?.status !== "completed"; attempt += 1) {
+      await worker.runOnce();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(await f.store.getJob(job.id)).toMatchObject({ status: "completed" });
     expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(true);
     expect(await f.store.teacherCanAccessReview(job.id, otherTeacherId)).toBe(false);
     await f.database.classEnrollment.update({ where: { id: enrollmentId }, data: { status: "removed" } });

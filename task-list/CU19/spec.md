@@ -2,9 +2,10 @@
 
 ## Aceptación
 
+- Request autenticada con `owner` igual al `githubLogin` y propuesta propia resuelve la misión/entrega, encola una Review y persiste el contexto académico junto al SHA solicitado.
 - Request autenticada con propuesta propia y `owner` distinto al `githubLogin` de la sesión devuelve `404 ACADEMIC_LINK_UNAVAILABLE`.
 - La discrepancia no consulta el vínculo académico ni encola Review.
-- Prueba PostgreSQL aislada en CI con `current_database()` protegido por `assertIsFragmentsTest`; proveedor fake no ejecutado.
+- Pruebas PostgreSQL aisladas en CI con `current_database()` protegido por `assertIsFragmentsTest`; proveedor fake no ejecutado.
 - Suite API y typecheck pasan.
 
 ## Límites
