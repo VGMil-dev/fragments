@@ -18,3 +18,7 @@ Estado: implementación de prueba; CI PostgreSQL pendiente.
 ## Limitación
 
 La integración autenticada de Ego Lite no se realizó: el Space 44/Profile 3 fue autorizado pero Ego Lite responde `task space not found: 44`. No se creó un espacio sustituto. El caso productivo visual permanece NO COMPROBADO.
+
+## Ajuste tras CI inicial
+
+CI #45720413138 detectó que la prueba modificaba una habilidad compartida con otros casos paralelos de la misma suite; también precisó que el snapshot incluye `description: null`. Se aisló la prueba con una habilidad fixture independiente y se ajustaron las aserciones al DTO real. El run inicial falló y no se interpreta como resultado funcional PASS; el commit correctivo vuelve a ejecutar CI.
