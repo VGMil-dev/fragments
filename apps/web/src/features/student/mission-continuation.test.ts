@@ -10,12 +10,17 @@ const base: MissionDeliveryHistory = {
   ],
 };
 
-const completed = (reviewId: string, status: "completed" | "failed" = "completed") => ({
+const completed = (
+  reviewId: string,
+  status: "completed" | "failed" = "completed",
+  createdAt = "2026-11-25T10:00:00.000Z",
+  updatedAt = "2026-11-25T10:00:00.000Z",
+) => ({
   reviewId,
   commitSha: "c".repeat(40),
   status,
-  createdAt: "2026-11-25T10:00:00.000Z",
-  updatedAt: "2026-11-25T10:00:00.000Z",
+  createdAt,
+  updatedAt,
 });
 
 describe("missionContinuationDestination", () => {
@@ -29,10 +34,30 @@ describe("missionContinuationDestination", () => {
       deliveries: base.deliveries.map((delivery, index) => ({
         ...delivery,
         status: "completed" as const,
-        attempts: index === 1 ? [completed("review-old"), completed("review-final"), completed("review-retry", "failed")] : [completed("review-proposal")],
+        attempts: index === 1 ? [
+          completed("review-old", "completed", "2026-11-25T10:00:00.000Z", "2026-11-25T10:10:00.000Z"),
+          completed("review-final", "completed", "2026-11-25T10:01:00.000Z", "2026-11-25T10:20:00.000Z"),
+          completed("review-retry", "failed", "2026-11-25T10:02:00.000Z", "2026-11-25T10:30:00.000Z"),
+        ] : [completed("review-proposal")],
       })),
     };
     expect(missionContinuationDestination(true, complete)).toEqual({ destination: "/student/trainer", reviewId: "review-final" });
+  });
+  it("uses completion time rather than creation order when Reviews finish out of order", () => {
+    const complete = {
+      ...base,
+      nextDeliverableId: null,
+      deliveries: base.deliveries.map((delivery, index) => ({
+        ...delivery,
+        status: "completed" as const,
+        attempts: index === 1 ? [
+          completed("review-finished-last", "completed", "2026-11-25T10:00:00.000Z", "2026-11-25T10:30:00.000Z"),
+          completed("review-created-last", "completed", "2026-11-25T10:10:00.000Z", "2026-11-25T10:20:00.000Z"),
+          completed("review-later-failed", "failed", "2026-11-25T10:40:00.000Z", "2026-11-25T10:50:00.000Z"),
+        ] : [completed("review-proposal")],
+      })),
+    };
+    expect(missionContinuationDestination(true, complete)).toEqual({ destination: "/student/trainer", reviewId: "review-finished-last" });
   });
   it("does not open Trainer if completed history has no completed Review ID for the final delivery", () => {
     const complete = { ...base, nextDeliverableId: null, deliveries: base.deliveries.map((delivery) => ({ ...delivery, status: "completed" as const, attempts: [] })) };

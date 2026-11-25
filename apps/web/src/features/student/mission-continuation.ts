@@ -17,7 +17,9 @@ export function missionContinuationDestination(hasMentorEvaluation: boolean, his
   if (history && history.deliveries.length > 0 && history.nextDeliverableId === null
     && history.deliveries.every((delivery) => delivery.status === "completed")) {
     const finalDelivery = history.deliveries[history.deliveries.length - 1];
-    const finalReview = finalDelivery?.attempts.slice().reverse().find((attempt) => attempt.status === "completed");
+    const finalReview = finalDelivery?.attempts.filter((attempt) => attempt.status === "completed")
+      .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+        || Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
     if (finalReview) return { destination: "/student/trainer", reviewId: finalReview.reviewId };
   }
   return { destination: "/student/review" };
