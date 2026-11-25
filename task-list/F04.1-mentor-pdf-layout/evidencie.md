@@ -28,7 +28,17 @@ Estado: implementado y desplegado; verificación funcional del PDF en producció
 - `pnpm exec vitest run apps/api/src/adapters/ai/pdf-renderer.test.ts apps/api/src/features/mentor/service.test.ts` — 2 archivos, 13/13 PASS. `pnpm --filter @fragments/api typecheck` PASS. `git diff --check` PASS.
 - Un intento adicional de inspección con `pdfinfo` no pudo generar el archivo temporal de prueba porque `tsx` no resolvió desde la raíz; el segundo intento de script temporal fue rechazado por la política del host. No se declara esa verificación de parser como PASS; el test automatizado verifica los objetos y el texto escapado.
 - Sin acceso autenticado de Ego Lite en Space 80, la descarga post-fix en producción sigue **NO COMPROBADA**. Sin despliegue posterior de este cambio, los acentos de producción también siguen **NO COMPROBADOS**. No hubo llamadas IA ni escrituras productivas.
-- Commit de implementación: `f8551b8` (`fix(F04.1): preserve Spanish text in mentor PDFs`). La rama aún requiere PR, CI e integración F14 antes de cualquier comprobación productiva.
+- Commit de implementación: `f8551b8` (`fix(F04.1): preserve Spanish text in mentor PDFs`); commit documental con la referencia: `5cbe474`.
+
+## Integración y despliegue F14 · v0.5.90 · 2026-11-25
+
+- PR #321 merge normal: head `5cbe474ea07ea4d77bce5313cb07047c788012c9`, merge exacto en `main` `4c8881928657db2386fcd3786efa7e3e6eb60ad4`. CI del PR `45694595488` PASS. No se borró la rama de trabajo.
+- Tag anotada nueva `v0.5.90` apunta al merge exacto. F14 run `45695443956`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS. La protección efectiva `fragments-production` se observó como `branch_policy`, sin reviewers humanos; no se alteró ninguna regla.
+- El poller/aplicador normales procesaron release `458619994`; ledger marca `v0.5.90`, SHA exacto y `deployed`. Apply finalizó `Result=success`, `ExecMainStatus=0` a las 20:39:35 UTC. No se invocó manualmente el deploy ni se recreó el servicio.
+- Backup `fragments-prod-2026-11-25T20-39-15-251Z.dump`, 98,409 bytes, SHA-256 `82ac2161308233c5233cbaee424fd009cf44dbadc912d05c6911e65067d5a8da`, integridad `restored_to_temporary_database`.
+- SSH read-only: web/API `Up (healthy)` en imagen `sha-4c8881928657db2386fcd3786efa7e3e6eb60ad4`; la imagen anterior `sha-fd91e02ba7d877d7f492ee64a6bd12d9d1024974` sigue presente para rollback. Health público HTTP 200 `ok/database=ready`; asset `/assets/index-DJJQtGvr.js` contiene `v0.5.90` y el SHA exacto.
+- Root `/dev/sda1`: 84 GB libres (57 % usado), inodos 13 %. F14 poll timer y apply path activos; apply inactivo tras éxito; `systemctl --failed` vacío. Tymeslot, ImagenEC, PostgreSQL, Pits y contenedores de prueba continúan en ejecución/salud.
+- **NO COMPROBADO:** el PDF descargado y visualizado en una sesión autenticada después de desplegar v0.5.90. La release/health/bundle acreditan el código servido, pero no la legibilidad del artefacto PDF ya generado; Ego Lite Space 80 aún no aparece. F04.1 queda abierta para esta revalidación. Sin evaluación IA ni modificaciones académicas productivas.
 
 ## PR y release F14
 
