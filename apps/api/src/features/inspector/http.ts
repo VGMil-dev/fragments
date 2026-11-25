@@ -76,7 +76,7 @@ export function createInspectorHttp(service: InspectorService, auth?: FragmentsA
 
     try {
       if (listMatch && request.method === "GET") {
-        const records = await service.listForTeacher(listMatch[1]!);
+        const records = await service.listForTeacher(listMatch[1]!, teacherId);
         sendJson(response, 200, { ok: true, data: InspectorChallengeRecordsResponseSchema.parse(records.map(toPublicRecord)) });
         return "handled";
       }
@@ -86,7 +86,7 @@ export function createInspectorHttp(service: InspectorService, auth?: FragmentsA
           sendError(response, 400, "INVALID_IDEMPOTENCY_KEY", "No se pudo identificar esta solicitud de creación.");
           return "handled";
         }
-        const record = await service.createChallenge(listMatch[1]!, idempotencyKey);
+        const record = await service.createChallenge(listMatch[1]!, idempotencyKey, teacherId);
         sendJson(response, 201, { ok: true, data: toPublicRecord(record) });
         return "handled";
       }

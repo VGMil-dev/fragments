@@ -40,7 +40,7 @@ async function makeReview(commitSha = commitA): Promise<ReviewEvidence> {
   return { id: "review-1", projectId: "project-1", commitSha, owner: snapshot.owner, repo: snapshot.repo, snapshot, analysis };
 }
 
-async function fixture(options: { commitSha?: string; review?: ReviewEvidence | null } = {}) {
+async function fixture(options: { commitSha?: string; review?: ReviewEvidence | null; authorized?: boolean } = {}) {
   let currentCommit = options.commitSha ?? commitA;
   const review = options.review === undefined ? await makeReview() : options.review;
   let nextId = 0;
@@ -68,6 +68,7 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
   const reviews = {
     async getById(id: string) { return id === "review-1" ? review : null; },
     async getLatestCommit(projectId: string) { return projectId === "project-1" ? currentCommit : null; },
+    async teacherCanAccessReview() { return options.authorized ?? true; },
   };
   const service = createInspectorService({
     provider,
@@ -83,7 +84,7 @@ async function fixture(options: { commitSha?: string; review?: ReviewEvidence | 
 describe("Inspector service", () => {
   it("creates a challenge from evidence on the exact reviewed commit and hides the teacher hint from students", async () => {
     const { service, getEvidenceExcerpt, getPracticedFeatures } = await fixture();
-    const created = await service.createChallenge("review-1", requestId(1));
+    const created = await service.createChallenge("review-1", requestId(1), "teacher-1");
 
     expect(created.commitSha).toBe(commitA);
     expect(InspectorChallengeSchema.safeParse(created.challenge).success).toBe(true);
@@ -101,8 +102,8 @@ describe("Inspector service", () => {
 
   it("recovers the persisted result for the same operation without another provider dispatch", async () => {
     const { service, getProviderCalls } = await fixture();
-    const first = await service.createChallenge("review-1", requestId(10));
-    const recovered = await service.createChallenge("review-1", requestId(10));
+    const first = await service.createChallenge("review-1", requestId(10), "teacher-1");
+    const recovered = await service.createChallenge("review-1", requestId(10), "teacher-1");
 
     expect(recovered).toEqual(first);
     expect(getProviderCalls()).toBe(1);
@@ -111,10 +112,10 @@ describe("Inspector service", () => {
 
   it("rejects missing reviews, unrelated latest commits, and reviews without verified repository evidence", async () => {
     const missing = await fixture({ review: null });
-    await expect(missing.service.createChallenge("review-1", requestId(11))).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
+    await expect(missing.service.createChallenge("review-1", requestId(11), "teacher-1")).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
 
     const stale = await fixture({ commitSha: commitB });
-    await expect(stale.service.createChallenge("review-1", requestId(12))).rejects.toMatchObject({ code: "REVIEW_STALE" });
+    await expect(stale.service.createChallenge("review-1", requestId(12), "teacher-1")).rejects.toMatchObject({ code: "REVIEW_STALE" });
 
     const validReview = await makeReview();
     const validFinding = validReview.analysis.findings[0]!;
@@ -122,33 +123,33 @@ describe("Inspector service", () => {
       ...validFinding,
       status: "not_verified",
     }] } } });
-    await expect(noEvidence.service.createChallenge("review-1", requestId(13))).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
+    await expect(noEvidence.service.createChallenge("review-1", requestId(13), "teacher-1")).rejects.toMatchObject({ code: "NO_VERIFIED_EVIDENCE" });
 
     const inventedPath = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, path: "src/missing.ts" }],
     }] } } });
-    await expect(inventedPath.service.createChallenge("review-1", requestId(14))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(inventedPath.service.createChallenge("review-1", requestId(14), "teacher-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
 
     const outOfRange = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, lines: [1, 2] }],
     }] } } });
-    await expect(outOfRange.service.createChallenge("review-1", requestId(15))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(outOfRange.service.createChallenge("review-1", requestId(15), "teacher-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
 
     const badEvidenceDigest = await fixture({ review: { ...validReview, analysis: { ...validReview.analysis, findings: [{
       ...validFinding,
       evidence: [{ ...validFinding.evidence[0]!, digest: "f".repeat(64) }],
     }] } } });
-    await expect(badEvidenceDigest.service.createChallenge("review-1", requestId(16))).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
+    await expect(badEvidenceDigest.service.createChallenge("review-1", requestId(16), "teacher-1")).rejects.toMatchObject({ code: "INVALID_REVIEW_EVIDENCE" });
   });
 
   it("marks pending challenges obsolete, freezes assigned challenges, and preserves recorded defenses after a new commit", async () => {
     const { service, changeCommit } = await fixture();
-    const pending = await service.createChallenge("review-1", requestId(20));
-    const assigned = await service.createChallenge("review-1", requestId(21));
+    const pending = await service.createChallenge("review-1", requestId(20), "teacher-1");
+    const assigned = await service.createChallenge("review-1", requestId(21), "teacher-1");
     await service.assignChallenge(assigned.id, "teacher-1");
-    const completed = await service.createChallenge("review-1", requestId(22));
+    const completed = await service.createChallenge("review-1", requestId(22), "teacher-1");
     await service.assignChallenge(completed.id, "teacher-1");
     await service.recordDefense(completed.id, "teacher-1", {
       mutationObserved: true,
@@ -168,7 +169,7 @@ describe("Inspector service", () => {
 
   it("requires teacher assignment before recording, binds the teacher, and rejects unsafe record fields", async () => {
     const { service } = await fixture();
-    const created = await service.createChallenge("review-1", requestId(30));
+    const created = await service.createChallenge("review-1", requestId(30), "teacher-1");
     await expect(service.recordDefense(created.id, "teacher-1", {
       mutationObserved: true,
       restorationConfirmed: true,
@@ -187,5 +188,12 @@ describe("Inspector service", () => {
       notes: "Incluye datos privados",
       password: "must-not-pass",
     })).rejects.toMatchObject({ code: "INVALID_DEFENSE_RECORD" });
+  });
+
+  it("denies unlinked teachers before exposing evidence or invoking the challenge provider", async () => {
+    const { service, getProviderCalls } = await fixture({ authorized: false });
+    await expect(service.listForTeacher("review-1", "teacher-2")).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
+    await expect(service.createChallenge("review-1", requestId(40), "teacher-2")).rejects.toMatchObject({ code: "REVIEW_NOT_FOUND" });
+    expect(getProviderCalls()).toBe(0);
   });
 });

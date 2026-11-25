@@ -64,6 +64,7 @@ export interface InspectorDependencies {
   reviews: {
     getById(id: string): Promise<ReviewEvidence | null>;
     getLatestCommit(projectId: string): Promise<string | null>;
+    teacherCanAccessReview(reviewId: string, teacherId: string): Promise<boolean>;
   };
   provider: {
     createChallenge(input: {
@@ -170,12 +171,21 @@ export function createInspectorService(dependencies: InspectorDependencies) {
     return review;
   }
 
+  async function requireTeacherReview(reviewId: string, teacherId: string): Promise<ReviewEvidence> {
+    validateTeacherId(teacherId);
+    if (!isIdentifier(reviewId)) throw error("INVALID_REVIEW_ID", "Indica una revisión válida.");
+    if (!await dependencies.reviews.teacherCanAccessReview(reviewId, teacherId)) {
+      throw error("REVIEW_NOT_FOUND", "No se encontró la revisión.");
+    }
+    return requireReview(reviewId);
+  }
+
   return {
-    async createChallenge(reviewId: string, requestId: string): Promise<InspectorRecord> {
+    async createChallenge(reviewId: string, requestId: string, teacherId: string): Promise<InspectorRecord> {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
         throw error("INVALID_IDEMPOTENCY_KEY", "La solicitud de creación debe tener un identificador válido.");
       }
-      const review = await requireReview(reviewId);
+      const review = await requireTeacherReview(reviewId, teacherId);
       const latestCommit = await dependencies.reviews.getLatestCommit(review.projectId);
       if (!latestCommit || latestCommit.toLowerCase() !== review.commitSha.toLowerCase()) {
         await this.reconcileCommit(review.id);
@@ -216,8 +226,8 @@ export function createInspectorService(dependencies: InspectorDependencies) {
       return persistedRecord!;
     },
 
-    async listForTeacher(reviewId: string): Promise<InspectorRecord[]> {
-      const review = await requireReview(reviewId);
+    async listForTeacher(reviewId: string, teacherId: string): Promise<InspectorRecord[]> {
+      const review = await requireTeacherReview(reviewId, teacherId);
       await this.reconcileCommit(reviewId);
       const records = await dependencies.store.listByReview(reviewId);
       const normalized = await Promise.all(records.map((record) => record.projectId === review.projectId
@@ -245,6 +255,7 @@ export function createInspectorService(dependencies: InspectorDependencies) {
     async assignChallenge(id: string, teacherId: string): Promise<InspectorRecord> {
       validateTeacherId(teacherId);
       const record = await requireRecord(id);
+      await requireTeacherReview(record.reviewId, teacherId);
       const latestCommit = await dependencies.reviews.getLatestCommit(record.projectId);
       if (!latestCommit) throw error("REVIEW_NOT_FOUND", "No se encontró la revisión.");
       if (latestCommit.toLowerCase() !== record.commitSha.toLowerCase()) {
@@ -258,6 +269,7 @@ export function createInspectorService(dependencies: InspectorDependencies) {
     async recordDefense(id: string, teacherId: string, raw: unknown): Promise<InspectorRecord> {
       validateTeacherId(teacherId);
       const record = await requireRecord(id);
+      await requireTeacherReview(record.reviewId, teacherId);
       if (record.status !== "assigned") throw error("CHALLENGE_NOT_ASSIGNED", "Asigna el reto antes de registrar la defensa.");
       if (record.assignedTo !== teacherId) throw error("TEACHER_MISMATCH", "Solo la persona docente que asignó el reto puede registrar el resultado.");
       const defense = validateDefense(raw);

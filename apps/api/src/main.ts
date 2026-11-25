@@ -72,6 +72,7 @@ const inspectorReviews = createInspectorReviewAdapter({
   reviews: {
     getById: reviewStore.getById,
     getLatestCommit: reviewStore.getLatestCommit,
+    teacherCanAccessReview: reviewStore.teacherCanAccessReview,
   },
   repository: { getCommitSnapshot: (input) => github.readCommitSnapshot(input) },
 });
