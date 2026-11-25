@@ -1,5 +1,14 @@
 # F14 — Evidencia
 
+## Release automática v0.5.88 · CU-12 feedback de rúbrica · 2026-11-25
+
+- PR #312 se integró por merge normal como SHA `cd05bd238750bc1da8aa7b8de5ea29bfbdd153c9`; CI `45679461617` SUCCESS y revisión independiente CLEAN.
+- La tag anotada nueva `v0.5.88` apunta al SHA exacto de `main`. F14 run `45680454124`: `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; no hubo aprobación humana adicional.
+- El timer/poller normal recogió release `458529022`; el aplicador registró `release_deployed`, ledger `deployed`, tag/SHA coincidentes. Backup `fragments-prod-2026-11-25T19-04-39-502Z.dump`, 98,409 bytes, SHA-256 `ac38e49638cf117caab68a906c037d95079ebd74c39c4fefa57ca6bd0259e3e3`, `restored_to_temporary_database`.
+- SSH de solo lectura: contenedores web/API healthy sobre `sha-cd05bd238750bc1da8aa7b8de5ea29bfbdd153c9`; poll timer, apply path y cloudflared activos; `systemctl --failed` vacío; servicios vecinos saludables. `/dev/sda1` con 92 GB libres (53% usado), inodos 12%; imagen previa `sha-e6d3979` conservada para rollback.
+- Verificación pública: `/health` HTTP 200, `ok/database=ready`; bundle `/assets/index-G1iFj5_B.js` contiene `v0.5.88` y SHA exacto. UI autenticada Ego Lite post-release NO COMPROBADA: Space 44 fue autorizado pero no se pudo reclamar porque no aparece en el runtime; Space 80 tampoco disponible.
+- No se cambió `fragments-production`, Required reviewers ni controles técnicos. No se ejecutó deploy/reinicio manual, SQL productivo ni rollback real.
+
 **Estado actual:** F14 integrada; release automático al publicar una tag SemVer anotada tras superar las puertas técnicas. `Required reviewers` permanece desactivado. La configuración manual descrita en los registros históricos fue reemplazada y no debe reactivarse por iniciativa propia. La última release verificada es `v0.5.56` (2026-11-24), documentada abajo.
 
 ## Release y aplicación automática v0.5.55 — F10.7/F16.14 Pixel Night · 2026-11-24
