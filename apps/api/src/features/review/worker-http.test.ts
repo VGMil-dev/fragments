@@ -21,14 +21,23 @@ if (process.env.CI && !databaseUrl) throw new Error("CI requiere DATABASE_URL pa
 const describePostgres = databaseUrl ? describe : describe.skip;
 const databases: PrismaClient[] = [];
 const createdReviewJobIds = new Set<string>();
+const createdAcademicUserIds = new Set<string>();
+const createdAcademicClassroomIds = new Set<string>();
+const createdAcademicEnrollmentIds = new Set<string>();
 afterEach(async () => {
   const jobIds = [...createdReviewJobIds];
   createdReviewJobIds.clear();
   for (const database of databases.splice(0)) {
     try {
+      await database.classEnrollment.deleteMany({ where: { id: { in: [...createdAcademicEnrollmentIds] } } });
+      await database.classroom.deleteMany({ where: { id: { in: [...createdAcademicClassroomIds] } } });
+      await database.user.deleteMany({ where: { id: { in: [...createdAcademicUserIds] } } });
       await cleanupReviewFixtureRows(database, databaseUrl!, jobIds);
     } finally { await database.$disconnect(); }
   }
+  createdAcademicUserIds.clear();
+  createdAcademicClassroomIds.clear();
+  createdAcademicEnrollmentIds.clear();
 });
 
 function trackReviewJob<T extends { id: string }>(job: T): T {
@@ -80,6 +89,47 @@ async function serve(handler: (request: IncomingMessage, response: ServerRespons
 }
 
 describePostgres("Review queue worker and feature HTTP handler — PostgreSQL integration", () => {
+  it("limits Inspector review access to the teacher's active classroom and enrolled student", async () => {
+    const f = await fixture();
+    const teacherId = `teacher-${randomUUID()}`;
+    const otherTeacherId = `teacher-${randomUUID()}`;
+    const studentId = `student-${randomUUID()}`;
+    const classroomId = `classroom-${randomUUID()}`;
+    const enrollmentId = `enrollment-${randomUUID()}`;
+    createdAcademicUserIds.add(teacherId);
+    createdAcademicUserIds.add(otherTeacherId);
+    createdAcademicUserIds.add(studentId);
+    createdAcademicClassroomIds.add(classroomId);
+    createdAcademicEnrollmentIds.add(enrollmentId);
+    await f.database.user.createMany({ data: [
+      { id: teacherId, name: "Teacher fixture", email: `${teacherId}@example.test`, isTeacher: true },
+      { id: otherTeacherId, name: "Other teacher fixture", email: `${otherTeacherId}@example.test`, isTeacher: true },
+      { id: studentId, name: "Student fixture", email: `${studentId}@example.test` },
+    ] });
+    await f.database.classroom.create({ data: {
+      id: classroomId, teacherId, title: "QA Inspector", subject: "QA", identityKey: classroomId,
+      status: "active", createdAt: new Date(), updatedAt: new Date(),
+    } });
+    await f.database.classEnrollment.create({ data: {
+      id: enrollmentId, classroomId, studentId, status: "active", source: "teacher_assignment",
+      requestedAt: new Date(), decidedAt: new Date(), decidedBy: teacherId,
+    } });
+    const job = await f.store.enqueue({ request: f.request, context: {
+      ...f.context, studentId,
+      academicLink: {
+        proposalId: `proposal-${randomUUID()}`, proposalVersion: 1, proposalTitle: "QA Inspector",
+        assignmentVersionId: `assignment-${randomUUID()}`, missionTitle: "QA Inspector", missionVersion: 1,
+        mentorContextVersion: 1, classroomId, classroomTitle: "QA Inspector",
+      },
+    } });
+    const worker = createReviewWorker({ store: f.store, service: f.service, workerId: "worker-inspector-acl" });
+    expect(await worker.runOnce()).toBe(true);
+    expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(true);
+    expect(await f.store.teacherCanAccessReview(job.id, otherTeacherId)).toBe(false);
+    await f.database.classEnrollment.update({ where: { id: enrollmentId }, data: { status: "withdrawn" } });
+    expect(await f.store.teacherCanAccessReview(job.id, teacherId)).toBe(false);
+  });
+
   it("requires a student session and conceals reviews owned by another account", async () => {
     const f = await fixture();
     const job = await f.store.enqueue({ request: f.request, context: { ...f.context, studentId: "student-a" } });

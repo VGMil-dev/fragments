@@ -276,6 +276,7 @@ describePostgres("HTTP API — PostgreSQL integration", () => {
       reviews: {
         async getById(id) { return id === review.id ? review : null; },
         async getLatestCommit() { return review.commitSha; },
+        async teacherCanAccessReview() { return true; },
       },
       provider: { async createChallenge() {
         return {

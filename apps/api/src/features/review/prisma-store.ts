@@ -320,6 +320,20 @@ export function createPrismaReviewStore(database: PrismaClient) {
     },
     async getByKey(key: string): Promise<ReviewRecord | null> { const row = await rowByKey(key); return row ? parsePayload(row.payloadJson).record ?? null : null; },
     async getById(id: string): Promise<ReviewRecord | null> { const row = await rowById(id); return row ? parsePayload(row.payloadJson).record ?? null : null; },
+    async teacherCanAccessReview(id: string, teacherId: string): Promise<boolean> {
+      const row = await database.job.findFirst({ where: { id, type: jobType, status: "done" }, select: { payloadJson: true } });
+      if (!row) return false;
+      let payload: ReviewPayload;
+      try { payload = parsePayload(row.payloadJson); } catch { return false; }
+      const studentId = payload.context.studentId;
+      const classroomId = payload.context.academicLink?.classroomId;
+      if (!studentId || !classroomId) return false;
+      const classroom = await database.classroom.findFirst({
+        where: { id: classroomId, teacherId, status: "active", enrollments: { some: { studentId, status: "active" } } },
+        select: { id: true },
+      });
+      return classroom !== null;
+    },
     async save(record: ReviewRecord, lease?: { owner: string }): Promise<ReviewRecord> {
       const row = await rowByKey(record.key); if (!row) throw new Error("No se encontró el trabajo Review para guardar su resultado.");
       const payload = parsePayload(row.payloadJson); const now = new Date();

@@ -39,6 +39,7 @@ async function fixture(snapshotOverrides: Record<string, unknown> = {}) {
     reviews: {
       async getById(id) { return id === review.id ? review : null; },
       async getLatestCommit(projectId) { return projectId === review.projectId ? review.commitSha : null; },
+      async teacherCanAccessReview(_reviewId, teacherId) { return teacherId === "teacher-fixture"; },
     },
     repository: {
       async getCommitSnapshot(input) {

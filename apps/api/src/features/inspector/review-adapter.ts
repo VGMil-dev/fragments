@@ -9,6 +9,7 @@ export type InspectorReviewRecord = Pick<ReviewRecord, "id" | "projectId" | "own
 export interface InspectorReviewLookup {
   getById(id: string): Promise<InspectorReviewRecord | null>;
   getLatestCommit(projectId: string): Promise<string | null>;
+  teacherCanAccessReview(reviewId: string, teacherId: string): Promise<boolean>;
 }
 
 export interface InspectorExactCommitReader {
@@ -57,6 +58,9 @@ export function createInspectorReviewAdapter(dependencies: {
     },
     getLatestCommit(projectId: string) {
       return dependencies.reviews.getLatestCommit(sourceProjectIds.get(projectId) ?? projectId);
+    },
+    teacherCanAccessReview(reviewId: string, teacherId: string) {
+      return dependencies.reviews.teacherCanAccessReview(reviewId, teacherId);
     },
   };
 }
