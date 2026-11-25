@@ -1,6 +1,6 @@
 import {
   AcademicGalleryDetailSchema, AcademicGalleryEntrySchema, AcademicGalleryPageSchema,
-  CreateProposalRequestSchema, HistoricalProjectsResponseSchema, TeacherProjectsResponseSchema,
+  CreateProposalRequestSchema, TeacherProjectsResponseSchema,
   TeacherStudentsPageSchema,
 } from "@fragments/contracts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
@@ -14,6 +14,25 @@ function avatar(value: string | null): string | null {
 function parseJson(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 
 export function createPrismaAcademicRepository(database: PrismaClient) {
+  const teacherProjectWhere = (teacherId: string, studentId: string) => ({
+    ownerUserId: studentId,
+    assignmentVersion: {
+      is: {
+        assignment: {
+          is: {
+            status: "published",
+            classroom: {
+              is: {
+                teacherId,
+                status: "active",
+                enrollments: { some: { studentId, status: "active" } },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
   const entry = async (publication: any) => {
     const proposal = parseJson(publication.revision.proposalJson);
     const context = parseJson(publication.context.configJson);
@@ -46,7 +65,6 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
     && row.evaluation.proposalVersion === row.proposalVersion
     && row.evaluation.contextVersion === row.contextVersion));
   return {
-    async isGitHubStudent(userId: string) { return Boolean(await database.user.findFirst({ where: { id: userId, ...studentWhere }, select: { id: true } })); },
     async listGallery(offset = 0, limit = 20) {
       const safeOffset = Math.max(0, Math.trunc(offset)), safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
       const rows = await publications();
@@ -67,17 +85,21 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
       return Promise.all(rows.map(async row => ({ id: row.id, version: row.version, proposal: row.proposalJson, assignmentVersionId: row.assignmentVersionId,
         assignmentContext: await loadProposalAssignmentContext(database, row.assignmentVersionId), updatedAt: row.updatedAt.toISOString() })));
     },
-    async listStudents(offset = 0, limit = 20) {
+    async listStudents(teacherId: string, offset = 0, limit = 20) {
       const safeOffset = Math.max(0, Math.trunc(offset)), safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
-      const rows = await database.user.findMany({ where: studentWhere, include: { accounts: { where: { providerId: "github" }, take: 1 } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], skip: safeOffset, take: safeLimit + 1 });
+      const rows = await database.user.findMany({ where: { ...studentWhere, enrollments: { some: { status: "active", classroom: { is: { teacherId, status: "active" } } } } }, include: { accounts: { where: { providerId: "github" }, take: 1 } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], skip: safeOffset, take: safeLimit + 1 });
       const items = await Promise.all(rows.slice(0, safeLimit).map(async row => {
         const login = row.githubLogin; if (!login || !/^[A-Za-z0-9-]{1,39}$/.test(login)) return null;
-        return { id: row.id, githubLogin: login, avatarUrl: avatar(row.image), profileUrl: `https://github.com/${login}`, registeredAt: row.createdAt.toISOString(), projectCount: await database.proposal.count({ where: { ownerUserId: row.id } }) };
+        return { id: row.id, githubLogin: login, avatarUrl: avatar(row.image), profileUrl: `https://github.com/${login}`, registeredAt: row.createdAt.toISOString(), projectCount: await database.proposal.count({ where: teacherProjectWhere(teacherId, row.id) }) };
       }));
       return TeacherStudentsPageSchema.parse({ items: items.filter(Boolean), nextOffset: rows.length > safeLimit ? safeOffset + safeLimit : null });
     },
-    async listStudentProjects(userId: string) {
-      const rows = await database.proposal.findMany({ where: { ownerUserId: userId }, include: { owner: true, moderation: true, revisions: { include: { publication: { include: { context: true } } }, orderBy: { version: "desc" } } }, orderBy: { updatedAt: "desc" }, take: 200 });
+    async listStudentProjects(teacherId: string, userId: string) {
+      const hasAuthorizedClassroom = await database.classroom.findFirst({ where: {
+        teacherId, status: "active", enrollments: { some: { studentId: userId, status: "active" } },
+      }, select: { id: true } });
+      if (!hasAuthorizedClassroom) return null;
+      const rows = await database.proposal.findMany({ where: teacherProjectWhere(teacherId, userId), include: { owner: true, moderation: true, revisions: { include: { publication: { include: { context: true } } }, orderBy: { version: "desc" } } }, orderBy: { updatedAt: "desc" }, take: 200 });
       const result = rows.map(row => {
         const history = row.revisions.flatMap(revision => {
           const parsed = CreateProposalRequestSchema.safeParse(revision.proposalJson); if (!parsed.success) return [];
@@ -88,10 +110,6 @@ export function createPrismaAcademicRepository(database: PrismaClient) {
         return history.length ? { id: row.id, title: history[0]!.proposal.title, ownerGithubLogin: row.owner?.githubLogin ?? null, currentVersion: row.version, withdrawn: Boolean(row.moderation), withdrawalReason: row.moderation?.reason ?? null, withdrawnAt: row.moderation?.withdrawnAt.toISOString() ?? null, history } : null;
       }).filter(Boolean);
       return TeacherProjectsResponseSchema.parse(result);
-    },
-    async listHistoricalProjects() {
-      const rows = await database.proposal.findMany({ where: { ownerUserId: null }, orderBy: { updatedAt: "desc" }, take: 200 });
-      return HistoricalProjectsResponseSchema.parse(rows.map(row => ({ id: row.id, title: String(parseJson(row.proposalJson).title ?? ""), currentVersion: row.version, updatedAt: row.updatedAt.toISOString() })));
     },
     async withdrawProject(projectId: string, teacherId: string, reason: string, now = new Date()) {
       return database.$transaction(async tx => {

@@ -264,6 +264,6 @@ describePostgres("Mentor skill selections — guarded PostgreSQL integration", (
 
     const teacherProjects = await request("/api/teacher/students/" + studentA + "/projects", teacherA, undefined, "GET", "teacher");
     expect(teacherProjects.status).toBe(200);
-    expect(teacherProjects.body.data[0]?.history[0]?.proposal).not.toHaveProperty("mentorSkills");
+    expect(teacherProjects.body.data).toEqual([]);
   });
 });

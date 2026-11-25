@@ -392,13 +392,11 @@ describePostgres("Mentor HTTP ownership, revision, and opt-in flow", () => {
     expect(students.status).toBe(200);
     expect(JSON.stringify(await students.json())).not.toContain("student-one@example.test");
     const projects = await fetch(`${base}/api/teacher/students/student-1/projects`, { headers: teacherHeaders });
-    expect(projects.status).toBe(200);
-    expect(await projects.json()).toMatchObject({ ok: true, data: [expect.objectContaining({
-      id: draftProposal.id,
-      history: [expect.objectContaining({ version: 1, published: false })],
-    })] });
+    expect(projects.status).toBe(404);
+    expect(JSON.stringify(await projects.json())).not.toContain(draftProposal.id);
     const historical = await fetch(`${base}/api/teacher/historical-projects`, { headers: teacherHeaders });
-    expect((await historical.json() as { data: Array<{ id: string }> }).data.map((item) => item.id)).toContain(legacy.id);
+    expect(historical.status).toBe(404);
+    expect(JSON.stringify(await historical.json())).not.toContain(legacy.id);
 
     const cookie = await fetch(`${base}/api/me/proposals/${legacy.id}/claim`, { method: "POST", headers: { ...teacherHeaders, cookie: `fragments_proposal_owner=${token}` } });
     expect(cookie.status).toBe(401);

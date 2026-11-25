@@ -6,7 +6,6 @@ import {
   AcademicGalleryPageSchema,
   ApiResultSchema,
   GalleryWithdrawalRequestSchema,
-  HistoricalProjectsResponseSchema,
   MeResponseSchema,
   OwnedProposalsResponseSchema,
   StudentMeSchema,
@@ -93,17 +92,14 @@ export function createAcademicHttp(database: PrismaClient, auth?: FragmentsAuthS
       if (request.method === "GET" && url.pathname === "/api/teacher/students") {
         const page = readPage(url.searchParams);
         if (!page) { sendError(response, 400, "INVALID_PAGINATION", "Revisa los límites de la página solicitada."); return "handled"; }
-        sendJson(response, 200, { ok: true, data: TeacherStudentsPageSchema.parse(await academic.listStudents(page.offset, page.limit)) });
-        return "handled";
-      }
-      if (request.method === "GET" && url.pathname === "/api/teacher/historical-projects") {
-        sendJson(response, 200, { ok: true, data: HistoricalProjectsResponseSchema.parse(await academic.listHistoricalProjects()) });
+        sendJson(response, 200, { ok: true, data: TeacherStudentsPageSchema.parse(await academic.listStudents(teacherId, page.offset, page.limit)) });
         return "handled";
       }
       const studentProjects = request.method === "GET" && url.pathname.match(/^\/api\/teacher\/students\/([A-Za-z0-9_-]{1,100})\/projects$/);
       if (studentProjects) {
-        if (!await academic.isGitHubStudent(studentProjects[1]!)) { sendError(response, 404, "NOT_FOUND", "No se encontró el perfil estudiantil."); return "handled"; }
-        sendJson(response, 200, { ok: true, data: TeacherProjectsResponseSchema.parse(await academic.listStudentProjects(studentProjects[1]!)) });
+        const projects = await academic.listStudentProjects(teacherId, studentProjects[1]!);
+        if (!projects) { sendError(response, 404, "NOT_FOUND", "No se encontró el perfil estudiantil."); return "handled"; }
+        sendJson(response, 200, { ok: true, data: TeacherProjectsResponseSchema.parse(projects) });
         return "handled";
       }
       const withdraw = request.method === "POST" && url.pathname.match(/^\/api\/teacher\/projects\/([A-Za-z0-9_-]{1,100})\/withdraw$/);

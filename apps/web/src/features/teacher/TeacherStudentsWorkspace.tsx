@@ -14,7 +14,6 @@ export function TeacherStudentsWorkspace({ navigate }: { navigate: (path: string
   const [offset, setOffset] = useState<number | null>(null);
   const [selected, setSelected] = useState<TeacherStudentEntry | null>(null);
   const [projects, setProjects] = useState<TeacherProject[]>([]);
-  const [historical, setHistorical] = useState<Array<{ id: string; title: string; currentVersion: number; updatedAt: string }>>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -31,8 +30,6 @@ export function TeacherStudentsWorkspace({ navigate }: { navigate: (path: string
     setStudents((current) => nextOffset === 0 ? result.data.items : [...current, ...result.data.items]);
     setOffset(result.data.nextOffset);
     setAccess("ready");
-    const legacy = await api.getHistoricalProjects();
-    if (legacy.ok) setHistorical(legacy.data);
   }
 
   useEffect(() => { void loadStudents(); }, []);
@@ -101,9 +98,6 @@ export function TeacherStudentsWorkspace({ navigate }: { navigate: (path: string
           </li>)}</ol>
         </article>)}
       </section>
-    </section>
-    <section className="teacher-students__historical"><h2>Proyectos históricos sin propietario GitHub acreditado</h2>
-      {historical.length ? <ul>{historical.map((project) => <li key={project.id}>{project.title} · revisión {project.currentVersion}</li>)}</ul> : <p>No hay propuestas históricas pendientes de acreditar.</p>}
     </section>
     {message ? <p role="status">{message}</p> : null}
   </main>;
