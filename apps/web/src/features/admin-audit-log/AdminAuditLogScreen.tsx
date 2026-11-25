@@ -33,7 +33,7 @@ export function AdminAuditLogScreen({ api }: { api: AdminAuditLogApi }) {
       <p className="admin-audit-log__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-audit-log-title">Registro de actividad administrativa</h1>
       <p>Consultas administrativas recientes con hora y correlación de solicitud. No se muestran identidades ni contenido privado.</p>
-      <AdminConsoleNavigation current="audit-log" />
+      <AdminConsoleNavigation current="audit-log" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
     </header>
     <p className="admin-audit-log__retention">La muestra conserva hasta 50 eventos desde el último inicio del API; se pierde al reiniciar el proceso.</p>

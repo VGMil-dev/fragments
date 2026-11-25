@@ -1,6 +1,8 @@
 import "./admin-console.css";
 
-export function AdminConsoleNavigation({ current }: { current: "overview" | "diagnostics" | "requests" | "queue" | "audit-log" | "review-events" | "mentor-events" | "trainer-events" | "teachers" | "ai-diagnostics" }) {
+export function AdminConsoleNavigation({ current, accessDenied }: { current: "overview" | "diagnostics" | "requests" | "queue" | "audit-log" | "review-events" | "mentor-events" | "trainer-events" | "teachers" | "ai-diagnostics"; accessDenied: boolean }) {
+  if (accessDenied) return null;
+
   return <nav className="admin-console-nav" aria-label="Herramientas de administración">
     <a href="/admin" aria-current={current === "overview" ? "page" : undefined}>Resumen</a>
     <a href="/admin/diagnostics" aria-current={current === "diagnostics" ? "page" : undefined}>Diagnósticos</a>

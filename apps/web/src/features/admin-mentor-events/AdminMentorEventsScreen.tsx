@@ -33,7 +33,7 @@ export function AdminMentorEventsScreen({ api }: { api: AdminMentorEventsApi }) 
       <p className="admin-mentor-events__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-mentor-events-title">Eventos operativos de Mentor</h1>
       <p>Evaluaciones de Mentor recientes con etapa, resultado, duración y hora UTC. No se muestran propuestas, prompts, puntuaciones ni datos personales.</p>
-      <AdminConsoleNavigation current="mentor-events" />
+      <AdminConsoleNavigation current="mentor-events" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
       <button type="button" onClick={() => setReload((value) => value + 1)} disabled={busy}>{busy ? "Actualizando…" : state.status === "error" ? "Reintentar" : "Actualizar"}</button>
     </header>
     <p className="admin-mentor-events__retention">La API conserva hasta 100 eventos desde el inicio del proceso; esta vista devuelve como máximo 50. El buffer se pierde al reiniciar la API.</p>

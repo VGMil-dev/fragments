@@ -35,7 +35,7 @@ export function AdminRequestsScreen({ api }: { api: AdminRequestsApi }) {
       <p className="admin-requests__eyebrow">FRAGMENTS · ADMINISTRACIÓN</p>
       <h1 id="admin-requests-title">Solicitudes académicas</h1>
       <p>Consulta matrículas y solicitudes de ingreso registradas. Esta vista no permite aprobar ni modificar estados.</p>
-      <AdminConsoleNavigation current="requests" />
+      <AdminConsoleNavigation current="requests" accessDenied={state.status === "error" && state.reason !== "OTHER"} />
     </header>
     <section className="admin-requests__controls" aria-label="Filtros y actualización">
       <label htmlFor="admin-request-status">Estado</label>
