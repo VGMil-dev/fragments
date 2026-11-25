@@ -44,4 +44,4 @@ Pendiente PR, revisión/CI y decisión F14. No se publicará tag sin los control
 
 ## Integración
 
-PR pendiente. No crear tag hasta merge y controles CI requeridos; desplegar únicamente por el flujo F14 normal.
+Commit de regresiones/documentación: `8ee42c67804fd48d447c16fd703f92d0645c2493`. El cambio funcional de wrapping está en el commit base de este checkout `4c4013b289a2994c1375441c8fc67ca9b2cf8403` (snapshot del worktree). PR pendiente; no crear tag hasta merge y controles CI requeridos; desplegar únicamente por el flujo F14 normal.
