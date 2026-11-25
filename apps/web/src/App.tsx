@@ -20,6 +20,8 @@ import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
 import { TeacherWorkspaceShell } from "./features/teacher/TeacherWorkspaceShell";
 import { AdminDiagnosticsScreen } from "./features/admin-diagnostics/AdminDiagnosticsScreen.js";
 import { adminDiagnosticsApi } from "./features/admin-diagnostics/admin-diagnostics-api.js";
+import { AdminAiDiagnosticsScreen } from "./features/admin-ai-diagnostics/AdminAiDiagnosticsScreen.js";
+import { adminAiDiagnosticsApi } from "./features/admin-ai-diagnostics/admin-ai-diagnostics-api.js";
 import { AdminOverviewScreen } from "./features/admin-console/AdminOverviewScreen.js";
 import { AdminRequestsScreen } from "./features/admin-requests/AdminRequestsScreen.js";
 import { adminRequestsApi } from "./features/admin-requests/admin-requests-api.js";
@@ -513,6 +515,7 @@ export function App() {
   if (path === "/teacher/reset-password") return <><div id="route-content" tabIndex={-1}><TeacherPasswordReset navigate={navigate} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin") return <><div id="route-content" tabIndex={-1}><AdminOverviewScreen diagnosticsApi={adminDiagnosticsApi} queueApi={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/diagnostics") return <><div id="route-content" tabIndex={-1}><AdminDiagnosticsScreen api={adminDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
+  if (path === "/admin/ai-diagnostics") return <><div id="route-content" tabIndex={-1}><AdminAiDiagnosticsScreen api={adminAiDiagnosticsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/requests") return <><div id="route-content" tabIndex={-1}><AdminRequestsScreen api={adminRequestsApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/queue") return <><div id="route-content" tabIndex={-1}><AdminQueueSummaryScreen api={adminQueueApi} /></div><footer className="route-version"><BuildVersion /></footer></>;
   if (path === "/admin/audit-log") return <><div id="route-content" tabIndex={-1}><AdminAuditLogScreen api={adminAuditLogApi} /></div><footer className="route-version"><BuildVersion /></footer></>;

@@ -1,4 +1,4 @@
-export const adminAuditEvents = ["admin.classroom_requests.read", "admin.queue_summary.read", "admin.audit_log.read", "admin.teachers.list", "admin.review_events.read", "admin.mentor_events.read"] as const;
+export const adminAuditEvents = ["admin.classroom_requests.read", "admin.queue_summary.read", "admin.audit_log.read", "admin.teachers.list", "admin.review_events.read", "admin.mentor_events.read", "admin.ai_diagnostics.read"] as const;
 export type AdminAuditEventName = (typeof adminAuditEvents)[number];
 export type AdminAuditEvent = { requestId: string; event: AdminAuditEventName; occurredAt: string; actorType: "admin" };
 export type AdminAuditLogResult = { ok: true; data: { events: AdminAuditEvent[] } } | { ok: false; error: { code: string; message: string } };

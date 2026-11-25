@@ -22,6 +22,7 @@ import { createTechnologyCatalogHttp } from "../features/mentor/technology-catal
 import { createAssignmentHttp } from "../features/assignments/http.js";
 import { createRequestDiagnostics } from "../features/admin-diagnostics/diagnostics.js";
 import { createAdminDiagnosticsHttp } from "../features/admin-diagnostics/http.js";
+import { createAdminAiDiagnosticsHttp, type AdminAiDiagnosticsConfig } from "../features/admin-ai-diagnostics/http.js";
 import { createAdminClassroomRequestsHttp, type AdminClassroomRequestsAuditEvent } from "../features/admin-requests/http.js";
 import { createAdminClassroomRequestsRepository } from "../features/admin-requests/repository.js";
 import { createAdminQueueSummaryHttp, type AdminQueueAuditEvent } from "../features/admin-queue/http.js";
@@ -57,6 +58,7 @@ type HttpOptions = {
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;
   adminAuditLogWriteLine?: (line: string) => void | Promise<void>;
+  aiDiagnostics?: AdminAiDiagnosticsConfig;
   reviewOperationalLog?: ReviewOperationalLog;
   mentorOperationalLog?: MentorOperationalLog;
   trainerOperationalLog?: TrainerOperationalLog;
@@ -77,6 +79,10 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     });
   }) });
   const adminDiagnosticsHandler = createAdminDiagnosticsHttp(requestDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null);
+  const adminAiDiagnosticsHandler = options.aiDiagnostics ? createAdminAiDiagnosticsHttp(options.aiDiagnostics, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
+    getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
+    write: (event) => adminAuditLog.write(event),
+  }) : undefined;
   const adminClassroomRequests = createAdminClassroomRequestsRepository(database);
   const adminClassroomRequestsHandler = createAdminClassroomRequestsHttp(adminClassroomRequests, async (request) => options.auth ? options.auth.adminCheck(request) : null, {
     getActorId: async (request) => options.auth ? options.auth.userId(request) : null,
@@ -175,6 +181,7 @@ export function createHttpHandler(database: PrismaClient, options: HttpOptions =
     if (adminTrainerEventsHandler && await adminTrainerEventsHandler(request, response) === "handled") return;
     if (await adminTeachersHandler(request, response) === "handled") return;
     if (await adminDiagnosticsHandler(request, response) === "handled") return;
+    if (adminAiDiagnosticsHandler && await adminAiDiagnosticsHandler(request, response) === "handled") return;
     const notFound = ApiResultSchema(z.unknown()).parse({ ok: false, error: { code: "NOT_FOUND", message: "No se encontró la ruta." } });
     response.writeHead(404).end(JSON.stringify(notFound));
   };
