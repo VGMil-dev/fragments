@@ -24,3 +24,9 @@
 ## Integración
 - Commit/PR/CI/release/deploy: pendientes.
 - No iniciar llamadas IA pagadas: proveedor puede configurarse, pero saldo y tope global no son observables por este mecanismo.
+
+## Commit
+
+- Implementación: `db02e19a1592bbc3653dd669181b16b32c3e51d6` (rama `codex/f22-ai-budget-diagnostics`).
+- PR, CI, release y despliegue siguen pendientes; no se declara el objetivo de F22.18 terminado.
+
