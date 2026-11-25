@@ -18,8 +18,10 @@ Corrección implementada en `apps/web/src/features/admin-console/AdminOverviewSc
 - CI del PR #310: run `45671152783`, job `verify` — SUCCESS (todos los pasos y limpieza PASS).
 - Revisión independiente formal: pendiente.
 
-## Producción
+## Integración y producción
 
-- Sin cambios desplegados. Producción está en `v0.5.86`/SHA `11f113cd011bbc15f55785488a2e094436e15094`.
-- Ego Lite UI post-release: NO COMPROBADO; Spaces autorizados 44/80 no aparecen en este runtime.
-- Como es un cambio solo de presentación, no demuestra ni reemplaza el control de acceso backend; producción permanece pendiente hasta integrar y probar en el perfil real.
+- PR #310 integrada mediante merge normal. Merge SHA `e6d397968e07d29a8e976bbd3a1726f71a4a3af4`; CI PR run `45671641514` SUCCESS.
+- F14: tag anotada `v0.5.87`; run `45672204109` SUCCESS en verify-build, atestación y publicación; release ID `458474637` aplicada normalmente por el agente pull.
+- Ledger: `deployed`; backup `fragments-prod-2026-11-25T18-17-57-139Z.dump`, 98,312 bytes, SHA-256 `0be49f2f2f1a0eb36a1dfdb833f763635d1d2a07b7d00efd1ac3a80c0d0c8616`, `restored_to_temporary_database`.
+- API/web healthy en SHA exacto; `/health` HTTP 200 `ok/database=ready`; bundle `/assets/index-Bp8ZB-TH.js` contiene `v0.5.87` y el SHA esperado. Poll timer/apply path/cloudflared activos; `systemctl --failed` vacío; servicios vecinos healthy; disco 96 GB libres (51 % usado), inodos 11 %. Releases previas retenidas para rollback; rollback real no ejecutado.
+- CU-33 funcional con Ego Lite en producción: NO COMPROBADO; Spaces autorizados 44/80 no aparecen en este runtime. El despliegue y bundle no sustituyen la verificación de navegación con rol real. Backend no fue modificado.
