@@ -1,6 +1,6 @@
 # CU-23 — Evidencia
 
-Estado: código integrado en commit local `75588c46f08cae84f2eac1f444659468df27fb56`; publicación PR/CI, integración normal y despliegue F14 pendientes.
+Estado: código integrado por PR #323 en merge `509000c6cfa032d663cd969dd63075ab46063c20`; desplegado como `v0.5.91`. El CU completo sigue PARCIAL: la UI autenticada de producción no se pudo validar en Ego Lite.
 
 ## Hallazgo
 
@@ -20,5 +20,7 @@ Estado: código integrado en commit local `75588c46f08cae84f2eac1f444659468df27f
 
 - Build `pnpm build` PASS (web Vite, API tsc y Prisma client); se mantienen advertencias existentes del bundle >500 kB y directivas `use client` de lucide.
 - Lint `pnpm lint` PASS (solo contracts expone script de lint). Typecheck `pnpm typecheck` PASS. Diff check PASS.
-- Pendiente: PR/CI (incluida ejecución PostgreSQL efímera), integración normal y F14.
-- Pendiente: revisión Ego Lite autenticada del historial en producción; si los Spaces autorizados no están disponibles, registrar NO COMPROBADO sin crear otro.
+- PR #323 integrado normalmente; CI run `45700376763` PASS (aplica Prisma a PostgreSQL desechable y ejecuta pruebas/typecheck/lint/build). F14 run `45701424827` PASS en verify-build, attest-package y publish-approved-release; paquete ARM64 firmado y validado.
+- Tag anotada `v0.5.91` apunta al merge exacto. Aplicación normal F14: release ID `458655140`, ledger `deployed`, API/web sobre SHA exacto; bundle `/assets/index-xHykWBFP.js` y `/health` HTTP 200, `ok/database=ready`.
+- Backup `fragments-prod-2026-11-25T21-16-21-115Z.dump`, 98,409 bytes, SHA-256 `c3da288bf53d54803f764f76d6beb6003f807fddfbda12ebb2a2cea24d37f6d5`, `restored_to_temporary_database`. Imagen previa v0.5.90 conservada. VPS tras despliegue: 80 GB libres, 59 % usado, inodos 13 %; timer/path activos, apply inactivo, `systemctl --failed` vacío, Tymeslot/ImagenEC/Pits saludables.
+- Producción funcional autenticada: NO COMPROBADA. Los Spaces autorizados Ego Lite 44/80 no aparecen en el runtime actual; no se abrió un perfil/Space sustituto ni se generaron entregas. El despliegue de bundle no demuestra el flujo autenticado, ni que existan dos entregas reales con commits distintos. No se evaluó IA real ni se modificó una cuenta/entrega productiva.
