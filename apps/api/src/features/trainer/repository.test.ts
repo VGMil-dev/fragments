@@ -10,6 +10,7 @@ const describePostgres = databaseUrl ? describe : describe.skip;
 const prefix = `trainer-test-${randomUUID().replaceAll("-", "")}`;
 let database: PrismaClient | undefined;
 let secondDatabase: PrismaClient | undefined;
+let safeTestDatabase = false;
 let store: ReturnType<typeof createTrainerRepository>;
 let secondStore: ReturnType<typeof createTrainerRepository>;
 const commitSha = "a".repeat(40);
@@ -26,13 +27,17 @@ describePostgres("Trainer Prisma repository (fragments_test)", () => {
   beforeAll(async () => {
     database = openDatabase(databaseUrl!); secondDatabase = openDatabase(databaseUrl!);
     await Promise.all([database.$connect(), secondDatabase.$connect()]);
+    const [{ currentDatabase }] = await database.$queryRaw<Array<{ currentDatabase: string }>>`SELECT current_database() AS "currentDatabase"`;
+    if (currentDatabase !== "fragments_test") throw new Error("Trainer repository integration tests require fragments_test.");
+    safeTestDatabase = true;
     store = createTrainerRepository(database); secondStore = createTrainerRepository(secondDatabase);
   });
   afterEach(async () => {
-    if (!database) return;
-    await database.trainerAttempt.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
-    await database.trainerSession.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
-    await database.trainerBank.deleteMany({ where: { reviewId: { startsWith: prefix } } });
+    if (database && safeTestDatabase) {
+      await database.trainerAttempt.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
+      await database.trainerSession.deleteMany({ where: { sessionHash: { startsWith: prefix } } });
+      await database.trainerBank.deleteMany({ where: { reviewId: { startsWith: prefix } } });
+    }
   });
   afterAll(async () => { await Promise.all([database?.$disconnect(), secondDatabase?.$disconnect()]); });
 
