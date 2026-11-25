@@ -1,6 +1,6 @@
 # Evidencia CU-12 — validación del peso de rúbrica
 
-Estado: corrección de feedback implementada localmente; integración y despliegue F14 pendientes.
+Estado: corrección integrada y desplegada en producción; la verificación visual autenticada de Ego Lite permanece NO COMPROBADA.
 
 ## Cambio y TDD
 
@@ -15,6 +15,15 @@ Estado: corrección de feedback implementada localmente; integración y desplieg
 
 ## Límites actuales
 
-- Producción continúa en `v0.5.87`; este cambio no está integrado ni desplegado.
-- No se verificó la tarjeta de misión con Ego Lite, porque Spaces 44/80 no están disponibles para reclamar. No se afectaron datos productivos.
-- Pendiente: publicar rama y PR, CI/revisión independiente, merge normal, release etiquetada autorizada por F14 y comprobación del bundle/health; después, UI autenticada si regresa el Space docente.
+- PR #312 se integró mediante merge normal el 2026-11-25; merge SHA `cd05bd238750bc1da8aa7b8de5ea29bfbdd153c9`; CI `45679461617` SUCCESS; revisor independiente CLEAN (solo lectura/diff).
+- Release anotada `v0.5.88` apunta a ese SHA. F14 run `45680454124`: `verify-build`, `attest-package`, `publish-approved-release` SUCCESS. Ledger release `458529022` = `deployed` por poller/aplicador normales.
+- Backup productivo `fragments-prod-2026-11-25T19-04-39-502Z.dump`, 98,409 bytes, SHA-256 `ac38e49638cf117caab68a906c037d95079ebd74c39c4fefa57ca6bd0259e3e3`, integridad `restored_to_temporary_database`.
+- Verificación posterior: API/web healthy sobre `sha-cd05bd238750bc1da8aa7b8de5ea29bfbdd153c9`; `/health` HTTP 200 con `ok/database=ready`; bundle `/assets/index-G1iFj5_B.js` contiene `v0.5.88` y SHA exacto. Timer F14, apply path y cloudflared activos; `systemctl --failed` vacío; servicios vecinos healthy; raíz 92 GB libres (53% usado), inodos 12%; imagen previa conservada para rollback, no ejercido.
+- La regla F14/controles técnicos no se alteraron; no hubo despliegue/reinicio manual ni escrituras SQL productivas.
+- Prueba local sigue limitada por falta de `DATABASE_URL`: 78 pruebas API omitidas; el CI de F14 probó PostgreSQL desechable y backup/restore. No hubo llamada a proveedor de IA.
+- UI autenticada Ego Lite tras el release NO COMPROBADA. El usuario autorizó reclamar Space 44; el runtime no lo ofreció y la reclamación falló. Space 80 también sigue ausente. No se creó ni cerró ninguna sesión sustitutiva.
+
+## Cierre de implementación
+
+- Comportamiento desplegado: total de peso explícito cuando la rúbrica no suma 100, publicación bloqueada en cliente y servidor, sin crear versión inválida.
+- Estado de la incidencia CU-12 en la matriz académica: PARCIAL hasta probar la experiencia autenticada completa y los casos de comparación/inmutabilidad de rúbricas que siguen pendientes.
