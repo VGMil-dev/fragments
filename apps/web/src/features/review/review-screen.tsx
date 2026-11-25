@@ -92,9 +92,32 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
     try {
       const result = await onLoadDeliveryHistory(proposalId);
       if (deliveryRequestKey.current !== proposalId) return;
-      setDeliveryHistory(result.ok ? { status: "success", data: result.data } : { status: "error" });
+      if (!result.ok) {
+        setDeliveryHistory({ status: "error" });
+        return;
+      }
+      setDeliveryHistory({ status: "success", data: result.data });
+      const attempts = result.data.deliveries.flatMap((delivery) => delivery.attempts);
+      const latestAttempt = attempts.reduce<(typeof attempts)[number] | undefined>(
+        (latest, attempt) => !latest || attempt.updatedAt > latest.updatedAt ? attempt : latest,
+        undefined,
+      );
+      if (latestAttempt) {
+        setReviewState({ status: "loading" });
+        try {
+          const recovered = await onRefresh(latestAttempt.reviewId);
+          if (deliveryRequestKey.current !== proposalId) return;
+          setReviewState(recovered.ok
+            ? { status: "success", data: recovered.data }
+            : { status: "error", retry: () => void refreshReview(latestAttempt.reviewId) });
+        } catch {
+          if (deliveryRequestKey.current === proposalId) {
+            setReviewState({ status: "error", retry: () => void refreshReview(latestAttempt.reviewId) });
+          }
+        }
+      }
     } catch { if (deliveryRequestKey.current === proposalId) setDeliveryHistory({ status: "error" }); }
-  }, [onLoadDeliveryHistory]);
+  }, [onLoadDeliveryHistory, onRefresh]);
 
   useEffect(() => {
     if (initialProposalId && onLoadDeliveryHistory) void loadDeliveryHistory(initialProposalId);
