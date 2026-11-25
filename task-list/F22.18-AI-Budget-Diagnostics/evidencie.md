@@ -34,4 +34,4 @@
 
 ## Commits
 - Implementación: `db02e19a1592bbc3653dd669181b16b32c3e51d6` (PR #281).
-- Esta reconciliación documental: se registra en el commit siguiente.
+- Reconciliación documental: PR #282, commit de rama `87edbb8fd454af168c819fac237ecd2cf1ce9682`, CI `45543367414` SUCCESS; merge commit `02cf81bec667af91207b4092ffe6a3f90050eeeb`.
