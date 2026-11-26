@@ -54,6 +54,7 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
       throw new ReviewProcessingError("repository", "GITHUB_UNAVAILABLE", "manual");
     }
     if (!response.ok) {
+      if (response.status === 409) throw new ReviewProcessingError("repository", "GITHUB_EMPTY_REPOSITORY", "permanent");
       if (response.status === 429 || (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")) {
         throw new ReviewProcessingError("repository", "GITHUB_RATE_LIMITED", "transient");
       }
@@ -90,6 +91,50 @@ export function createGitHubRestRepositoryReader(options: { token?: string; fetc
   }
 
   return {
+    async getPublicRepository(owner: string, repo: string, signal?: AbortSignal) {
+      if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(owner) || !/^[A-Za-z0-9_.-]{1,100}$/.test(repo) || repo === "." || repo === "..") throw new Error("Indica un repositorio de GitHub válido.");
+      const metadata = object(await getJson(new URL(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, githubApi), 256_000, signal));
+      if (metadata.private !== false || typeof metadata.default_branch !== "string" || !metadata.default_branch.trim()) throw new Error("Solo se pueden usar repositorios públicos con una rama predeterminada.");
+      const canonicalOwner = object(metadata.owner);
+      if (typeof canonicalOwner.login !== "string" || typeof metadata.name !== "string") throw new Error("GitHub respondió con datos incompletos.");
+      return { owner: canonicalOwner.login, repo: metadata.name, visibility: "public" as const, defaultBranch: metadata.default_branch };
+    },
+    async listRecentCommits(owner: string, repo: string, branch: string, signal?: AbortSignal) {
+      if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(owner) || !/^[A-Za-z0-9_.-]{1,100}$/.test(repo) || !branch.trim() || branch.length > 255) throw new Error("Indica un repositorio y una rama válidos.");
+      const repository = await this.getPublicRepository(owner, repo, signal);
+      if (repository.defaultBranch !== branch) throw Object.assign(new Error("La rama solicitada no es la rama predeterminada del repositorio."), { errorCode: "GITHUB_INVALID_BRANCH" });
+      const url = new URL(`/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}/commits`, githubApi);
+      url.searchParams.set("per_page", "10");
+      url.searchParams.set("sha", branch);
+      const raw = await getJson(url, 512_000, signal);
+      if (!Array.isArray(raw)) throw new Error("GitHub respondió con una lista de commits no válida.");
+      return raw.slice(0, 10).map((value) => {
+        const commit = object(value);
+        const metadata = object(commit.commit);
+        const author = object(metadata.author ?? {});
+        const committer = object(metadata.committer ?? {});
+        const user = commit.author && typeof commit.author === "object" ? object(commit.author) : {};
+        const sha = commit.sha;
+        if (typeof sha !== "string" || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(sha)) throw new Error("GitHub devolvió un SHA de commit no válido.");
+        const message = typeof metadata.message === "string" ? metadata.message.split("\n", 1)[0]!.slice(0, 500) : "Sin mensaje";
+        const authorName = typeof author.name === "string" ? author.name : typeof user.login === "string" ? user.login : "Autor no disponible";
+        const committedAt = typeof committer.date === "string" ? committer.date : typeof author.date === "string" ? author.date : null;
+        return { sha, message, author: authorName.slice(0, 160), committedAt };
+      });
+    },
+    async resolveCommit(owner: string, repo: string, commitSha: string, signal?: AbortSignal) {
+      if (!/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(commitSha)) throw new Error("Indica el SHA completo del commit que quieres revisar.");
+      const repository = await this.getPublicRepository(owner, repo, signal);
+      const raw = object(await getJson(new URL(`/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}/commits/${encodeURIComponent(commitSha.toLowerCase())}`, githubApi), 1_000_000, signal));
+      if (typeof raw.sha !== "string" || raw.sha.toLowerCase() !== commitSha.toLowerCase()) throw new Error("GitHub no devolvió el SHA exacto solicitado.");
+      const metadata = object(raw.commit);
+      const author = object(metadata.author ?? {});
+      const committer = object(metadata.committer ?? {});
+      const user = raw.author && typeof raw.author === "object" ? object(raw.author) : {};
+      return { sha: raw.sha, message: typeof metadata.message === "string" ? metadata.message.split("\n", 1)[0]!.slice(0, 500) : "Sin mensaje",
+        author: (typeof author.name === "string" ? author.name : typeof user.login === "string" ? user.login : "Autor no disponible").slice(0, 160),
+        committedAt: typeof committer.date === "string" ? committer.date : typeof author.date === "string" ? author.date : null };
+    },
     async readCommitSnapshot(input: ExactCommitRequest, processing: { signal?: AbortSignal } = {}): Promise<RepositorySnapshot> {
       if (!/^[A-Za-z0-9-]{1,39}$/.test(input.owner) || !/^[A-Za-z0-9_.-]{1,100}$/.test(input.repo)) throw new Error("Indica un propietario y repositorio de GitHub válidos.");
       if (!/^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(input.commitSha)) throw new Error("Indica el SHA completo del commit que quieres revisar.");
