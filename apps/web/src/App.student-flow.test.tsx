@@ -95,6 +95,15 @@ afterEach(() => {
   mocks.assignmentsApi.listStudent.mockReset();
 });
 
+async function openMissionDetails(title = "Aplicación móvil") {
+  const classroomButton = container?.querySelector<HTMLButtonElement>(`button[aria-label="Abrir aula ${classroom.title}"]`);
+  expect(classroomButton).toBeTruthy();
+  await act(async () => classroomButton?.click());
+  const missionButton = container?.querySelector<HTMLButtonElement>(`button[aria-label="Ver misión ${title}"]`);
+  expect(missionButton).toBeTruthy();
+  await act(async () => missionButton?.click());
+}
+
 describe("student mission to Mentor flow", () => {
   it("shows each saved Review commit and rubric in the delivery history", async () => {
     window.history.replaceState({}, "", "/student/submissions");
@@ -140,6 +149,7 @@ describe("student mission to Mentor flow", () => {
     mocks.studentApi.getMyProposals.mockResolvedValue({ ok: true, data: [] });
     await act(async () => root?.render(<App />));
 
+    await openMissionDetails();
     const start = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.getAttribute("aria-label") === "Iniciar propuesta: Aplicación móvil");
     expect(start).toBeDefined();
     expect(mocks.studentApi.saveProposalDraft).not.toHaveBeenCalled();
@@ -171,7 +181,8 @@ describe("student mission to Mentor flow", () => {
 
     await act(async () => root?.render(<App />));
 
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
+    await openMissionDetails();
+    const linked = container?.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Aplicación móvil"]');
     expect(linked).toBeDefined();
     await act(async () => linked?.click());
 
@@ -191,7 +202,8 @@ describe("student mission to Mentor flow", () => {
     }] });
     mocks.studentApi.getMySubmissions.mockResolvedValue({ ok: true, data: [{ kind: "mentor", sourceId: "evaluated-mission-proposal" }] });
     await act(async () => root?.render(<App />));
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
+    await openMissionDetails();
+    const linked = container?.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Aplicación móvil"]');
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/review");
     expect(container?.querySelector("[data-testid=review-initial-proposal]")?.textContent).toBe("evaluated-mission-proposal");
@@ -215,7 +227,8 @@ describe("student mission to Mentor flow", () => {
       ],
     } });
     await act(async () => root?.render(<App />));
-    const linked = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Continuar misión");
+    await openMissionDetails();
+    const linked = container?.querySelector<HTMLButtonElement>('button[aria-label="Continuar misión: Aplicación móvil"]');
     await act(async () => linked?.click());
     expect(window.location.pathname).toBe("/student/trainer");
     expect(window.location.search).toBe("?reviewId=final-delivery-review");
@@ -295,8 +308,9 @@ describe("student mission to Mentor flow", () => {
     }));
 
     await act(async () => root?.render(<App />));
+    await openMissionDetails();
 
-    expect(container?.textContent).toContain("Espera mientras consultamos tus propuestas antes de iniciar.");
+    expect(container?.textContent).toContain("Consultando la propuesta vinculada");
     expect(container?.querySelector('button[aria-label="Iniciar propuesta: Aplicación móvil"]')).toBeNull();
 
     await act(async () => finishProposals());
@@ -498,6 +512,7 @@ describe("student mission to Mentor flow", () => {
 
   it("keeps the published context and version when the student starts and saves a proposal", async () => {
     await act(async () => root?.render(<App />));
+    await openMissionDetails();
     const start = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta: Aplicación móvil"]');
     expect(start).toBeTruthy();
 
@@ -524,6 +539,7 @@ describe("student mission to Mentor flow", () => {
 
     const classroomsLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent?.includes("Mis aulas"));
     await act(async () => classroomsLink?.click());
+    await openMissionDetails();
     const startAgain = container?.querySelector<HTMLButtonElement>('button[aria-label="Iniciar propuesta: Aplicación móvil"]');
     await act(async () => startAgain?.click());
     const reviewLink = [...(container?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((link) => link.textContent === "Review");
