@@ -31,6 +31,10 @@ Implementación funcional local verificada; integración, release y validación 
 - `2026-11-26 00:45` Bogota — `pnpm --filter @fragments/web build`: PASS (Vite 8.3.5, 2283 módulos; artefactos incluyen los dos WebP). Warnings existentes: bundle principal >500 KB y directivas `use client` de lucide-react; el build finalizó con código 0.
 - `2026-11-26 00:45` Bogota — `git diff --check`: PASS.
 - Los comandos se ejecutaron desde `.worktrees/mi-espacio-v4` usando el store pnpm independiente `D:\.pnpm-store-mi-espacio-v4`; no se tocó/eliminó ninguna dependencia de otro worktree.
+- Commit funcional independiente: `c53b63a7063aea228e3ec881bb9f3fc85b09ffcc` (`feat(student): implement approved Mi espacio V4 redesign`).
+- Rama publicada: `origin/codex/mi-espacio-v4`, SHA `c53b63a7063aea228e3ec881bb9f3fc85b09ffcc`.
+- PR borrador [#348](https://github.com/VGMil-dev/fragments/pull/348), base `main` en `2a9fbeecbe3b83c5f2e28ad75f3dd9171a17c783`; CI `45763977112` SUCCESS el `2026-11-26`. Corrieron Compose profiles, Prisma disposable, políticas de release/backup, backup/restore, release-agent, metadata, test/typecheck/lint/build.
+- Ego Lite: `profiles()` identificó `Profile 5 — Estudiante`; el usuario autorizó utilizarlo. Se creó el Space 27 propio con ese perfil. En producción, antes del despliegue, la sesión autenticada cargó Mi espacio anterior con identidad GitHub y datos QA; captura: `C:\Users\vgmil\ego\mi-espacio-v4-20261126\production-before-auth.png`. Sin clics de escritura. El preview local carga la V4, pero muestra la identidad fixture `fixture-student`; no se usará para afirmar identidad ni datos productivos. Comparación autenticada post-release pendiente.
 - Hashes de assets tras extraer el kit:
   - `mi-espacio-guia.webp`: `cd2590c7c6a51124d8e3541dd4a20d88455bd9def6f3f3898bd466439ab9f830`.
   - `mi-espacio-misiones.webp`: `cf1ced214adcfc856fe602a9acc1b090611291d83eff10d15953046a062d4fa9`.
@@ -38,7 +42,7 @@ Implementación funcional local verificada; integración, release y validación 
 ## Bloqueos / límites de verificación
 
 - Los primeros intentos con el almacén compartido/offline sufrieron `EPERM`/tarball ausente, pero se resolvieron sin borrar procesos ni dependencias de terceros usando el almacén independiente. La instalación congelada terminó correctamente.
-- Comparación visual de la página React local, CI/PR/merge, release F14, producción, Notion y carpeta final de evidencias siguen pendientes.
+- Comparación visual autenticada post-release, actualización sobre la integración prioritaria de V7/sidebar, merge/actualización final de rama, release F14, producción, Notion y carpeta final de evidencias siguen pendientes. Mis aulas V5 tampoco está publicada y conserva cambios sin commit fuera de este worktree.
 
 ## Integración y despliegue
 
