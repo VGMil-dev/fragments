@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Check, GitBranch, Github, Info, LoaderCircle, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CodeXml, GitBranch, Info, LoaderCircle, Search } from "lucide-react";
 import type {
   ApiResult,
   CreateReviewSubmissionRequest,
@@ -321,15 +321,15 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
               {stage === 0 ? <>
                 <label className="review-field review-field--wide">
                   <span>URL del repositorio</span>
-                  <span className="review-repo-input"><Github aria-hidden="true" size={19} /><input aria-label="URL del repositorio" type="url" inputMode="url" autoComplete="url" placeholder="https://github.com/usuario/repositorio" value={repositoryUrl} disabled={selectionBusy} onChange={(event) => { setRepositoryUrl(event.target.value); clearRepositorySelection(); }} /></span>
+                  <span className="review-repo-input"><CodeXml aria-hidden="true" size={19} /><input aria-label="URL del repositorio" type="url" inputMode="url" autoComplete="url" placeholder="https://github.com/usuario/repositorio" value={repositoryUrl} disabled={selectionBusy} onChange={(event) => { setRepositoryUrl(event.target.value); clearRepositorySelection(); }} /></span>
                 </label>
-                {repository ? <div className="review-repository-card" role="status"><Github aria-hidden="true" size={22} /><div><strong>{repository.owner}/{repository.repo}</strong><small>Repositorio público · rama predeterminada {repository.defaultBranch}</small></div></div> : null}
+                {repository ? <div className="review-repository-card" role="status"><CodeXml aria-hidden="true" size={22} /><div><strong>{repository.owner}/{repository.repo}</strong><small>Repositorio público · rama predeterminada {repository.defaultBranch}</small></div></div> : null}
                 <p className="review-stage__hint">La comprobación consulta el backend de Fragments. Elegir un repositorio no inicia una evaluación.</p>
                 <button className="review-button review-button--secondary" type="submit" disabled={selectionBusy}><Search aria-hidden="true" size={16} /> {selectionBusy ? "Verificando…" : "Detectar repositorio"}</button>
               </> : null}
 
               {stage === 1 ? <>
-                {repository ? <div className="review-repository-strip"><Github aria-hidden="true" size={17} /><span>{repository.owner}/{repository.repo}</span><span className="review-branch"><GitBranch aria-hidden="true" size={15} /> {repository.defaultBranch}</span></div> : null}
+                {repository ? <div className="review-repository-strip"><CodeXml aria-hidden="true" size={17} /><span>{repository.owner}/{repository.repo}</span><span className="review-branch"><GitBranch aria-hidden="true" size={15} /> {repository.defaultBranch}</span></div> : null}
                 <div className="review-mode" role="group" aria-label="Método de selección del commit">
                   <button type="button" className={commitMode === "recent" ? "is-active" : ""} aria-pressed={commitMode === "recent"} onClick={() => { setCommitMode("recent"); setSelectionStatus(null); }}>Commits recientes</button>
                   <button type="button" className={commitMode === "manual" ? "is-active" : ""} aria-pressed={commitMode === "manual"} onClick={() => { setCommitMode("manual"); setSelectedCommit(null); setFields((current) => ({ ...current, commitSha: "" })); setSelectionStatus(null); }}>Introducir SHA</button>

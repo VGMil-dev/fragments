@@ -24,6 +24,9 @@ describe("Review repository selection", () => {
     const sha = "A".repeat(40);
     expect(parseCommitReference(sha, { owner: "student", repo: "mobile-app" })).toBe("a".repeat(40));
     expect(parseCommitReference(`https://github.com/student/mobile-app/commit/${sha}`, { owner: "student", repo: "mobile-app" })).toBe("a".repeat(40));
+    const sha256 = "B".repeat(64);
+    expect(parseCommitReference(sha256, { owner: "student", repo: "mobile-app" })).toBe("b".repeat(64));
+    expect(parseCommitReference(`https://github.com/student/mobile-app/commit/${sha256}`, { owner: "student", repo: "mobile-app" })).toBe("b".repeat(64));
   });
 
   it.each([

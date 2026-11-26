@@ -1,6 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
-import { Rocket, UsersRound } from "lucide-react";
+import { Lightbulb, Rocket, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGalleryDetail, AcademicGalleryEntry, ClassroomSummary, MentorPublishedConfig, ProposalDraftResponse, StudentAssignment, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
@@ -466,7 +466,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
             repositoryLookup={{
               detectRepository: async ({ owner, repo }, signal) => {
                 const result = await studentApi.getPublicGitHubRepository(owner, repo, signal);
-                return result.ok ? { ok: true as const, data: { owner: result.data.owner, name: result.data.repo, visibility: result.data.visibility, defaultBranch: result.data.defaultBranch } } : result;
+                return result.ok ? { ok: true as const, data: result.data } : result;
               },
               listCommits: async ({ owner, repo, branch }, signal) => {
                 const result = await studentApi.getRecentGitHubCommits(owner, repo, branch, signal);

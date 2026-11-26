@@ -57,9 +57,10 @@ const repositoryLookup: ReviewRepositoryLookup = {
 };
 
 function setInputValue(input: HTMLInputElement, value: string) {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
+  const view = input.ownerDocument.defaultView!;
+  Object.getOwnPropertyDescriptor(view.HTMLInputElement.prototype, "value")!.set!.call(input, value);
+  input.dispatchEvent(new view.Event("input", { bubbles: true }));
+  input.dispatchEvent(new view.Event("change", { bubbles: true }));
 }
 
 async function prepareRepository(container: HTMLElement) {
@@ -140,6 +141,7 @@ describe("ReviewScreen", () => {
       await prepareRepository(container);
       await act(async () => container.querySelector<HTMLInputElement>('.review-commit input[type="radio"]')!.click());
       expect(container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.disabled).toBe(false);
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--ghost")!.click());
       await act(async () => {
         setInputValue(container.querySelector<HTMLInputElement>('input[aria-label="URL del repositorio"]')!, "https://github.com/fixture-student/another-app");
       });

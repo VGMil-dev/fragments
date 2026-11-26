@@ -39,14 +39,14 @@ export function parseCommitReference(value: string, repository: Pick<ReviewRepos
     try {
       const url = new URL(raw);
       if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "github.com" || url.username || url.password || url.port || url.search || url.hash) return null;
-      const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/commit\/([a-f0-9]{40})\/?$/i);
+      const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/commit\/([a-f0-9]{40}|[a-f0-9]{64})\/?$/i);
       if (!match || `${match[1]}/${match[2]}`.toLowerCase() !== `${repository.owner}/${repository.repo}`.toLowerCase()) return null;
       sha = match[3]!;
     } catch {
       return null;
     }
   }
-  return /^[a-f0-9]{40}$/i.test(sha) ? sha.toLowerCase() : null;
+  return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(sha) ? sha.toLowerCase() : null;
 }
 
 export function repositoryLookupError(code: string): string {

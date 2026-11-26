@@ -14,7 +14,7 @@ describe("GitHub REST exact commit reader", () => {
       const url = new URL(String(input));
       if (url.pathname.endsWith("/repos/student/demo")) return response({ private: false, name: "demo", owner: { login: "student" }, default_branch: "trunk" });
       if (url.pathname.endsWith("/commits") && url.searchParams.get("sha") === "trunk") return response(Array.from({ length: 12 }, (_, index) => ({
-        sha: `${String(index).padStart(1, "0")}${"a".repeat(38)}`,
+        sha: index.toString(16).padStart(40, "0"),
         commit: { message: `commit ${index}\nsecond line`, author: { name: "Student", date: "2026-11-25T10:00:00Z" }, committer: { date: "2026-11-25T10:00:00Z" } },
       })));
       if (url.pathname.endsWith(`/commits/${fullSha}`)) return response({ sha: fullSha, commit: { message: "manual commit", author: { name: "Student", date: "2026-11-25T10:00:00Z" } } });
