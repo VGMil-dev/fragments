@@ -1,48 +1,44 @@
-# Informe final — UX-12 V7
+# UX-12-V7 — Evidencia
 
-**Estado: pruebas técnicas locales PASS; QA visual, integración y producción pendientes.** Implementé los dos cambios funcionales en commits independientes y un commit correctivo basado en fallos detectados por la suite. No se ha desplegado.
+**Estado: COMPLETA, integrada y desplegada.** Review V7 y la barra lateral estudiantil están en producción. El footer compartido recibió un fix visual de seguimiento.
 
-## Cambios y trazabilidad
+## Integración
 
-- Branch local `codex/review-v7`, en worktree `D:\Dev\Trabajo\Fragments-review-v7`, basada en `origin/main` SHA `2a9fbeecbe3b83c5f2e28ad75f3dd9171a17c783`.
-- Commit funcional de navegación: [`5f4bceecddc73cacb824580306e1dea9be3b14de`](../apps/web/src/features/student/StudentSidebar.tsx) — `feat(ui): redesign student sidebar following approved V7`.
-- Commit funcional de Review: `0f8d4e1ea39298c47e3acd4f8a4dfb54fcf15225` — `feat(review): implement approved V7 repository and commit workflow`.
-- Correcciones de integración: `a0781fd6666bde2d5428229e06b54ec7c966f5d2` — exports de iconos, mapeo API, SHA-1/SHA-256 y fixtures de 40 dígitos.
-- `origin/main` vigente sigue en `2a9fbeecbe3b83c5f2e28ad75f3dd9171a17c783`; la rama no tiene avance externo nuevo al corte.
-- PR: pendiente de publicación. Release/tag: no creados. Producción: sin cambio.
+- Branch de trabajo: `codex/review-v7`, worktree `D:\Dev\Trabajo\Fragments-review-v7`.
+- Commits funcionales preservados: `5f4bceecddc73cacb824580306e1dea9be3b14de` (sidebar) y `0f8d4e1ea39298c47e3acd4f8a4dfb54fcf15225` (Review).
+- Correcciones funcionales: `a0781fd6666bde2d5428229e06b54ec7c966f5d2`. Fix visual del footer: `afa9caa7d20673e4a96b149c4a9cbee03df69d93` (`fix(ui): keep student version badge compact`).
+- PR #349 integró V7 en `0f48fff6bf44761ef7103507861a0c4d3c5b26dc`; PR #348 integró Mi espacio V4 en `15b5d965a8803d68a16faeb0ad5e21bdb8877855`; PR #350 integró Mis aulas V5 en `07a84f631dc2f670571908daddb6d33fa732521a`. Todas usaron merge normal y `verify` PASS.
+- La QA productiva encontró que el footer estiraba el badge a 103×130 px en Mis aulas. PR #352 lo corrigió con `align-items:flex-end`, merge normal `0cfb841fa5031754c8770cff4db10fa4b2e4274f`; CI `45769664116` PASS. PR documental #353 agregó el hallazgo compartido, mergeada después; no cambió runtime.
 
-## Implementación
+## Bloqueo pnpm EPERM
 
-La navegación estudiantil ahora usa una barra lateral reutilizable con secciones académicas/herramientas, rutas existentes, identidad GitHub, cierre de sesión, menú móvil, estado activo y foco/skip link.
+- No había procesos Node/pnpm activos. El archivo que fallaba en `D:\.pnpm-store\v11` devolvía acceso denegado. Se apartó el `node_modules` parcial fuera del worktree, sin detener procesos.
+- Instalación recuperada con `pnpm install --frozen-lockfile --ignore-scripts --package-import-method=copy --store-dir D:\pnpm-store-review-v7-20261126`: 441 paquetes, PASS; `pnpm-lock.yaml` sin cambios.
 
-Review usa un flujo secuencial de tres pasos. Se copian los tres WebP originales, se validan repositorios públicos y commits desde endpoints autenticados del backend, se limita la lista a diez commits de la rama predeterminada y se resuelve el SHA completo antes de permitir la confirmación explícita «Evaluar commit». El motor existente y la vinculación académica se conservan.
+## Verificación técnica
 
-Los assets quedaron en `apps/web/src/features/review/assets/`. Sus SHA-256 coinciden con los tres valores del `LEEME.md` adjunto. No se regeneraron.
+- `pnpm test`: PASS. Contracts 34/34; web 351/351; API 209 PASS y 82 omitidas porque dependen de PostgreSQL de integración local (CI ejecutó PostgreSQL desechable).
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check`: PASS. La build conserva warnings de `use client` en lucide-react.
+- Hashes SHA-256 de los tres WebP canónicos coinciden con el `LEEME.md` del kit V7.
+- CI PR #349 run `45764662148`, PR #348 `45765184682`, PR #350 `45766994085` y follow-up #352 `45769664116`: todos `verify` SUCCESS.
 
-## Verificación
+## QA Ego Lite
 
-- `git diff --check`: PASS.
-- `git diff --cached --check`: PASS antes de los commits.
-- Verificación SHA-256 de los 3 WebP: PASS.
-- `pnpm install --frozen-lockfile --ignore-scripts --package-import-method=copy --store-dir D:\pnpm-store-review-v7-20261126`: PASS con 441 paquetes y lockfile intacto. Se aisló `node_modules` parcial en `D:\Dev\Trabajo\Fragments-review-v7-node_modules-eperm-backup`; sin procesos Node/pnpm activos.
-- `pnpm test`: PASS — contracts 34/34; web 362/362; API 209 PASS y 82 SKIP condicionadas por bases de integración no provisionadas.
-- `pnpm typecheck`: PASS en los tres paquetes. `pnpm lint`: PASS según tareas configuradas en Turbo (contracts). `pnpm build`: PASS; Vite reportó advertencias de `use client` originadas en lucide-react.
-- Focal API: 9/9; Review/selection/sidebar: 33/33. Hallazgos encontrados y corregidos por estas pruebas: export de Github no disponible en lucide-react, referencia `Lightbulb` retirada accidentalmente, contrato `repo`, SHA de fixture de longitud inválida y edición URL en el estado de test incorrecto.
-- Ego Lite `profiles()` confirma `Profile 5 — Estudiante`. La página de referencia HTML y billing se abrieron anteriormente; falta inspeccionar la app real desktop/móvil.
-- CI `45735067192` y F14 `45731973140` son los workflows recientes con conclusión SUCCESS. Billing REST no informa cuota por scope `user` faltante; no se amplió. El historial demuestra disponibilidad reciente de Actions, no la cuota numérica restante.
-- Comparación desktop/móvil, anchos 320 px, teclado, flujo real con perfil Estudiante, contexto desde misión y captura de implementación: pendientes; sin capturas comparativas todavía.
+- Perfil real `Profile 5 — Estudiante`, autenticado en `https://fragments.gavanti.org`; revisión de producción en `v0.5.97`.
+- Review: la API de producción verificó el repositorio público `octocat/Hello-World`; se cargaron commits de `master`, se seleccionó el SHA `7fd1a60b01f91b314f59955a4e4d4e80d8edf11d` y se llegó a Confirmación. El aviso indica que IA empieza solo al pulsar “Evaluar commit”; no se pulsó ni se inició evaluación.
+- Sidebar y rutas estudiantiles visibles. Mi espacio y las pestañas Aulas/Inventario/Solicitudes de Mis aulas cargaron autenticadas; no se enviaron formularios ni se alteraron datos.
+- Producción 1440×900, 390×844 y 320×800: document/body no excedieron el viewport; menú móvil cambió `aria-expanded` false→true y conservó enlace a Review. En Mis aulas, badge final `101×28 px` con `v0.5.97 · 0cfb841`.
+- Capturas recortadas para no incluir identidad ni datos académicos, en `UX-12-V7_EVIDENCIAS/`: `production-review-v0.5.97.png`, `production-sidebar-v0.5.97.png`, `production-version-badge-v0.5.97.png`. Junto con este informe son 4 archivos, por debajo del máximo de 20.
 
-## VPS, cuota y F14
+## F14 y producción
 
-- Inventario SSH de solo lectura antes de implementar: ARM64, 77 GB libres de 193 GB; memoria disponible 8.2 GiB; 2 vCPU; producción y servicios vecinos activos. Mantenimiento selectivo: ninguno; espacio recuperado: 0 GB, porque no se pudo demostrar que imágenes/cachés estuvieran fuera de retención. No se tocaron contenedores, imágenes, bases, backups ni servicios vecinos.
-- Billing de GitHub mostró US$11.33 de gasto metered en noviembre. La cuota restante de Actions no quedó expuesta en UI; API billing rechazó por falta de scope de usuario. Runs recientes de Actions y F14 continuaban exitosos; no hay evidencia de agotamiento.
-- AGENTS.md prohíbe push, modificar `main` o publicar. F14 obliga tag anotada exacta, build/attestation hosted, entorno protegido, backup, pull agent verificado y ledger. No existe autorización para saltar controles: no se hizo despliegue manual ni se falsificó una attestation. El servidor conserva la versión operativa.
-- Referencia de producción registrada en Notion (no revalidada en esta ronda): v0.5.95, SHA `3bda8bb843c33bf3e03973a4e773de96eb65bc4a`.
+- Tag anotada `v0.5.96` → SHA `07a84f631dc2f670571908daddb6d33fa732521a`; run F14 `45767539848` SUCCESS; release ledger `459034994`, `deployed`.
+- Fix tag anotada `v0.5.97` → SHA `0cfb841fa5031754c8770cff4db10fa4b2e4274f`; tag object `46826cefba401ced463445b7c48bf29a4d434720`; F14 run `45770050876` SUCCESS en `verify-build`, `attest-package` y `publish-approved-release`; release ledger `459049941`, `deployed`.
+- Backup final: `/var/backups/fragments/fragments-prod-2026-11-26T06-48-56-548Z.dump`, 98,420 bytes, SHA-256 `e4e308abfa3dfcc74687dcfc614d918f1f1859006df134e889b4e527db2b8d76`, `restored_to_temporary_database`. Archivo y ledger coincidieron.
+- API/web `healthy` en `sha-0cfb841fa5031754c8770cff4db10fa4b2e4274f`; `/health` HTTP 200 con `ok/database=ready`; bundle `/assets/index-CzhqWXHw.js` incluye versión y SHA exactos.
+- Imágenes anteriores de `v0.5.96` permanecen presentes para rollback ordinario; no se ejerció rollback. Poll timer, apply path y cloudflared activos; `systemctl --failed` vacío. PostgreSQL, Pits, Tymeslot e ImagenEC continuaron arriba/healthy. No hubo despliegue manual, limpieza, migraciones ni cambios a gates.
+- GitHub Actions estuvo operativa: CI #352 y F14 #45770050876 terminaron correctamente. No se obtuvo lectura numérica de cuota disponible; no se asumió que estuviera agotada.
 
-## Notion y límite de evidencia
+## Notion
 
-La ficha UX-12 fue actualizada: V7 queda como diseño aprobado por el propietario y explicita que la fidelidad de la implementación sigue pendiente. [UX-12 · Review · Commit](https://app.notion.com/p/41ecd5fa7ed781dfa1bbfd35bc10ada3). Los tres assets canónicos están en el repositorio local. Sin capturas visuales aún; la evidencia de este paquete sigue constando de un archivo, dentro del máximo de 20.
-
-## Próximo cierre necesario
-
-Completar Ego Lite en desktop y móvil con `Profile 5 — Estudiante`; publicar PR y esperar checks/revisión; coordinar integración con Mi espacio V4 y Mis aulas V5 para una sola tag/releases F14; comprobar producción, salud, backup, rollback y servicios vecinos. Hasta entonces UX-12-V7 permanece parcial.
+Ficha UX-12 actualizada: [UX-12 · Review · Commit](https://app.notion.com/p/41ecd5fa7ed781dfa1bbfd35bc10ada3).
