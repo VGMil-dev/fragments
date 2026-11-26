@@ -607,11 +607,13 @@ describe("shared API contracts", () => {
     const completed = {
       ...assigned,
       status: "completed" as const,
-      defense: { mutationObserved: true, restorationConfirmed: true, notes: "Registrado.", recordedAt: now },
+      defense: { mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "Registrado.", recordedAt: now },
     };
 
-    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: " Bien " }).data)
-      .toEqual({ mutationObserved: true, restorationConfirmed: true, notes: "Bien" });
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: " Bien " }).data)
+      .toEqual({ mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "Bien" });
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: false, restorationConfirmed: false, competencyOutcome: "not_evaluated", notes: "" }).success).toBe(true);
+    expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, competencyOutcome: "excellent", notes: "" }).success).toBe(false);
     expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: "x".repeat(2001) }).success).toBe(false);
     expect(InspectorDefenseRecordRequestSchema.safeParse({ mutationObserved: true, restorationConfirmed: true, notes: "", teacherHint: "private" }).success).toBe(false);
     expect(InspectorChallengeRecordResponseSchema.safeParse(record).success).toBe(true);

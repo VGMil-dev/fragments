@@ -120,6 +120,7 @@ export function InspectorTeacherWorkspace({ api, navigate }: { api: InspectorApi
     const result = await api.record(active.id, {
       mutationObserved: form.get("mutationObserved") === "true",
       restorationConfirmed: form.get("restorationConfirmed") === "true",
+      competencyOutcome: String(form.get("competencyOutcome") ?? "") as "demonstrated" | "not_demonstrated" | "not_evaluated",
       notes: String(form.get("notes") ?? ""),
     });
     if (!result.ok) { setMessage(result.error.message); return; }

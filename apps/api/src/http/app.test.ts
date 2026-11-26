@@ -342,10 +342,10 @@ describePostgres("HTTP API — PostgreSQL integration", () => {
     const assignedResponse = await fetch(`${base}/api/inspector/challenges/challenge-1/assign`, { method: "POST", headers, body: "{}" });
     expect(assignedResponse.status).toBe(200);
     const recordedResponse = await fetch(`${base}/api/inspector/challenges/challenge-1/record`, {
-      method: "POST", headers, body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, notes: "Se explicó y restauró." }),
+      method: "POST", headers, body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "Se explicó y restauró." }),
     });
     expect(recordedResponse.status).toBe(200);
-    expect(await recordedResponse.json()).toMatchObject({ ok: true, data: { status: "completed", defense: { mutationObserved: true, restorationConfirmed: true } } });
+    expect(await recordedResponse.json()).toMatchObject({ ok: true, data: { status: "completed", defense: { mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated" } } });
 
     const listResponse = await fetch(`${base}/api/inspector/review-1/challenges`, { headers: { cookie: headers.cookie } });
     const listed = await listResponse.text();

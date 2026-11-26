@@ -41,11 +41,12 @@
 .inspector-panel__record label { display: flex; align-items: flex-start; gap: .6rem; color: var(--f16-text-primary); font-size: var(--f16-type-meta); }
 .inspector-panel__record input { width: 1rem; height: 1rem; margin-top: .2rem; accent-color: var(--f16-lime); }
 .inspector-panel__record input:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 2px; }
-.inspector-panel__notes { display: grid !important; gap: .45rem !important; color: var(--f16-text-secondary) !important; }
-.inspector-panel__notes textarea { width: 100%; min-width: 0; resize: vertical; padding: .7rem; border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); background: var(--f16-surface-raised); color: var(--f16-text-primary); font: inherit; }
+.inspector-panel__notes, .inspector-panel__outcome { display: grid !important; gap: .45rem !important; color: var(--f16-text-secondary) !important; }
+.inspector-panel__notes textarea, .inspector-panel__outcome select { width: 100%; min-width: 0; padding: .7rem; border: 1px solid var(--f16-border-strong); border-radius: var(--f16-radius-control); background: var(--f16-surface-raised); color: var(--f16-text-primary); font: inherit; }
+.inspector-panel__notes textarea { resize: vertical; }
 .inspector-panel__button { justify-self: start; min-height: 44px; padding: .65rem 1rem; border: 0; border-radius: var(--f16-radius-control); background: var(--f16-cobalt); color: var(--f16-text-primary); font: inherit; font-weight: 750; cursor: pointer; }
 .inspector-panel__button:hover { background: var(--f16-cobalt); }
-.inspector-panel__button:focus-visible, .inspector-panel__notes textarea:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
+.inspector-panel__button:focus-visible, .inspector-panel__notes textarea:focus-visible, .inspector-panel__outcome select:focus-visible { outline: 3px solid var(--f16-focus); outline-offset: 3px; }
 .inspector-panel__button:disabled { cursor: wait; opacity: .65; }
 .inspector-panel__message { margin: 0; color: var(--f16-text-secondary); }
 .inspector-panel__defense { padding: 1rem 1.1rem; border: 1px solid var(--f16-success); border-radius: var(--f16-radius-card); background: var(--f16-surface-raised); }
