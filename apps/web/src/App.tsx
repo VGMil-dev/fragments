@@ -1,6 +1,6 @@
 import { BrandMark } from "./components/brand/BrandMark";
 import { BuildVersion } from "./components/brand/BuildVersion";
-import { ClipboardCheck, Code2, Dumbbell, Folder, GraduationCap, Home, Image, Lightbulb, MoreHorizontal, Rocket, Sparkles, UsersRound } from "lucide-react";
+import { Rocket, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGalleryDetail, AcademicGalleryEntry, ClassroomSummary, MentorPublishedConfig, ProposalDraftResponse, StudentAssignment, StudentClassroomRequest, StudentMe, StudentSubmissionsResponse, UpdateProposalDraftRequest } from "@fragments/contracts";
 import { createApiClient } from "./lib/api/api-client";
@@ -15,6 +15,7 @@ import { StudentLoginScreen } from "./features/auth/StudentLoginScreen";
 import { missionContinuationDestination, missionContinuationUrl, type MissionContinuation } from "./features/student/mission-continuation.js";
 import { StudentDashboard } from "./features/student/StudentDashboard";
 import { StudentClassroomsScreen } from "./features/student/StudentClassroomsScreen";
+import { StudentSidebar } from "./features/student/StudentSidebar";
 import { assignmentsApi } from "./features/assignments/assignments-api.js";
 import { LandingHeroMedia } from "./features/landing/LandingHeroMedia";
 import { OAuthCompletionScreen } from "./features/auth/OAuthCompletionScreen";
@@ -321,35 +322,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
 
   return (
     <div className="student-workspace">
-      <a className="skip-link" href="#student-content">Saltar al contenido</a>
-      <header className="student-workspace__nav">
-        <a className="brand" href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }} aria-label="Fragments, ir al inicio">
-          <BrandMark className="brand__icon" />
-          <span className="brand__name">fragments<span className="brand__period">.</span></span>
-        </a>
-        <nav className="student-workspace__navigation" aria-label="Secciones para estudiantes">
-          <div className="student-nav__primary">
-            <a href="/student/dashboard" aria-current={path === "/student/dashboard" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/dashboard"); }}><Home size={19} aria-hidden="true" /><span><span className="student-nav-desktop">Mi espacio</span><span className="student-nav-mobile">Inicio</span></span></a>
-            <a href="/student/classrooms" aria-current={path === "/student/classrooms" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/classrooms"); }}><GraduationCap size={19} aria-hidden="true" /><span><span className="student-nav-desktop-label">Mis aulas</span><span className="student-nav-mobile-label">Aulas</span></span></a>
-            <a className="student-nav-projects" href="/student/projects" aria-current={path === "/student/projects" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/projects"); }}><Folder size={19} aria-hidden="true" /><span>Mis proyectos</span></a>
-            <a href="/student/submissions" aria-current={path === "/student/submissions" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/submissions"); }}><ClipboardCheck size={19} aria-hidden="true" /><span><span className="student-nav-desktop-label">Mis entregas</span><span className="student-nav-mobile-label">Entregas</span></span></a>
-          </div>
-          <div className="student-nav__tools" aria-label="Herramientas">
-            <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/gallery"); }}><Image size={19} aria-hidden="true" /><span>Galería</span></a>
-            <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); setSelectedAssignment(undefined); navigate("/student/mentor"); }}><Sparkles size={19} aria-hidden="true" /><span>Mentor</span></a>
-            <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/review"); }}><Code2 size={19} aria-hidden="true" /><span>Review</span></a>
-            <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/student/trainer"); }}><Dumbbell size={19} aria-hidden="true" /><span>Trainer</span></a>
-          </div>
-          <details className={`student-workspace__more${["/student/projects", "/student/gallery", "/student/mentor", "/student/review", "/student/trainer"].includes(path) ? " student-workspace__more--active" : ""}`}><summary><MoreHorizontal size={19} aria-hidden="true" /><span>Más</span></summary><div>
-              <a href="/student/projects" aria-current={path === "/student/projects" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/projects"); }}>Mis proyectos</a>
-              <a href="/student/gallery" aria-current={path === "/student/gallery" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/gallery"); }}>Galería</a>
-              <a href="/student/mentor" aria-current={path === "/student/mentor" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); setSelectedAssignment(undefined); navigate("/student/mentor"); }}>Mentor</a>
-              <a href="/student/review" aria-current={path === "/student/review" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/review"); }}>Review</a>
-              <a href="/student/trainer" aria-current={path === "/student/trainer" ? "page" : undefined} onClick={(event) => { event.preventDefault(); event.currentTarget.closest("details")?.removeAttribute("open"); navigate("/student/trainer"); }}>Trainer</a>
-          </div></details>
-        </nav>
-        <div className="student-workspace__account">{student ? <>{student.profileUrl && student.githubLogin ? <a href={student.profileUrl} target="_blank" rel="noreferrer">@{student.githubLogin}</a> : <span>Cuenta GitHub</span>}<button type="button" onClick={() => { void fetch("/api/auth/sign-out", { method: "POST", credentials: "same-origin" }).finally(() => navigate("/student/login")); }}>Cerrar sesión</button></> : <a href="/student/login" onClick={(event) => { event.preventDefault(); navigate("/student/login"); }}>Acceso estudiante</a>}</div>
-      </header>
+      <StudentSidebar path={path} student={student} navigate={navigate} onOpenMentor={() => setSelectedAssignment(undefined)} />
       <div id="student-content" className="student-workspace__content" role="region" aria-label="Contenido de estudiante" tabIndex={-1}>
         {proposalContinuation?.status === "loading" ? <p role="status">Consultando el estado guardado de tu proyecto…</p> : null}
         {proposalContinuation?.status === "error" ? <div role="alert"><p>No pudimos confirmar el estado guardado de tu proyecto. No abrimos otra etapa. Inténtalo de nuevo.</p><button type="button" onClick={() => void continueProposal(proposalContinuation.proposal)}>Reintentar</button></div> : null}
