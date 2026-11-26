@@ -14,6 +14,7 @@ export type ReviewRetryClass = "transient" | "permanent" | "manual";
 
 export type ReviewErrorCode =
   | "GITHUB_NOT_FOUND"
+  | "GITHUB_EMPTY_REPOSITORY"
   | "GITHUB_ACCESS_DENIED"
   | "GITHUB_RATE_LIMITED"
   | "GITHUB_SERVER_ERROR"

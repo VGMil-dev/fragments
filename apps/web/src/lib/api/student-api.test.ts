@@ -3,6 +3,25 @@ import { createApiClient } from "./api-client";
 import { createStudentApi } from "./student-api";
 
 describe("createStudentApi", () => {
+  it("reads public GitHub repository metadata, recent commits, and an exact commit through authenticated routes", async () => {
+    const repository = { owner: "Ada", repo: "weather", visibility: "public", defaultBranch: "main" };
+    const commit = { sha: "a".repeat(40), message: "Add forecast", author: "Ada", committedAt: null };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: repository }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [commit] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: commit }), { status: 200 }));
+    const api = createStudentApi(createApiClient({ fetcher }));
+
+    await expect(api.getPublicGitHubRepository("Ada", "weather")).resolves.toEqual({ ok: true, data: repository });
+    await expect(api.getRecentGitHubCommits("Ada", "weather", "main")).resolves.toEqual({ ok: true, data: [commit] });
+    await expect(api.resolveGitHubCommit("Ada", "weather", commit.sha)).resolves.toEqual({ ok: true, data: commit });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "/api/github/repositories/Ada/weather",
+      "/api/github/repositories/Ada/weather/commits?branch=main",
+      `/api/github/repositories/Ada/weather/commits/${commit.sha}`,
+    ]);
+  });
+
   it("reads account-scoped classrooms and requests, submits a join code, and loads authorized skills", async () => {
     const classroom = { id: "classroom-a", title: "Grupo A", subject: "Programación", groupLabel: "10A", period: null, status: "active", createdAt: "2026-11-19T10:00:00.000Z", updatedAt: "2026-11-19T10:00:00.000Z" };
     const request = { id: "enrollment-a", status: "pending", source: "join_code", requestedAt: "2026-11-19T10:00:00.000Z", decidedAt: null };

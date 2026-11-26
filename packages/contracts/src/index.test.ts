@@ -33,6 +33,9 @@ import {
   TeacherLoginRequestSchema,
   TeacherSessionResponseSchema,
   ReviewRequestSchema,
+  GitHubPublicRepositorySchema,
+  GitHubCommitListSchema,
+  GitHubCommitSummarySchema,
   ReviewAcademicLinkSchema,
   MissionDeliveryHistorySchema,
   ReviewResponseSchema,
@@ -469,6 +472,15 @@ describe("shared API contracts", () => {
     expect(ReviewRequestSchema.safeParse({ ...request, assignmentDeliverableId: "delivery-1" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, linkedProposalId: "" }).success).toBe(false);
     expect(ReviewRequestSchema.safeParse({ ...request, repositoryUrl: "http://127.0.0.1/secret" }).success).toBe(false);
+  });
+
+  it("validates public GitHub metadata and bounds recent commit summaries", () => {
+    expect(GitHubPublicRepositorySchema.parse({ owner: "student", repo: "demo", visibility: "public", defaultBranch: "main" })).toEqual({
+      owner: "student", repo: "demo", visibility: "public", defaultBranch: "main",
+    });
+    expect(GitHubPublicRepositorySchema.safeParse({ owner: "student", repo: "demo", visibility: "private", defaultBranch: "main" }).success).toBe(false);
+    expect(GitHubCommitSummarySchema.safeParse({ sha: "a".repeat(40), message: "Initial commit", author: "Student", committedAt: null }).success).toBe(true);
+    expect(GitHubCommitListSchema.safeParse(Array.from({ length: 11 }, (_, index) => ({ sha: String(index).repeat(40), message: "commit", author: "Student", committedAt: null }))).success).toBe(false);
   });
 
   it("keeps mission skill names in a bounded optional Review academic snapshot", () => {
