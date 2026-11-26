@@ -371,6 +371,7 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
           submissions={submissions}
           onRetrySubmissions={() => setSubmissionsReload((value) => value + 1)}
           onContinueProposal={(proposal) => { void continueProposal(proposal); }}
+          onLoadDeliveryHistory={loadMissionDeliveryHistory}
           onStartMission={(assignment) => { setSelectedProposal(undefined); setSelectedAssignment(assignment); navigate("/student/mentor"); }}
           onCreateProposal={() => { setSelectedProposal(undefined); setSelectedAssignment(undefined); navigate("/student/mentor"); }}
           onNavigate={navigate}
