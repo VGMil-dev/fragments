@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación funcional local verificada; integración, release y validación productiva pendientes. No marcar tarea completa.
+Implementación, integración, release y verificación de producción completadas el 2026-11-26. El estado visual UX-01 permanece Candidata hasta aprobación visual del propietario.
 
 ## Aislamiento y referencia
 
@@ -46,4 +46,30 @@ Implementación funcional local verificada; integración, release y validación 
 
 ## Integración y despliegue
 
-Pendientes. Registrar aquí comandos y salidas frescas, hash del commit, PR/merge, CI, tag/release, health/SHA productivos y comprobación Ego Lite al completar cada etapa.
+### Integración consolidada
+
+- V7 y la barra lateral compartida se integraron primero por PR [#349](https://github.com/VGMil-dev/fragments/pull/349), merge `0f48fff6bf44761ef7103507861a0c4d3c5b26dc`, CI verify `45764662148` PASS.
+- Mi espacio V4 mantuvo el commit funcional independiente `c53b63a7063aea228e3ec881bb9f3fc85b09ffcc`. PR [#348](https://github.com/VGMil-dev/fragments/pull/348) pasó CI verify `45765184682` y se integró mediante merge normal `15b5d965a8803d68a16faeb0ad5e21bdb8877855`.
+- Mis aulas V5 se integró después por PR [#350](https://github.com/VGMil-dev/fragments/pull/350), merge `07a84f631dc2f670571908daddb6d33fa732521a`, CI verify `45766994085` PASS. No se sobrescribió el trabajo de los otros agentes.
+- `origin/main` verificado en `07a84f631dc2f670571908daddb6d33fa732521a`; `v0.5.96` es una única release consolidada y su tag anotada apunta a ese SHA.
+
+### Pruebas y release
+
+- Tras las tres integraciones: suite web `351/351`, contracts `34/34`, API `209` PASS y `82` OMITIDAS por requerir PostgreSQL de integración; typecheck, lint, build y `git diff --check` PASS. El typecheck se ejecutó después del build de contracts para evitar una carrera de artefactos `dist`.
+- Workflow F14 [run `45767539848`](https://github.com/VGMil-dev/fragments/actions/runs/45767539848), evento push de tag, terminó `success` el `2026-11-26T06:25:20Z`. Ejecutó validación de SHA/tag, instalación congelada, respaldo y restauración aislada, pruebas, typecheck, lint, build, imágenes ARM64 y atestación.
+- GitHub Release [v0.5.96](https://github.com/VGMil-dev/fragments/releases/tag/v0.5.96) publicada `2026-11-26T06:25:17Z`; paquete de imágenes digest `sha256:844719b9b30036a83499e09c084a2d657b086c982ccabfb5ef8215c5bee39fa5`; manifiesto `sha256:91c5c928bec82d92eb2b2ebe73966f44d2a753bb6ccd8e31a4266581c33a44de`; atestación `sha256:7e840f45ded2fa500343823df1631a056ac83e612ceaf8bc0b54a3ef3d242cb5`.
+
+### Producción y Ego Lite — solo lectura
+
+- Procedimiento autorizado F14 aplicado automáticamente. `fragments-release-apply.service`: `inactive/dead`, `Result=success`; timer `fragments-release-poll.timer` y watcher `fragments-release-apply.path` activos; `systemctl --failed` vacío.
+- `https://fragments.gavanti.org/health` devolvió `HTTP 200`, `status=ok`, `database=ready`. El HTML entrega `/assets/index-De0j7EpX.js`; el bundle contiene `v0.5.96` y el SHA íntegro `07a84f631dc2f670571908daddb6d33fa732521a`.
+- Ego Lite TaskSpace 31, Profile 5 — Estudiante, en `/student/dashboard`; identidad autenticada real `@MilordV` y actividad real de QA visibles. Solo lectura; no se continuó ni modificó una misión ni se guardó información.
+- Viewports 1440×900, 390×844 y 320×800 CSS px: `document.documentElement.scrollWidth` y `document.body.scrollWidth` fueron 1425, 390 y 320 respectivamente; ninguno excede su `innerWidth` (la diferencia de 15 px en escritorio es la barra de desplazamiento vertical). No se observó desbordamiento horizontal del documento.
+- El filtro `Por iniciar, 0 misiones` quedó `aria-pressed=true` y mostró el estado vacío correspondiente; al volver a `Todas`, se restauró la lista real. Tab movió el foco de «Todas» a «En curso» con `:focus-visible=true` y contorno sólido.
+- Capturas locales originales, no modificadas, guardadas fuera del repositorio en `C:\Users\vgmil\ego\mi-espacio-v4-20261126\production-v4-desktop.png`, `production-v4-mobile-390.png`, `production-v4-mobile-320.png` y `production-v4-keyboard-focus.png`. Incluyen la cuenta autenticada y datos de actividad; no se incorporan al repositorio.
+- Límites: no se comprobaron zoom 200 %, contraste formal, lector de pantalla ni otros trayectos de datos. La UX-01 sigue `Candidata`; esta verificación de release no constituye aprobación visual propietaria.
+
+### Referencias de cierre
+
+- Capturas de comparación originales y un informe de cierre compartible (máximo 20 archivos) se guardan fuera del repositorio en `C:\Users\vgmil\Downloads\MI_ESPACIO_V4_EVIDENCIAS_2026-11-26`.
+- Rama propia: `codex/mi-espacio-v4`; PR de implementación #348 quedó integrada. La actualización documental posterior se registrará mediante un PR separado contra `main`, sin crear otra release.
