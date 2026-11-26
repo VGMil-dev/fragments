@@ -484,3 +484,13 @@ Evidencia privada: `C:\Users\vgmil\.codex\evidence\fragments-f14\audit-2026-11-1
 - `/dev/sda1`: 75 GB libres de 193 GB (62 % usado); inodos 14 %. Docker reportó 113.1 GB en imágenes, 101.1 GB reclaimable y 9.056 GB de build cache; no se ejecutó limpieza. Imágenes API/web de `v0.5.92` y `v0.5.91` permanecen disponibles para rollback; no se ejerció rollback.
 - Sin migración/escritura de datos académicos. Ego Lite autenticado y presentación visual de las anclas NO COMPROBADOS: Spaces 44/80 autorizados no aparecen en el runtime; no se abrió un Space sustituto.
 - UI autenticada post-release NO COMPROBADA porque Ego Lite no expuso en este runtime los Spaces autorizados. La evidencia del bundle y servicios no sustituye esa prueba ni declara estabilidad para piloto.
+
+## Release automática v0.5.94 · CU-28 valoración formativa · 2026-11-26
+
+- PR #341 (implementación) y PR #342 (documentación) se integraron mediante merge normal. `main` y la tag anotada `v0.5.94` apuntan al SHA exacto `381e04c95a3eebf7a8a5c5639b946c70547f966f`.
+- F14 run #45726817051 pasó `verify-build`, `attest-package` y `publish-approved-release` SUCCESS; CI de implementación #45725692114 y documentación #45726099529 también SUCCESS. Se conservaron la validación PostgreSQL desechable y backup/restore, firmas/atestación, build ARM64 y gates técnicos.
+- El timer/poller y aplicador normales aceptaron el release ID `458790752`; ledger en `/var/lib/fragments-release/ledger.json`: `deployed`, tag y SHA exactos. Backup `fragments-prod-2026-11-26T00-21-40-533Z.dump`, 98,409 bytes, SHA-256 `29acc873a478f5a9272b9df7221561ca5204ec1412ded13602f077397c19f384`, integridad `restored_to_temporary_database`.
+- API/web productivos `Up (healthy)` sobre imágenes `sha-381e04c95a3eebf7a8a5c5639b946c70547f966f`; `/health` público devuelve `ok/database=ready`. El asset `/assets/index-DpJhOa5s.js` contiene `v0.5.94` y el SHA completo.
+- Timer, `apply.path` y `cloudflared` activos; aplicador terminó con `Result=success`, `ExecMainStatus=0`; `systemctl --failed` vacío. A las 00:24 UTC raíz tenía 72 GB libres de 193 GB (63 % usado), inodos 14 %. No se hizo limpieza; se conserva el espacio para releases y rollback. Servicios Fragments, PostgreSQL, Tymeslot, ImagenEC, Pits y QA observados arriba/healthy donde aplica.
+- No hubo despliegue manual, migración o escrituras académicas. La configuración de `fragments-production` y los gates no se modificaron.
+- Ego Lite autenticado, formulario/valoración docente visual y recorrido real post-release: NO COMPROBADOS; no se creó Space sustituto. La integración PostgreSQL fake valida persistencia técnica, no la aceptación pedagógica ni la interfaz en producción. CU-28 global permanece parcial y F26 sigue Idea.
