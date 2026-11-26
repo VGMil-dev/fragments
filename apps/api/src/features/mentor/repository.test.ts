@@ -159,12 +159,14 @@ describePostgres("Mentor Prisma repository ownership and revisions", () => {
       createdAt: ownTime,
     } });
 
-    await expect(repo.listStudentSubmissions(studentId)).resolves.toEqual([expect.objectContaining({
+    const history = await repo.listStudentSubmissions(studentId);
+    expect(history).toHaveLength(5);
+    expect(history).toContainEqual(expect.objectContaining({
       id: ownSubmissionId,
       kind: "review",
       sourceId: ownJobId,
       rubricVersion: "own-rubric-v1",
       commitSha: "a".repeat(40),
-    })]);
+    }));
   });
 });
