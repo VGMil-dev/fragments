@@ -610,6 +610,19 @@ export const ReviewRequestSchema = z.object({
 }).strict().superRefine((request, context) => {
   if (request.assignmentDeliverableId && !request.linkedProposalId) context.addIssue({ code: "custom", path: ["linkedProposalId"], message: "Una entrega requiere una propuesta de misión vinculada." });
 });
+export const GitHubPublicRepositorySchema = z.object({
+  owner: githubOwner,
+  repo: githubRepo,
+  visibility: z.literal("public"),
+  defaultBranch: nonEmptyText.max(255),
+}).strict();
+export const GitHubCommitSummarySchema = z.object({
+  sha: gitObjectId,
+  message: z.string().max(500),
+  author: z.string().max(160),
+  committedAt: z.iso.datetime().nullable(),
+}).strict();
+export const GitHubCommitListSchema = z.array(GitHubCommitSummarySchema).max(10);
 export const ReviewAcademicLinkSchema = z.object({
   proposalId: identifier,
   proposalVersion: z.number().int().positive(),
@@ -759,6 +772,8 @@ export type ProposalEvaluationResponse = z.infer<typeof ProposalEvaluationRespon
 export type MentorControlEvaluationHistoryItem = z.infer<typeof MentorControlEvaluationHistoryItemSchema>;
 export type MentorControlWorkspaceResponse = z.infer<typeof MentorControlWorkspaceResponseSchema>;
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
+export type GitHubPublicRepository = z.infer<typeof GitHubPublicRepositorySchema>;
+export type GitHubCommitSummary = z.infer<typeof GitHubCommitSummarySchema>;
 export type ReviewAcademicLink = z.infer<typeof ReviewAcademicLinkSchema>;
 export type MissionDeliveryHistory = z.infer<typeof MissionDeliveryHistorySchema>;
 export type TeacherClassroomReview = z.infer<typeof TeacherClassroomReviewSchema>;

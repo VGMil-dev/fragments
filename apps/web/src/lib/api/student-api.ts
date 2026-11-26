@@ -22,6 +22,9 @@ import {
   UpdateProposalRequestSchema,
   UpdateProposalDraftRequestSchema,
   ReviewRequestSchema,
+  GitHubPublicRepositorySchema,
+  GitHubCommitListSchema,
+  GitHubCommitSummarySchema,
   MissionDeliveryHistorySchema,
   ReviewResponseSchema,
   ReviewSubmissionResponseSchema,
@@ -46,6 +49,8 @@ import {
   type UpdateProposalRequest,
   type UpdateProposalDraftRequest,
   type ReviewRequest,
+  type GitHubPublicRepository,
+  type GitHubCommitSummary,
   type MissionDeliveryHistory,
   type ReviewResponse,
   type ReviewSubmissionResponse,
@@ -179,6 +184,16 @@ export function createStudentApi(client: ApiClient, mentorEvaluationClient: ApiC
       const request = ReviewRequestSchema.safeParse(input);
       if (!request.success) return Promise.resolve(invalid<ReviewResponse>());
       return client.request("/api/reviews", ReviewResponseSchema, jsonRequest("POST", request.data, signal));
+    },
+    getPublicGitHubRepository(owner: string, repo: string, signal?: AbortSignal): Promise<ApiResult<GitHubPublicRepository>> {
+      return client.request(`/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, GitHubPublicRepositorySchema, withSignal(signal));
+    },
+    getRecentGitHubCommits(owner: string, repo: string, branch: string, signal?: AbortSignal): Promise<ApiResult<GitHubCommitSummary[]>> {
+      const query = new URLSearchParams({ branch });
+      return client.request(`/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?${query}`, GitHubCommitListSchema, withSignal(signal));
+    },
+    resolveGitHubCommit(owner: string, repo: string, sha: string, signal?: AbortSignal): Promise<ApiResult<GitHubCommitSummary>> {
+      return client.request(`/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(sha)}`, GitHubCommitSummarySchema, withSignal(signal));
     },
     getMissionDeliveryHistory(proposalId: string, signal?: AbortSignal): Promise<ApiResult<MissionDeliveryHistory>> {
       const id = encodeId(proposalId);

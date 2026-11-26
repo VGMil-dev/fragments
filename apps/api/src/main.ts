@@ -115,6 +115,7 @@ const resolveReviewAcademicLink = createReviewAcademicLinkResolver(database);
 const review = {
   store: reviewStore,
   service: reviewService,
+  repositoryCatalog: github,
   resolveStudentId: async (request: Parameters<NonNullable<typeof auth>['student']>[0]) => (await auth?.student(request))?.id ?? null,
   resolveTeacherId: async (request: Parameters<NonNullable<typeof auth>['teacherId']>[0]) => (await auth?.teacherId(request)) ?? null,
   resolveAcademicLink: resolveReviewAcademicLink,
