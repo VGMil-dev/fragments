@@ -12,6 +12,7 @@ Exponer en cada resultado Review propio el SHA y la rúbrica versionada que cons
 
 - DTO compartido `StudentSubmission` con SHA opcional y validado para resultados Review.
 - Proyección PostgreSQL desde el snapshot persistido, filtrada por jobs del estudiante titular.
+- Aplicar el límite del historial después del filtro por propietario, para que actividad de otras cuentas no desplace resultados propios.
 - Vista «Mis entregas» con tipo, fecha, rúbrica y SHA completo.
 - Regresión de UI y prueba de integración PostgreSQL únicamente en `fragments_test`.
 
