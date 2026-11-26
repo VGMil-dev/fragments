@@ -72,4 +72,9 @@ Implementación, integración, release y verificación de producción completada
 ### Referencias de cierre
 
 - Capturas de comparación originales y un informe de cierre compartible (máximo 20 archivos) se guardan fuera del repositorio en `C:\Users\vgmil\Downloads\MI_ESPACIO_V4_EVIDENCIAS_2026-11-26`.
-- Rama propia: `codex/mi-espacio-v4`; PR de implementación #348 quedó integrada. La actualización documental posterior se registrará mediante un PR separado contra `main`, sin crear otra release.
+- Rama propia: `codex/mi-espacio-v4`; PR de implementación #348 y cierre documental #351 quedaron integrados en `main`. La documentación posterior no requiere una release nueva.
+
+### Coordinación posterior — hallazgo compartido fuera de F17.18
+
+- Después de esta verificación, el agente de Mis aulas informó un badge de versión visualmente alto/ovalado en esa pantalla y lo atribuyó al footer compartido de Review V7. Este agente no reprodujo ni verificó el hallazgo en Mis aulas; corresponde al trabajo compartido V7, no a la implementación Mi espacio V4.
+- El reporte se escaló al agente V7 para seguimiento coordinado. No se modificó código V5/V7 ni se inició otro despliegue F14 en esta tarea.
