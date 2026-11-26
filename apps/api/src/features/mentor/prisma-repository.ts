@@ -57,7 +57,10 @@ export function createPrismaMentorRepository(database: PrismaClient) {
     async listStudentSubmissions(ownerUserId: string) {
       const [proposals, reviews] = await Promise.all([
         database.proposal.findMany({ where: { ownerUserId }, select: { id: true } }),
-        database.job.findMany({ where: { type: "review", status: "done" }, orderBy: { updatedAt: "desc" }, take: 200, select: { id: true, payloadJson: true } }),
+        database.job.findMany({ where: {
+          type: "review", status: "done",
+          payloadJson: { path: ["context", "studentId"], equals: ownerUserId },
+        }, orderBy: { updatedAt: "desc" }, take: 200, select: { id: true, payloadJson: true } }),
       ]);
       const reviewLabels = new Map<string, string>();
       for (const job of reviews) {

@@ -6,6 +6,7 @@
 - GIVEN una entrega Mentor, WHEN se lista, THEN muestra su rúbrica/fecha sin inventar un SHA de Review.
 - GIVEN un job Review de otra identidad, WHEN se consulta el historial propio, THEN su SHA, rúbrica, puntuación y existencia no se filtran.
 - GIVEN un snapshot Review histórico sin SHA válido, WHEN se lista, THEN no se entrega un SHA fabricado y el contrato sigue siendo compatible.
+- GIVEN más de 200 Reviews de otras identidades más un Review propio más antiguo, WHEN se consulta el historial, THEN el límite de 200 se aplica después del filtro por propietario y conserva el resultado propio.
 - GIVEN integración PostgreSQL, WHEN corre el test, THEN confirma `current_database() = fragments_test` antes de las fixtures.
 
 ## Fuera de alcance

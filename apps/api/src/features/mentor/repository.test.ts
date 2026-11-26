@@ -26,6 +26,9 @@ describePostgres("Mentor Prisma repository ownership and revisions", () => {
   afterAll(async () => {
     if (!database) return;
     if (!safeTestDatabase) { await database.$disconnect(); return; }
+    const historyFloodPrefix = `mentor-history-flood-${namespace}`;
+    await database.submission.deleteMany({ where: { id: { startsWith: historyFloodPrefix } } });
+    await database.job.deleteMany({ where: { id: { startsWith: historyFloodPrefix } } });
     await database.submission.deleteMany({ where: { id: { in: reviewSubmissionIds } } });
     await database.job.deleteMany({ where: { id: { in: reviewJobIds } } });
     await database.proposal.deleteMany({ where: { ownerHash: { startsWith: namespace } } });
@@ -110,5 +113,58 @@ describePostgres("Mentor Prisma repository ownership and revisions", () => {
     expect(history[2]).toMatchObject({ commitSha: oldSha, rubricVersion: "mission-v1-rubric", createdAt: oldTime.toISOString() });
     expect(history[3]).toMatchObject({ rubricVersion: "legacy-rubric" });
     expect(history[3]).not.toHaveProperty("commitSha");
+  });
+
+  it("applies the history limit after filtering Review jobs by student", async () => {
+    const repo = createPrismaMentorRepository(database);
+    const prefix = `mentor-history-flood-${namespace}`;
+    const ownJobId = `${prefix}-owned`;
+    const ownSubmissionId = `${prefix}-submission`;
+    const ownTime = new Date("2025-01-01T00:00:00.000Z");
+    const otherJobs = Array.from({ length: 205 }, (_, index) => {
+      const updatedAt = new Date(Date.UTC(2026, 0, 1) + index * 1000);
+      return {
+        id: `${prefix}-other-${index}`,
+        type: "review",
+        payloadJson: { request: { owner: "qa-student", repo: "demo", commitSha: "c".repeat(40) }, context: { studentId: `${studentId}-other` } },
+        idempotencyKey: `${prefix}-key-${index}`,
+        status: "done",
+        attempts: 1,
+        createdAt: updatedAt,
+        updatedAt,
+      };
+    });
+    await database.job.createMany({ data: [
+      {
+        id: ownJobId,
+        type: "review",
+        payloadJson: { request: { owner: "qa-student", repo: "own-project", commitSha: "a".repeat(40) }, context: { studentId } },
+        idempotencyKey: `${prefix}-own-key`,
+        status: "done",
+        attempts: 1,
+        createdAt: ownTime,
+        updatedAt: ownTime,
+      },
+      ...otherJobs,
+    ] });
+    await database.submission.create({ data: {
+      id: ownSubmissionId,
+      kind: "review",
+      sourceId: ownJobId,
+      score: 80,
+      snapshotJson: { commitSha: "a".repeat(40) },
+      contentHash: `${prefix}-hash`,
+      verificationCode: `${prefix}-verification`,
+      rubricVersion: "own-rubric-v1",
+      createdAt: ownTime,
+    } });
+
+    await expect(repo.listStudentSubmissions(studentId)).resolves.toEqual([expect.objectContaining({
+      id: ownSubmissionId,
+      kind: "review",
+      sourceId: ownJobId,
+      rubricVersion: "own-rubric-v1",
+      commitSha: "a".repeat(40),
+    })]);
   });
 });

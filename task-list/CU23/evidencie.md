@@ -24,3 +24,9 @@ Estado: código integrado por PR #323 en merge `509000c6cfa032d663cd969dd63075ab
 - Tag anotada `v0.5.91` apunta al merge exacto. Aplicación normal F14: release ID `458655140`, ledger `deployed`, API/web sobre SHA exacto; bundle `/assets/index-xHykWBFP.js` y `/health` HTTP 200, `ok/database=ready`.
 - Backup `fragments-prod-2026-11-25T21-16-21-115Z.dump`, 98,409 bytes, SHA-256 `c3da288bf53d54803f764f76d6beb6003f807fddfbda12ebb2a2cea24d37f6d5`, `restored_to_temporary_database`. Imagen previa v0.5.90 conservada. VPS tras despliegue: 80 GB libres, 59 % usado, inodos 13 %; timer/path activos, apply inactivo, `systemctl --failed` vacío, Tymeslot/ImagenEC/Pits saludables.
 - Producción funcional autenticada: NO COMPROBADA. Los Spaces autorizados Ego Lite 44/80 no aparecen en el runtime actual; no se abrió un perfil/Space sustituto ni se generaron entregas. El despliegue de bundle no demuestra el flujo autenticado, ni que existan dos entregas reales con commits distintos. No se evaluó IA real ni se modificó una cuenta/entrega productiva.
+
+## Filtro de propietario antes del límite del historial — en verificación · 2026-11-26
+
+- Se identificó una truncación por actividad global: `listStudentSubmissions` leía los 200 jobs Review más recientes de todas las identidades y filtraba al estudiante después; otros 200 jobs podían ocultar Reviews propios antiguos.
+- Cambio en curso: el filtro por `payloadJson.context.studentId` se aplica en la consulta PostgreSQL antes de `take: 200`. Se añadió regresión aislada con 205 jobs ajenos más un Review propio anterior, y limpieza de fixtures limitada a `fragments_test` con prefijo aleatorio de esta prueba.
+- Verificación local: typecheck API PASS. La prueba focal `repository.test.ts` se omitió por falta de DATABASE_URL local; el archivo comprueba `current_database() === fragments_test` antes de crear fixtures. CI PostgreSQL queda pendiente; aún no se afirma que la regresión esté aprobada.
