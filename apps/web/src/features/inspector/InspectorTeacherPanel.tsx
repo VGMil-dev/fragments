@@ -19,6 +19,12 @@ const statusLabels: Record<InspectorStatus, string> = {
   obsolete: "Obsoleto",
 };
 
+const competencyOutcomeLabels = {
+  demonstrated: "Demostrado",
+  not_demonstrated: "No demostrado",
+  not_evaluated: "No evaluado",
+} as const;
+
 export function InspectorTeacherPanel({ record, teacherAuthorized = false, onAssign, onRecord, message }: InspectorTeacherPanelProps) {
   const [busy, setBusy] = useState(false);
   const challenge = record?.challenge ?? null;
@@ -90,8 +96,17 @@ export function InspectorTeacherPanel({ record, teacherAuthorized = false, onAss
       {status === "assigned" && (
         <form className="inspector-panel__record" onSubmit={handleRecord}>
           <h3>Registrar la defensa</h3>
+          <p>Esta valoración es formativa y no establece una nota oficial.</p>
           <label><input name="mutationObserved" type="checkbox" value="true" /> La mutación se explicó</label>
           <label><input name="restorationConfirmed" type="checkbox" value="true" /> La restauración quedó confirmada</label>
+          <label className="inspector-panel__outcome">Valoración formativa de la competencia
+            <select name="competencyOutcome" defaultValue="" required>
+              <option value="" disabled>Selecciona una valoración</option>
+              <option value="demonstrated">Demostrado</option>
+              <option value="not_demonstrated">No demostrado</option>
+              <option value="not_evaluated">No evaluado</option>
+            </select>
+          </label>
           <label className="inspector-panel__notes">Notas docentes<textarea name="notes" maxLength={2000} rows={3} /></label>
           <button className="inspector-panel__button" disabled={busy} type="submit">Guardar resultado</button>
         </form>
@@ -107,6 +122,8 @@ export function InspectorTeacherPanel({ record, teacherAuthorized = false, onAss
         <dl>
           <div><dt>Mutación explicada</dt><dd>{record.defense.mutationObserved ? "Sí" : "No"}</dd></div>
           <div><dt>Restauración confirmada</dt><dd>{record.defense.restorationConfirmed ? "Sí" : "No"}</dd></div>
+          <div><dt>Competencia</dt><dd>{record.defense.competencyOutcome ? competencyOutcomeLabels[record.defense.competencyOutcome] : "Sin valoración registrada"}</dd></div>
+          {record.defense.notes ? <div><dt>Notas docentes</dt><dd>{record.defense.notes}</dd></div> : null}
           <div><dt>Fecha de registro</dt><dd><time dateTime={record.defense.recordedAt}>{formatDate(record.defense.recordedAt)}</time></dd></div>
         </dl>
       </section> : null}

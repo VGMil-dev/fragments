@@ -566,12 +566,12 @@ describePostgres("F18.B mission to Mentor academic flow — PostgreSQL", () => {
       const assignDefense = await fetch(`${base}/api/inspector/challenges/${inspectorCreated.data.id}/assign`, { method: "POST", headers: inspectorHeaders, body: "{}" });
       expect(assignDefense.status).toBe(200);
       const defense = await fetch(`${base}/api/inspector/challenges/${inspectorCreated.data.id}/record`, { method: "POST", headers: inspectorHeaders,
-        body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, notes: "El docente observó la mutación y confirmó la restauración." }) });
+        body: JSON.stringify({ mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "El docente observó la mutación y confirmó la restauración." }) });
       expect(defense.status).toBe(200);
       const inspectorListed = await fetch(`${base}/api/inspector/${finalDelivery.data.id}/challenges`, { headers: inspectorHeaders });
-      const inspectorRecords = await inspectorListed.json() as { data: Array<{ status: string; commitSha: string; challenge: { teacherHint?: string }; defense?: { restorationConfirmed: boolean } }> };
+      const inspectorRecords = await inspectorListed.json() as { data: Array<{ status: string; commitSha: string; challenge: { teacherHint?: string }; defense?: { restorationConfirmed: boolean; competencyOutcome?: string; notes: string } }> };
       expect(inspectorRecords.data).toMatchObject([{ status: "completed", commitSha: finalCommitSha,
-        challenge: { teacherHint: "Guía privada: comprueba el conteo de rutas." }, defense: { restorationConfirmed: true } }]);
+        challenge: { teacherHint: "Guía privada: comprueba el conteo de rutas." }, defense: { restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "El docente observó la mutación y confirmó la restauración." } }]);
       expect(await db.inspectorChallenge.count({ where: { reviewId: finalDelivery.data.id, commitSha: finalCommitSha, status: "completed" } })).toBe(1);
 
       const finalHistoryResponse = await fetch(historyUrl, { headers });

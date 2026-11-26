@@ -162,9 +162,12 @@ export const InspectorChallengeSchema = InspectorChallengePublicSchema.extend({
   teacherHint: nonEmptyText,
 }).strict();
 
+export const InspectorCompetencyOutcomeSchema = z.enum(["demonstrated", "not_demonstrated", "not_evaluated"]);
+
 export const InspectorDefenseRecordRequestSchema = z.object({
   mutationObserved: z.boolean(),
   restorationConfirmed: z.boolean(),
+  competencyOutcome: InspectorCompetencyOutcomeSchema.optional(),
   notes: z.string().trim().max(2000),
 }).strict();
 

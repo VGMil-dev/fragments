@@ -64,13 +64,15 @@ describe("InspectorTeacherPanel", () => {
     const completed: InspectorChallengeRecordResponse = {
       ...fakeRecord,
       status: "completed",
-      defense: { mutationObserved: true, restorationConfirmed: true, notes: "FAKE_DEFENSE_NOTE", recordedAt: "2026-11-23T10:20:00.000Z" },
+      defense: { mutationObserved: true, restorationConfirmed: true, competencyOutcome: "demonstrated", notes: "FAKE_DEFENSE_NOTE", recordedAt: "2026-11-23T10:20:00.000Z" },
     };
     const view = await render({ record: completed, onAssign: vi.fn(), onRecord: vi.fn() });
     expect(view.textContent).toContain("Mutación explicada");
     expect(view.textContent).toContain("Restauración confirmada");
+    expect(view.textContent).toContain("Competencia");
+    expect(view.textContent).toContain("Demostrado");
     expect(view.textContent).toContain("Sí");
-    expect(view.textContent).not.toContain("FAKE_DEFENSE_NOTE");
+    expect(view.textContent).toContain("FAKE_DEFENSE_NOTE");
     expect(view.textContent).not.toContain("FAKE_PRIVATE_TEACHER_HINT");
     expect(view.querySelector("form")).toBeNull();
     expect(view.querySelector("button")).toBeNull();
@@ -103,13 +105,16 @@ describe("InspectorTeacherPanel", () => {
     await act(async () => {
       const mutation = view.querySelector<HTMLInputElement>('input[name="mutationObserved"]');
       const restoration = view.querySelector<HTMLInputElement>('input[name="restorationConfirmed"]');
+      const outcome = view.querySelector<HTMLSelectElement>('select[name="competencyOutcome"]');
       if (mutation) mutation.checked = true;
       if (restoration) restoration.checked = true;
+      if (outcome) outcome.value = "demonstrated";
       view.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });
     expect(onRecord).toHaveBeenCalledOnce();
     const submitted = onRecord.mock.calls[0]?.[0];
     expect(submitted?.get("mutationObserved")).toBe("true");
     expect(submitted?.get("restorationConfirmed")).toBe("true");
+    expect(submitted?.get("competencyOutcome")).toBe("demonstrated");
   });
 });

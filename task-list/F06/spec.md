@@ -9,7 +9,7 @@
 - Better Auth es la única autoridad de sesión/identidad y persiste usuarios y sesiones en SQLite; la autorización de Inspector requiere `isTeacher` o rol `admin` en la sesión.
 - Respuesta docente: `InspectorChallengeRecordResponseSchema`, con reto privado, SHA, estado, asignación y defensa.
 - Asignación: `POST /api/inspector/challenges/:id/assign`, body `{}` estricto; identidad obtenida de sesión docente, nunca del body.
-- Defensa: `POST /api/inspector/challenges/:id/record`, `InspectorDefenseRecordRequestSchema` limita campos a dos booleanos y notas de hasta 2000 caracteres.
+- Defensa: `POST /api/inspector/challenges/:id/record`, `InspectorDefenseRecordRequestSchema` limita campos a dos booleanos, valoración cualitativa opcional (`demonstrated|not_demonstrated|not_evaluated`) y notas de hasta 2000 caracteres. La UI docente actual exige seleccionar una opción. No calcula puntos ni una calificación oficial.
 - Consulta/creación por review: `GET|POST /api/inspector/:reviewId/challenges`.
 - Todas las rutas requieren cookie/sesión Better Auth docente válida, emiten `Cache-Control: no-store` y validan respuestas.
 - Salida estudiantil usa solo `InspectorStudentChallengeResponseSchema` y `InspectorChallengePublicSchema`; el hint docente se elimina y se rechaza si aparece.
