@@ -53,7 +53,8 @@ type HttpOptions = {
   logFailure?: (diagnostic: MentorEvaluationDiagnostic) => void;
   inspector?: ReturnType<typeof createInspectorService>;
   review?: { store: ReturnType<typeof createPrismaReviewStore>; service: ReturnType<typeof createReviewService>; resolveContext: ReviewContextResolver;
-    resolveStudentId?: (request: IncomingMessage) => Promise<string | null>; resolveTeacherId?: ReviewTeacherIdResolver; resolveAcademicLink?: ReviewAcademicLinkResolver };
+    resolveStudentId?: (request: IncomingMessage) => Promise<string | null>; resolveTeacherId?: ReviewTeacherIdResolver; resolveAcademicLink?: ReviewAcademicLinkResolver;
+    repositoryCatalog?: { getPublicRepository(owner: string, repo: string, signal?: AbortSignal): Promise<unknown>; listRecentCommits(owner: string, repo: string, branch: string, signal?: AbortSignal): Promise<unknown>; resolveCommit(owner: string, repo: string, sha: string, signal?: AbortSignal): Promise<unknown> } };
   trainer?: { service: ReturnType<typeof createTrainerService>; store: ReturnType<typeof createTrainerRepository> };
   adminAuditWrite?: AdminAuditWrite;
   adminQueueAuditWrite?: AdminQueueAuditWrite;

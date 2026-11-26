@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, GitCommitHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, GitBranch, Github, Info, LoaderCircle, Search } from "lucide-react";
 import type {
   ApiResult,
   CreateReviewSubmissionRequest,
@@ -14,6 +14,10 @@ import { AsyncStateView, type AsyncState } from "../../hooks/async-state";
 import { DataSourceBadge, type DataMode } from "../../hooks/data-source-badge";
 import { SubmissionDownloads } from "../submissions/submission-downloads";
 import { validateReviewRequest, type ReviewFields } from "./review-validation";
+import { parseCommitReference, parsePublicGitHubRepository, repositoryLookupError, type ReviewCommitOption, type ReviewRepository, type ReviewRepositoryLookup } from "./repository-selection";
+import repositoryArtwork from "./assets/review-repositorio.webp";
+import commitArtwork from "./assets/review-commit.webp";
+import confirmationArtwork from "./assets/review-confirmacion.webp";
 import "./review-screen.css";
 
 export interface ReviewScreenProps {
@@ -29,6 +33,7 @@ export interface ReviewScreenProps {
   linkedProposals?: ProposalDraftResponse[];
   initialProposalId?: string;
   onLoadDeliveryHistory?: (proposalId: string) => Promise<ApiResult<MissionDeliveryHistory>>;
+  repositoryLookup?: ReviewRepositoryLookup;
 }
 
 const EMPTY_FIELDS: ReviewFields = { owner: "", repo: "", commitSha: "" };
@@ -39,37 +44,150 @@ function evidenceLabel(evidence: EvidenceReference): string {
     : `Campo: ${evidence.field}`;
 }
 
-export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, onOpenTrainer, mode = "real", linkedProposals = [], initialProposalId = "", onLoadDeliveryHistory }: ReviewScreenProps) {
+function formatCommitDate(value: string | null): string {
+  if (!value) return "Fecha no disponible";
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? "Fecha no disponible" : new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "America/Bogota" }).format(timestamp);
+}
+
+export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGenerateSubmission, onPdf, onBack, onOpenTrainer, mode = "real", linkedProposals = [], initialProposalId = "", onLoadDeliveryHistory, repositoryLookup }: ReviewScreenProps) {
   const initialData = initialReview?.status === "success" ? initialReview.data : undefined;
   const [fields, setFields] = useState<ReviewFields>(() => initialData
     ? { owner: initialData.owner, repo: initialData.repo, commitSha: initialData.commitSha }
     : EMPTY_FIELDS);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ReviewFields, string>>>({});
   const [reviewState, setReviewState] = useState<AsyncState<ReviewResponse> | null>(initialReview ?? null);
   const [submission, setSubmission] = useState<AsyncState<ReviewSubmissionResponse> | null>(null);
   const [linkedProposalId, setLinkedProposalId] = useState(initialProposalId);
   const [deliveryHistory, setDeliveryHistory] = useState<{ status: "idle" | "loading" | "error" | "success"; data?: MissionDeliveryHistory }>({ status: "idle" });
+  const [stage, setStage] = useState<0 | 1 | 2>(initialData ? 2 : 0);
+  const [repositoryUrl, setRepositoryUrl] = useState(() => initialData ? `https://github.com/${initialData.owner}/${initialData.repo}` : "");
+  const [repository, setRepository] = useState<ReviewRepository | null>(() => initialData ? { owner: initialData.owner, repo: initialData.repo, visibility: "public", defaultBranch: "" } : null);
+  const [commits, setCommits] = useState<ReviewCommitOption[]>([]);
+  const [selectedCommit, setSelectedCommit] = useState<ReviewCommitOption | null>(() => initialData ? { sha: initialData.commitSha, message: "", author: "", committedAt: null } : null);
+  const [manualReference, setManualReference] = useState("");
+  const [selectionStatus, setSelectionStatus] = useState<{ kind: "error" | "success"; message: string } | null>(null);
+  const [selectionBusy, setSelectionBusy] = useState(false);
+  const [commitMode, setCommitMode] = useState<"recent" | "manual">("recent");
+  const lookupRequestId = useRef(0);
   const deliveryRequestKey = useRef("");
   const linkedProposal = linkedProposals.find((proposal) => proposal.id === linkedProposalId);
   const nextDeliveryId = deliveryHistory.status === "success" ? deliveryHistory.data?.nextDeliverableId : null;
   const hasDeliveryPlan = Boolean(deliveryHistory.status === "success" && deliveryHistory.data?.deliveries.length);
 
-  function updateField(field: keyof ReviewFields, value: string) {
-    setFields((current) => ({ ...current, [field]: value }));
-    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+  function clearRepositorySelection() {
+    lookupRequestId.current += 1;
+    setRepository(null);
+    setCommits([]);
+    setSelectedCommit(null);
+    setFields(EMPTY_FIELDS);
+    setStage(0);
+    setSelectionStatus(null);
+    setSelectionBusy(false);
     setReviewState(null);
     setSubmission(null);
   }
 
+  async function detectRepository(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    const parsed = parsePublicGitHubRepository(repositoryUrl);
+    if (!parsed) {
+      setSelectionStatus({ kind: "error", message: "Introduce la URL https://github.com/usuario/repositorio de un repositorio público." });
+      return;
+    }
+    if (!repositoryLookup) {
+      setSelectionStatus({ kind: "error", message: "No pudimos conectar con la verificación segura de Fragments. Inténtalo más tarde." });
+      return;
+    }
+    const requestId = ++lookupRequestId.current;
+    const controller = new AbortController();
+    setSelectionBusy(true);
+    setSelectionStatus(null);
+    setRepository(null);
+    setCommits([]);
+    setSelectedCommit(null);
+    setFields(EMPTY_FIELDS);
+    setReviewState(null);
+    setSubmission(null);
+    try {
+      const result = await repositoryLookup.detectRepository(parsed, controller.signal);
+      if (requestId !== lookupRequestId.current) return;
+      if (!result.ok) throw new Error(repositoryLookupError(result.error.code));
+      const found = result.data;
+      setRepository(found);
+      setFields({ owner: found.owner, repo: found.repo, commitSha: "" });
+      setRepositoryUrl(`https://github.com/${found.owner}/${found.repo}`);
+      setSelectionStatus({ kind: "success", message: "Repositorio público verificado." });
+      try {
+        const commitsResult = await repositoryLookup.listCommits({ owner: found.owner, repo: found.repo, branch: found.defaultBranch, limit: 10 }, controller.signal);
+        if (requestId !== lookupRequestId.current) return;
+        if (!commitsResult.ok) setSelectionStatus({ kind: "error", message: repositoryLookupError(commitsResult.error.code) });
+        else setCommits(commitsResult.data.slice(0, 10));
+      } catch {
+        if (requestId !== lookupRequestId.current) return;
+        setSelectionStatus({ kind: "error", message: "El repositorio está verificado, pero no pudimos cargar sus commits. Reintenta o introduce un SHA manualmente." });
+      }
+    } catch (error) {
+      if (requestId !== lookupRequestId.current) return;
+      setRepository(null);
+      setCommits([]);
+      const message = error instanceof Error ? error.message : "";
+      const knownFailure = ["No encontramos", "Este repositorio", "GitHub ha"].some((prefix) => message.startsWith(prefix));
+      setSelectionStatus({ kind: "error", message: knownFailure ? message : "No pudimos verificar el repositorio y sus commits. Puedes volver a intentarlo." });
+    } finally {
+      if (requestId === lookupRequestId.current) setSelectionBusy(false);
+    }
+  }
+
+  function selectCommit(commit: ReviewCommitOption) {
+    setSelectedCommit(commit);
+    setFields((current) => ({ ...current, commitSha: commit.sha }));
+    setSelectionStatus(null);
+  }
+
+  async function verifyManualCommit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (!repository || !repositoryLookup) {
+      setSelectionStatus({ kind: "error", message: "Verifica primero un repositorio público." });
+      return;
+    }
+    const sha = parseCommitReference(manualReference, repository);
+    if (!sha) {
+      setSelectionStatus({ kind: "error", message: "Introduce un SHA completo de 40 caracteres o un enlace GitHub al commit de este repositorio." });
+      return;
+    }
+    const requestId = ++lookupRequestId.current;
+    setSelectionBusy(true);
+    setSelectionStatus(null);
+    try {
+      const result = await repositoryLookup.resolveCommit({ owner: repository.owner, repo: repository.repo, commitSha: sha });
+      if (requestId !== lookupRequestId.current) return;
+      if (!result.ok) {
+        setSelectionStatus({ kind: "error", message: repositoryLookupError(result.error.code) });
+        return;
+      }
+      if (result.data.sha.toLowerCase() !== sha) {
+        setSelectionStatus({ kind: "error", message: "El SHA devuelto no coincide con el commit solicitado." });
+        return;
+      }
+      selectCommit(result.data);
+      setSelectionStatus({ kind: "success", message: "SHA verificado en el repositorio seleccionado." });
+    } catch {
+      if (requestId === lookupRequestId.current) setSelectionStatus({ kind: "error", message: "No pudimos verificar el commit. Comprueba la conexión e inténtalo de nuevo." });
+    } finally {
+      if (requestId === lookupRequestId.current) setSelectionBusy(false);
+    }
+  }
+
   async function queueReview(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
+    if (stage !== 2 || !repository || !selectedCommit || fields.commitSha !== selectedCommit.sha) return;
     const validated = validateReviewRequest(fields);
     if (!validated.ok) {
-      setFieldErrors(validated.fieldErrors);
+      setSelectionStatus({ kind: "error", message: "Selecciona un repositorio y un commit verificados antes de iniciar Review." });
       return;
     }
 
-    setFieldErrors({});
+    setSelectionStatus(null);
     setReviewState({ status: "loading" });
     setSubmission(null);
     try {
@@ -165,37 +283,75 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
 
   return (
     <main className="student-screen review-screen" aria-labelledby="review-title">
-      <header className="student-screen__header">
+      <header className="student-screen__header review-screen__page-header">
         <div>
           <button className="review-screen__back" type="button" onClick={onBack}><ArrowLeft aria-hidden="true" size={17} /> Volver a Mentor</button>
           <div className="review-screen__identity">
-            <span className="review-screen__commit-mark" aria-hidden="true"><GitCommitHorizontal size={20} /></span>
             <p className="student-screen__eyebrow">REVIEW <span aria-hidden="true">/</span> COMMIT</p>
           </div>
-          <h1 id="review-title">Revisa un commit</h1>
-          <p className="student-screen__lead">Elige el repositorio y el commit exacto que quieres entender mejor.</p>
+          <h1 id="review-title">Revisión de código</h1>
+          <p className="student-screen__lead">Elige un repositorio y un commit para recibir orientación sobre tu proyecto.</p>
         </div>
         <DataSourceBadge mode={mode} {...(currentReview?.status === "completed" ? { modelId: currentReview.analysis.modelId } : {})} />
       </header>
 
-      <form className="review-form" onSubmit={(event) => void queueReview(event)} noValidate>
-        <label className="review-field">
-          <span>Usuario u organización</span>
-          <input aria-label="Usuario u organización" autoComplete="off" value={fields.owner} maxLength={39} disabled={reviewIsBusy} onChange={(event) => updateField("owner", event.target.value)} aria-invalid={Boolean(fieldErrors.owner)} aria-describedby={fieldErrors.owner ? "review-owner-error" : undefined} />
-          {fieldErrors.owner ? <small id="review-owner-error" role="alert">{fieldErrors.owner}</small> : null}
-        </label>
-        <label className="review-field">
-          <span>Nombre del repositorio</span>
-          <input aria-label="Nombre del repositorio" autoComplete="off" value={fields.repo} maxLength={100} disabled={reviewIsBusy} onChange={(event) => updateField("repo", event.target.value)} aria-invalid={Boolean(fieldErrors.repo)} aria-describedby={fieldErrors.repo ? "review-repo-error" : undefined} />
-          {fieldErrors.repo ? <small id="review-repo-error" role="alert">{fieldErrors.repo}</small> : null}
-        </label>
-        <label className="review-field review-field--wide">
-          <span>SHA del commit</span>
-          <input aria-label="SHA del commit" autoComplete="off" spellCheck={false} value={fields.commitSha} maxLength={64} disabled={reviewIsBusy} onChange={(event) => updateField("commitSha", event.target.value)} aria-invalid={Boolean(fieldErrors.commitSha)} aria-describedby={fieldErrors.commitSha ? "review-sha-help review-sha-error" : "review-sha-help"} />
-          <small id="review-sha-help">Pega el identificador completo del commit, de 40 o 64 caracteres hexadecimales.</small>
-          {fieldErrors.commitSha ? <small id="review-sha-error" role="alert">{fieldErrors.commitSha}</small> : null}
-        </label>
-        {linkedProposals.length ? <label className="review-field review-field--wide">
+      <section className="review-wizard" aria-label="Preparar Review">
+        <nav className="review-stepper" aria-label="Etapas de Review">
+          {(["Repositorio", "Commit", "Confirmación"] as const).map((label, index) => {
+            const step = index as 0 | 1 | 2;
+            const complete = stage > step || (step === 1 && Boolean(selectedCommit));
+            const allowed = step === 0 || Boolean(repository) && (step === 1 || Boolean(selectedCommit));
+            return <button key={label} type="button" className={`review-stepper__item${stage === step ? " is-current" : ""}${complete ? " is-complete" : ""}`} aria-current={stage === step ? "step" : undefined} disabled={!allowed || selectionBusy || reviewIsBusy} onClick={() => setStage(step)}>
+              <span className="review-stepper__number">{complete ? <Check aria-hidden="true" size={15} /> : String(index + 1).padStart(2, "0")}</span>
+              <span className="review-stepper__label">{label}</span>
+            </button>;
+          })}
+        </nav>
+
+        <form className="review-form review-wizard__form" onSubmit={(event) => stage === 0 ? void detectRepository(event) : stage === 1 ? void verifyManualCommit(event) : void queueReview(event)} noValidate>
+          <div className="review-stage" aria-live="polite">
+            <div className="review-stage__art"><img src={stage === 0 ? repositoryArtwork : stage === 1 ? commitArtwork : confirmationArtwork} alt="" aria-hidden="true" /></div>
+            <div className="review-stage__content">
+              <div className="review-stage__heading">
+                <span className="review-stage__number">0{stage + 1}</span>
+                <div><h2>{stage === 0 ? "Selecciona un repositorio" : stage === 1 ? "Elige el commit" : "Confirma tu selección"}</h2>
+                  <p>{stage === 0 ? "Introduce el enlace de un repositorio público de GitHub." : stage === 1 ? "Elige una versión concreta de tu proyecto para revisar." : "Comprueba los datos antes de iniciar Review."}</p></div>
+              </div>
+
+              {stage === 0 ? <>
+                <label className="review-field review-field--wide">
+                  <span>URL del repositorio</span>
+                  <span className="review-repo-input"><Github aria-hidden="true" size={19} /><input aria-label="URL del repositorio" type="url" inputMode="url" autoComplete="url" placeholder="https://github.com/usuario/repositorio" value={repositoryUrl} disabled={selectionBusy} onChange={(event) => { setRepositoryUrl(event.target.value); clearRepositorySelection(); }} /></span>
+                </label>
+                {repository ? <div className="review-repository-card" role="status"><Github aria-hidden="true" size={22} /><div><strong>{repository.owner}/{repository.repo}</strong><small>Repositorio público · rama predeterminada {repository.defaultBranch}</small></div></div> : null}
+                <p className="review-stage__hint">La comprobación consulta el backend de Fragments. Elegir un repositorio no inicia una evaluación.</p>
+                <button className="review-button review-button--secondary" type="submit" disabled={selectionBusy}><Search aria-hidden="true" size={16} /> {selectionBusy ? "Verificando…" : "Detectar repositorio"}</button>
+              </> : null}
+
+              {stage === 1 ? <>
+                {repository ? <div className="review-repository-strip"><Github aria-hidden="true" size={17} /><span>{repository.owner}/{repository.repo}</span><span className="review-branch"><GitBranch aria-hidden="true" size={15} /> {repository.defaultBranch}</span></div> : null}
+                <div className="review-mode" role="group" aria-label="Método de selección del commit">
+                  <button type="button" className={commitMode === "recent" ? "is-active" : ""} aria-pressed={commitMode === "recent"} onClick={() => { setCommitMode("recent"); setSelectionStatus(null); }}>Commits recientes</button>
+                  <button type="button" className={commitMode === "manual" ? "is-active" : ""} aria-pressed={commitMode === "manual"} onClick={() => { setCommitMode("manual"); setSelectedCommit(null); setFields((current) => ({ ...current, commitSha: "" })); setSelectionStatus(null); }}>Introducir SHA</button>
+                </div>
+                {commitMode === "recent" ? <>
+                  <div className="review-commit-heading"><strong>Últimos commits de la rama predeterminada</strong><span>{commits.length} {commits.length === 1 ? "commit" : "commits"}</span></div>
+                  {commits.length ? <fieldset className="review-commit-list"><legend className="visually-hidden">Selecciona un commit</legend>{commits.map((commit, index) => <label key={commit.sha} className={`review-commit${selectedCommit?.sha === commit.sha ? " is-selected" : ""}`}>
+                    <input type="radio" name="review-commit" aria-label={`${commit.message} ${commit.sha.slice(0, 7)}`} checked={selectedCommit?.sha === commit.sha} onChange={() => selectCommit(commit)} />
+                    <span className="review-commit__copy"><strong>{commit.message}</strong><small>{commit.author} · {formatCommitDate(commit.committedAt)}</small></span><span className="review-commit__trailing"><code>{commit.sha.slice(0, 7)}</code>{index === 0 ? <small>Más reciente</small> : null}</span>
+                  </label>)}</fieldset> : <p className="review-empty-commits" role="status">No encontramos commits en la rama predeterminada. Puedes verificar un SHA manualmente.</p>}
+                </> : <>
+                  <label className="review-field review-field--wide"><span>SHA completo o enlace al commit</span><input aria-label="SHA completo o enlace al commit" autoComplete="off" spellCheck={false} placeholder="40 caracteres hexadecimales" value={manualReference} disabled={selectionBusy} onChange={(event) => { setManualReference(event.target.value); setSelectedCommit(null); setFields((current) => ({ ...current, commitSha: "" })); setSelectionStatus(null); }} /><small>El backend de Fragments verificará que el commit pertenezca a este repositorio.</small></label>
+                  <button className="review-button review-button--secondary" type="submit" disabled={selectionBusy || !repository}><Search aria-hidden="true" size={16} /> {selectionBusy ? "Verificando…" : "Verificar SHA"}</button>
+                </>}
+              </> : null}
+
+              {stage === 2 ? <>
+                <div className="review-confirmation">
+                  <div><small>Repositorio</small><strong>{repository?.owner}/{repository?.repo}</strong>{repository?.defaultBranch ? <span>Rama predeterminada: {repository.defaultBranch}</span> : null}</div>
+                  <div><small>Commit seleccionado</small><code>{selectedCommit?.sha}</code>{selectedCommit?.message ? <span>{selectedCommit.message}</span> : null}</div>
+                </div>
+                {linkedProposals.length ? <label className="review-field review-field--wide">
           <span>Vincular a una propuesta y compartir con el docente (opcional)</span>
           <select aria-label="Vincular Review a una propuesta" value={linkedProposalId} disabled={reviewIsBusy} onChange={(event) => void loadDeliveryHistory(event.target.value)}>
             <option value="">Sin vínculo académico</option>
@@ -220,13 +376,19 @@ export function ReviewScreen({ initialReview, onQueue, onRetry, onRefresh, onGen
           {deliveryHistory.status === "success" && deliveryHistory.data?.deliveries.length === 0 ? <p>Esta misión no tiene entregas versionadas; se conserva el flujo de Review actual.</p> : null}
           {deliveryHistory.status === "success" && hasDeliveryPlan && !nextDeliveryId ? <p role="status">Todas las entregas tienen una Review completada. El historial permanece disponible.</p> : null}
         </section> : null}
-        <div className="review-form__footer">
-          <p>{linkedProposal ? `Se compartirá con el docente de ${linkedProposal.assignmentContext?.mentorContext.config.theme}.` : "La revisión se vincula al commit que elegiste."}</p>
-          <button className="button button--primary" type="submit" disabled={reviewIsBusy || Boolean(linkedProposal && onLoadDeliveryHistory && deliveryHistory.status !== "success") || Boolean(hasDeliveryPlan && !nextDeliveryId)}>
-            {reviewIsBusy ? "Enviando commit…" : "Evaluar commit"}
-          </button>
-        </div>
-      </form>
+                <div className="review-confirmation__notice"><Info aria-hidden="true" size={16} /><span>Elegir repositorio o commit no inicia IA. La revisión comienza cuando pulses «Evaluar commit».</span></div>
+                <div className="review-form__footer"><p>{linkedProposal ? `Se compartirá con el docente de ${linkedProposal.assignmentContext?.mentorContext.config.theme}.` : "La revisión se vincula al commit que elegiste."}</p><button className="review-button review-button--primary" type="submit" disabled={!selectedCommit || reviewIsBusy || Boolean(linkedProposal && onLoadDeliveryHistory && deliveryHistory.status !== "success") || Boolean(hasDeliveryPlan && !nextDeliveryId)}>{reviewIsBusy ? <><LoaderCircle aria-hidden="true" size={17} className="is-spinning" /> Enviando commit…</> : <>Evaluar commit <ArrowRight aria-hidden="true" size={17} /></>}</button></div>
+              </> : null}
+            </div>
+          </div>
+          {selectionStatus ? <p className={`review-selection-status is-${selectionStatus.kind}`} role={selectionStatus.kind === "error" ? "alert" : "status"}>{selectionStatus.message}</p> : null}
+          <div className="review-wizard__actions">
+            <button type="button" className="review-button review-button--ghost" onClick={() => setStage((current) => (Math.max(0, current - 1) as 0 | 1 | 2))} disabled={stage === 0 || selectionBusy || reviewIsBusy}><ArrowLeft aria-hidden="true" size={16} /> Atrás</button>
+            <span aria-live="polite">PASO 0{stage + 1} / 03</span>
+            {stage < 2 ? <button type="button" className="review-button review-button--primary" onClick={() => setStage((current) => (Math.min(2, current + 1) as 0 | 1 | 2))} disabled={selectionBusy || (stage === 0 ? !repository : !selectedCommit)}>Continuar <ArrowRight aria-hidden="true" size={17} /></button> : <span />}
+          </div>
+        </form>
+      </section>
 
       <section className="review-result" aria-labelledby="review-result-title">
         <div className="review-result__heading">

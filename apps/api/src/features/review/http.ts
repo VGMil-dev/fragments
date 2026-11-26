@@ -1,6 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   ApiResultSchema,
+  GitHubPublicRepositorySchema,
+  GitHubCommitListSchema,
+  GitHubCommitSummarySchema,
   CreateReviewSubmissionRequestSchema,
   MissionDeliveryHistorySchema,
   ReviewAcademicLinkSchema,
@@ -21,9 +24,14 @@ type RouteResult = "handled" | "unhandled";
 export type ReviewContextResolver = (request: IncomingMessage, input: ReturnType<typeof ReviewRequestSchema.parse>) => Promise<ReviewContext | null>;
 export type ReviewAcademicLinkResolver = (studentId: string, proposalId: string, deliverableId?: string, commitSha?: string) => Promise<unknown | null>;
 export type ReviewTeacherIdResolver = (request: IncomingMessage) => Promise<string | null>;
+type GitHubRepositoryCatalog = {
+  getPublicRepository(owner: string, repo: string, signal?: AbortSignal): Promise<unknown>;
+  listRecentCommits(owner: string, repo: string, branch: string, signal?: AbortSignal): Promise<unknown>;
+  resolveCommit(owner: string, repo: string, sha: string, signal?: AbortSignal): Promise<unknown>;
+};
 
 export function createReviewHttp(options: { store: Store; service: Service; resolveContext: ReviewContextResolver; resolveStudentId?: (request: IncomingMessage) => Promise<string | null>;
-  resolveAcademicLink?: ReviewAcademicLinkResolver; resolveTeacherId?: ReviewTeacherIdResolver }) {
+  resolveAcademicLink?: ReviewAcademicLinkResolver; resolveTeacherId?: ReviewTeacherIdResolver; repositoryCatalog?: GitHubRepositoryCatalog }) {
   return async function handleReviewHttp(request: IncomingMessage, response: ServerResponse): Promise<RouteResult> {
     const url = new URL(request.url ?? "/", "http://fragments.local");
     const teacherReviewsMatch = request.method === "GET" && url.pathname.match(/^\/api\/teacher\/classrooms\/([A-Za-z0-9_-]{1,100})\/reviews$/);
@@ -40,7 +48,9 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
       return "handled";
     }
     const deliveryHistoryMatch = request.method === "GET" && url.pathname.match(/^\/api\/me\/proposals\/([A-Za-z0-9_-]{1,100})\/deliveries$/);
-    const studentRoute = Boolean(deliveryHistoryMatch) || (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
+    const catalogMatch = url.pathname.match(/^\/api\/github\/repositories\/([^/]+)\/([^/]+)(?:\/commits(?:\/([^/]+))?)?$/);
+    const catalogRoute = request.method === "GET" && Boolean(catalogMatch);
+    const studentRoute = Boolean(deliveryHistoryMatch) || catalogRoute || (url.pathname === "/api/reviews" || url.pathname.startsWith("/api/reviews/") || url.pathname === "/api/review-submissions" || url.pathname.startsWith("/api/review-submissions/")) && !url.pathname.startsWith("/api/review-submissions/verify/");
     const studentId = studentRoute && options.resolveStudentId ? await options.resolveStudentId(request) : null;
     if (studentRoute && options.resolveStudentId && !studentId) {
       sendError(response, 401, "AUTH_REQUIRED", "Inicia sesión como estudiante para consultar Review.");
@@ -58,6 +68,33 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
         sendJson(response, 200, MissionDeliveryHistorySchema.parse(history));
       } catch {
         sendError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo consultar el historial de entregas.");
+      }
+      return "handled";
+    }
+    if (catalogRoute && catalogMatch) {
+      if (!options.repositoryCatalog) { sendCatalogError(response, 503, "REVIEW_UNAVAILABLE", "No se pudo consultar GitHub en este momento."); return "handled"; }
+      let owner: string; let repo: string; let sha: string | undefined;
+      try { owner = decodeURIComponent(catalogMatch[1]!); repo = decodeURIComponent(catalogMatch[2]!); sha = catalogMatch[3] ? decodeURIComponent(catalogMatch[3]) : undefined; }
+      catch { sendCatalogError(response, 400, "INVALID_INPUT", "Indica un repositorio válido."); return "handled"; }
+      try {
+        let result: unknown; let schema;
+        if (sha) { result = await options.repositoryCatalog.resolveCommit(owner, repo, sha); schema = GitHubCommitSummarySchema; }
+        else if (url.pathname.endsWith("/commits")) {
+          const branch = url.searchParams.get("branch") ?? "";
+          result = await options.repositoryCatalog.listRecentCommits(owner, repo, branch); schema = GitHubCommitListSchema;
+        } else { result = await options.repositoryCatalog.getPublicRepository(owner, repo); schema = GitHubPublicRepositorySchema; }
+        sendCatalogJson(response, schema.parse(result));
+      } catch (error) {
+        const sourceCode = error && typeof error === "object" && "errorCode" in error ? String(error.errorCode) : "";
+        const code = sourceCode === "GITHUB_RATE_LIMITED" ? "RATE_LIMITED" : sourceCode === "GITHUB_EMPTY_REPOSITORY" ? "EMPTY_REPOSITORY" : sha ? "COMMIT_NOT_FOUND" : "NOT_FOUND";
+        const responseCode = sourceCode === "GITHUB_INVALID_BRANCH" ? "INVALID_BRANCH" : code;
+        const status = responseCode === "RATE_LIMITED" ? 429 : responseCode === "EMPTY_REPOSITORY" ? 409 : responseCode === "INVALID_BRANCH" ? 400 : 404;
+        const message = responseCode === "RATE_LIMITED" ? "GitHub limitó temporalmente las consultas. Inténtalo más tarde."
+          : responseCode === "EMPTY_REPOSITORY" ? "Este repositorio todavía no tiene commits."
+            : responseCode === "COMMIT_NOT_FOUND" ? "No encontramos ese commit en el repositorio público seleccionado."
+              : responseCode === "INVALID_BRANCH" ? "La rama dejó de ser la predeterminada. Vuelve a detectar el repositorio."
+              : "No encontramos ese repositorio público en GitHub.";
+        sendCatalogError(response, status, responseCode, message);
       }
       return "handled";
     }
@@ -226,6 +263,15 @@ export function createReviewHttp(options: { store: Store; service: Service; reso
 
     return "unhandled";
   };
+}
+
+function sendCatalogJson(response: ServerResponse, data: unknown): void {
+  const body = ApiResultSchema(GitHubPublicRepositorySchema.or(GitHubCommitSummarySchema).or(GitHubCommitListSchema)).parse({ ok: true, data });
+  response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }).end(JSON.stringify(body));
+}
+function sendCatalogError(response: ServerResponse, status: number, code: string, message: string): void {
+  const body = ApiResultSchema(GitHubPublicRepositorySchema.or(GitHubCommitSummarySchema).or(GitHubCommitListSchema)).parse({ ok: false, error: { code, message } });
+  response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }).end(JSON.stringify(body));
 }
 
 function publicReview(job: ReviewJobView) {

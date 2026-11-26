@@ -8,6 +8,29 @@ const source = "export const value = 42;\n";
 const response = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 
 describe("GitHub REST exact commit reader", () => {
+  it("detects public repository metadata, lists only the newest ten branch commits, and resolves a complete SHA", async () => {
+    const fullSha = "e".repeat(40);
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/repos/student/demo")) return response({ private: false, name: "demo", owner: { login: "student" }, default_branch: "trunk" });
+      if (url.pathname.endsWith("/commits") && url.searchParams.get("sha") === "trunk") return response(Array.from({ length: 12 }, (_, index) => ({
+        sha: `${String(index).padStart(1, "0")}${"a".repeat(38)}`,
+        commit: { message: `commit ${index}\nsecond line`, author: { name: "Student", date: "2026-11-25T10:00:00Z" }, committer: { date: "2026-11-25T10:00:00Z" } },
+      })));
+      if (url.pathname.endsWith(`/commits/${fullSha}`)) return response({ sha: fullSha, commit: { message: "manual commit", author: { name: "Student", date: "2026-11-25T10:00:00Z" } } });
+      return new Response("not found", { status: 404 });
+    });
+    const reader = createGitHubRestRepositoryReader({ fetch });
+
+    await expect(reader.getPublicRepository("student", "demo")).resolves.toEqual({ owner: "student", repo: "demo", visibility: "public", defaultBranch: "trunk" });
+    const commits = await reader.listRecentCommits("student", "demo", "trunk");
+    expect(commits).toHaveLength(10);
+    expect(commits[0]).toMatchObject({ message: "commit 0", author: "Student", committedAt: "2026-11-25T10:00:00Z" });
+    const commitsRequest = fetch.mock.calls.find(([input]) => new URL(String(input)).pathname.endsWith("/commits"));
+    expect(String(commitsRequest?.[0])).toContain("per_page=10");
+    await expect(reader.resolveCommit("student", "demo", fullSha)).resolves.toMatchObject({ sha: fullSha, message: "manual commit" });
+  });
+
   it("uses only fixed GitHub REST endpoints and returns a digest-verified exact commit snapshot", async () => {
     const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);

@@ -463,6 +463,17 @@ function StudentWorkspace({ path, search, navigate }: { path: string; search: st
         {path === "/student/review" && requestedProposalId && proposalRecoveryPending ? <main className="student-portal" aria-labelledby="proposal-loading-title"><h1 id="proposal-loading-title">Abriendo tu propuesta</h1><p role="status">Cargando tus propuestas guardadas…</p></main> : null}
         {path === "/student/review" && (!requestedProposalId || currentProposal) ? (
           <ReviewScreen
+            repositoryLookup={{
+              detectRepository: async ({ owner, repo }, signal) => {
+                const result = await studentApi.getPublicGitHubRepository(owner, repo, signal);
+                return result.ok ? { ok: true as const, data: { owner: result.data.owner, name: result.data.repo, visibility: result.data.visibility, defaultBranch: result.data.defaultBranch } } : result;
+              },
+              listCommits: async ({ owner, repo, branch }, signal) => {
+                const result = await studentApi.getRecentGitHubCommits(owner, repo, branch, signal);
+                return result.ok ? { ok: true as const, data: result.data } : result;
+              },
+              resolveCommit: async ({ owner, repo, commitSha }, signal) => studentApi.resolveGitHubCommit(owner, repo, commitSha, signal),
+            }}
             onQueue={(request) => studentApi.createReview(request)}
             onRetry={(reviewId) => studentApi.retryReview(reviewId)}
             onRefresh={(reviewId) => studentApi.getReview(reviewId)}

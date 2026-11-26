@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ReviewScreen } from "./review-screen";
+import type { ReviewRepositoryLookup } from "./repository-selection";
 
 const analysis = {
   rubricVersion: "v1",
@@ -49,22 +50,103 @@ const actions = {
   onPdf: vi.fn(async () => ({ ok: true as const, data: new Blob(["pdf"]) })),
 };
 
+const repositoryLookup: ReviewRepositoryLookup = {
+  detectRepository: vi.fn(async ({ owner, repo }) => ({ ok: true as const, data: { owner, repo, visibility: "public" as const, defaultBranch: "main" } })),
+  listCommits: vi.fn(async () => ({ ok: true as const, data: Array.from({ length: 10 }, (_, index) => ({ sha: String(index + 1).repeat(40), message: `feat: commit ${index + 1}`, author: "Fixture student", committedAt: "2026-11-25T12:00:00.000Z" })) })),
+  resolveCommit: vi.fn(async ({ commitSha }) => ({ ok: true as const, data: { sha: commitSha, message: "feat: verified manual commit", author: "Fixture student", committedAt: null } })),
+};
+
+function setInputValue(input: HTMLInputElement, value: string) {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+async function prepareRepository(container: HTMLElement) {
+  const repo = container.querySelector<HTMLInputElement>('input[aria-label="URL del repositorio"]')!;
+  setInputValue(repo, "https://github.com/fixture-student/mobile-app");
+  await act(async () => container.querySelector<HTMLFormElement>(".review-wizard__form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.click());
+}
+
 describe("ReviewScreen", () => {
-  it("starts with a commit form and does not invent an analysis", () => {
+  it("starts at the repository stage and does not invent an analysis", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} onBack={vi.fn()} />);
 
-    expect(html).toContain("Revisa un commit");
-    expect(html).toContain("SHA del commit");
-    expect(html).toContain("Evaluar commit");
+    expect(html).toContain("Selecciona un repositorio");
+    expect(html).toContain("URL del repositorio");
+    expect(html).toContain("PASO 01 / 03");
     expect(html).not.toContain("84/100");
+    expect(html).not.toContain("button--primary\">Evaluar commit");
   });
 
-  it("frames the commit workflow with a decorative Git icon and keeps the form controls labeled", () => {
+  it("frames the repository workflow and labels the URL input", () => {
     const html = renderToStaticMarkup(<ReviewScreen {...actions} onBack={vi.fn()} />);
 
     expect(html).toContain("review-screen__identity");
-    expect(html).toContain("review-screen__commit-mark");
-    expect(html).toContain('aria-label="SHA del commit"');
+    expect(html).toContain("review-stepper");
+    expect(html).toContain('aria-label="URL del repositorio"');
+  });
+
+  it("requires an explicitly selected recent commit before queuing Review", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container);
+    const root = createRoot(container);
+    const onQueue = vi.fn(async () => actions.onQueue());
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} repositoryLookup={repositoryLookup} onBack={vi.fn()} />));
+      await prepareRepository(container);
+      expect(repositoryLookup.detectRepository).toHaveBeenCalledWith({ owner: "fixture-student", repo: "mobile-app" }, expect.any(AbortSignal));
+      expect(repositoryLookup.listCommits).toHaveBeenCalledWith({ owner: "fixture-student", repo: "mobile-app", branch: "main", limit: 10 }, expect.any(AbortSignal));
+      expect(container.querySelectorAll(".review-commit")).toHaveLength(10);
+      expect(container.textContent).toContain("Elige el commit");
+      await act(async () => container.querySelector<HTMLButtonElement>('.review-commit input[type="radio"]')!.click());
+      expect(container.textContent).toContain("commit 1");
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.click());
+      expect(container.textContent).toContain("Confirma tu selección");
+      expect(onQueue).not.toHaveBeenCalled();
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Evaluar commit"))!.click());
+      expect(onQueue).toHaveBeenCalledWith({ owner: "fixture-student", repo: "mobile-app", commitSha: "1".repeat(40) });
+    } finally { await act(async () => root.unmount()); container.remove(); }
+  });
+
+  it("verifies a manual SHA on the backend and preserves it while navigating back", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container);
+    const root = createRoot(container);
+    const sha = "f".repeat(40);
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} repositoryLookup={repositoryLookup} onBack={vi.fn()} />));
+      await prepareRepository(container);
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Introducir SHA"))!.click());
+      const input = container.querySelector<HTMLInputElement>('input[aria-label="SHA completo o enlace al commit"]')!;
+      await act(async () => setInputValue(input, `https://github.com/fixture-student/mobile-app/commit/${sha}`));
+      await act(async () => container.querySelector<HTMLButtonElement>('.review-button--secondary[type="submit"]')!.click());
+      expect(repositoryLookup.resolveCommit).toHaveBeenCalledWith({ owner: "fixture-student", repo: "mobile-app", commitSha: sha });
+      expect(container.textContent).toContain("SHA verificado en el repositorio seleccionado.");
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.click());
+      expect(container.textContent).toContain(sha);
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--ghost")!.click());
+      expect(container.querySelector<HTMLInputElement>('input[aria-label="SHA completo o enlace al commit"]')!.value).toBe(`https://github.com/fixture-student/mobile-app/commit/${sha}`);
+    } finally { await act(async () => root.unmount()); container.remove(); }
+  });
+
+  it("invalidates the selected commit when the repository URL changes", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div"); document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<ReviewScreen {...actions} repositoryLookup={repositoryLookup} onBack={vi.fn()} />));
+      await prepareRepository(container);
+      await act(async () => container.querySelector<HTMLInputElement>('.review-commit input[type="radio"]')!.click());
+      expect(container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.disabled).toBe(false);
+      await act(async () => {
+        setInputValue(container.querySelector<HTMLInputElement>('input[aria-label="URL del repositorio"]')!, "https://github.com/fixture-student/another-app");
+      });
+      expect(container.textContent).toContain("Selecciona un repositorio");
+      expect(container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.disabled).toBe(true);
+      expect(container.textContent).not.toContain("feat: commit 1");
+    } finally { await act(async () => root.unmount()); container.remove(); }
   });
 
   it("shows only the score and evidence-backed findings from a completed response", () => {
@@ -171,21 +253,10 @@ describe("ReviewScreen", () => {
     const linkedProposal = { id: "proposal-1", proposal: { title: "Rutas de Expo" }, assignmentVersionId: "mission-v1",
       assignmentContext: { assignmentVersionId: "mission-v1", mentorContext: { version: 2, config: { theme: "Programación móvil" } } } } as never;
     try {
-      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} linkedProposals={[linkedProposal]} onBack={vi.fn()} />));
-      const inputs = [...container.querySelectorAll<HTMLInputElement>(".review-form input")];
-      const setInput = (input: HTMLInputElement, value: string) => {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-        setter.call(input, value);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-      };
-      await act(async () => {
-        setInput(inputs[0]!, "fixture-student");
-        setInput(inputs[1]!, "expo-app");
-        setInput(inputs[2]!, "a".repeat(40));
-        container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      });
-      expect(onQueue).toHaveBeenLastCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "a".repeat(40) });
+      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} linkedProposals={[linkedProposal]} repositoryLookup={repositoryLookup} onBack={vi.fn()} />));
+      await prepareRepository(container);
+      await act(async () => container.querySelector<HTMLButtonElement>('.review-commit input[type="radio"]')!.click());
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.click());
 
       const select = container.querySelector<HTMLSelectElement>('select[aria-label="Vincular Review a una propuesta"]')!;
       await act(async () => {
@@ -193,8 +264,8 @@ describe("ReviewScreen", () => {
         setter.call(select, "proposal-1");
         select.dispatchEvent(new Event("change", { bubbles: true }));
       });
-      await act(async () => container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-      expect(onQueue).toHaveBeenLastCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "a".repeat(40), linkedProposalId: "proposal-1" });
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Evaluar commit"))!.click());
+      expect(onQueue).toHaveBeenLastCalledWith({ owner: "fixture-student", repo: "mobile-app", commitSha: "1".repeat(40), linkedProposalId: "proposal-1" });
     } finally {
       await act(async () => root.unmount());
       container.remove();
@@ -221,7 +292,10 @@ describe("ReviewScreen", () => {
     const linkedProposal = { id: "proposal-1", proposal: { title: "Rutas de Expo" }, assignmentVersionId: "mission-v1",
       assignmentContext: { assignmentVersionId: "mission-v1", mentorContext: { version: 2, config: { theme: "Programación móvil" } } } } as never;
     try {
-      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} onRetry={onRetry} linkedProposals={[linkedProposal]} onLoadDeliveryHistory={onLoadDeliveryHistory} onBack={vi.fn()} />));
+      await act(async () => root.render(<ReviewScreen {...actions} onQueue={onQueue} onRetry={onRetry} linkedProposals={[linkedProposal]} repositoryLookup={repositoryLookup} onLoadDeliveryHistory={onLoadDeliveryHistory} onBack={vi.fn()} />));
+      await prepareRepository(container);
+      await act(async () => container.querySelector<HTMLButtonElement>('.review-commit input[type="radio"]')!.click());
+      await act(async () => container.querySelector<HTMLButtonElement>(".review-wizard__actions .review-button--primary")!.click());
       const select = container.querySelector<HTMLSelectElement>('select[aria-label="Vincular Review a una propuesta"]')!;
       await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, "proposal-1");
@@ -235,18 +309,9 @@ describe("ReviewScreen", () => {
       expect(retry).toBeDefined();
       await act(async () => retry?.click());
       expect(onRetry).toHaveBeenCalledWith("review-failed");
-      const inputs = [...container.querySelectorAll<HTMLInputElement>(".review-form input")];
-      const setInput = (input: HTMLInputElement, value: string) => {
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-      };
-      await act(async () => {
-        setInput(inputs[0]!, "fixture-student"); setInput(inputs[1]!, "expo-app"); setInput(inputs[2]!, "b".repeat(40));
-        container.querySelector<HTMLFormElement>(".review-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      });
+      await act(async () => [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Evaluar commit"))!.click());
       expect(onLoadDeliveryHistory).toHaveBeenCalledWith("proposal-1");
-      expect(onQueue).toHaveBeenCalledWith({ owner: "fixture-student", repo: "expo-app", commitSha: "b".repeat(40), linkedProposalId: "proposal-1", assignmentDeliverableId: "delivery-2" });
+      expect(onQueue).toHaveBeenCalledWith({ owner: "fixture-student", repo: "mobile-app", commitSha: "1".repeat(40), linkedProposalId: "proposal-1", assignmentDeliverableId: "delivery-2" });
     } finally {
       await act(async () => root.unmount());
       container.remove();
